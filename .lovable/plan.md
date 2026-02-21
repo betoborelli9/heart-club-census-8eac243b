@@ -1,75 +1,96 @@
 
-# Heart Club Global – Fan Census & Engagement Platform
 
-## Visão Geral
-Plataforma de censo de torcidas com votação única ("Voto Sagrado"), dashboard personalizado nas cores do clube escolhido e mapa interativo de densidade de torcedores. Versão inicial com frontend completo usando dados mockados, pronta para conexão com Supabase.
+# Dashboard Super-App - Upgrade Completo
 
----
+## Objetivo
+Transformar o Dashboard atual (simples, linear) em um "centro de comando" denso e interativo, mantendo dark mode e cores dinâmicas do clube.
 
-## Fase 1: Fundação e Onboarding
+## Arquitetura da Implementacao
 
-### 1.1 Estrutura Base
-- Dark mode por padrão, layout mobile-first
-- Animações suaves com Framer Motion para transições entre telas
-- Banco de dados mockado com ~40 clubes brasileiros (Série A e B), cada um com cores primária/secundária e escudo
+### Estrutura de Componentes (novos arquivos)
 
-### 1.2 Tela de Login (Mockada)
-- Tela de boas-vindas com branding "Heart Club Global" (coração + futebol)
-- Botões de login social (Google, Apple) – mockados, simulam autenticação
-- Design impactante e emocional, remetendo à paixão clubística
+```text
+src/
+  components/
+    dashboard/
+      MatchCenter.tsx        -- Jogo expandido com estadio, probabilidades, escalacao
+      HeatmapSection.tsx     -- Mapa-mundi SVG interativo com drill-down
+      CensusStats.tsx        -- Contador animado + bar chart comparativo (recharts)
+      NewsCarousel.tsx       -- Carrossel horizontal de noticias com imagens
+      Marketplace.tsx        -- Grid de produtos da loja oficial
+      AmbassadorCard.tsx     -- Card de embaixador com hover effects
+      DashboardHeader.tsx    -- Header refatorado
+  data/
+    mockDashboard.ts         -- Todos os dados mockados centralizados
+```
 
-### 1.3 Fluxo de Votação em 3 Etapas
-- **Etapa 1 – Dados Pessoais**: Nome, data de nascimento, país e cidade
-- **Etapa 2 – Clube do Coração**: Campo de busca com autocomplete, mostrando escudo e nome. Confirmação dramática ("Este voto é eterno. Tem certeza?")
-- **Etapa 3 – Clubes de Simpatia** (Opcional): Selecionar até 4 clubes adicionais
-- Barra de progresso visual entre etapas
-- Após votar, flag `has_voted = true` bloqueia acesso permanente à votação
+### 1. Navegacao por Tabs (Shadcn Tabs)
 
----
+O Dashboard tera 3 abas principais usando o componente `Tabs` ja existente:
+- **Visao Geral** - Profile, Match Center, Stats, Noticias, Marketplace
+- **Mapa** - Heatmap global em tela cheia
+- **Ranking** - Embaixadores + ranking expandido
 
-## Fase 2: Dashboard Personalizado
+### 2. Match Center Expandido (`MatchCenter.tsx`)
 
-### 2.1 Personalização de Cores
-- Após o voto, toda a UI assume as cores do clube do coração do usuário
-- Variáveis CSS dinâmicas (primary/secondary/accent) baseadas no clube
-- Header com escudo do clube e nome do torcedor
+- Card maior com: nome do estadio, cidade, horario
+- Barra de probabilidade de vitoria (home vs away vs empate) com animacao
+- Secao "Escalacao Provavel" com formacao tatica (4-3-3) usando grid CSS
+- Card "Onde Assistir" com icones/logos estilizados das emissoras (Globo, Premiere, SporTV, ESPN) usando badges coloridos
+- Dados 100% mockados
 
-### 2.2 Seções do Dashboard
-- **Card do Perfil**: Escudo, nome do clube, data do voto, código de embaixador
-- **Próximo Jogo**: Card com data, adversário, competição e seção "Onde Assistir" (dados mockados)
-- **Últimas Notícias**: Grid de cards com manchetes do clube (dados mockados, prontos para API-Football)
-- **Ranking de Embaixadores**: Lista dos maiores angariadores de novos membros
+### 3. Heatmap Global (`HeatmapSection.tsx`)
 
----
+- Mapa SVG puro (sem dependencia externa) usando paths de continentes simplificados
+- Cada continente colorido com gradiente baseado na cor primaria do clube (opacidade variavel = densidade)
+- Ao clicar num continente: animacao de zoom (framer-motion scale + translate) mostrando lista de paises com barras de progresso
+- Tooltip ao hover mostrando contagem de torcedores
+- Dados mockados com distribuicao por continente e paises
 
-## Fase 3: Heatmap Global
+### 4. Estatisticas do Censo (`CensusStats.tsx`)
 
-### 3.1 Mapa Interativo
-- Mapa mundial com choropleth (intensidade de cor por volume de votos)
-- Visão por país com dados mockados de torcedores
-- Drill-down ao clicar em um país para ver distribuição por cidades
-- Tooltip com contagem de torcedores e clubes mais populares da região
-- Filtros por clube específico para ver sua distribuição geográfica
+- Contador animado "Voce e o torcedor no X" usando requestAnimationFrame para efeito de contagem
+- Bar chart horizontal (recharts `BarChart`) comparando top 5 clubes no ranking global
+- O clube do usuario aparece destacado na cor primaria
 
----
+### 5. Noticias em Carrossel (`NewsCarousel.tsx`)
 
-## Fase 4: Engajamento
+- Usar o componente `Carousel` do Shadcn (embla-carousel-react ja instalado)
+- Cards com imagem placeholder (unsplash de futebol ou SVG), titulo, resumo e timestamp
+- Scroll horizontal touch-friendly (mobile-first)
 
-### 4.1 Sistema de Embaixadores
-- Código de referral único gerado para cada usuário (mockado)
-- Tela com link compartilhável e contagem de indicações
-- Ranking dos maiores angariadores
+### 6. Marketplace (`Marketplace.tsx`)
 
-### 4.2 Proteção do Voto
-- Guard/middleware que verifica `has_voted` antes de permitir acesso à votação
-- Após votação, redireciona automaticamente para o Dashboard
-- Mensagem clara: "Seu voto já foi registrado" se tentar acessar novamente
+- Grid 2x2 (mobile) / 4 colunas (desktop) de produtos
+- Cards com imagem placeholder, nome do produto, preco e botao "Comprar" (link de afiliado mockado)
+- Produtos: camisa titular, camisa reserva, agasalho, caneca
+- Hover effect com scale e sombra
 
----
+### 7. Embaixadores com Micro-interacoes (`AmbassadorCard.tsx`)
 
-## Estrutura de Páginas
-- `/` – Landing page com CTA para votar
-- `/onboarding` – Fluxo de votação em 3 etapas
-- `/dashboard` – Dashboard personalizado (protegido, requer voto)
-- `/map` – Heatmap global interativo
-- `/embaixador` – Painel do programa de embaixadores
+- Cada embaixador em card individual com hover:scale-105 e transicao de sombra
+- Medalhas animadas (ouro, prata, bronze) para top 3
+- Barra de progresso mostrando meta vs atual
+
+### 8. Refinamento de UX
+
+- `max-w-4xl` (expandir de `max-w-2xl`) para layout mais amplo
+- Spacing consistente com `gap-6` entre secoes
+- Grid responsivo: 1 coluna mobile, 2 colunas tablet+
+- Todas as cards com `hover:border-primary/50 transition-colors`
+
+### Detalhes Tecnicos
+
+- **Mapa SVG**: Paths simplificados dos 6 continentes embutidos no componente (sem lib externa), mantendo o bundle leve
+- **Recharts**: Ja instalado, sera usado para o bar chart comparativo
+- **Embla Carousel**: Ja instalado via Shadcn, sera usado para noticias
+- **Framer Motion**: Ja instalado, usado para animacoes de entrada, contador e zoom do mapa
+- **Mock data**: Arquivo centralizado `mockDashboard.ts` com noticias, jogos, produtos, stats do censo e dados geograficos
+
+### Sequencia de Implementacao
+
+1. Criar `mockDashboard.ts` com todos os dados
+2. Criar componentes individuais (em paralelo)
+3. Refatorar `Dashboard.tsx` com layout de Tabs e grid responsivo
+4. Ajustes finais de spacing e animacoes
+
