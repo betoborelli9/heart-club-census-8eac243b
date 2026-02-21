@@ -1,96 +1,60 @@
 
+# Heatmap Profissional com react-simple-maps
 
-# Dashboard Super-App - Upgrade Completo
+## Resumo
+Substituir o mapa SVG artesanal por um mapa geografico real usando `react-simple-maps`, com estetica choropleth dark, efeito glow, zoom interativo por continente, tooltips, legenda e micro-animacoes de pulsacao.
 
-## Objetivo
-Transformar o Dashboard atual (simples, linear) em um "centro de comando" denso e interativo, mantendo dark mode e cores dinâmicas do clube.
+## Dados Mockados
 
-## Arquitetura da Implementacao
+Atualizar `src/data/mockDashboard.ts`:
+- Adicionar dados por pais com codigos ISO (ex: `BRA`, `ARG`, `USA`) para vincular ao GeoJSON do react-simple-maps
+- Incluir campo `isTopHub` nos 3 maiores paises para controlar pulsacao
+- Manter a estrutura de continentes para o drill-down, mas agora com coordenadas de centro para zoom (`center: [lng, lat]`, `zoom: number`)
 
-### Estrutura de Componentes (novos arquivos)
+## Novo HeatmapSection.tsx
 
-```text
-src/
-  components/
-    dashboard/
-      MatchCenter.tsx        -- Jogo expandido com estadio, probabilidades, escalacao
-      HeatmapSection.tsx     -- Mapa-mundi SVG interativo com drill-down
-      CensusStats.tsx        -- Contador animado + bar chart comparativo (recharts)
-      NewsCarousel.tsx       -- Carrossel horizontal de noticias com imagens
-      Marketplace.tsx        -- Grid de produtos da loja oficial
-      AmbassadorCard.tsx     -- Card de embaixador com hover effects
-      DashboardHeader.tsx    -- Header refatorado
-  data/
-    mockDashboard.ts         -- Todos os dados mockados centralizados
-```
+### Engine
+- Instalar `react-simple-maps` (usa topojson embutido, sem chamadas externas)
+- Componentes usados: `ComposableMap`, `Geographies`, `Geography`, `ZoomableGroup`
 
-### 1. Navegacao por Tabs (Shadcn Tabs)
+### Estetica Choropleth Dark
+- Fundo do mapa em tons escuros (`#0a0a0a`)
+- Escala de cor: verde escuro quase preto (0 votos) ate verde vibrante (max votos) usando interpolacao linear com a cor primaria do clube
+- Efeito glow: aplicar `filter: drop-shadow(0 0 8px hsl(var(--primary)))` via CSS nos paises com alta densidade
+- Bordas dos paises em cinza escuro sutil
 
-O Dashboard tera 3 abas principais usando o componente `Tabs` ja existente:
-- **Visao Geral** - Profile, Match Center, Stats, Noticias, Marketplace
-- **Mapa** - Heatmap global em tela cheia
-- **Ranking** - Embaixadores + ranking expandido
+### Interatividade de Zoom
+- Estado de posicao/zoom controlado por `useState` (`center`, `zoom`)
+- Ao clicar em um pais/regiao, animar transicao suave para coordenadas do continente correspondente
+- Transicao animada via prop `transition` do `ZoomableGroup` (duracao 800ms)
 
-### 2. Match Center Expandido (`MatchCenter.tsx`)
+### Tooltip
+- Tooltip customizado posicionado via mouse coordinates (`onMouseMove`)
+- Exibe: nome do pais + numero formatado de torcedores (ex: "Brasil: 4.3M de torcedores")
+- Estilo dark com borda sutil e sombra
 
-- Card maior com: nome do estadio, cidade, horario
-- Barra de probabilidade de vitoria (home vs away vs empate) com animacao
-- Secao "Escalacao Provavel" com formacao tatica (4-3-3) usando grid CSS
-- Card "Onde Assistir" com icones/logos estilizados das emissoras (Globo, Premiere, SporTV, ESPN) usando badges coloridos
-- Dados 100% mockados
+### Legenda e Filtros
+- Legenda no canto inferior: gradiente horizontal de verde escuro a verde vibrante com labels "Menos Torcedores" e "Mais Torcedores"
+- Botoes flutuantes no canto superior direito do mapa:
+  - "Visao Global" (reseta zoom)
+  - "Meu Pais" (zoom para Brasil)
+- Estilo: botoes com `backdrop-blur` e bordas sutis
 
-### 3. Heatmap Global (`HeatmapSection.tsx`)
+### Micro-animacoes
+- Os 3 paises com mais torcedores recebem animacao de pulsacao CSS (`@keyframes pulse-glow`) que oscila o brilho externo
+- Framer Motion para transicao de entrada do componente
 
-- Mapa SVG puro (sem dependencia externa) usando paths de continentes simplificados
-- Cada continente colorido com gradiente baseado na cor primaria do clube (opacidade variavel = densidade)
-- Ao clicar num continente: animacao de zoom (framer-motion scale + translate) mostrando lista de paises com barras de progresso
-- Tooltip ao hover mostrando contagem de torcedores
-- Dados mockados com distribuicao por continente e paises
+## Arquivos Modificados
 
-### 4. Estatisticas do Censo (`CensusStats.tsx`)
+1. **Instalar dependencia**: `react-simple-maps`
+2. **`src/data/mockDashboard.ts`**: Adicionar mapa `countryFansData: Record<string, number>` com codigos ISO e dados de torcedores por pais; adicionar `continentZoomTargets` com coordenadas de zoom
+3. **`src/components/dashboard/HeatmapSection.tsx`**: Reescrever completamente com react-simple-maps, tooltip, legenda, filtros e animacoes
+4. Adicionar tipos para `react-simple-maps` caso necessario (declaracao de modulo)
 
-- Contador animado "Voce e o torcedor no X" usando requestAnimationFrame para efeito de contagem
-- Bar chart horizontal (recharts `BarChart`) comparando top 5 clubes no ranking global
-- O clube do usuario aparece destacado na cor primaria
+## Detalhes Tecnicos
 
-### 5. Noticias em Carrossel (`NewsCarousel.tsx`)
-
-- Usar o componente `Carousel` do Shadcn (embla-carousel-react ja instalado)
-- Cards com imagem placeholder (unsplash de futebol ou SVG), titulo, resumo e timestamp
-- Scroll horizontal touch-friendly (mobile-first)
-
-### 6. Marketplace (`Marketplace.tsx`)
-
-- Grid 2x2 (mobile) / 4 colunas (desktop) de produtos
-- Cards com imagem placeholder, nome do produto, preco e botao "Comprar" (link de afiliado mockado)
-- Produtos: camisa titular, camisa reserva, agasalho, caneca
-- Hover effect com scale e sombra
-
-### 7. Embaixadores com Micro-interacoes (`AmbassadorCard.tsx`)
-
-- Cada embaixador em card individual com hover:scale-105 e transicao de sombra
-- Medalhas animadas (ouro, prata, bronze) para top 3
-- Barra de progresso mostrando meta vs atual
-
-### 8. Refinamento de UX
-
-- `max-w-4xl` (expandir de `max-w-2xl`) para layout mais amplo
-- Spacing consistente com `gap-6` entre secoes
-- Grid responsivo: 1 coluna mobile, 2 colunas tablet+
-- Todas as cards com `hover:border-primary/50 transition-colors`
-
-### Detalhes Tecnicos
-
-- **Mapa SVG**: Paths simplificados dos 6 continentes embutidos no componente (sem lib externa), mantendo o bundle leve
-- **Recharts**: Ja instalado, sera usado para o bar chart comparativo
-- **Embla Carousel**: Ja instalado via Shadcn, sera usado para noticias
-- **Framer Motion**: Ja instalado, usado para animacoes de entrada, contador e zoom do mapa
-- **Mock data**: Arquivo centralizado `mockDashboard.ts` com noticias, jogos, produtos, stats do censo e dados geograficos
-
-### Sequencia de Implementacao
-
-1. Criar `mockDashboard.ts` com todos os dados
-2. Criar componentes individuais (em paralelo)
-3. Refatorar `Dashboard.tsx` com layout de Tabs e grid responsivo
-4. Ajustes finais de spacing e animacoes
-
+- O GeoJSON vem embutido no react-simple-maps via URL do Natural Earth (CDN topojson padrao da lib)
+- Escala de cor calculada por: `opacity = minOpacity + (fans / maxFans) * (1 - minOpacity)` aplicada sobre `hsl(var(--primary))`
+- Paises sem dados ficam com fill `hsl(var(--primary) / 0.05)` (quase invisivel)
+- Zoom controlado por estado React, nao por transformacoes CSS externas
+- Tooltip usa `position: fixed` com coordenadas do mouse para evitar problemas de overflow
