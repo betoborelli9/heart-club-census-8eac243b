@@ -40,7 +40,17 @@ export interface ContinentData {
   name: string;
   fans: number;
   path: string;
-  countries: { name: string; fans: number }[];
+  center: [number, number];
+  zoom: number;
+  countries: { name: string; fans: number; iso: string }[];
+}
+
+export interface CountryFansEntry {
+  iso: string;
+  name: string;
+  fans: number;
+  continent: string;
+  isTopHub?: boolean;
 }
 
 export interface CensusClubRank {
@@ -169,79 +179,125 @@ export const mockProducts: Product[] = [
   },
 ];
 
-// Heatmap
+// Heatmap - Country-level fan data with ISO codes
+export const countryFansData: CountryFansEntry[] = [
+  // South America
+  { iso: "BRA", name: "Brasil", fans: 4300000, continent: "south-america", isTopHub: true },
+  { iso: "ARG", name: "Argentina", fans: 180000, continent: "south-america" },
+  { iso: "PRY", name: "Paraguai", fans: 95000, continent: "south-america" },
+  { iso: "URY", name: "Uruguai", fans: 75000, continent: "south-america" },
+  { iso: "CHL", name: "Chile", fans: 50000, continent: "south-america" },
+  { iso: "COL", name: "Colômbia", fans: 50000, continent: "south-america" },
+  { iso: "PER", name: "Peru", fans: 30000, continent: "south-america" },
+  { iso: "BOL", name: "Bolívia", fans: 15000, continent: "south-america" },
+  { iso: "ECU", name: "Equador", fans: 20000, continent: "south-america" },
+  { iso: "VEN", name: "Venezuela", fans: 12000, continent: "south-america" },
+  // Europe
+  { iso: "PRT", name: "Portugal", fans: 420000, continent: "europe", isTopHub: true },
+  { iso: "ESP", name: "Espanha", fans: 150000, continent: "europe" },
+  { iso: "GBR", name: "Inglaterra", fans: 95000, continent: "europe" },
+  { iso: "ITA", name: "Itália", fans: 80000, continent: "europe" },
+  { iso: "DEU", name: "Alemanha", fans: 75000, continent: "europe" },
+  { iso: "FRA", name: "França", fans: 45000, continent: "europe" },
+  { iso: "NLD", name: "Holanda", fans: 20000, continent: "europe" },
+  { iso: "CHE", name: "Suíça", fans: 15000, continent: "europe" },
+  // North America
+  { iso: "USA", name: "Estados Unidos", fans: 620000, continent: "north-america", isTopHub: true },
+  { iso: "MEX", name: "México", fans: 95000, continent: "north-america" },
+  { iso: "CAN", name: "Canadá", fans: 65000, continent: "north-america" },
+  // Asia
+  { iso: "JPN", name: "Japão", fans: 120000, continent: "asia" },
+  { iso: "CHN", name: "China", fans: 85000, continent: "asia" },
+  { iso: "ARE", name: "Emirados Árabes", fans: 45000, continent: "asia" },
+  { iso: "IND", name: "Índia", fans: 40000, continent: "asia" },
+  { iso: "KOR", name: "Coreia do Sul", fans: 35000, continent: "asia" },
+  { iso: "SAU", name: "Arábia Saudita", fans: 25000, continent: "asia" },
+  // Africa
+  { iso: "AGO", name: "Angola", fans: 65000, continent: "africa" },
+  { iso: "MOZ", name: "Moçambique", fans: 50000, continent: "africa" },
+  { iso: "ZAF", name: "África do Sul", fans: 35000, continent: "africa" },
+  { iso: "NGA", name: "Nigéria", fans: 30000, continent: "africa" },
+  { iso: "CPV", name: "Cabo Verde", fans: 12000, continent: "africa" },
+  // Oceania
+  { iso: "AUS", name: "Austrália", fans: 35000, continent: "oceania" },
+  { iso: "NZL", name: "Nova Zelândia", fans: 10000, continent: "oceania" },
+];
+
+// Quick lookup map: ISO -> fans
+export const countryFansMap: Record<string, number> = Object.fromEntries(
+  countryFansData.map((c) => [c.iso, c.fans])
+);
+
+// Continent zoom targets for react-simple-maps
+export const continentZoomTargets: Record<string, { center: [number, number]; zoom: number; name: string }> = {
+  "south-america": { center: [-55, -15], zoom: 3, name: "América do Sul" },
+  "europe": { center: [15, 50], zoom: 4, name: "Europa" },
+  "north-america": { center: [-100, 40], zoom: 2.5, name: "América do Norte" },
+  "asia": { center: [90, 35], zoom: 2.5, name: "Ásia" },
+  "africa": { center: [20, 0], zoom: 2.5, name: "África" },
+  "oceania": { center: [140, -25], zoom: 3.5, name: "Oceania" },
+};
+
+// Map ISO to continent for drill-down
+export const isoToContinent: Record<string, string> = Object.fromEntries(
+  countryFansData.map((c) => [c.iso, c.continent])
+);
+
+// Legacy continent structure (kept for compatibility)
 export const mockContinents: ContinentData[] = [
   {
     id: "south-america",
     name: "América do Sul",
-    fans: 4250000,
-    path: "M 285 340 L 310 310 L 330 340 L 340 380 L 330 430 L 310 470 L 290 490 L 280 460 L 270 420 L 260 380 Z",
-    countries: [
-      { name: "Brasil", fans: 3800000 },
-      { name: "Argentina", fans: 180000 },
-      { name: "Paraguai", fans: 95000 },
-      { name: "Uruguai", fans: 75000 },
-      { name: "Chile", fans: 50000 },
-      { name: "Colômbia", fans: 50000 },
-    ],
+    fans: 4827000,
+    path: "",
+    center: [-55, -15],
+    zoom: 3,
+    countries: countryFansData.filter(c => c.continent === "south-america").map(c => ({ name: c.name, fans: c.fans, iso: c.iso })),
   },
   {
     id: "europe",
     name: "Europa",
-    fans: 820000,
-    path: "M 450 160 L 500 140 L 560 150 L 580 170 L 560 200 L 530 220 L 490 220 L 460 210 L 440 190 Z",
-    countries: [
-      { name: "Portugal", fans: 420000 },
-      { name: "Espanha", fans: 150000 },
-      { name: "Inglaterra", fans: 95000 },
-      { name: "Itália", fans: 80000 },
-      { name: "Alemanha", fans: 75000 },
-    ],
+    fans: 900000,
+    path: "",
+    center: [15, 50],
+    zoom: 4,
+    countries: countryFansData.filter(c => c.continent === "europe").map(c => ({ name: c.name, fans: c.fans, iso: c.iso })),
   },
   {
     id: "north-america",
     name: "América do Norte",
-    fans: 380000,
-    path: "M 130 120 L 200 100 L 280 130 L 300 180 L 290 230 L 260 270 L 220 290 L 180 270 L 150 220 L 120 170 Z",
-    countries: [
-      { name: "Estados Unidos", fans: 220000 },
-      { name: "México", fans: 95000 },
-      { name: "Canadá", fans: 65000 },
-    ],
+    fans: 780000,
+    path: "",
+    center: [-100, 40],
+    zoom: 2.5,
+    countries: countryFansData.filter(c => c.continent === "north-america").map(c => ({ name: c.name, fans: c.fans, iso: c.iso })),
   },
   {
     id: "asia",
     name: "Ásia",
-    fans: 290000,
-    path: "M 580 130 L 680 100 L 760 140 L 780 200 L 740 260 L 680 270 L 620 240 L 590 200 Z",
-    countries: [
-      { name: "Japão", fans: 120000 },
-      { name: "China", fans: 85000 },
-      { name: "Emirados Árabes", fans: 45000 },
-      { name: "Índia", fans: 40000 },
-    ],
+    fans: 350000,
+    path: "",
+    center: [90, 35],
+    zoom: 2.5,
+    countries: countryFansData.filter(c => c.continent === "asia").map(c => ({ name: c.name, fans: c.fans, iso: c.iso })),
   },
   {
     id: "africa",
     name: "África",
-    fans: 180000,
-    path: "M 450 240 L 510 230 L 560 260 L 570 320 L 550 380 L 520 410 L 480 400 L 450 360 L 440 300 Z",
-    countries: [
-      { name: "Angola", fans: 65000 },
-      { name: "Moçambique", fans: 50000 },
-      { name: "África do Sul", fans: 35000 },
-      { name: "Nigéria", fans: 30000 },
-    ],
+    fans: 192000,
+    path: "",
+    center: [20, 0],
+    zoom: 2.5,
+    countries: countryFansData.filter(c => c.continent === "africa").map(c => ({ name: c.name, fans: c.fans, iso: c.iso })),
   },
   {
     id: "oceania",
     name: "Oceania",
     fans: 45000,
-    path: "M 720 360 L 770 340 L 810 360 L 820 400 L 790 420 L 750 410 L 720 390 Z",
-    countries: [
-      { name: "Austrália", fans: 35000 },
-      { name: "Nova Zelândia", fans: 10000 },
-    ],
+    path: "",
+    center: [140, -25],
+    zoom: 3.5,
+    countries: countryFansData.filter(c => c.continent === "oceania").map(c => ({ name: c.name, fans: c.fans, iso: c.iso })),
   },
 ];
 
