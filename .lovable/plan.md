@@ -1,60 +1,49 @@
 
-# Heatmap Profissional com react-simple-maps
 
-## Resumo
-Substituir o mapa SVG artesanal por um mapa geografico real usando `react-simple-maps`, com estetica choropleth dark, efeito glow, zoom interativo por continente, tooltips, legenda e micro-animacoes de pulsacao.
+# Heatmap com Circulos de Pulsacao e Efeito Satelite
 
-## Dados Mockados
+## Objetivo
+Transformar o heatmap atual (choropleth por preenchimento de paises) em uma visualizacao estilo "visao de satelite" com circulos de pulsacao radiantes sobre os hubs de torcida, mantendo o mapa geografico real do react-simple-maps como base.
 
-Atualizar `src/data/mockDashboard.ts`:
-- Adicionar dados por pais com codigos ISO (ex: `BRA`, `ARG`, `USA`) para vincular ao GeoJSON do react-simple-maps
-- Incluir campo `isTopHub` nos 3 maiores paises para controlar pulsacao
-- Manter a estrutura de continentes para o drill-down, mas agora com coordenadas de centro para zoom (`center: [lng, lat]`, `zoom: number`)
+## O que muda
 
-## Novo HeatmapSection.tsx
+### 1. Dados Mockados (mockDashboard.ts)
+- Adicionar coordenadas geograficas (`lat`, `lng`) a cada entrada de `countryFansData` para posicionar os circulos de glow no mapa
+- Ajustar valores de fans conforme solicitado (Brasil: 4.3M, Portugal: 150K, Angola: 80K, EUA: 45K)
+- Marcar os 3 maiores hubs para animacao de pulsacao
 
-### Engine
-- Instalar `react-simple-maps` (usa topojson embutido, sem chamadas externas)
-- Componentes usados: `ComposableMap`, `Geographies`, `Geography`, `ZoomableGroup`
+### 2. Circulos de Pulsacao com Glow (HeatmapSection.tsx)
+- Manter os paises preenchidos com choropleth sutil (verde escuro quase preto para poucos votos)
+- Adicionar circulos SVG (`<circle>`) posicionados via `useGeographies` + projecao nas coordenadas de cada pais com dados
+- Cada circulo tera:
+  - Raio proporcional ao numero de torcedores
+  - Preenchimento com gradiente radial SVG: centro em verde vibrante (#006437), bordas com transparencia total
+  - Os 3 maiores hubs recebem animacao CSS `pulse-glow` que oscila opacidade e tamanho
+- Definir `<defs>` com `<radialGradient>` no SVG para o efeito de glow
 
-### Estetica Choropleth Dark
-- Fundo do mapa em tons escuros (`#0a0a0a`)
-- Escala de cor: verde escuro quase preto (0 votos) ate verde vibrante (max votos) usando interpolacao linear com a cor primaria do clube
-- Efeito glow: aplicar `filter: drop-shadow(0 0 8px hsl(var(--primary)))` via CSS nos paises com alta densidade
-- Bordas dos paises em cinza escuro sutil
+### 3. Interatividade Aprimorada
+- Hover em continente: leve zoom animado (800ms) + todos os paises da regiao mudam para verde mais claro
+- Tooltip flutuante mostra: "Continente: [Nome] | Votos: [Numero]" ao passar mouse sobre circulos ou paises
+- Botoes "Visao Global" e "Meu Pais" mantidos
 
-### Interatividade de Zoom
-- Estado de posicao/zoom controlado por `useState` (`center`, `zoom`)
-- Ao clicar em um pais/regiao, animar transicao suave para coordenadas do continente correspondente
-- Transicao animada via prop `transition` do `ZoomableGroup` (duracao 800ms)
+### 4. Legenda Dinamica
+- Barra de gradiente no canto inferior: verde escuro (#0a1a0a) ao verde neon (#00ff6a)
+- Labels "Menos Torcedores" e "Mais Torcedores"
 
-### Tooltip
-- Tooltip customizado posicionado via mouse coordinates (`onMouseMove`)
-- Exibe: nome do pais + numero formatado de torcedores (ex: "Brasil: 4.3M de torcedores")
-- Estilo dark com borda sutil e sombra
-
-### Legenda e Filtros
-- Legenda no canto inferior: gradiente horizontal de verde escuro a verde vibrante com labels "Menos Torcedores" e "Mais Torcedores"
-- Botoes flutuantes no canto superior direito do mapa:
-  - "Visao Global" (reseta zoom)
-  - "Meu Pais" (zoom para Brasil)
-- Estilo: botoes com `backdrop-blur` e bordas sutis
-
-### Micro-animacoes
-- Os 3 paises com mais torcedores recebem animacao de pulsacao CSS (`@keyframes pulse-glow`) que oscila o brilho externo
-- Framer Motion para transicao de entrada do componente
+### 5. Micro-animacoes
+- 3 maiores hubs: circulos pulsam com `@keyframes` que alterna escala (1x a 1.3x) e opacidade
+- Efeito de "respiracao" continua, simulando captacao satelite em tempo real
 
 ## Arquivos Modificados
 
-1. **Instalar dependencia**: `react-simple-maps`
-2. **`src/data/mockDashboard.ts`**: Adicionar mapa `countryFansData: Record<string, number>` com codigos ISO e dados de torcedores por pais; adicionar `continentZoomTargets` com coordenadas de zoom
-3. **`src/components/dashboard/HeatmapSection.tsx`**: Reescrever completamente com react-simple-maps, tooltip, legenda, filtros e animacoes
-4. Adicionar tipos para `react-simple-maps` caso necessario (declaracao de modulo)
+1. `src/data/mockDashboard.ts` - Adicionar `lat`/`lng` a `CountryFansEntry`, ajustar valores de fans
+2. `src/components/dashboard/HeatmapSection.tsx` - Reescrever com circulos de glow SVG, gradientes radiais, hover de continente e tooltip aprimorado
 
 ## Detalhes Tecnicos
 
-- O GeoJSON vem embutido no react-simple-maps via URL do Natural Earth (CDN topojson padrao da lib)
-- Escala de cor calculada por: `opacity = minOpacity + (fans / maxFans) * (1 - minOpacity)` aplicada sobre `hsl(var(--primary))`
-- Paises sem dados ficam com fill `hsl(var(--primary) / 0.05)` (quase invisivel)
-- Zoom controlado por estado React, nao por transformacoes CSS externas
-- Tooltip usa `position: fixed` com coordenadas do mouse para evitar problemas de overflow
+- Os circulos usam o componente `Marker` do react-simple-maps para posicionamento automatico via coordenadas
+- Gradiente radial definido em `<defs>` do `<ComposableMap>`: `<radialGradient id="glow-green"><stop offset="0%" stop-color="#006437" stop-opacity="0.9"/><stop offset="100%" stop-color="#006437" stop-opacity="0"/></radialGradient>`
+- Raio do circulo: `Math.sqrt(fans / maxFans) * maxRadius` (escala quadratica para evitar circulos gigantes)
+- A pulsacao usa `transform-origin: center` e `animation: pulse 2s ease-in-out infinite`
+- Paises base ficam com fill muito sutil (`hsl(var(--primary) / 0.03)`) para que os circulos sejam o destaque visual
+
