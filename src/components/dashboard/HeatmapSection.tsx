@@ -8,6 +8,7 @@ import {
   Geographies,
   Geography,
   ZoomableGroup,
+  Marker,
 } from "react-simple-maps";
 import {
   countryFansData,
@@ -18,11 +19,8 @@ import {
 
 const GEO_URL = "https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json";
 
-const TOP_HUBS = countryFansData
-  .filter((c) => c.isTopHub)
-  .map((c) => c.iso);
-
 const MAX_FANS = Math.max(...countryFansData.map((c) => c.fans));
+const MAX_RADIUS = 28;
 
 function formatFans(n: number): string {
   if (n >= 1000000) return `${(n / 1000000).toFixed(1)}M`;
@@ -30,17 +28,8 @@ function formatFans(n: number): string {
   return n.toString();
 }
 
-function getCountryFill(iso: string): string {
-  const fans = countryFansMap[iso];
-  if (!fans) return "hsl(var(--primary) / 0.04)";
-  const t = Math.max(0.12, fans / MAX_FANS);
-  return `hsl(var(--primary) / ${t.toFixed(2)})`;
-}
-
-function getCountryStroke(iso: string): string {
-  const fans = countryFansMap[iso];
-  if (!fans) return "hsl(var(--border) / 0.3)";
-  return "hsl(var(--border) / 0.5)";
+function getCircleRadius(fans: number): number {
+  return Math.sqrt(fans / MAX_FANS) * MAX_RADIUS;
 }
 
 interface TooltipState {
@@ -48,6 +37,7 @@ interface TooltipState {
   y: number;
   name: string;
   fans: number;
+  continent?: string;
 }
 
 const HeatmapSection = () => {
@@ -56,7 +46,6 @@ const HeatmapSection = () => {
   const [tooltip, setTooltip] = useState<TooltipState | null>(null);
   const [activeContinent, setActiveContinent] = useState<string | null>(null);
 
-  // Detail panel data
   const detailCountries = useMemo(() => {
     if (!activeContinent) return [];
     return countryFansData
@@ -144,6 +133,18 @@ const HeatmapSection = () => {
               projectionConfig={{ scale: 130, center: [0, 20] }}
               style={{ width: "100%", height: "auto" }}
             >
+              <defs>
+                <radialGradient id="glow-green" cx="50%" cy="50%" r="50%">
+                  <stop offset="0%" stopColor="#006437" stopOpacity={0.9} />
+                  <stop offset="40%" stopColor="#006437" stopOpacity={0.5} />
+                  <stop offset="100%" stopColor="#006437" stopOpacity={0} />
+                </radialGradient>
+                <radialGradient id="glow-green-bright" cx="50%" cy="50%" r="50%">
+                  <stop offset="0%" stopColor="#00ff6a" stopOpacity={0.95} />
+                  <stop offset="25%" stopColor="#006437" stopOpacity={0.7} />
+                  <stop offset="100%" stopColor="#006437" stopOpacity={0} />
+                </radialGradient>
+              </defs>
               <ZoomableGroup center={center} zoom={zoom}>
                 <Geographies geography={GEO_URL}>
                   {({ geographies }) =>
@@ -151,44 +152,49 @@ const HeatmapSection = () => {
                       const iso =
                         geo.properties.ISO_A3 || geo.properties.ADM0_A3;
                       const fans = countryFansMap[iso] || 0;
-                      const isHub = TOP_HUBS.includes(iso);
+                      const continent = isoToContinent[iso];
+                      const isHoveredContinent =
+                        activeContinent && continent === activeContinent;
 
                       return (
                         <Geography
                           key={geo.rsmKey}
                           geography={geo}
-                          fill={getCountryFill(iso)}
-                          stroke={getCountryStroke(iso)}
-                          strokeWidth={0.4}
-                          className={`outline-none cursor-pointer ${isHub ? "heatmap-pulse" : ""}`}
+                          fill={
+                            isHoveredContinent
+                              ? "hsl(var(--primary) / 0.08)"
+                              : fans > 0
+                                ? "hsl(var(--primary) / 0.03)"
+                                : "hsl(var(--primary) / 0.015)"
+                          }
+                          stroke="hsl(var(--border) / 0.2)"
+                          strokeWidth={0.3}
+                          className="outline-none cursor-pointer"
                           style={{
                             default: {
                               outline: "none",
-                              filter: fans > MAX_FANS * 0.5
-                                ? "drop-shadow(0 0 6px hsl(var(--primary) / 0.6))"
-                                : "none",
-                              transition: "fill 300ms, filter 300ms",
+                              transition: "fill 300ms",
                             },
                             hover: {
-                              fill: fans
-                                ? "hsl(var(--primary) / 0.85)"
-                                : "hsl(var(--primary) / 0.15)",
+                              fill: "hsl(var(--primary) / 0.12)",
                               outline: "none",
-                              filter: "drop-shadow(0 0 10px hsl(var(--primary) / 0.7))",
                               cursor: "pointer",
                             },
                             pressed: { outline: "none" },
                           }}
                           onMouseEnter={(e) => {
-                            if (fans > 0) {
-                              const name =
-                                countryFansData.find((c) => c.iso === iso)
-                                  ?.name || geo.properties.NAME;
+                            if (continent) {
+                              const cName =
+                                continentZoomTargets[continent]?.name || continent;
+                              const totalFans = countryFansData
+                                .filter((c) => c.continent === continent)
+                                .reduce((s, c) => s + c.fans, 0);
                               setTooltip({
                                 x: e.clientX,
                                 y: e.clientY,
-                                name,
-                                fans,
+                                name: cName,
+                                fans: totalFans,
+                                continent,
                               });
                             }
                           }}
@@ -208,6 +214,58 @@ const HeatmapSection = () => {
                     })
                   }
                 </Geographies>
+
+                {/* Glow Circles */}
+                {countryFansData.map((country) => {
+                  const r = getCircleRadius(country.fans);
+                  const isTop = country.isTopHub;
+                  return (
+                    <Marker
+                      key={country.iso}
+                      coordinates={[country.lng, country.lat]}
+                    >
+                      <circle
+                        r={r}
+                        fill={isTop ? "url(#glow-green-bright)" : "url(#glow-green)"}
+                        className={isTop ? "heatmap-circle-pulse" : ""}
+                        style={{
+                          pointerEvents: "all",
+                          cursor: "pointer",
+                        }}
+                        onMouseEnter={(e) => {
+                          setTooltip({
+                            x: e.clientX,
+                            y: e.clientY,
+                            name: country.name,
+                            fans: country.fans,
+                            continent: country.continent,
+                          });
+                        }}
+                        onMouseMove={(e) => {
+                          setTooltip((prev) =>
+                            prev
+                              ? { ...prev, x: e.clientX, y: e.clientY }
+                              : null
+                          );
+                        }}
+                        onMouseLeave={() => setTooltip(null)}
+                        onClick={() =>
+                          handleZoomToContinent(country.continent)
+                        }
+                      />
+                      {/* Inner bright core for top hubs */}
+                      {isTop && (
+                        <circle
+                          r={r * 0.2}
+                          fill="#00ff6a"
+                          opacity={0.8}
+                          className="heatmap-core-pulse"
+                          style={{ pointerEvents: "none" }}
+                        />
+                      )}
+                    </Marker>
+                  );
+                })}
               </ZoomableGroup>
             </ComposableMap>
 
@@ -221,10 +279,12 @@ const HeatmapSection = () => {
                 }}
               >
                 <p className="text-xs font-semibold text-foreground">
-                  {tooltip.name}
+                  {tooltip.continent
+                    ? `Continente: ${continentZoomTargets[tooltip.continent]?.name || tooltip.continent}`
+                    : tooltip.name}
                 </p>
                 <p className="text-[10px] text-primary font-medium">
-                  {formatFans(tooltip.fans)} torcedores
+                  {tooltip.name} | {formatFans(tooltip.fans)} torcedores
                 </p>
               </div>
             )}
@@ -238,7 +298,7 @@ const HeatmapSection = () => {
                 className="flex-1 h-2 rounded-full"
                 style={{
                   background:
-                    "linear-gradient(to right, hsl(var(--primary) / 0.08), hsl(var(--primary) / 1))",
+                    "linear-gradient(to right, #0a1a0a, #006437, #00ff6a)",
                 }}
               />
               <span className="text-[9px] text-muted-foreground whitespace-nowrap">
@@ -311,14 +371,35 @@ const HeatmapSection = () => {
         </CardContent>
       </Card>
 
-      {/* Pulse animation for top hubs */}
+      {/* Pulse animations for glow circles */}
       <style>{`
-        @keyframes pulse-glow {
-          0%, 100% { filter: drop-shadow(0 0 4px hsl(var(--primary) / 0.4)); }
-          50% { filter: drop-shadow(0 0 12px hsl(var(--primary) / 0.8)); }
+        @keyframes circle-pulse {
+          0%, 100% {
+            transform: scale(1);
+            opacity: 1;
+          }
+          50% {
+            transform: scale(1.3);
+            opacity: 0.7;
+          }
         }
-        .heatmap-pulse {
-          animation: pulse-glow 2.5s ease-in-out infinite;
+        @keyframes core-pulse {
+          0%, 100% {
+            opacity: 0.8;
+            transform: scale(1);
+          }
+          50% {
+            opacity: 1;
+            transform: scale(1.5);
+          }
+        }
+        .heatmap-circle-pulse {
+          transform-origin: center;
+          animation: circle-pulse 2.5s ease-in-out infinite;
+        }
+        .heatmap-core-pulse {
+          transform-origin: center;
+          animation: core-pulse 2s ease-in-out infinite;
         }
       `}</style>
     </motion.div>
