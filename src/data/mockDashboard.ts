@@ -51,6 +51,8 @@ export interface CountryFansEntry {
   fans: number;
   continent: string;
   isTopHub?: boolean;
+  lat: number;
+  lng: number;
 }
 
 export interface CensusClubRank {
@@ -182,45 +184,45 @@ export const mockProducts: Product[] = [
 // Heatmap - Country-level fan data with ISO codes
 export const countryFansData: CountryFansEntry[] = [
   // South America
-  { iso: "BRA", name: "Brasil", fans: 4300000, continent: "south-america", isTopHub: true },
-  { iso: "ARG", name: "Argentina", fans: 180000, continent: "south-america" },
-  { iso: "PRY", name: "Paraguai", fans: 95000, continent: "south-america" },
-  { iso: "URY", name: "Uruguai", fans: 75000, continent: "south-america" },
-  { iso: "CHL", name: "Chile", fans: 50000, continent: "south-america" },
-  { iso: "COL", name: "Colômbia", fans: 50000, continent: "south-america" },
-  { iso: "PER", name: "Peru", fans: 30000, continent: "south-america" },
-  { iso: "BOL", name: "Bolívia", fans: 15000, continent: "south-america" },
-  { iso: "ECU", name: "Equador", fans: 20000, continent: "south-america" },
-  { iso: "VEN", name: "Venezuela", fans: 12000, continent: "south-america" },
+  { iso: "BRA", name: "Brasil", fans: 4300000, continent: "south-america", isTopHub: true, lat: -14.2, lng: -51.9 },
+  { iso: "ARG", name: "Argentina", fans: 180000, continent: "south-america", lat: -38.4, lng: -63.6 },
+  { iso: "PRY", name: "Paraguai", fans: 95000, continent: "south-america", lat: -23.4, lng: -58.4 },
+  { iso: "URY", name: "Uruguai", fans: 75000, continent: "south-america", lat: -32.5, lng: -55.8 },
+  { iso: "CHL", name: "Chile", fans: 50000, continent: "south-america", lat: -35.7, lng: -71.5 },
+  { iso: "COL", name: "Colômbia", fans: 50000, continent: "south-america", lat: 4.6, lng: -74.1 },
+  { iso: "PER", name: "Peru", fans: 30000, continent: "south-america", lat: -9.2, lng: -75.0 },
+  { iso: "BOL", name: "Bolívia", fans: 15000, continent: "south-america", lat: -16.3, lng: -63.6 },
+  { iso: "ECU", name: "Equador", fans: 20000, continent: "south-america", lat: -1.8, lng: -78.2 },
+  { iso: "VEN", name: "Venezuela", fans: 12000, continent: "south-america", lat: 6.4, lng: -66.6 },
   // Europe
-  { iso: "PRT", name: "Portugal", fans: 420000, continent: "europe", isTopHub: true },
-  { iso: "ESP", name: "Espanha", fans: 150000, continent: "europe" },
-  { iso: "GBR", name: "Inglaterra", fans: 95000, continent: "europe" },
-  { iso: "ITA", name: "Itália", fans: 80000, continent: "europe" },
-  { iso: "DEU", name: "Alemanha", fans: 75000, continent: "europe" },
-  { iso: "FRA", name: "França", fans: 45000, continent: "europe" },
-  { iso: "NLD", name: "Holanda", fans: 20000, continent: "europe" },
-  { iso: "CHE", name: "Suíça", fans: 15000, continent: "europe" },
+  { iso: "PRT", name: "Portugal", fans: 150000, continent: "europe", isTopHub: true, lat: 39.4, lng: -8.2 },
+  { iso: "ESP", name: "Espanha", fans: 95000, continent: "europe", lat: 40.5, lng: -3.7 },
+  { iso: "GBR", name: "Inglaterra", fans: 65000, continent: "europe", lat: 55.4, lng: -3.4 },
+  { iso: "ITA", name: "Itália", fans: 55000, continent: "europe", lat: 41.9, lng: 12.6 },
+  { iso: "DEU", name: "Alemanha", fans: 40000, continent: "europe", lat: 51.2, lng: 10.5 },
+  { iso: "FRA", name: "França", fans: 35000, continent: "europe", lat: 46.2, lng: 2.2 },
+  { iso: "NLD", name: "Holanda", fans: 20000, continent: "europe", lat: 52.1, lng: 5.3 },
+  { iso: "CHE", name: "Suíça", fans: 15000, continent: "europe", lat: 46.8, lng: 8.2 },
   // North America
-  { iso: "USA", name: "Estados Unidos", fans: 620000, continent: "north-america", isTopHub: true },
-  { iso: "MEX", name: "México", fans: 95000, continent: "north-america" },
-  { iso: "CAN", name: "Canadá", fans: 65000, continent: "north-america" },
+  { iso: "USA", name: "Estados Unidos", fans: 45000, continent: "north-america", lat: 37.1, lng: -95.7 },
+  { iso: "MEX", name: "México", fans: 35000, continent: "north-america", lat: 23.6, lng: -102.6 },
+  { iso: "CAN", name: "Canadá", fans: 25000, continent: "north-america", lat: 56.1, lng: -106.3 },
   // Asia
-  { iso: "JPN", name: "Japão", fans: 120000, continent: "asia" },
-  { iso: "CHN", name: "China", fans: 85000, continent: "asia" },
-  { iso: "ARE", name: "Emirados Árabes", fans: 45000, continent: "asia" },
-  { iso: "IND", name: "Índia", fans: 40000, continent: "asia" },
-  { iso: "KOR", name: "Coreia do Sul", fans: 35000, continent: "asia" },
-  { iso: "SAU", name: "Arábia Saudita", fans: 25000, continent: "asia" },
+  { iso: "JPN", name: "Japão", fans: 60000, continent: "asia", lat: 36.2, lng: 138.3 },
+  { iso: "CHN", name: "China", fans: 40000, continent: "asia", lat: 35.9, lng: 104.2 },
+  { iso: "ARE", name: "Emirados Árabes", fans: 25000, continent: "asia", lat: 23.4, lng: 53.8 },
+  { iso: "IND", name: "Índia", fans: 20000, continent: "asia", lat: 20.6, lng: 79.0 },
+  { iso: "KOR", name: "Coreia do Sul", fans: 18000, continent: "asia", lat: 35.9, lng: 127.8 },
+  { iso: "SAU", name: "Arábia Saudita", fans: 12000, continent: "asia", lat: 23.9, lng: 45.1 },
   // Africa
-  { iso: "AGO", name: "Angola", fans: 65000, continent: "africa" },
-  { iso: "MOZ", name: "Moçambique", fans: 50000, continent: "africa" },
-  { iso: "ZAF", name: "África do Sul", fans: 35000, continent: "africa" },
-  { iso: "NGA", name: "Nigéria", fans: 30000, continent: "africa" },
-  { iso: "CPV", name: "Cabo Verde", fans: 12000, continent: "africa" },
+  { iso: "AGO", name: "Angola", fans: 80000, continent: "africa", isTopHub: false, lat: -11.2, lng: 17.9 },
+  { iso: "MOZ", name: "Moçambique", fans: 50000, continent: "africa", lat: -18.7, lng: 35.5 },
+  { iso: "ZAF", name: "África do Sul", fans: 30000, continent: "africa", lat: -30.6, lng: 22.9 },
+  { iso: "NGA", name: "Nigéria", fans: 25000, continent: "africa", lat: 9.1, lng: 8.7 },
+  { iso: "CPV", name: "Cabo Verde", fans: 10000, continent: "africa", lat: 16.0, lng: -24.0 },
   // Oceania
-  { iso: "AUS", name: "Austrália", fans: 35000, continent: "oceania" },
-  { iso: "NZL", name: "Nova Zelândia", fans: 10000, continent: "oceania" },
+  { iso: "AUS", name: "Austrália", fans: 20000, continent: "oceania", lat: -25.3, lng: 133.8 },
+  { iso: "NZL", name: "Nova Zelândia", fans: 8000, continent: "oceania", lat: -40.9, lng: 174.9 },
 ];
 
 // Quick lookup map: ISO -> fans
