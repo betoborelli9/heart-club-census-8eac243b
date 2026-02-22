@@ -20,15 +20,15 @@ import {
 const GEO_URL = "https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json";
 
 const MAX_FANS = Math.max(...countryFansData.map((c) => c.fans));
-const MAX_RADIUS = 28;
+const MAX_RADIUS = 32;
 
 function formatFans(n: number): string {
   if (n >= 1000000) return `${(n / 1000000).toFixed(1)}M`;
-  if (n >= 1000) return `${(n / 1000).toFixed(0)}K`;
-  return n.toString();
+  if (n >= 1000) return `${Math.round(n / 1000).toLocaleString("pt-BR")}K`;
+  return n.toLocaleString("pt-BR");
 }
 
-function getCircleRadius(fans: number): number {
+function getHeatRadius(fans: number): number {
   return Math.sqrt(fans / MAX_FANS) * MAX_RADIUS;
 }
 
@@ -74,22 +74,32 @@ const HeatmapSection = () => {
     setActiveContinent("south-america");
   }, []);
 
-  const handleGeographyClick = useCallback(
-    (geo: any) => {
-      const iso = geo.properties.ISO_A3 || geo.properties.ADM0_A3;
-      const continent = isoToContinent[iso];
-      if (continent) {
-        handleZoomToContinent(continent);
-      }
+  const handleCountryClick = useCallback(
+    (name: string, fans: number, continent: string, e: React.MouseEvent) => {
+      setTooltip({ x: e.clientX, y: e.clientY, name, fans, continent });
+      handleZoomToContinent(continent);
     },
     [handleZoomToContinent]
   );
 
+  const handleGeographyClick = useCallback(
+    (geo: any, e: React.MouseEvent) => {
+      const iso = geo.properties.ISO_A3 || geo.properties.ADM0_A3;
+      const continent = isoToContinent[iso];
+      const fans = countryFansMap[iso] || 0;
+      const name = geo.properties.NAME || iso;
+      if (continent) {
+        handleCountryClick(name, fans, continent, e);
+      }
+    },
+    [handleCountryClick]
+  );
+
   return (
     <motion.div
-      initial={{ y: 20, opacity: 0 }}
-      animate={{ y: 0, opacity: 1 }}
-      transition={{ duration: 0.5 }}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.8 }}
     >
       <Card className="overflow-hidden relative">
         <CardHeader className="pb-2">
@@ -126,7 +136,7 @@ const HeatmapSection = () => {
           {/* Map Container */}
           <div
             className="relative w-full"
-            style={{ background: "#0a0a0a", minHeight: 320 }}
+            style={{ background: "#080808", minHeight: 320 }}
           >
             <ComposableMap
               projection="geoMercator"
@@ -134,160 +144,138 @@ const HeatmapSection = () => {
               style={{ width: "100%", height: "auto" }}
             >
               <defs>
-                <radialGradient id="glow-green" cx="50%" cy="50%" r="50%">
-                  <stop offset="0%" stopColor="#006437" stopOpacity={0.9} />
-                  <stop offset="40%" stopColor="#006437" stopOpacity={0.5} />
+                {/* Heat glow gradients - large soft blur */}
+                <radialGradient id="heat-large" cx="50%" cy="50%" r="50%">
+                  <stop offset="0%" stopColor="#006437" stopOpacity={0.8} />
+                  <stop offset="30%" stopColor="#006437" stopOpacity={0.45} />
+                  <stop offset="60%" stopColor="#006437" stopOpacity={0.15} />
                   <stop offset="100%" stopColor="#006437" stopOpacity={0} />
                 </radialGradient>
-                <radialGradient id="glow-green-bright" cx="50%" cy="50%" r="50%">
-                  <stop offset="0%" stopColor="#00ff6a" stopOpacity={0.95} />
-                  <stop offset="25%" stopColor="#006437" stopOpacity={0.7} />
+                <radialGradient id="heat-medium" cx="50%" cy="50%" r="50%">
+                  <stop offset="0%" stopColor="#006437" stopOpacity={0.65} />
+                  <stop offset="35%" stopColor="#006437" stopOpacity={0.3} />
+                  <stop offset="70%" stopColor="#006437" stopOpacity={0.08} />
                   <stop offset="100%" stopColor="#006437" stopOpacity={0} />
                 </radialGradient>
+                <radialGradient id="heat-small" cx="50%" cy="50%" r="50%">
+                  <stop offset="0%" stopColor="#006437" stopOpacity={0.5} />
+                  <stop offset="40%" stopColor="#006437" stopOpacity={0.2} />
+                  <stop offset="100%" stopColor="#006437" stopOpacity={0} />
+                </radialGradient>
+                {/* SVG blur filter for smoke effect */}
+                <filter id="heat-blur">
+                  <feGaussianBlur in="SourceGraphic" stdDeviation="4" />
+                </filter>
+                <filter id="heat-blur-large">
+                  <feGaussianBlur in="SourceGraphic" stdDeviation="6" />
+                </filter>
               </defs>
               <ZoomableGroup center={center} zoom={zoom}>
                 <Geographies geography={GEO_URL}>
                   {({ geographies }) =>
-                    geographies.map((geo) => {
-                      const iso =
-                        geo.properties.ISO_A3 || geo.properties.ADM0_A3;
-                      const fans = countryFansMap[iso] || 0;
-                      const continent = isoToContinent[iso];
-                      const isHoveredContinent =
-                        activeContinent && continent === activeContinent;
-
-                      return (
-                        <Geography
-                          key={geo.rsmKey}
-                          geography={geo}
-                          fill={
-                            isHoveredContinent
-                              ? "hsl(var(--primary) / 0.08)"
-                              : fans > 0
-                                ? "hsl(var(--primary) / 0.03)"
-                                : "hsl(var(--primary) / 0.015)"
-                          }
-                          stroke="hsl(var(--border) / 0.2)"
-                          strokeWidth={0.3}
-                          className="outline-none cursor-pointer"
-                          style={{
-                            default: {
-                              outline: "none",
-                              transition: "fill 300ms",
-                            },
-                            hover: {
-                              fill: "hsl(var(--primary) / 0.12)",
-                              outline: "none",
-                              cursor: "pointer",
-                            },
-                            pressed: { outline: "none" },
-                          }}
-                          onMouseEnter={(e) => {
-                            if (continent) {
-                              const cName =
-                                continentZoomTargets[continent]?.name || continent;
-                              const totalFans = countryFansData
-                                .filter((c) => c.continent === continent)
-                                .reduce((s, c) => s + c.fans, 0);
-                              setTooltip({
-                                x: e.clientX,
-                                y: e.clientY,
-                                name: cName,
-                                fans: totalFans,
-                                continent,
-                              });
-                            }
-                          }}
-                          onMouseMove={(e) => {
-                            if (tooltip) {
-                              setTooltip((prev) =>
-                                prev
-                                  ? { ...prev, x: e.clientX, y: e.clientY }
-                                  : null
-                              );
-                            }
-                          }}
-                          onMouseLeave={() => setTooltip(null)}
-                          onClick={() => handleGeographyClick(geo)}
-                        />
-                      );
-                    })
+                    geographies.map((geo) => (
+                      <Geography
+                        key={geo.rsmKey}
+                        geography={geo}
+                        fill="#151515"
+                        stroke="#333333"
+                        strokeWidth={0.4}
+                        className="outline-none cursor-pointer"
+                        style={{
+                          default: { outline: "none" },
+                          hover: {
+                            fill: "#1a2a1e",
+                            outline: "none",
+                            cursor: "pointer",
+                          },
+                          pressed: { outline: "none" },
+                        }}
+                        onClick={(e) => handleGeographyClick(geo, e as any)}
+                      />
+                    ))
                   }
                 </Geographies>
 
-                {/* Glow Circles */}
-                {countryFansData.map((country) => {
-                  const r = getCircleRadius(country.fans);
-                  const isTop = country.isTopHub;
-                  return (
-                    <Marker
-                      key={country.iso}
-                      coordinates={[country.lng, country.lat]}
-                    >
-                      <circle
-                        r={r}
-                        fill={isTop ? "url(#glow-green-bright)" : "url(#glow-green)"}
-                        className={isTop ? "heatmap-circle-pulse" : ""}
-                        style={{
-                          pointerEvents: "all",
-                          cursor: "pointer",
-                        }}
-                        onMouseEnter={(e) => {
-                          setTooltip({
-                            x: e.clientX,
-                            y: e.clientY,
-                            name: country.name,
-                            fans: country.fans,
-                            continent: country.continent,
-                          });
-                        }}
-                        onMouseMove={(e) => {
-                          setTooltip((prev) =>
-                            prev
-                              ? { ...prev, x: e.clientX, y: e.clientY }
-                              : null
-                          );
-                        }}
-                        onMouseLeave={() => setTooltip(null)}
-                        onClick={() =>
-                          handleZoomToContinent(country.continent)
-                        }
-                      />
-                      {/* Inner bright core for top hubs */}
-                      {isTop && (
+                {/* Static heat spots - sorted smallest first so large ones render on top */}
+                {[...countryFansData]
+                  .sort((a, b) => a.fans - b.fans)
+                  .map((country) => {
+                    const r = getHeatRadius(country.fans);
+                    const intensity = country.fans / MAX_FANS;
+                    const gradientId =
+                      intensity > 0.3
+                        ? "heat-large"
+                        : intensity > 0.05
+                          ? "heat-medium"
+                          : "heat-small";
+                    const blurId =
+                      intensity > 0.3 ? "heat-blur-large" : "heat-blur";
+                    // Larger visual radius with heavy blur for smoke/heat effect
+                    const visualR = r * 2.2;
+
+                    return (
+                      <Marker
+                        key={country.iso}
+                        coordinates={[country.lng, country.lat]}
+                      >
+                        {/* Outer soft heat cloud */}
                         <circle
-                          r={r * 0.2}
-                          fill="#00ff6a"
-                          opacity={0.8}
-                          className="heatmap-core-pulse"
+                          r={visualR}
+                          fill={`url(#${gradientId})`}
+                          filter={`url(#${blurId})`}
                           style={{ pointerEvents: "none" }}
                         />
-                      )}
-                    </Marker>
-                  );
-                })}
+                        {/* Inner brighter core */}
+                        <circle
+                          r={r * 0.5}
+                          fill="#006437"
+                          opacity={0.4 + intensity * 0.4}
+                          filter="url(#heat-blur)"
+                          style={{ pointerEvents: "none" }}
+                        />
+                        {/* Clickable invisible hit area */}
+                        <circle
+                          r={Math.max(r, 8)}
+                          fill="transparent"
+                          style={{ pointerEvents: "all", cursor: "pointer" }}
+                          onClick={(e) =>
+                            handleCountryClick(
+                              country.name,
+                              country.fans,
+                              country.continent,
+                              e as any
+                            )
+                          }
+                        />
+                      </Marker>
+                    );
+                  })}
               </ZoomableGroup>
             </ComposableMap>
 
             {/* Tooltip */}
-            {tooltip && (
-              <div
-                className="fixed z-50 pointer-events-none px-3 py-2 rounded-lg border border-border/60 bg-card/95 backdrop-blur-sm shadow-xl"
-                style={{
-                  left: tooltip.x + 12,
-                  top: tooltip.y - 40,
-                }}
-              >
-                <p className="text-xs font-semibold text-foreground">
-                  {tooltip.continent
-                    ? `Continente: ${continentZoomTargets[tooltip.continent]?.name || tooltip.continent}`
-                    : tooltip.name}
-                </p>
-                <p className="text-[10px] text-primary font-medium">
-                  {tooltip.name} | {formatFans(tooltip.fans)} torcedores
-                </p>
-              </div>
-            )}
+            <AnimatePresence>
+              {tooltip && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.15 }}
+                  className="fixed z-50 pointer-events-none px-4 py-2.5 rounded-lg border border-border/40 bg-card/95 backdrop-blur-md shadow-2xl"
+                  style={{
+                    left: tooltip.x + 14,
+                    top: tooltip.y - 48,
+                  }}
+                >
+                  <p className="text-xs font-bold text-foreground">
+                    {tooltip.name}
+                  </p>
+                  <p className="text-[11px] text-primary font-semibold">
+                    {formatFans(tooltip.fans)} torcedores
+                  </p>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
             {/* Legend */}
             <div className="absolute bottom-3 left-3 right-3 flex items-center gap-2 z-10">
@@ -298,7 +286,7 @@ const HeatmapSection = () => {
                 className="flex-1 h-2 rounded-full"
                 style={{
                   background:
-                    "linear-gradient(to right, #0a1a0a, #006437, #00ff6a)",
+                    "linear-gradient(to right, #0a1a0a, #003d22, #006437, #00ff6a)",
                 }}
               />
               <span className="text-[9px] text-muted-foreground whitespace-nowrap">
@@ -335,9 +323,9 @@ const HeatmapSection = () => {
                     return (
                       <motion.div
                         key={country.iso}
-                        initial={{ x: -15, opacity: 0 }}
-                        animate={{ x: 0, opacity: 1 }}
-                        transition={{ delay: i * 0.04 }}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ delay: i * 0.05 }}
                         className="space-y-1"
                       >
                         <div className="flex justify-between text-[11px]">
@@ -355,10 +343,7 @@ const HeatmapSection = () => {
                             animate={{
                               width: `${(country.fans / maxInContinent) * 100}%`,
                             }}
-                            transition={{
-                              duration: 0.6,
-                              delay: i * 0.04,
-                            }}
+                            transition={{ duration: 0.5, delay: i * 0.05 }}
                           />
                         </div>
                       </motion.div>
@@ -370,38 +355,6 @@ const HeatmapSection = () => {
           </AnimatePresence>
         </CardContent>
       </Card>
-
-      {/* Pulse animations for glow circles */}
-      <style>{`
-        @keyframes circle-pulse {
-          0%, 100% {
-            transform: scale(1);
-            opacity: 1;
-          }
-          50% {
-            transform: scale(1.3);
-            opacity: 0.7;
-          }
-        }
-        @keyframes core-pulse {
-          0%, 100% {
-            opacity: 0.8;
-            transform: scale(1);
-          }
-          50% {
-            opacity: 1;
-            transform: scale(1.5);
-          }
-        }
-        .heatmap-circle-pulse {
-          transform-origin: center;
-          animation: circle-pulse 2.5s ease-in-out infinite;
-        }
-        .heatmap-core-pulse {
-          transform-origin: center;
-          animation: core-pulse 2s ease-in-out infinite;
-        }
-      `}</style>
     </motion.div>
   );
 };
