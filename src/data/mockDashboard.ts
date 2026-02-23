@@ -70,6 +70,381 @@ export interface Ambassador {
   city: string;
 }
 
+// ===== Hierarchical Map Data (Choropleth Drill-Down) =====
+
+export interface CityMapData {
+  name: string;
+  votes: number;
+}
+
+export interface StateMapData {
+  name: string;
+  votes: number;
+  cities?: CityMapData[];
+}
+
+export interface CountryMapData {
+  name: string;
+  votes: number;
+  states?: StateMapData[];
+}
+
+export interface ContinentMapData {
+  name: string;
+  votes: number;
+  countries: Record<string, CountryMapData>;
+}
+
+export interface ClubMapData {
+  total: number;
+  continents: Record<string, ContinentMapData>;
+}
+
+export const clubMapData: Record<string, ClubMapData> = {
+  palmeiras: {
+    total: 5794000,
+    continents: {
+      "south-america": {
+        name: "América do Sul",
+        votes: 4827000,
+        countries: {
+          BRA: {
+            name: "Brasil",
+            votes: 4300000,
+            states: [
+              {
+                name: "São Paulo",
+                votes: 2100000,
+                cities: [
+                  { name: "São Paulo", votes: 1200000 },
+                  { name: "Campinas", votes: 280000 },
+                  { name: "Santos", votes: 150000 },
+                  { name: "Ribeirão Preto", votes: 120000 },
+                  { name: "Sorocaba", votes: 95000 },
+                ],
+              },
+              {
+                name: "Rio de Janeiro",
+                votes: 450000,
+                cities: [
+                  { name: "Rio de Janeiro", votes: 320000 },
+                  { name: "Niterói", votes: 65000 },
+                ],
+              },
+              {
+                name: "Minas Gerais",
+                votes: 380000,
+                cities: [
+                  { name: "Belo Horizonte", votes: 220000 },
+                  { name: "Uberlândia", votes: 80000 },
+                ],
+              },
+              {
+                name: "Paraná",
+                votes: 320000,
+                cities: [
+                  { name: "Curitiba", votes: 200000 },
+                  { name: "Londrina", votes: 60000 },
+                ],
+              },
+              {
+                name: "Rio Grande do Sul",
+                votes: 250000,
+                cities: [
+                  { name: "Porto Alegre", votes: 150000 },
+                ],
+              },
+              { name: "Bahia", votes: 180000 },
+              { name: "Ceará", votes: 120000 },
+              { name: "Pernambuco", votes: 100000 },
+              { name: "Goiás", votes: 100000 },
+            ],
+          },
+          ARG: { name: "Argentina", votes: 180000 },
+          PRY: { name: "Paraguai", votes: 95000 },
+          URY: { name: "Uruguai", votes: 75000 },
+          CHL: { name: "Chile", votes: 50000 },
+          COL: { name: "Colômbia", votes: 50000 },
+          PER: { name: "Peru", votes: 30000 },
+          ECU: { name: "Equador", votes: 20000 },
+          BOL: { name: "Bolívia", votes: 15000 },
+          VEN: { name: "Venezuela", votes: 12000 },
+        },
+      },
+      europe: {
+        name: "Europa",
+        votes: 475000,
+        countries: {
+          PRT: { name: "Portugal", votes: 150000 },
+          ESP: { name: "Espanha", votes: 95000 },
+          GBR: { name: "Inglaterra", votes: 65000 },
+          ITA: { name: "Itália", votes: 55000 },
+          DEU: { name: "Alemanha", votes: 40000 },
+          FRA: { name: "França", votes: 35000 },
+          NLD: { name: "Holanda", votes: 20000 },
+          CHE: { name: "Suíça", votes: 15000 },
+        },
+      },
+      "north-america": {
+        name: "América do Norte",
+        votes: 105000,
+        countries: {
+          USA: { name: "Estados Unidos", votes: 45000 },
+          MEX: { name: "México", votes: 35000 },
+          CAN: { name: "Canadá", votes: 25000 },
+        },
+      },
+      asia: {
+        name: "Ásia",
+        votes: 175000,
+        countries: {
+          JPN: { name: "Japão", votes: 60000 },
+          CHN: { name: "China", votes: 40000 },
+          ARE: { name: "Emirados Árabes", votes: 25000 },
+          IND: { name: "Índia", votes: 20000 },
+          KOR: { name: "Coreia do Sul", votes: 18000 },
+          SAU: { name: "Arábia Saudita", votes: 12000 },
+        },
+      },
+      africa: {
+        name: "África",
+        votes: 195000,
+        countries: {
+          AGO: { name: "Angola", votes: 80000 },
+          MOZ: { name: "Moçambique", votes: 50000 },
+          ZAF: { name: "África do Sul", votes: 30000 },
+          NGA: { name: "Nigéria", votes: 25000 },
+          CPV: { name: "Cabo Verde", votes: 10000 },
+        },
+      },
+      oceania: {
+        name: "Oceania",
+        votes: 28000,
+        countries: {
+          AUS: { name: "Austrália", votes: 20000 },
+          NZL: { name: "Nova Zelândia", votes: 8000 },
+        },
+      },
+    },
+  },
+  flamengo: {
+    total: 7200000,
+    continents: {
+      "south-america": {
+        name: "América do Sul",
+        votes: 6500000,
+        countries: {
+          BRA: { name: "Brasil", votes: 6000000 },
+          ARG: { name: "Argentina", votes: 200000 },
+          PRY: { name: "Paraguai", votes: 120000 },
+          URY: { name: "Uruguai", votes: 80000 },
+          COL: { name: "Colômbia", votes: 60000 },
+          CHL: { name: "Chile", votes: 40000 },
+        },
+      },
+      europe: {
+        name: "Europa",
+        votes: 350000,
+        countries: {
+          PRT: { name: "Portugal", votes: 180000 },
+          ESP: { name: "Espanha", votes: 80000 },
+          GBR: { name: "Inglaterra", votes: 50000 },
+          ITA: { name: "Itália", votes: 40000 },
+        },
+      },
+      "north-america": {
+        name: "América do Norte",
+        votes: 150000,
+        countries: {
+          USA: { name: "Estados Unidos", votes: 90000 },
+          CAN: { name: "Canadá", votes: 35000 },
+          MEX: { name: "México", votes: 25000 },
+        },
+      },
+      africa: {
+        name: "África",
+        votes: 120000,
+        countries: {
+          AGO: { name: "Angola", votes: 60000 },
+          MOZ: { name: "Moçambique", votes: 40000 },
+          ZAF: { name: "África do Sul", votes: 20000 },
+        },
+      },
+      asia: {
+        name: "Ásia",
+        votes: 80000,
+        countries: {
+          JPN: { name: "Japão", votes: 40000 },
+          CHN: { name: "China", votes: 25000 },
+          ARE: { name: "Emirados Árabes", votes: 15000 },
+        },
+      },
+    },
+  },
+  corinthians: {
+    total: 6100000,
+    continents: {
+      "south-america": {
+        name: "América do Sul",
+        votes: 5600000,
+        countries: {
+          BRA: { name: "Brasil", votes: 5200000 },
+          ARG: { name: "Argentina", votes: 150000 },
+          PRY: { name: "Paraguai", votes: 100000 },
+          URY: { name: "Uruguai", votes: 70000 },
+          CHL: { name: "Chile", votes: 45000 },
+          COL: { name: "Colômbia", votes: 35000 },
+        },
+      },
+      europe: {
+        name: "Europa",
+        votes: 280000,
+        countries: {
+          PRT: { name: "Portugal", votes: 120000 },
+          ESP: { name: "Espanha", votes: 60000 },
+          GBR: { name: "Inglaterra", votes: 50000 },
+          ITA: { name: "Itália", votes: 50000 },
+        },
+      },
+      "north-america": {
+        name: "América do Norte",
+        votes: 120000,
+        countries: {
+          USA: { name: "Estados Unidos", votes: 70000 },
+          CAN: { name: "Canadá", votes: 30000 },
+          MEX: { name: "México", votes: 20000 },
+        },
+      },
+      asia: {
+        name: "Ásia",
+        votes: 60000,
+        countries: {
+          JPN: { name: "Japão", votes: 35000 },
+          CHN: { name: "China", votes: 25000 },
+        },
+      },
+      africa: {
+        name: "África",
+        votes: 40000,
+        countries: {
+          AGO: { name: "Angola", votes: 25000 },
+          MOZ: { name: "Moçambique", votes: 15000 },
+        },
+      },
+    },
+  },
+};
+
+// Continent zoom targets for react-simple-maps
+export const continentZoomTargets: Record<string, { center: [number, number]; zoom: number; name: string }> = {
+  "south-america": { center: [-55, -15], zoom: 3, name: "América do Sul" },
+  "europe": { center: [15, 50], zoom: 4, name: "Europa" },
+  "north-america": { center: [-100, 40], zoom: 2.5, name: "América do Norte" },
+  "asia": { center: [90, 35], zoom: 2.5, name: "Ásia" },
+  "africa": { center: [20, 0], zoom: 2.5, name: "África" },
+  "oceania": { center: [140, -25], zoom: 3.5, name: "Oceania" },
+};
+
+// Map ISO country codes to their continent
+export const isoToContinentMap: Record<string, string> = {
+  BRA: "south-america", ARG: "south-america", PRY: "south-america", URY: "south-america",
+  CHL: "south-america", COL: "south-america", PER: "south-america", BOL: "south-america",
+  ECU: "south-america", VEN: "south-america", GUY: "south-america", SUR: "south-america",
+  PRT: "europe", ESP: "europe", GBR: "europe", ITA: "europe", DEU: "europe",
+  FRA: "europe", NLD: "europe", CHE: "europe", BEL: "europe", AUT: "europe",
+  SWE: "europe", NOR: "europe", DNK: "europe", FIN: "europe", POL: "europe",
+  ROU: "europe", GRC: "europe", CZE: "europe", HUN: "europe", IRL: "europe",
+  USA: "north-america", CAN: "north-america", MEX: "north-america",
+  GTM: "north-america", CUB: "north-america", DOM: "north-america",
+  JPN: "asia", CHN: "asia", ARE: "asia", IND: "asia", KOR: "asia",
+  SAU: "asia", THA: "asia", IDN: "asia", MYS: "asia", PHL: "asia",
+  VNM: "asia", PAK: "asia", BGD: "asia", IRQ: "asia", IRN: "asia",
+  TUR: "asia", ISR: "asia", RUS: "asia",
+  AGO: "africa", MOZ: "africa", ZAF: "africa", NGA: "africa", CPV: "africa",
+  EGY: "africa", KEN: "africa", GHA: "africa", TZA: "africa", ETH: "africa",
+  MAR: "africa", DZA: "africa", TUN: "africa", CMR: "africa", SEN: "africa",
+  AUS: "oceania", NZL: "oceania",
+};
+
+// Legacy data kept for compatibility
+export const countryFansData: CountryFansEntry[] = [
+  { iso: "BRA", name: "Brasil", fans: 4300000, continent: "south-america", isTopHub: true, lat: -14.2, lng: -51.9 },
+  { iso: "ARG", name: "Argentina", fans: 180000, continent: "south-america", lat: -38.4, lng: -63.6 },
+  { iso: "PRY", name: "Paraguai", fans: 95000, continent: "south-america", lat: -23.4, lng: -58.4 },
+  { iso: "URY", name: "Uruguai", fans: 75000, continent: "south-america", lat: -32.5, lng: -55.8 },
+  { iso: "CHL", name: "Chile", fans: 50000, continent: "south-america", lat: -35.7, lng: -71.5 },
+  { iso: "COL", name: "Colômbia", fans: 50000, continent: "south-america", lat: 4.6, lng: -74.1 },
+  { iso: "PER", name: "Peru", fans: 30000, continent: "south-america", lat: -9.2, lng: -75.0 },
+  { iso: "BOL", name: "Bolívia", fans: 15000, continent: "south-america", lat: -16.3, lng: -63.6 },
+  { iso: "ECU", name: "Equador", fans: 20000, continent: "south-america", lat: -1.8, lng: -78.2 },
+  { iso: "VEN", name: "Venezuela", fans: 12000, continent: "south-america", lat: 6.4, lng: -66.6 },
+  { iso: "PRT", name: "Portugal", fans: 150000, continent: "europe", isTopHub: true, lat: 39.4, lng: -8.2 },
+  { iso: "ESP", name: "Espanha", fans: 95000, continent: "europe", lat: 40.5, lng: -3.7 },
+  { iso: "GBR", name: "Inglaterra", fans: 65000, continent: "europe", lat: 55.4, lng: -3.4 },
+  { iso: "ITA", name: "Itália", fans: 55000, continent: "europe", lat: 41.9, lng: 12.6 },
+  { iso: "DEU", name: "Alemanha", fans: 40000, continent: "europe", lat: 51.2, lng: 10.5 },
+  { iso: "FRA", name: "França", fans: 35000, continent: "europe", lat: 46.2, lng: 2.2 },
+  { iso: "NLD", name: "Holanda", fans: 20000, continent: "europe", lat: 52.1, lng: 5.3 },
+  { iso: "CHE", name: "Suíça", fans: 15000, continent: "europe", lat: 46.8, lng: 8.2 },
+  { iso: "USA", name: "Estados Unidos", fans: 45000, continent: "north-america", lat: 37.1, lng: -95.7 },
+  { iso: "MEX", name: "México", fans: 35000, continent: "north-america", lat: 23.6, lng: -102.6 },
+  { iso: "CAN", name: "Canadá", fans: 25000, continent: "north-america", lat: 56.1, lng: -106.3 },
+  { iso: "JPN", name: "Japão", fans: 60000, continent: "asia", lat: 36.2, lng: 138.3 },
+  { iso: "CHN", name: "China", fans: 40000, continent: "asia", lat: 35.9, lng: 104.2 },
+  { iso: "ARE", name: "Emirados Árabes", fans: 25000, continent: "asia", lat: 23.4, lng: 53.8 },
+  { iso: "IND", name: "Índia", fans: 20000, continent: "asia", lat: 20.6, lng: 79.0 },
+  { iso: "KOR", name: "Coreia do Sul", fans: 18000, continent: "asia", lat: 35.9, lng: 127.8 },
+  { iso: "SAU", name: "Arábia Saudita", fans: 12000, continent: "asia", lat: 23.9, lng: 45.1 },
+  { iso: "AGO", name: "Angola", fans: 80000, continent: "africa", lat: -11.2, lng: 17.9 },
+  { iso: "MOZ", name: "Moçambique", fans: 50000, continent: "africa", lat: -18.7, lng: 35.5 },
+  { iso: "ZAF", name: "África do Sul", fans: 30000, continent: "africa", lat: -30.6, lng: 22.9 },
+  { iso: "NGA", name: "Nigéria", fans: 25000, continent: "africa", lat: 9.1, lng: 8.7 },
+  { iso: "CPV", name: "Cabo Verde", fans: 10000, continent: "africa", lat: 16.0, lng: -24.0 },
+  { iso: "AUS", name: "Austrália", fans: 20000, continent: "oceania", lat: -25.3, lng: 133.8 },
+  { iso: "NZL", name: "Nova Zelândia", fans: 8000, continent: "oceania", lat: -40.9, lng: 174.9 },
+];
+
+export const countryFansMap: Record<string, number> = Object.fromEntries(
+  countryFansData.map((c) => [c.iso, c.fans])
+);
+
+export const isoToContinent: Record<string, string> = Object.fromEntries(
+  countryFansData.map((c) => [c.iso, c.continent])
+);
+
+export const mockContinents: ContinentData[] = [
+  {
+    id: "south-america", name: "América do Sul", fans: 4827000, path: "",
+    center: [-55, -15], zoom: 3,
+    countries: countryFansData.filter(c => c.continent === "south-america").map(c => ({ name: c.name, fans: c.fans, iso: c.iso })),
+  },
+  {
+    id: "europe", name: "Europa", fans: 900000, path: "",
+    center: [15, 50], zoom: 4,
+    countries: countryFansData.filter(c => c.continent === "europe").map(c => ({ name: c.name, fans: c.fans, iso: c.iso })),
+  },
+  {
+    id: "north-america", name: "América do Norte", fans: 780000, path: "",
+    center: [-100, 40], zoom: 2.5,
+    countries: countryFansData.filter(c => c.continent === "north-america").map(c => ({ name: c.name, fans: c.fans, iso: c.iso })),
+  },
+  {
+    id: "asia", name: "Ásia", fans: 350000, path: "",
+    center: [90, 35], zoom: 2.5,
+    countries: countryFansData.filter(c => c.continent === "asia").map(c => ({ name: c.name, fans: c.fans, iso: c.iso })),
+  },
+  {
+    id: "africa", name: "África", fans: 192000, path: "",
+    center: [20, 0], zoom: 2.5,
+    countries: countryFansData.filter(c => c.continent === "africa").map(c => ({ name: c.name, fans: c.fans, iso: c.iso })),
+  },
+  {
+    id: "oceania", name: "Oceania", fans: 45000, path: "",
+    center: [140, -25], zoom: 3.5,
+    countries: countryFansData.filter(c => c.continent === "oceania").map(c => ({ name: c.name, fans: c.fans, iso: c.iso })),
+  },
+];
+
 // Match Center
 export const mockMatch: MatchData = {
   homeTeam: { name: "Palmeiras", emoji: "🟢", shortName: "PAL" },
@@ -108,199 +483,43 @@ export const mockMatch: MatchData = {
 // News
 export const mockNews: NewsItem[] = [
   {
-    id: 1,
-    title: "Reforço confirmado para a próxima temporada",
+    id: 1, title: "Reforço confirmado para a próxima temporada",
     summary: "Clube oficializa contratação de destaque do futebol europeu para reforçar o meio-campo.",
     imageUrl: "https://images.unsplash.com/photo-1489944440615-453fc2b6a9a9?w=400&h=250&fit=crop",
-    time: "2h atrás",
-    category: "Transferências",
+    time: "2h atrás", category: "Transferências",
   },
   {
-    id: 2,
-    title: "Treinador elogia desempenho do elenco no treino",
+    id: 2, title: "Treinador elogia desempenho do elenco no treino",
     summary: "Técnico destaca evolução tática e projeta escalação para o clássico de domingo.",
     imageUrl: "https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=400&h=250&fit=crop",
-    time: "5h atrás",
-    category: "Bastidores",
+    time: "5h atrás", category: "Bastidores",
   },
   {
-    id: 3,
-    title: "Ingressos para o clássico esgotados em 2 horas",
+    id: 3, title: "Ingressos para o clássico esgotados em 2 horas",
     summary: "Torcida esgota todos os setores do estádio em tempo recorde para o grande jogo.",
     imageUrl: "https://images.unsplash.com/photo-1522778119026-d647f0596c20?w=400&h=250&fit=crop",
-    time: "8h atrás",
-    category: "Torcida",
+    time: "8h atrás", category: "Torcida",
   },
   {
-    id: 4,
-    title: "Base revelou mais um talento para o profissional",
+    id: 4, title: "Base revelou mais um talento para o profissional",
     summary: "Jovem de 17 anos impressiona nos treinos e ganha chance no elenco principal.",
     imageUrl: "https://images.unsplash.com/photo-1431324155629-1a6deb1dec8d?w=400&h=250&fit=crop",
-    time: "12h atrás",
-    category: "Base",
+    time: "12h atrás", category: "Base",
   },
   {
-    id: 5,
-    title: "Novo uniforme 3 será lançado na próxima semana",
+    id: 5, title: "Novo uniforme 3 será lançado na próxima semana",
     summary: "Camisa homenageia conquista histórica e terá detalhes dourados exclusivos.",
     imageUrl: "https://images.unsplash.com/photo-1517466787929-bc90951d0974?w=400&h=250&fit=crop",
-    time: "1d atrás",
-    category: "Loja",
+    time: "1d atrás", category: "Loja",
   },
 ];
 
 // Marketplace
 export const mockProducts: Product[] = [
-  {
-    id: 1,
-    name: "Camisa Titular 2025",
-    price: "R$ 299,90",
-    originalPrice: "R$ 349,90",
-    imageUrl: "https://images.unsplash.com/photo-1580087256394-dc596e1c8f4f?w=300&h=300&fit=crop",
-    tag: "Lançamento",
-  },
-  {
-    id: 2,
-    name: "Camisa Reserva 2025",
-    price: "R$ 279,90",
-    imageUrl: "https://images.unsplash.com/photo-1551854838-212c50b4c184?w=300&h=300&fit=crop",
-  },
-  {
-    id: 3,
-    name: "Agasalho Viagem",
-    price: "R$ 399,90",
-    originalPrice: "R$ 459,90",
-    imageUrl: "https://images.unsplash.com/photo-1556906781-9a412961c28c?w=300&h=300&fit=crop",
-    tag: "-13%",
-  },
-  {
-    id: 4,
-    name: "Caneca Oficial",
-    price: "R$ 59,90",
-    imageUrl: "https://images.unsplash.com/photo-1514228742587-6b1558fcca3d?w=300&h=300&fit=crop",
-  },
-];
-
-// Heatmap - Country-level fan data with ISO codes
-export const countryFansData: CountryFansEntry[] = [
-  // South America
-  { iso: "BRA", name: "Brasil", fans: 4300000, continent: "south-america", isTopHub: true, lat: -14.2, lng: -51.9 },
-  { iso: "ARG", name: "Argentina", fans: 180000, continent: "south-america", lat: -38.4, lng: -63.6 },
-  { iso: "PRY", name: "Paraguai", fans: 95000, continent: "south-america", lat: -23.4, lng: -58.4 },
-  { iso: "URY", name: "Uruguai", fans: 75000, continent: "south-america", lat: -32.5, lng: -55.8 },
-  { iso: "CHL", name: "Chile", fans: 50000, continent: "south-america", lat: -35.7, lng: -71.5 },
-  { iso: "COL", name: "Colômbia", fans: 50000, continent: "south-america", lat: 4.6, lng: -74.1 },
-  { iso: "PER", name: "Peru", fans: 30000, continent: "south-america", lat: -9.2, lng: -75.0 },
-  { iso: "BOL", name: "Bolívia", fans: 15000, continent: "south-america", lat: -16.3, lng: -63.6 },
-  { iso: "ECU", name: "Equador", fans: 20000, continent: "south-america", lat: -1.8, lng: -78.2 },
-  { iso: "VEN", name: "Venezuela", fans: 12000, continent: "south-america", lat: 6.4, lng: -66.6 },
-  // Europe
-  { iso: "PRT", name: "Portugal", fans: 150000, continent: "europe", isTopHub: true, lat: 39.4, lng: -8.2 },
-  { iso: "ESP", name: "Espanha", fans: 95000, continent: "europe", lat: 40.5, lng: -3.7 },
-  { iso: "GBR", name: "Inglaterra", fans: 65000, continent: "europe", lat: 55.4, lng: -3.4 },
-  { iso: "ITA", name: "Itália", fans: 55000, continent: "europe", lat: 41.9, lng: 12.6 },
-  { iso: "DEU", name: "Alemanha", fans: 40000, continent: "europe", lat: 51.2, lng: 10.5 },
-  { iso: "FRA", name: "França", fans: 35000, continent: "europe", lat: 46.2, lng: 2.2 },
-  { iso: "NLD", name: "Holanda", fans: 20000, continent: "europe", lat: 52.1, lng: 5.3 },
-  { iso: "CHE", name: "Suíça", fans: 15000, continent: "europe", lat: 46.8, lng: 8.2 },
-  // North America
-  { iso: "USA", name: "Estados Unidos", fans: 45000, continent: "north-america", lat: 37.1, lng: -95.7 },
-  { iso: "MEX", name: "México", fans: 35000, continent: "north-america", lat: 23.6, lng: -102.6 },
-  { iso: "CAN", name: "Canadá", fans: 25000, continent: "north-america", lat: 56.1, lng: -106.3 },
-  // Asia
-  { iso: "JPN", name: "Japão", fans: 60000, continent: "asia", lat: 36.2, lng: 138.3 },
-  { iso: "CHN", name: "China", fans: 40000, continent: "asia", lat: 35.9, lng: 104.2 },
-  { iso: "ARE", name: "Emirados Árabes", fans: 25000, continent: "asia", lat: 23.4, lng: 53.8 },
-  { iso: "IND", name: "Índia", fans: 20000, continent: "asia", lat: 20.6, lng: 79.0 },
-  { iso: "KOR", name: "Coreia do Sul", fans: 18000, continent: "asia", lat: 35.9, lng: 127.8 },
-  { iso: "SAU", name: "Arábia Saudita", fans: 12000, continent: "asia", lat: 23.9, lng: 45.1 },
-  // Africa
-  { iso: "AGO", name: "Angola", fans: 80000, continent: "africa", isTopHub: false, lat: -11.2, lng: 17.9 },
-  { iso: "MOZ", name: "Moçambique", fans: 50000, continent: "africa", lat: -18.7, lng: 35.5 },
-  { iso: "ZAF", name: "África do Sul", fans: 30000, continent: "africa", lat: -30.6, lng: 22.9 },
-  { iso: "NGA", name: "Nigéria", fans: 25000, continent: "africa", lat: 9.1, lng: 8.7 },
-  { iso: "CPV", name: "Cabo Verde", fans: 10000, continent: "africa", lat: 16.0, lng: -24.0 },
-  // Oceania
-  { iso: "AUS", name: "Austrália", fans: 20000, continent: "oceania", lat: -25.3, lng: 133.8 },
-  { iso: "NZL", name: "Nova Zelândia", fans: 8000, continent: "oceania", lat: -40.9, lng: 174.9 },
-];
-
-// Quick lookup map: ISO -> fans
-export const countryFansMap: Record<string, number> = Object.fromEntries(
-  countryFansData.map((c) => [c.iso, c.fans])
-);
-
-// Continent zoom targets for react-simple-maps
-export const continentZoomTargets: Record<string, { center: [number, number]; zoom: number; name: string }> = {
-  "south-america": { center: [-55, -15], zoom: 3, name: "América do Sul" },
-  "europe": { center: [15, 50], zoom: 4, name: "Europa" },
-  "north-america": { center: [-100, 40], zoom: 2.5, name: "América do Norte" },
-  "asia": { center: [90, 35], zoom: 2.5, name: "Ásia" },
-  "africa": { center: [20, 0], zoom: 2.5, name: "África" },
-  "oceania": { center: [140, -25], zoom: 3.5, name: "Oceania" },
-};
-
-// Map ISO to continent for drill-down
-export const isoToContinent: Record<string, string> = Object.fromEntries(
-  countryFansData.map((c) => [c.iso, c.continent])
-);
-
-// Legacy continent structure (kept for compatibility)
-export const mockContinents: ContinentData[] = [
-  {
-    id: "south-america",
-    name: "América do Sul",
-    fans: 4827000,
-    path: "",
-    center: [-55, -15],
-    zoom: 3,
-    countries: countryFansData.filter(c => c.continent === "south-america").map(c => ({ name: c.name, fans: c.fans, iso: c.iso })),
-  },
-  {
-    id: "europe",
-    name: "Europa",
-    fans: 900000,
-    path: "",
-    center: [15, 50],
-    zoom: 4,
-    countries: countryFansData.filter(c => c.continent === "europe").map(c => ({ name: c.name, fans: c.fans, iso: c.iso })),
-  },
-  {
-    id: "north-america",
-    name: "América do Norte",
-    fans: 780000,
-    path: "",
-    center: [-100, 40],
-    zoom: 2.5,
-    countries: countryFansData.filter(c => c.continent === "north-america").map(c => ({ name: c.name, fans: c.fans, iso: c.iso })),
-  },
-  {
-    id: "asia",
-    name: "Ásia",
-    fans: 350000,
-    path: "",
-    center: [90, 35],
-    zoom: 2.5,
-    countries: countryFansData.filter(c => c.continent === "asia").map(c => ({ name: c.name, fans: c.fans, iso: c.iso })),
-  },
-  {
-    id: "africa",
-    name: "África",
-    fans: 192000,
-    path: "",
-    center: [20, 0],
-    zoom: 2.5,
-    countries: countryFansData.filter(c => c.continent === "africa").map(c => ({ name: c.name, fans: c.fans, iso: c.iso })),
-  },
-  {
-    id: "oceania",
-    name: "Oceania",
-    fans: 45000,
-    path: "",
-    center: [140, -25],
-    zoom: 3.5,
-    countries: countryFansData.filter(c => c.continent === "oceania").map(c => ({ name: c.name, fans: c.fans, iso: c.iso })),
-  },
+  { id: 1, name: "Camisa Titular 2025", price: "R$ 299,90", originalPrice: "R$ 349,90", imageUrl: "https://images.unsplash.com/photo-1580087256394-dc596e1c8f4f?w=300&h=300&fit=crop", tag: "Lançamento" },
+  { id: 2, name: "Camisa Reserva 2025", price: "R$ 279,90", imageUrl: "https://images.unsplash.com/photo-1551854838-212c50b4c184?w=300&h=300&fit=crop" },
+  { id: 3, name: "Agasalho Viagem", price: "R$ 399,90", originalPrice: "R$ 459,90", imageUrl: "https://images.unsplash.com/photo-1556906781-9a412961c28c?w=300&h=300&fit=crop", tag: "-13%" },
+  { id: 4, name: "Caneca Oficial", price: "R$ 59,90", imageUrl: "https://images.unsplash.com/photo-1514228742587-6b1558fcca3d?w=300&h=300&fit=crop" },
 ];
 
 // Census Stats
