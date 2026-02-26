@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Heart, Mail, Loader2 } from "lucide-react";
+import { Mail, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -8,6 +8,7 @@ import { useNavigate } from "react-router-dom";
 import { useUser } from "@/contexts/UserContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import logo from "@/assets/logo.png";
 
 const Login = () => {
   const navigate = useNavigate();
@@ -47,10 +48,7 @@ const Login = () => {
     if (error) {
       toast({ variant: "destructive", title: "Erro", description: error.message });
     } else {
-      toast({
-        title: "Link enviado! ✉️",
-        description: "Verifique seu email para acessar sua conta.",
-      });
+      toast({ title: "Link enviado! ✉️", description: "Verifique seu email para acessar sua conta." });
     }
     setLoadingProvider(null);
   };
@@ -77,18 +75,14 @@ const Login = () => {
       >
         {/* Logo */}
         <div className="text-center space-y-3">
-          <motion.div
+          <motion.img
+            src={logo}
+            alt="Heart Club"
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
             transition={{ type: "spring", bounce: 0.5, delay: 0.2 }}
-            className="mx-auto w-20 h-20 rounded-2xl flex items-center justify-center"
-            style={{ background: "var(--gradient-orange)" }}
-          >
-            <Heart className="w-10 h-10 text-white" fill="currentColor" />
-          </motion.div>
-          <h1 className="text-3xl font-display font-bold text-foreground tracking-tight">
-            Heart Club <span className="text-gradient-orange">Global</span>
-          </h1>
+            className="mx-auto w-28 h-28 object-contain drop-shadow-[0_0_30px_rgba(255,102,0,0.4)]"
+          />
           <p className="text-sm text-muted-foreground">
             O maior censo de torcidas do mundo
           </p>
