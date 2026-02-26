@@ -14,30 +14,81 @@ export type Database = {
   }
   public: {
     Tables: {
+      clubes_cache: {
+        Row: {
+          api_id: number | null
+          cidade: string | null
+          escudo_url: string | null
+          id: string
+          nome: string
+          nome_curto: string | null
+          pais: string | null
+          pais_codigo: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          api_id?: number | null
+          cidade?: string | null
+          escudo_url?: string | null
+          id?: string
+          nome: string
+          nome_curto?: string | null
+          pais?: string | null
+          pais_codigo?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          api_id?: number | null
+          cidade?: string | null
+          escudo_url?: string | null
+          id?: string
+          nome?: string
+          nome_curto?: string | null
+          pais?: string | null
+          pais_codigo?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
+          cidade: string | null
           data_nascimento: string | null
           device_hardware: string | null
+          estado: string | null
+          faixa_etaria: string | null
           genero: string | null
           id: string
+          nome_exibicao: string | null
+          pais: string | null
           profissao: string | null
           role: string | null
           username: string | null
         }
         Insert: {
+          cidade?: string | null
           data_nascimento?: string | null
           device_hardware?: string | null
+          estado?: string | null
+          faixa_etaria?: string | null
           genero?: string | null
           id: string
+          nome_exibicao?: string | null
+          pais?: string | null
           profissao?: string | null
           role?: string | null
           username?: string | null
         }
         Update: {
+          cidade?: string | null
           data_nascimento?: string | null
           device_hardware?: string | null
+          estado?: string | null
+          faixa_etaria?: string | null
           genero?: string | null
           id?: string
+          nome_exibicao?: string | null
+          pais?: string | null
           profissao?: string | null
           role?: string | null
           username?: string | null

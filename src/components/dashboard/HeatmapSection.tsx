@@ -30,7 +30,7 @@ import {
   type StateMapData,
 } from "@/data/mockDashboard";
 import { clubs } from "@/data/clubs";
-import { useUser } from "@/contexts/UserContext";
+
 
 const GEO_URL = "https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json";
 
@@ -73,11 +73,10 @@ interface HeatmapSectionProps {
 }
 
 const HeatmapSection = ({ data: externalData }: HeatmapSectionProps) => {
-  const { user } = useUser();
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Club selection
-  const defaultClubId = user?.heartClubId || "palmeiras";
+  const defaultClubId = "palmeiras";
   const [selectedClubId, setSelectedClubId] = useState(defaultClubId);
   const [searchOpen, setSearchOpen] = useState(false);
 
