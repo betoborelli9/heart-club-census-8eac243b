@@ -81,7 +81,7 @@ const Login = () => {
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
             transition={{ type: "spring", bounce: 0.5, delay: 0.2 }}
-            className="mx-auto w-28 h-28 object-contain drop-shadow-[0_0_30px_rgba(255,102,0,0.4)]"
+            className="mx-auto w-28 h-28 object-contain"
           />
           <p className="text-sm text-muted-foreground">
             O maior censo de torcidas do mundo
