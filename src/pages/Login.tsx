@@ -106,24 +106,6 @@ const Login = () => {
             Entrar com Google
           </Button>
 
-          <Button
-            variant="outline"
-            className="w-full h-13 font-medium glass-card-hover border-border/50 text-foreground"
-            onClick={() => handleOAuth("azure")}
-            disabled={!!loadingProvider}
-          >
-            {loadingProvider === "azure" ? (
-              <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-            ) : (
-              <svg className="w-5 h-5 mr-2" viewBox="0 0 23 23">
-                <path fill="#f25022" d="M0 0h11v11H0z"/>
-                <path fill="#00a4ef" d="M0 12h11v11H0z"/>
-                <path fill="#7fba00" d="M12 0h11v11H12z"/>
-                <path fill="#ffb900" d="M12 12h11v11H12z"/>
-              </svg>
-            )}
-            Entrar com Microsoft
-          </Button>
         </div>
 
         {/* Divider */}
