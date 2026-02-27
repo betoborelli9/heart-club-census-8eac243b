@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { MapPin, Loader2, ChevronRight } from "lucide-react";
+import { MapPin, Loader2, ChevronRight, CheckCircle, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -26,11 +26,13 @@ const ProfileSetup = () => {
   const [cidade, setCidade] = useState("");
   const [estado, setEstado] = useState("");
   const [detectingLocation, setDetectingLocation] = useState(false);
+  const [detectedCity, setDetectedCity] = useState<string | null>(null);
+  const [detectedState, setDetectedState] = useState<string | null>(null);
+  const [locationConfirmed, setLocationConfirmed] = useState<boolean | null>(null);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) navigate("/login", { replace: true });
-    // Don't redirect if profile complete — allow re-editing for testing
   }, [isLoading, isAuthenticated, navigate]);
 
   useEffect(() => {
@@ -51,13 +53,29 @@ const ProfileSetup = () => {
       fetch("https://ipapi.co/json/")
         .then(r => r.json())
         .then(data => {
-          if (data.city) setCidade(data.city);
-          if (data.region_code) setEstado(data.region_code);
+          if (data.city) {
+            setDetectedCity(data.city);
+            setCidade(data.city);
+          }
+          if (data.region_code) {
+            setDetectedState(data.region_code);
+            setEstado(data.region_code);
+          }
         })
         .catch(() => {})
         .finally(() => setDetectingLocation(false));
     }
   }, []);
+
+  const handleConfirmLocation = () => {
+    setLocationConfirmed(true);
+  };
+
+  const handleDenyLocation = () => {
+    setLocationConfirmed(false);
+    setCidade("");
+    setEstado("");
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -86,6 +104,8 @@ const ProfileSetup = () => {
   if (isLoading) {
     return <div className="min-h-screen bg-background flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>;
   }
+
+  const showLocationQuestion = detectedCity && locationConfirmed === null && !detectingLocation;
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center px-4 relative overflow-hidden">
@@ -124,23 +144,70 @@ const ProfileSetup = () => {
           </div>
 
           <div className="glass-card rounded-xl p-5 space-y-4">
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <MapPin className="w-4 h-4 text-primary" />
-              <span>{detectingLocation ? "Detectando localização..." : cidade && estado ? `${cidade}/${estado}` : "Informe sua localização"}</span>
-            </div>
+            {/* Location detection banner */}
+            {detectingLocation && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                <span>Detectando sua localização...</span>
+              </div>
+            )}
+
+            {showLocationQuestion && (
+              <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <MapPin className="w-4 h-4 text-primary" />
+                  <span className="text-sm font-medium text-foreground">
+                    Você mora em <strong className="text-primary">{detectedCity}{detectedState ? `/${detectedState}` : ''}</strong>, correto?
+                  </span>
+                </div>
+                <div className="flex gap-2">
+                  <Button type="button" size="sm" onClick={handleConfirmLocation} className="btn-orange-gradient text-xs gap-1">
+                    <CheckCircle className="w-3.5 h-3.5" /> Sim, correto!
+                  </Button>
+                  <Button type="button" size="sm" variant="outline" onClick={handleDenyLocation} className="text-xs gap-1 border-border/50">
+                    <XCircle className="w-3.5 h-3.5" /> Não, vou corrigir
+                  </Button>
+                </div>
+              </motion.div>
+            )}
+
+            {locationConfirmed === true && (
+              <div className="flex items-center gap-2 text-sm text-primary">
+                <CheckCircle className="w-4 h-4" />
+                <span>Localização confirmada: {cidade}/{estado}</span>
+              </div>
+            )}
+
+            {(locationConfirmed === false || !detectedCity) && !detectingLocation && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <MapPin className="w-4 h-4 text-primary" />
+                <span>Informe sua localização</span>
+              </div>
+            )}
+
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label className="text-xs text-muted-foreground">Cidade</Label>
-                <Input value={cidade} onChange={e => setCidade(e.target.value)} placeholder="Sua cidade" className="h-10 bg-secondary/30 border-border/30" required />
+                <Input
+                  value={cidade}
+                  onChange={e => { setCidade(e.target.value); if (locationConfirmed === true) setLocationConfirmed(null); }}
+                  placeholder="Sua cidade"
+                  className="h-10 bg-secondary/30 border-border/30"
+                  required
+                />
               </div>
               <div className="space-y-1.5">
                 <Label className="text-xs text-muted-foreground">Estado</Label>
-                <Select value={estado} onValueChange={setEstado}>
+                <Select value={estado} onValueChange={v => { setEstado(v); if (locationConfirmed === true) setLocationConfirmed(null); }}>
                   <SelectTrigger className="h-10 bg-secondary/30 border-border/30"><SelectValue placeholder="UF" /></SelectTrigger>
                   <SelectContent>{ESTADOS_BR.map(uf => <SelectItem key={uf} value={uf}>{uf}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
             </div>
+
+            <p className="text-[11px] text-muted-foreground leading-relaxed">
+              📍 Usamos sua localização para mostrar o engajamento da torcida na sua região.
+            </p>
           </div>
 
           <Button type="submit" className="w-full h-14 font-bold text-lg btn-orange-gradient rounded-xl" disabled={!canSubmit || saving}>
