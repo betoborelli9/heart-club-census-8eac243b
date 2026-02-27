@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Heart, Search, Check, Loader2, Shield, X, Sparkles } from "lucide-react";
+import { Heart, Search, Check, Loader2, Shield, X, Sparkles, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useNavigate } from "react-router-dom";
@@ -14,12 +14,13 @@ import {
 
 interface ClubResult {
   id: string | null;
-  api_id: number;
+  api_id: number | null;
   name: string;
   shortName: string;
   city: string | null;
   country: string | null;
   logo: string | null;
+  isCustom?: boolean;
 }
 
 const Voting = () => {
@@ -40,7 +41,6 @@ const Voting = () => {
   const [sympathyClubs, setSympathyClubs] = useState<ClubResult[]>([]);
   const [sympathyLoading, setSympathyLoading] = useState(false);
   const [sympathyOpen, setSympathyOpen] = useState(false);
-  const [activeSympathyIdx, setActiveSympathyIdx] = useState(0);
 
   const [showConfirm, setShowConfirm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -51,7 +51,6 @@ const Voting = () => {
   useEffect(() => {
     if (!isLoading && !isAuthenticated) navigate("/login", { replace: true });
     if (!isLoading && isAuthenticated && !isProfileComplete) navigate("/profile-setup", { replace: true });
-    // NO hasVoted redirect — open for testing
   }, [isLoading, isAuthenticated, isProfileComplete, navigate]);
 
   const searchClubs = useCallback(async (query: string, setter: (r: ClubResult[]) => void, setLoading: (b: boolean) => void) => {
@@ -100,21 +99,49 @@ const Voting = () => {
     return () => clearTimeout(sympathyDebounce.current);
   }, [sympathySearch, searchClubs]);
 
+  const createCustomClub = (name: string): ClubResult => ({
+    id: null,
+    api_id: null,
+    name: name.trim(),
+    shortName: name.trim(),
+    city: null,
+    country: null,
+    logo: null,
+    isCustom: true,
+  });
+
   const selectHeart = (club: ClubResult) => {
     setHeartClub(club);
     setHeartSearch("");
     setHeartResults([]);
     setHeartOpen(false);
+    toast({ title: `${club.name} selecionado! ❤️`, duration: 1500 });
+  };
+
+  const selectHeartCustom = () => {
+    if (heartSearch.trim().length < 2) return;
+    selectHeart(createCustomClub(heartSearch));
   };
 
   const selectSympathy = (club: ClubResult) => {
     if (sympathyClubs.length >= 4) return;
-    if (sympathyClubs.find(c => c.api_id === club.api_id)) return;
-    if (heartClub && heartClub.api_id === club.api_id) return;
+    const isDuplicate = sympathyClubs.find(c =>
+      (c.api_id && c.api_id === club.api_id) ||
+      (!c.api_id && !club.api_id && c.name.toLowerCase() === club.name.toLowerCase())
+    );
+    if (isDuplicate) return;
+    if (heartClub && heartClub.api_id && heartClub.api_id === club.api_id) return;
+    if (heartClub && !heartClub.api_id && heartClub.name.toLowerCase() === club.name.toLowerCase()) return;
     setSympathyClubs(prev => [...prev, club]);
     setSympathySearch("");
     setSympathyResults([]);
     setSympathyOpen(false);
+    toast({ title: `${club.name} adicionado! ✨`, duration: 1500 });
+  };
+
+  const selectSympathyCustom = () => {
+    if (sympathySearch.trim().length < 2) return;
+    selectSympathy(createCustomClub(sympathySearch));
   };
 
   const removeSympathy = (idx: number) => {
@@ -135,7 +162,6 @@ const Voting = () => {
     setSubmitting(true);
     try {
       const fingerprint = await generateFingerprint();
-      // Heart vote
       const { error } = await supabase.from("votos").insert({
         user_id: user.id,
         clube_nome: heartClub.name,
@@ -146,7 +172,6 @@ const Voting = () => {
       });
       if (error) throw error;
 
-      // Sympathy votes
       for (const sym of sympathyClubs) {
         await supabase.from("votos").insert({
           user_id: user.id,
@@ -174,22 +199,38 @@ const Voting = () => {
     return <div className="min-h-screen bg-background flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>;
   }
 
-  const ClubDropdown = ({ results, loading, open, onSelect }: { results: ClubResult[]; loading: boolean; open: boolean; onSelect: (c: ClubResult) => void }) => {
+  const ClubDropdown = ({ results, loading, open, onSelect, searchQuery, onCustom }: {
+    results: ClubResult[];
+    loading: boolean;
+    open: boolean;
+    onSelect: (c: ClubResult) => void;
+    searchQuery: string;
+    onCustom: () => void;
+  }) => {
     if (!open) return null;
     return (
-      <div className="absolute top-full left-0 right-0 z-50 mt-1 glass-card rounded-xl border border-border/30 max-h-60 overflow-y-auto">
+      <div className="absolute top-full left-0 right-0 z-50 mt-1 glass-card rounded-xl border border-border/30 max-h-72 overflow-y-auto">
         {loading && (
           <div className="flex items-center justify-center py-4">
             <Loader2 className="w-5 h-5 animate-spin text-primary" />
-            <span className="ml-2 text-sm text-muted-foreground">Buscando clubes...</span>
+            <span className="ml-2 text-sm text-muted-foreground">Buscando clubes no mundo todo...</span>
           </div>
         )}
-        {!loading && results.length === 0 && (
-          <div className="py-4 text-center text-sm text-muted-foreground">Nenhum clube encontrado</div>
+        {!loading && results.length === 0 && searchQuery.trim().length >= 2 && (
+          <div className="py-3 px-4 text-center space-y-2">
+            <p className="text-sm text-muted-foreground">Nenhum clube encontrado para "{searchQuery}"</p>
+            <button
+              onClick={onCustom}
+              className="inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline"
+            >
+              <Plus className="w-4 h-4" />
+              Adicionar "{searchQuery.trim()}" manualmente
+            </button>
+          </div>
         )}
         {results.map((club, i) => (
           <button
-            key={`${club.api_id}-${i}`}
+            key={`${club.api_id || club.name}-${i}`}
             onClick={() => onSelect(club)}
             className="w-full flex items-center gap-3 px-4 py-3 hover:bg-primary/10 transition-colors text-left border-b border-border/10 last:border-0"
           >
@@ -206,6 +247,19 @@ const Voting = () => {
             </div>
           </button>
         ))}
+        {!loading && results.length > 0 && searchQuery.trim().length >= 2 && (
+          <button
+            onClick={onCustom}
+            className="w-full flex items-center gap-3 px-4 py-3 hover:bg-primary/10 transition-colors text-left border-t border-border/20"
+          >
+            <div className="w-8 h-8 rounded bg-primary/10 flex items-center justify-center">
+              <Plus className="w-4 h-4 text-primary" />
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Não encontrou? Adicionar <strong className="text-foreground">"{searchQuery.trim()}"</strong>
+            </p>
+          </button>
+        )}
       </div>
     );
   };
@@ -221,7 +275,7 @@ const Voting = () => {
           <img src={logo} alt="Heart Club" className="mx-auto w-20 h-20 object-contain" />
           <h1 className="text-2xl font-display font-bold text-foreground">Voto Sagrado</h1>
           <p className="text-sm text-muted-foreground max-w-xs mx-auto">
-            Escolha seu Clube do Coração e até 4 clubes de simpatia.
+            Escolha seu Clube do Coração e até 4 clubes de simpatia. Busque qualquer time do planeta! 🌍
           </p>
         </motion.div>
 
@@ -233,27 +287,44 @@ const Voting = () => {
           </label>
 
           {heartClub ? (
-            <div className="flex items-center gap-3 glass-card glow-border rounded-xl p-4">
-              {heartClub.logo && <img src={heartClub.logo} alt="" className="w-10 h-10 object-contain" />}
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              className="flex items-center gap-3 glass-card glow-border rounded-xl p-4"
+            >
+              {heartClub.logo ? (
+                <img src={heartClub.logo} alt="" className="w-10 h-10 object-contain" />
+              ) : (
+                <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-lg">⚽</div>
+              )}
               <div className="flex-1 min-w-0">
                 <p className="font-bold text-foreground">{heartClub.name}</p>
-                <p className="text-xs text-muted-foreground">{[heartClub.city, heartClub.country].filter(Boolean).join(" • ")}</p>
+                <p className="text-xs text-muted-foreground">
+                  {heartClub.isCustom ? "Adicionado manualmente" : [heartClub.city, heartClub.country].filter(Boolean).join(" • ")}
+                </p>
               </div>
               <button onClick={() => setHeartClub(null)} className="text-muted-foreground hover:text-foreground p-1">
                 <X className="w-4 h-4" />
               </button>
-            </div>
+            </motion.div>
           ) : (
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-primary" />
               <Input
                 className="pl-10 h-12 bg-secondary/30 border-primary/30 focus:border-primary focus:shadow-[0_0_15px_rgba(255,102,0,0.2)]"
-                placeholder="Buscar seu clube do coração..."
+                placeholder="Buscar qualquer clube do mundo..."
                 value={heartSearch}
                 onChange={e => setHeartSearch(e.target.value)}
                 autoComplete="off"
               />
-              <ClubDropdown results={heartResults} loading={heartLoading} open={heartOpen} onSelect={selectHeart} />
+              <ClubDropdown
+                results={heartResults}
+                loading={heartLoading}
+                open={heartOpen}
+                onSelect={selectHeart}
+                searchQuery={heartSearch}
+                onCustom={selectHeartCustom}
+              />
             </div>
           )}
         </motion.div>
@@ -267,18 +338,32 @@ const Voting = () => {
           </label>
 
           {/* Selected sympathy clubs */}
-          {sympathyClubs.map((club, idx) => (
-            <div key={`sym-${idx}`} className="flex items-center gap-3 glass-card rounded-xl p-3 border border-border/20">
-              {club.logo && <img src={club.logo} alt="" className="w-8 h-8 object-contain" />}
-              <div className="flex-1 min-w-0">
-                <p className="font-medium text-foreground text-sm">{club.name}</p>
-                <p className="text-xs text-muted-foreground">{[club.city, club.country].filter(Boolean).join(" • ")}</p>
-              </div>
-              <button onClick={() => removeSympathy(idx)} className="text-muted-foreground hover:text-destructive p-1">
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-          ))}
+          <AnimatePresence>
+            {sympathyClubs.map((club, idx) => (
+              <motion.div
+                key={`sym-${club.name}-${idx}`}
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 20 }}
+                className="flex items-center gap-3 glass-card rounded-xl p-3 border border-border/20"
+              >
+                {club.logo ? (
+                  <img src={club.logo} alt="" className="w-8 h-8 object-contain" />
+                ) : (
+                  <div className="w-8 h-8 rounded bg-secondary flex items-center justify-center text-sm">⚽</div>
+                )}
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium text-foreground text-sm">{club.name}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {club.isCustom ? "Adicionado manualmente" : [club.city, club.country].filter(Boolean).join(" • ")}
+                  </p>
+                </div>
+                <button onClick={() => removeSympathy(idx)} className="text-muted-foreground hover:text-destructive p-1">
+                  <X className="w-4 h-4" />
+                </button>
+              </motion.div>
+            ))}
+          </AnimatePresence>
 
           {sympathyClubs.length < 4 && (
             <div className="relative">
@@ -290,7 +375,14 @@ const Voting = () => {
                 onChange={e => setSympathySearch(e.target.value)}
                 autoComplete="off"
               />
-              <ClubDropdown results={sympathyResults} loading={sympathyLoading} open={sympathyOpen} onSelect={selectSympathy} />
+              <ClubDropdown
+                results={sympathyResults}
+                loading={sympathyLoading}
+                open={sympathyOpen}
+                onSelect={selectSympathy}
+                searchQuery={sympathySearch}
+                onCustom={selectSympathyCustom}
+              />
             </div>
           )}
         </motion.div>
