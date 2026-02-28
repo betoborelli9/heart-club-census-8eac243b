@@ -41,9 +41,9 @@ const Dashboard = () => {
     <div className="min-h-screen bg-background">
       {/* Header — Preto Absoluto #000 */}
       <header className="sticky top-0 z-40 border-b border-border/20" style={{ backgroundColor: "#000000" }}>
-        <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between">
+        <div className="max-w-5xl mx-auto px-4 h-12 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <img src={logo} alt="Heart Club" className="w-9 h-9 object-contain" />
+            <img src={logo} alt="Heart Club" className="object-contain max-h-[30px] sm:max-h-[40px]" />
             <span className="text-sm font-display font-bold text-white hidden sm:inline">Heart Club</span>
           </div>
           <div className="flex items-center gap-3">
