@@ -22,14 +22,15 @@ const Splash = () => {
           initial={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.6 }}
-          className="fixed inset-0 z-50 bg-background flex items-center justify-center overflow-hidden"
+          className="fixed inset-0 z-50 bg-background overflow-hidden"
+          style={{ width: "100vw", height: "100vh" }}
         >
           <video
             autoPlay
             muted
             playsInline
-            className="absolute inset-0 w-full h-full object-cover"
-            style={{ objectFit: "cover", minWidth: "100%", minHeight: "100%" }}
+            className="absolute inset-0 object-cover"
+            style={{ width: "100vw", height: "100vh", objectFit: "cover" }}
             src={splashVideo}
           />
           <div className="absolute inset-0 bg-background/30" />
