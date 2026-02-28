@@ -14,6 +14,87 @@ export type Database = {
   }
   public: {
     Tables: {
+      ambassador_levels: {
+        Row: {
+          created_at: string
+          id: string
+          level: string
+          referral_count: number
+          scope_type: string
+          scope_value: string
+          social_verified: boolean
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          level?: string
+          referral_count?: number
+          scope_type: string
+          scope_value: string
+          social_verified?: boolean
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          level?: string
+          referral_count?: number
+          scope_type?: string
+          scope_value?: string
+          social_verified?: boolean
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      club_colors: {
+        Row: {
+          accent_color: string | null
+          api_id: number | null
+          club_name: string
+          conflict_reported: boolean
+          created_at: string
+          id: string
+          is_locked: boolean
+          primary_color: string
+          secondary_color: string
+          suggested_by: string | null
+          updated_at: string
+          validated_by: string | null
+        }
+        Insert: {
+          accent_color?: string | null
+          api_id?: number | null
+          club_name: string
+          conflict_reported?: boolean
+          created_at?: string
+          id?: string
+          is_locked?: boolean
+          primary_color?: string
+          secondary_color?: string
+          suggested_by?: string | null
+          updated_at?: string
+          validated_by?: string | null
+        }
+        Update: {
+          accent_color?: string | null
+          api_id?: number | null
+          club_name?: string
+          conflict_reported?: boolean
+          created_at?: string
+          id?: string
+          is_locked?: boolean
+          primary_color?: string
+          secondary_color?: string
+          suggested_by?: string | null
+          updated_at?: string
+          validated_by?: string | null
+        }
+        Relationships: []
+      }
       clubes_cache: {
         Row: {
           api_id: number | null
@@ -53,6 +134,7 @@ export type Database = {
       profiles: {
         Row: {
           cidade: string | null
+          classe_social: string | null
           data_nascimento: string | null
           device_hardware: string | null
           estado: string | null
@@ -67,6 +149,7 @@ export type Database = {
         }
         Insert: {
           cidade?: string | null
+          classe_social?: string | null
           data_nascimento?: string | null
           device_hardware?: string | null
           estado?: string | null
@@ -81,6 +164,7 @@ export type Database = {
         }
         Update: {
           cidade?: string | null
+          classe_social?: string | null
           data_nascimento?: string | null
           device_hardware?: string | null
           estado?: string | null
