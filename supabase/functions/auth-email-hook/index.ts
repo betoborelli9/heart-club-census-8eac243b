@@ -94,7 +94,7 @@ Deno.serve(async (req) => {
 
     if (error) {
       console.error("Email send error:", error);
-      return new Response(JSON.stringify({ error: error.message }), {
+      return new Response(JSON.stringify({ error: "Email delivery failed" }), {
         status: 500,
         headers: { "Content-Type": "application/json" },
       });
@@ -106,7 +106,7 @@ Deno.serve(async (req) => {
     });
   } catch (err) {
     console.error("auth-email-hook error:", err);
-    return new Response(JSON.stringify({ error: String(err) }), {
+    return new Response(JSON.stringify({ error: "Email service temporarily unavailable" }), {
       status: 500,
       headers: { "Content-Type": "application/json" },
     });
