@@ -13,6 +13,7 @@ interface Profile {
   pais: string | null;
   faixa_etaria: string | null;
   profissao: string | null;
+  classe_social: string | null;
   device_hardware: string | null;
   role: string | null;
 }

@@ -1,1 +1,7 @@
 project_id = "tmttlchkqjtbusfdwyrx"
+
+[functions.search-clubs]
+verify_jwt = false
+
+[functions.auth-email-hook]
+verify_jwt = false
