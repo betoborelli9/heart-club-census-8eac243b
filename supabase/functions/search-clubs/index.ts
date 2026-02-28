@@ -6,15 +6,58 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// Simple in-memory rate limiter (per IP, resets on cold start)
+const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
+const RATE_LIMIT = 15; // requests per window
+const RATE_WINDOW_MS = 60_000; // 1 minute
+
+function isRateLimited(ip: string): boolean {
+  const now = Date.now();
+  const entry = rateLimitMap.get(ip);
+  if (!entry || now > entry.resetAt) {
+    rateLimitMap.set(ip, { count: 1, resetAt: now + RATE_WINDOW_MS });
+    return false;
+  }
+  entry.count++;
+  return entry.count > RATE_LIMIT;
+}
+
+// Input validation: allow letters (unicode), digits, spaces, hyphens, dots
+const VALID_QUERY_RE = /^[\p{L}\p{N}\s\-\.]+$/u;
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
 
   try {
-    const { query } = await req.json();
+    // Rate limiting by IP
+    const clientIp = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+    if (isRateLimited(clientIp)) {
+      return new Response(JSON.stringify({ error: "Too many requests. Please try again later." }), {
+        status: 429,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const body = await req.json();
+    const query = typeof body.query === "string" ? body.query.trim() : "";
+
+    // Input validation
     if (!query || query.length < 2) {
       return new Response(JSON.stringify([]), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+    if (query.length > 100) {
+      return new Response(JSON.stringify({ error: "Search query too long" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    if (!VALID_QUERY_RE.test(query)) {
+      return new Response(JSON.stringify({ error: "Invalid search query" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -29,7 +72,6 @@ serve(async (req) => {
       .limit(15);
 
     if (cached && cached.length >= 3) {
-      console.log(`Cache hit for "${query}": ${cached.length} results`);
       const results = cached.map((c: any) => ({
         id: c.id,
         api_id: c.api_id,
@@ -48,7 +90,6 @@ serve(async (req) => {
     // 2. Fetch from API-Football via RapidAPI (only if cache insufficient)
     const apiKey = Deno.env.get("FOOTBALL_API_KEY");
     if (!apiKey) {
-      // Return whatever cache we have if no API key
       const fallback = (cached || []).map((c: any) => ({
         id: c.id, api_id: c.api_id, name: c.nome, shortName: c.nome_curto || c.nome,
         city: c.cidade, country: c.pais, countryCode: c.pais_codigo, logo: c.escudo_url,
@@ -57,8 +98,6 @@ serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-
-    console.log(`API call for "${query}" (cache had ${cached?.length || 0} results)`);
 
     const apiRes = await fetch(
       `https://v3.football.api-sports.io/teams?search=${encodeURIComponent(query)}`,
@@ -114,7 +153,8 @@ serve(async (req) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {
-    return new Response(JSON.stringify({ error: err.message }), {
+    console.error("search-clubs error:", err);
+    return new Response(JSON.stringify({ error: "Search temporarily unavailable" }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
