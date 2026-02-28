@@ -29,9 +29,10 @@ const Splash = () => {
             muted
             playsInline
             className="absolute inset-0 w-full h-full object-cover"
+            style={{ objectFit: "cover", minWidth: "100%", minHeight: "100%" }}
             src={splashVideo}
           />
-          <div className="absolute inset-0 bg-background/40" />
+          <div className="absolute inset-0 bg-background/30" />
         </motion.div>
       )}
     </AnimatePresence>

@@ -21,14 +21,15 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // 1. Check cache first
+    // 1. ALWAYS check local cache first to save API credits
     const { data: cached } = await supabase
       .from("clubes_cache")
       .select("*")
       .ilike("nome", `%${query}%`)
-      .limit(10);
+      .limit(15);
 
     if (cached && cached.length >= 3) {
+      console.log(`Cache hit for "${query}": ${cached.length} results`);
       const results = cached.map((c: any) => ({
         id: c.id,
         api_id: c.api_id,
@@ -44,20 +45,27 @@ serve(async (req) => {
       });
     }
 
-    // 2. Fetch from API-Football
+    // 2. Fetch from API-Football via RapidAPI (only if cache insufficient)
     const apiKey = Deno.env.get("FOOTBALL_API_KEY");
     if (!apiKey) {
-      return new Response(JSON.stringify({ error: "FOOTBALL_API_KEY not configured" }), {
-        status: 500,
+      // Return whatever cache we have if no API key
+      const fallback = (cached || []).map((c: any) => ({
+        id: c.id, api_id: c.api_id, name: c.nome, shortName: c.nome_curto || c.nome,
+        city: c.cidade, country: c.pais, countryCode: c.pais_codigo, logo: c.escudo_url,
+      }));
+      return new Response(JSON.stringify(fallback), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
+    console.log(`API call for "${query}" (cache had ${cached?.length || 0} results)`);
 
     const apiRes = await fetch(
       `https://v3.football.api-sports.io/teams?search=${encodeURIComponent(query)}`,
       {
         headers: {
-          "x-apisports-key": apiKey,
+          "x-rapidapi-key": apiKey,
+          "x-rapidapi-host": "v3.football.api-sports.io",
         },
       }
     );
@@ -66,7 +74,7 @@ serve(async (req) => {
     const teams = apiData?.response || [];
 
     const results = teams.slice(0, 15).map((item: any) => ({
-      id: null, // will be set after cache
+      id: null,
       api_id: item.team.id,
       name: item.team.name,
       shortName: item.team.code || item.team.name,
@@ -76,22 +84,33 @@ serve(async (req) => {
       logo: item.team.logo,
     }));
 
-    // 3. Cache results (upsert by api_id)
+    // 3. Cache results immediately to save future API credits
     for (const r of results) {
-      await supabase.from("clubes_cache").upsert(
-        {
-          api_id: r.api_id,
-          nome: r.name,
-          nome_curto: r.shortName,
-          cidade: r.city,
-          pais: r.country,
-          escudo_url: r.logo,
-        },
-        { onConflict: "api_id" }
-      );
+      if (r.api_id) {
+        await supabase.from("clubes_cache").upsert(
+          {
+            api_id: r.api_id,
+            nome: r.name,
+            nome_curto: r.shortName,
+            cidade: r.city,
+            pais: r.country,
+            escudo_url: r.logo,
+          },
+          { onConflict: "api_id" }
+        );
+      }
     }
 
-    return new Response(JSON.stringify(results), {
+    // Merge with any cached results not in API response
+    const apiIds = new Set(results.filter((r: any) => r.api_id).map((r: any) => r.api_id));
+    const extraCached = (cached || [])
+      .filter((c: any) => !apiIds.has(c.api_id))
+      .map((c: any) => ({
+        id: c.id, api_id: c.api_id, name: c.nome, shortName: c.nome_curto || c.nome,
+        city: c.cidade, country: c.pais, countryCode: c.pais_codigo, logo: c.escudo_url,
+      }));
+
+    return new Response(JSON.stringify([...results, ...extraCached]), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {

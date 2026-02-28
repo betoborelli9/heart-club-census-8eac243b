@@ -29,7 +29,7 @@ const Login = () => {
     setLoadingProvider(provider);
     const { error } = await supabase.auth.signInWithOAuth({
       provider,
-      options: { redirectTo: "https://www.heartclubapp.com/profile-setup" },
+      options: { redirectTo: `${window.location.origin}/login` },
     });
     if (error) {
       toast({ variant: "destructive", title: "Erro", description: error.message });
@@ -43,7 +43,7 @@ const Login = () => {
     setLoadingProvider("magic");
     const { error } = await supabase.auth.signInWithOtp({
       email,
-      options: { emailRedirectTo: "https://www.heartclubapp.com/profile-setup" },
+      options: { emailRedirectTo: `${window.location.origin}/login` },
     });
     if (error) {
       toast({ variant: "destructive", title: "Erro", description: error.message });
