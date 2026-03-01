@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { MapPin, Loader2, ChevronRight, CheckCircle, XCircle } from "lucide-react";
+import { MapPin, Loader2, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -25,10 +25,6 @@ const ProfileSetup = () => {
   const [genero, setGenero] = useState("");
   const [cidade, setCidade] = useState("");
   const [estado, setEstado] = useState("");
-  const [detectingLocation, setDetectingLocation] = useState(false);
-  const [detectedCity, setDetectedCity] = useState<string | null>(null);
-  const [detectedState, setDetectedState] = useState<string | null>(null);
-  const [locationConfirmed, setLocationConfirmed] = useState<boolean | null>(null);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -46,36 +42,6 @@ const ProfileSetup = () => {
       setNome(user.user_metadata?.full_name || "");
     }
   }, [profile, user]);
-
-  useEffect(() => {
-    if (!cidade && !estado) {
-      setDetectingLocation(true);
-      fetch("https://ipapi.co/json/")
-        .then(r => r.json())
-        .then(data => {
-          if (data.city) {
-            setDetectedCity(data.city);
-            setCidade(data.city);
-          }
-          if (data.region_code) {
-            setDetectedState(data.region_code);
-            setEstado(data.region_code);
-          }
-        })
-        .catch(() => {})
-        .finally(() => setDetectingLocation(false));
-    }
-  }, []);
-
-  const handleConfirmLocation = () => {
-    setLocationConfirmed(true);
-  };
-
-  const handleDenyLocation = () => {
-    setLocationConfirmed(false);
-    setCidade("");
-    setEstado("");
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -104,8 +70,6 @@ const ProfileSetup = () => {
   if (isLoading) {
     return <div className="min-h-screen bg-background flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>;
   }
-
-  const showLocationQuestion = detectedCity && locationConfirmed === null && !detectingLocation;
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center px-4 relative overflow-hidden">
@@ -144,53 +108,17 @@ const ProfileSetup = () => {
           </div>
 
           <div className="glass-card rounded-xl p-5 space-y-4">
-            {/* Location detection banner */}
-            {detectingLocation && (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Loader2 className="w-4 h-4 animate-spin text-primary" />
-                <span>Detectando sua localização...</span>
-              </div>
-            )}
-
-            {showLocationQuestion && (
-              <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="space-y-3">
-                <div className="flex items-center gap-2">
-                  <MapPin className="w-4 h-4 text-primary" />
-                  <span className="text-sm font-medium text-foreground">
-                    Você mora em <strong className="text-primary">{detectedCity}{detectedState ? `/${detectedState}` : ''}</strong>, correto?
-                  </span>
-                </div>
-                <div className="flex gap-2">
-                  <Button type="button" size="sm" onClick={handleConfirmLocation} className="btn-orange-gradient text-xs gap-1">
-                    <CheckCircle className="w-3.5 h-3.5" /> Sim, correto!
-                  </Button>
-                  <Button type="button" size="sm" variant="outline" onClick={handleDenyLocation} className="text-xs gap-1 border-border/50">
-                    <XCircle className="w-3.5 h-3.5" /> Não, vou corrigir
-                  </Button>
-                </div>
-              </motion.div>
-            )}
-
-            {locationConfirmed === true && (
-              <div className="flex items-center gap-2 text-sm text-primary">
-                <CheckCircle className="w-4 h-4" />
-                <span>Localização confirmada: {cidade}/{estado}</span>
-              </div>
-            )}
-
-            {(locationConfirmed === false || !detectedCity) && !detectingLocation && (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <MapPin className="w-4 h-4 text-primary" />
-                <span>Informe sua localização</span>
-              </div>
-            )}
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <MapPin className="w-4 h-4 text-primary" />
+              <span>Informe sua localização</span>
+            </div>
 
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label className="text-xs text-muted-foreground">Cidade</Label>
                 <Input
                   value={cidade}
-                  onChange={e => { setCidade(e.target.value); if (locationConfirmed === true) setLocationConfirmed(null); }}
+                  onChange={e => setCidade(e.target.value)}
                   placeholder="Sua cidade"
                   className="h-10 bg-secondary/30 border-border/30"
                   required
@@ -198,7 +126,7 @@ const ProfileSetup = () => {
               </div>
               <div className="space-y-1.5">
                 <Label className="text-xs text-muted-foreground">Estado</Label>
-                <Select value={estado} onValueChange={v => { setEstado(v); if (locationConfirmed === true) setLocationConfirmed(null); }}>
+                <Select value={estado} onValueChange={setEstado}>
                   <SelectTrigger className="h-10 bg-secondary/30 border-border/30"><SelectValue placeholder="UF" /></SelectTrigger>
                   <SelectContent>{ESTADOS_BR.map(uf => <SelectItem key={uf} value={uf}>{uf}</SelectItem>)}</SelectContent>
                 </Select>
