@@ -1,11 +1,13 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { Eye, Map, Trophy, LogOut, Loader2, Swords, Award } from "lucide-react";
+import { Eye, Map, Trophy, LogOut, Loader2, Swords } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { useUser } from "@/contexts/UserContext";
+import { supabase } from "@/integrations/supabase/client";
+import { getTeamTheme } from "@/data/teamColors";
 import logo from "@/assets/logo.png";
 
 import MatchCenter from "@/components/dashboard/MatchCenter";
@@ -22,10 +24,34 @@ import AmbassadorHierarchy from "@/components/dashboard/AmbassadorHierarchy";
 const Dashboard = () => {
   const navigate = useNavigate();
   const { user, profile, isLoading, isAuthenticated, signOut } = useUser();
+  const [teamClub, setTeamClub] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) navigate("/login", { replace: true });
   }, [isLoading, isAuthenticated, navigate]);
+
+  // Fetch user's voted club for dynamic theming
+  useEffect(() => {
+    if (!user) return;
+    supabase
+      .from("votos")
+      .select("clube_nome")
+      .eq("user_id", user.id)
+      .limit(1)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data?.clube_nome) setTeamClub(data.clube_nome);
+      });
+  }, [user]);
+
+  const theme = getTeamTheme(teamClub);
+
+  // Apply CSS custom properties for team theming
+  const teamCSSVars = {
+    "--primary-team": theme.primaryHex,
+    "--primary-team-hsl": theme.primary,
+    "--glow-team": `0 0 30px ${theme.glow}`,
+  } as React.CSSProperties;
 
   if (isLoading || !profile) {
     return (
@@ -38,7 +64,7 @@ const Dashboard = () => {
   const displayName = profile.nome_exibicao || user?.user_metadata?.full_name || "Torcedor";
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background" style={teamCSSVars}>
       {/* Header — Preto Absoluto #000 */}
       <header className="sticky top-0 z-40 border-b border-border/20" style={{ backgroundColor: "#000000" }}>
         <div className="max-w-5xl mx-auto px-4 h-12 flex items-center justify-between">
@@ -68,15 +94,21 @@ const Dashboard = () => {
           <ProgressiveProfile />
         </div>
 
-        {/* User Card */}
+        {/* User Card — Team-themed border */}
         <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="mb-6">
-          <Card className="glass-card border-primary/20">
+          <Card
+            className="glass-card"
+            style={{
+              borderColor: theme.primaryHex,
+              borderWidth: "1px",
+              boxShadow: `0 0 20px ${theme.glow}`,
+            }}
+          >
             <CardContent className="pt-6">
               <div className="flex items-center gap-4">
                 <div className="relative">
                   <img src={logo} alt="" className="w-14 h-14 object-contain" />
-                  {/* Ambassador Badge */}
-                  <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full flex items-center justify-center text-xs" style={{ backgroundColor: "hsl(30, 60%, 50%)" }}>
+                  <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full flex items-center justify-center text-xs" style={{ backgroundColor: theme.primaryHex }}>
                     🥉
                   </div>
                 </div>
@@ -85,6 +117,11 @@ const Dashboard = () => {
                   <p className="text-sm text-muted-foreground">
                     {profile.cidade}/{profile.estado} • Embaixador Bronze 🏅
                   </p>
+                  {teamClub && (
+                    <p className="text-xs mt-1 font-semibold" style={{ color: theme.primaryHex }}>
+                      ❤️ {teamClub}
+                    </p>
+                  )}
                 </div>
               </div>
             </CardContent>
@@ -93,16 +130,33 @@ const Dashboard = () => {
 
         <Tabs defaultValue="overview" className="w-full">
           <TabsList className="w-full grid grid-cols-4 mb-6 glass-card border border-border/30 p-1">
-            <TabsTrigger value="overview" className="gap-1 text-xs data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+            <TabsTrigger
+              value="overview"
+              className="gap-1 text-xs data-[state=active]:text-white"
+              style={{ "--tab-active-bg": theme.primaryHex } as React.CSSProperties}
+              data-team-tab
+            >
               <Eye className="w-3.5 h-3.5" /> <span className="hidden sm:inline">Visão Geral</span>
             </TabsTrigger>
-            <TabsTrigger value="map" className="gap-1 text-xs data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+            <TabsTrigger
+              value="map"
+              className="gap-1 text-xs data-[state=active]:text-white"
+              data-team-tab
+            >
               <Map className="w-3.5 h-3.5" /> <span className="hidden sm:inline">Mapa</span>
             </TabsTrigger>
-            <TabsTrigger value="duel" className="gap-1 text-xs data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+            <TabsTrigger
+              value="duel"
+              className="gap-1 text-xs data-[state=active]:text-white"
+              data-team-tab
+            >
               <Swords className="w-3.5 h-3.5" /> <span className="hidden sm:inline">Duelo</span>
             </TabsTrigger>
-            <TabsTrigger value="ranking" className="gap-1 text-xs data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+            <TabsTrigger
+              value="ranking"
+              className="gap-1 text-xs data-[state=active]:text-white"
+              data-team-tab
+            >
               <Trophy className="w-3.5 h-3.5" /> <span className="hidden sm:inline">Ranking</span>
             </TabsTrigger>
           </TabsList>
@@ -140,6 +194,13 @@ const Dashboard = () => {
           </p>
         </div>
       </main>
+
+      {/* Dynamic team theming for active tabs */}
+      <style>{`
+        [data-team-tab][data-state="active"] {
+          background-color: var(--primary-team, hsl(24, 100%, 50%)) !important;
+        }
+      `}</style>
     </div>
   );
 };
