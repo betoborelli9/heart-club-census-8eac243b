@@ -218,6 +218,41 @@ export type Database = {
         }
         Relationships: []
       }
+      votos_tracking: {
+        Row: {
+          created_at: string | null
+          fingerprint: string | null
+          id: string
+          ip_address: string | null
+          is_suspicious: boolean | null
+          voto_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          fingerprint?: string | null
+          id?: string
+          ip_address?: string | null
+          is_suspicious?: boolean | null
+          voto_id: string
+        }
+        Update: {
+          created_at?: string | null
+          fingerprint?: string | null
+          id?: string
+          ip_address?: string | null
+          is_suspicious?: boolean | null
+          voto_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "votos_tracking_voto_id_fkey"
+            columns: ["voto_id"]
+            isOneToOne: false
+            referencedRelation: "votos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
