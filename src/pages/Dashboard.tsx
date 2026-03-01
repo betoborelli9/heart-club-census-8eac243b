@@ -10,14 +10,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { getTeamTheme } from "@/data/teamColors";
 import logo from "@/assets/logo.png";
 
-import MatchCenter from "@/components/dashboard/MatchCenter";
 import HeatmapSection from "@/components/dashboard/HeatmapSection";
 import CensusStats from "@/components/dashboard/CensusStats";
 import NewsCarousel from "@/components/dashboard/NewsCarousel";
 import Marketplace from "@/components/dashboard/Marketplace";
 import AmbassadorSection from "@/components/dashboard/AmbassadorCard";
-import ProgressiveProfile from "@/components/dashboard/ProgressiveProfile";
-import SocialLock from "@/components/dashboard/SocialLock";
 import CensusDuel from "@/components/dashboard/CensusDuel";
 import AmbassadorHierarchy from "@/components/dashboard/AmbassadorHierarchy";
 
@@ -89,11 +86,6 @@ const Dashboard = () => {
       </header>
 
       <main className="max-w-5xl mx-auto px-4 py-6">
-        {/* Progressive Profile Questions */}
-        <div className="mb-6">
-          <ProgressiveProfile />
-        </div>
-
         {/* User Card — Team-themed border */}
         <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="mb-6">
           <Card
@@ -162,13 +154,7 @@ const Dashboard = () => {
           </TabsList>
 
           <TabsContent value="overview" className="space-y-6">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <MatchCenter />
-              <div className="space-y-6">
-                <CensusStats />
-                <SocialLock />
-              </div>
-            </div>
+            <CensusStats />
             <NewsCarousel />
             <Marketplace />
           </TabsContent>
