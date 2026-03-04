@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { 
   Eye, Map, Trophy, LogOut, Loader2, Swords, 
-  Search, Target, TrendingUp 
+  Search, Calendar, Target, TrendingUp, Newspaper 
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -24,11 +24,12 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const { user, profile, isLoading, signOut } = useUser();
   
+  // ESTADOS GLOBAIS DA PÁGINA
   const [activeTeam, setActiveTeam] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearching, setIsSearching] = useState(false);
 
-  // Carrega o time do coração do banco
+  // 1. CARREGAMENTO INICIAL: Puxa o time do coração do banco
   useEffect(() => {
     const loadInitialTeam = async () => {
       if (!user) return;
@@ -43,18 +44,19 @@ const Dashboard = () => {
     loadInitialTeam();
   }, [user]);
 
-  // Lógica de cores
+  // 2. LÓGICA DE CORES: O "Camaleão"
   const theme = getTeamTheme(activeTeam);
   const teamCSSVars = {
-    "--primary-team": theme.primaryHex,
-    "--glow-team": theme.glow,
+    "--primary-team": theme.primaryHex || "#FF0000",
+    "--glow-team": theme.glow || "rgba(255, 0, 0, 0.5)",
   } as React.CSSProperties;
 
-  // Função de busca
+  // 3. FUNÇÃO DE BUSCA: Muda o dashboard para o time consultado
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (!searchQuery.trim()) return;
     setIsSearching(true);
+    // Aqui simulamos a troca de tema para o time buscado
     setTimeout(() => {
       setActiveTeam(searchQuery);
       setIsSearching(false);
@@ -75,7 +77,7 @@ const Dashboard = () => {
   return (
     <div className="min-h-screen bg-[#000000] text-white selection:bg-[var(--primary-team)] transition-colors duration-700" style={teamCSSVars}>
       
-      {/* HEADER */}
+      {/* HEADER ULTRA-MODERNO */}
       <header className="sticky top-0 z-50 border-b border-white/10 bg-black/90 backdrop-blur-xl">
         <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between gap-6">
           <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate(0)}>
@@ -100,13 +102,13 @@ const Dashboard = () => {
         </div>
       </header>
 
-      {/* MAIN */}
       <main className="max-w-7xl mx-auto px-4 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
           
-          {/* COLUNA ESQUERDA */}
+          {/* COLUNA ESQUERDA: CONTEÚDO PRINCIPAL (8 COLUNAS) */}
           <div className="lg:col-span-8 space-y-8">
-            {/* CARD IDENTIDADE */}
+            
+            {/* CARD DE IDENTIDADE DINÂMICO */}
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
               <Card className="bg-zinc-900/40 border-0 border-l-4 border-[var(--primary-team)] overflow-hidden">
                 <CardContent className="p-6 flex flex-col md:flex-row justify-between items-center">
@@ -134,25 +136,4 @@ const Dashboard = () => {
               </Card>
             </motion.div>
 
-            {/* ABAS DE NAVEGAÇÃO */}
-            <Tabs defaultValue="overview" className="w-full">
-              <TabsList className="bg-zinc-900/60 p-1 mb-8 border border-white/5 h-14 flex overflow-x-auto scrollbar-hide">
-                <TabsTrigger value="overview" className="flex-1 gap-2 data-[state=active]:bg-[var(--primary-team)] text-[10px] font-black uppercase tracking-tighter">
-                  <Eye className="w-4 h-4" /> VISÃO GERAL
-                </TabsTrigger>
-                <TabsTrigger value="map" className="flex-1 gap-2 data-[state=active]:bg-[var(--primary-team)] text-[10px] font-black uppercase tracking-tighter">
-                  <Map className="w-4 h-4" /> MAPA MUNDIAL
-                </TabsTrigger>
-                <TabsTrigger value="duel" className="flex-1 gap-2 data-[state=active]:bg-[var(--primary-team)] text-[10px] font-black uppercase tracking-tighter">
-                  <Swords className="w-4 h-4" /> DUELO CENSUS
-                </TabsTrigger>
-                <TabsTrigger value="ranking" className="flex-1 gap-2 data-[state=active]:bg-[var(--primary-team)] text-[10px] font-black uppercase tracking-tighter">
-                  <Trophy className="w-4 h-4" /> RANKING
-                </TabsTrigger>
-              </TabsList>
-
-              <TabsContent value="overview" className="space-y-8 outline-none">
-                <NewsCarousel team={activeTeam} />
-                <div className="space-y-4">
-                   <div className="flex items-center justify-between">
-                      <h3 className="text-xs font
+      
