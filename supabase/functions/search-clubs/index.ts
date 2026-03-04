@@ -49,6 +49,7 @@ serve(async (req) => {
 
     // 2. Call API-Football
     const apiKey = Deno.env.get("FOOTBALL_API_KEY");
+    console.log("API Key prefix:", apiKey ? apiKey.substring(0, 8) + "..." : "NOT SET");
     if (!apiKey) {
       return new Response(JSON.stringify(cachedResults), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
