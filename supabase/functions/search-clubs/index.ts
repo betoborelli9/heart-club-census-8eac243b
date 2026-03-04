@@ -56,24 +56,40 @@ serve(async (req) => {
     }
 
     try {
-      const apiRes = await fetch(
-        `https://v3.football.api-sports.io/teams?search=${encodeURIComponent(query)}`,
-        {
+      // Try RapidAPI endpoint first (most common for paid users)
+      const rapidApiHost = "api-football-v1.p.rapidapi.com";
+      const url = `https://${rapidApiHost}/v3/teams?search=${encodeURIComponent(query)}`;
+      
+      console.log("Calling API-Football via RapidAPI:", url);
+      
+      let apiRes = await fetch(url, {
+        headers: {
+          "x-rapidapi-key": apiKey,
+          "x-rapidapi-host": rapidApiHost,
+        },
+      });
+
+      // Fallback to direct API-Sports endpoint if RapidAPI fails
+      if (!apiRes.ok) {
+        console.log("RapidAPI failed, trying direct endpoint. Status:", apiRes.status);
+        const directUrl = `https://v3.football.api-sports.io/teams?search=${encodeURIComponent(query)}`;
+        apiRes = await fetch(directUrl, {
           headers: {
-            "x-rapidapi-key": apiKey,
-            "x-rapidapi-host": "v3.football.api-sports.io",
+            "x-apisports-key": apiKey,
           },
-        }
-      );
+        });
+      }
 
       if (!apiRes.ok) {
-        console.error("API-Football error:", apiRes.status, await apiRes.text());
+        const errText = await apiRes.text();
+        console.error("API-Football error (both endpoints):", apiRes.status, errText);
         return new Response(JSON.stringify(cachedResults), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
 
       const apiData = await apiRes.json();
+      console.log("API-Football response count:", apiData?.results ?? 0);
       const teams = apiData?.response || [];
 
       const apiResults = teams.slice(0, 20).map((item: any) => ({

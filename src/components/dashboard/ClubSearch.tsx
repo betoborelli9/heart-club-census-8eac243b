@@ -8,23 +8,34 @@ export const ClubSearch = ({ onSelect }: { onSelect: (club: any) => void }) => {
   const [results, setResults] = useState<any[]>([]);
 
   const handleSearch = async (query: string) => {
-    if (query.length < 3) {
+    if (query.length < 2) {
       setResults([]);
       return;
     }
     
     setLoading(true);
     try {
-      // ESTA LINHA É A PONTE QUE ESTAVA FALTANDO:
       const { data, error } = await supabase.functions.invoke('search-clubs', {
         body: { query }
       });
 
-      if (error) throw error;
-      // Edge function returns array directly
-      if (Array.isArray(data)) setResults(data);
+      console.log("search-clubs response:", { data, error });
+
+      if (error) {
+        console.error("Edge function error:", error);
+        setResults([]);
+        return;
+      }
+      
+      if (Array.isArray(data)) {
+        setResults(data);
+      } else {
+        console.warn("Unexpected response format:", data);
+        setResults([]);
+      }
     } catch (err) {
       console.error("Erro na busca:", err);
+      setResults([]);
     } finally {
       setLoading(false);
     }
