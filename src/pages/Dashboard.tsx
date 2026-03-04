@@ -1,15 +1,17 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { Eye, Map, Trophy, LogOut, Loader2, Swords, Search, Calendar, Target, TrendingUp } from "lucide-react";
+import { Eye, Map, Trophy, LogOut, Loader2, Swords, Calendar, Target, TrendingUp } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { useNavigate } from "react-router-dom";
 import { useUser } from "@/contexts/UserContext";
 import { supabase } from "@/integrations/supabase/client";
 import { getTeamTheme } from "@/data/teamColors";
 import logo from "@/assets/logo.png";
+
+// Importação do novo componente de busca global
+import { ClubSearch } from "@/components/dashboard/ClubSearch";
 
 import NewsCarousel from "@/components/dashboard/NewsCarousel";
 import HeatmapSection from "@/components/dashboard/HeatmapSection";
@@ -52,11 +54,15 @@ const Dashboard = () => {
             <img src={logo} alt="Logo" className="h-9 w-9 object-contain" />
             <span className="text-lg font-black italic hidden sm:block">HEART CLUB</span>
           </div>
-          <div className="flex-1 max-w-xl relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
-            <Input placeholder="Buscar clube..." className="bg-zinc-900/50 border-white/10 pl-11 rounded-full focus:ring-[var(--primary-team)]" />
+          
+          {/* BUSCADOR GLOBAL CONECTADO À API FOOTBALL */}
+          <div className="flex-1 max-w-xl">
+            <ClubSearch onSelect={(club) => console.log("Clube selecionado:", club)} />
           </div>
-          <Button variant="ghost" size="icon" onClick={() => signOut()} className="rounded-full"><LogOut className="w-4 h-4 text-white/60" /></Button>
+
+          <Button variant="ghost" size="icon" onClick={() => signOut()} className="rounded-full">
+            <LogOut className="w-4 h-4 text-white/60" />
+          </Button>
         </div>
       </header>
 
@@ -87,9 +93,17 @@ const Dashboard = () => {
                 <TabsTrigger value="map" className="flex-1 data-[state=active]:bg-[var(--primary-team)]">MAPA</TabsTrigger>
                 <TabsTrigger value="duel" className="flex-1 data-[state=active]:bg-[var(--primary-team)]">DUELO</TabsTrigger>
               </TabsList>
-              <TabsContent value="overview" className="space-y-8"><NewsCarousel team={activeTeam} /><HeatmapSection /></TabsContent>
-              <TabsContent value="map"><HeatmapSection /></TabsContent>
-              <TabsContent value="duel" className="space-y-8"><CensusDuel /><AmbassadorHierarchy /></TabsContent>
+              <TabsContent value="overview" className="space-y-8">
+                <NewsCarousel team={activeTeam} />
+                <HeatmapSection />
+              </TabsContent>
+              <TabsContent value="map">
+                <HeatmapSection />
+              </TabsContent>
+              <TabsContent value="duel" className="space-y-8">
+                <CensusDuel />
+                <AmbassadorHierarchy />
+              </TabsContent>
             </Tabs>
           </div>
 
@@ -97,15 +111,26 @@ const Dashboard = () => {
             <Card className="bg-zinc-900/80 border-0 shadow-[var(--glow-team)]">
               <CardContent className="py-6 space-y-4">
                 <div className="flex justify-around items-center">
-                  <div className="text-center"><div className="w-12 h-12 bg-black rounded-full mb-1 border border-white/10" /><p className="text-[10px] font-bold uppercase">{activeTeam}</p></div>
+                  <div className="text-center">
+                    <div className="w-12 h-12 bg-black rounded-full mb-1 border border-white/10" />
+                    <p className="text-[10px] font-bold uppercase">{activeTeam}</p>
+                  </div>
                   <span className="text-xl font-black italic opacity-20">VS</span>
-                  <div className="text-center"><div className="w-12 h-12 bg-black rounded-full mb-1 border border-white/10" /><p className="text-[10px] font-bold uppercase text-white/40">RIVAL</p></div>
+                  <div className="text-center">
+                    <div className="w-12 h-12 bg-black rounded-full mb-1 border border-white/10" />
+                    <p className="text-[10px] font-bold uppercase text-white/40">RIVAL</p>
+                  </div>
                 </div>
               </CardContent>
             </Card>
             <Card className="bg-zinc-900/40 border-white/5 p-6">
-              <div className="flex justify-between text-[10px] mb-2 font-black uppercase"><span>Vaga Libertadores</span><span className="text-[var(--primary-team)]">78%</span></div>
-              <div className="h-1 w-full bg-zinc-800 rounded-full overflow-hidden"><div className="h-full bg-[var(--primary-team)]" style={{ width: '78%' }} /></div>
+              <div className="flex justify-between text-[10px] mb-2 font-black uppercase">
+                <span>Vaga Libertadores</span>
+                <span className="text-[var(--primary-team)]">78%</span>
+              </div>
+              <div className="h-1 w-full bg-zinc-800 rounded-full overflow-hidden">
+                <div className="h-full bg-[var(--primary-team)]" style={{ width: '78%' }} />
+              </div>
             </Card>
           </div>
         </div>
