@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import splashVideo from "@/assets/splash.mp4";
 
 const Splash = () => {
   const navigate = useNavigate();
@@ -10,8 +9,9 @@ const Splash = () => {
   useEffect(() => {
     const timer = setTimeout(() => {
       setShow(false);
+      // Aguarda a animação de fade-out antes de navegar
       setTimeout(() => navigate("/login", { replace: true }), 600);
-    }, 4000);
+    }, 4500); // 4.5 segundos de vídeo
     return () => clearTimeout(timer);
   }, [navigate]);
 
@@ -21,19 +21,24 @@ const Splash = () => {
         <motion.div
           initial={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          transition={{ duration: 0.6 }}
-          className="fixed inset-0 z-50 bg-background overflow-hidden"
-          style={{ width: "100vw", height: "100vh" }}
+          transition={{ duration: 0.8 }}
+          className="fixed inset-0 z-[9999] bg-black overflow-hidden pointer-events-none"
+          style={{ width: "100vw", height: "100vh", position: "fixed", top: 0, left: 0 }}
         >
           <video
             autoPlay
             muted
             playsInline
-            className="absolute inset-0 object-cover"
-            style={{ width: "100vw", height: "100vh", objectFit: "cover" }}
-            src={splashVideo}
+            // Usamos o caminho direto da pasta public para evitar erros de build
+            src="/splash.mp4"
+            className="w-full h-full object-cover"
+            style={{ 
+              width: "100vw", 
+              height: "100vh", 
+              objectFit: "cover",
+              display: "block" 
+            }}
           />
-          <div className="absolute inset-0 bg-background/30" />
         </motion.div>
       )}
     </AnimatePresence>
