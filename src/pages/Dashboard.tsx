@@ -94,7 +94,7 @@ const Dashboard = () => {
                 <TabsTrigger value="duel" className="flex-1 data-[state=active]:bg-[var(--primary-team)]">DUELO</TabsTrigger>
               </TabsList>
               <TabsContent value="overview" className="space-y-8">
-                <NewsCarousel team={activeTeam} />
+                <NewsCarousel />
                 <HeatmapSection />
               </TabsContent>
               <TabsContent value="map">
