@@ -8,7 +8,6 @@ export const ClubSearch = ({ onSelect }: { onSelect: (club: any) => void }) => {
   const [results, setResults] = useState<any[]>([]);
 
   const handleSearch = async (query: string) => {
-    // Só começa a buscar quando digitar pelo menos 3 letras
     if (query.length < 3) {
       setResults([]);
       return;
@@ -16,18 +15,15 @@ export const ClubSearch = ({ onSelect }: { onSelect: (club: any) => void }) => {
     
     setLoading(true);
     try {
-      // ESTA É A LINHA QUE ESTAVA FALTANDO NO SEU CÓDIGO:
+      // ESTA LINHA É A PONTE QUE ESTAVA FALTANDO:
       const { data, error } = await supabase.functions.invoke('search-clubs', {
         body: { query }
       });
 
       if (error) throw error;
-      
-      if (data?.results) {
-        setResults(data.results);
-      }
+      if (data?.results) setResults(data.results);
     } catch (err) {
-      console.error("Erro na busca global:", err);
+      console.error("Erro na busca:", err);
     } finally {
       setLoading(false);
     }
@@ -39,7 +35,7 @@ export const ClubSearch = ({ onSelect }: { onSelect: (club: any) => void }) => {
         <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
         <Input 
           placeholder="Busque o seu clube..." 
-          className="bg-zinc-900/80 border-white/10 pl-11 rounded-full h-12 text-white placeholder:text-white/20 focus:ring-2 focus:ring-red-600 transition-all"
+          className="bg-zinc-900/80 border-white/10 pl-11 rounded-full h-12 text-white focus:ring-2 focus:ring-red-600"
           onChange={(e) => handleSearch(e.target.value)}
         />
         {loading && (
@@ -49,23 +45,15 @@ export const ClubSearch = ({ onSelect }: { onSelect: (club: any) => void }) => {
         )}
       </div>
 
-      {/* Lista de resultados que aparece embaixo do campo */}
       {results.length > 0 && (
         <div className="absolute top-14 w-full bg-zinc-900 border border-white/10 rounded-2xl overflow-hidden z-[100] shadow-2xl max-h-[300px] overflow-y-auto">
-          <div className="p-2 border-b border-white/5 bg-black/40 flex items-center gap-2">
-            <Globe className="w-3 h-3 text-white/40" />
-            <span className="text-[10px] font-bold text-white/40 uppercase tracking-widest">Resultados Globais</span>
-          </div>
           {results.map((club) => (
             <button
               key={club.id}
-              onClick={() => { 
-                onSelect(club); 
-                setResults([]); 
-              }}
-              className="w-full flex items-center gap-4 p-4 hover:bg-white/5 transition-colors border-b border-white/5 last:border-0 text-left"
+              onClick={() => { onSelect(club); setResults([]); }}
+              className="w-full flex items-center gap-4 p-4 hover:bg-white/5 border-b border-white/5 text-left"
             >
-              <img src={club.logo} alt={club.name} className="w-8 h-8 object-contain bg-white/5 rounded-sm p-1" />
+              <img src={club.logo} alt={club.name} className="w-8 h-8 object-contain" />
               <span className="font-bold text-sm text-white uppercase italic">{club.name}</span>
             </button>
           ))}
