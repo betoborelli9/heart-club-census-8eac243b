@@ -3,27 +3,8 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
-
-// Simple in-memory rate limiter (per IP, resets on cold start)
-const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
-const RATE_LIMIT = 15; // requests per window
-const RATE_WINDOW_MS = 60_000; // 1 minute
-
-function isRateLimited(ip: string): boolean {
-  const now = Date.now();
-  const entry = rateLimitMap.get(ip);
-  if (!entry || now > entry.resetAt) {
-    rateLimitMap.set(ip, { count: 1, resetAt: now + RATE_WINDOW_MS });
-    return false;
-  }
-  entry.count++;
-  return entry.count > RATE_LIMIT;
-}
-
-// Input validation: allow letters (unicode), digits, spaces, hyphens, dots
-const VALID_QUERY_RE = /^[\p{L}\p{N}\s\-\.]+$/u;
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -31,44 +12,9 @@ serve(async (req) => {
   }
 
   try {
-    // Authentication check
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader?.startsWith("Bearer ")) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
-    const authClient = createClient(supabaseUrl, supabaseAnonKey, {
-      global: { headers: { Authorization: authHeader } },
-    });
-
-    const { data: claimsData, error: claimsError } = await authClient.auth.getClaims(
-      authHeader.replace("Bearer ", "")
-    );
-    if (claimsError || !claimsData?.claims) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    // Rate limiting by IP
-    const clientIp = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
-    if (isRateLimited(clientIp)) {
-      return new Response(JSON.stringify({ error: "Too many requests. Please try again later." }), {
-        status: 429,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
     const body = await req.json();
     const query = typeof body.query === "string" ? body.query.trim() : "";
 
-    // Input validation
     if (!query || query.length < 2) {
       return new Response(JSON.stringify([]), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
@@ -78,17 +24,12 @@ serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-    if (!VALID_QUERY_RE.test(query)) {
-      return new Response(JSON.stringify({ error: "Invalid search query" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
 
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // 1. Check local cache first
+    // 1. Check local cache
     const { data: cached } = await supabase
       .from("clubes_cache")
       .select("*")
@@ -106,10 +47,9 @@ serve(async (req) => {
       logo: c.escudo_url,
     }));
 
-    // 2. ALWAYS call API-Football to get comprehensive results (incl. Brazil lower divisions)
+    // 2. Call API-Football
     const apiKey = Deno.env.get("FOOTBALL_API_KEY");
     if (!apiKey) {
-      // No API key — return cache only
       return new Response(JSON.stringify(cachedResults), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -147,7 +87,7 @@ serve(async (req) => {
         logo: item.team.logo,
       }));
 
-      // 3. Cache ALL new API results immediately for future queries
+      // 3. Cache new results
       const upsertPromises = apiResults
         .filter((r: any) => r.api_id)
         .map((r: any) =>
@@ -165,7 +105,7 @@ serve(async (req) => {
         );
       await Promise.all(upsertPromises);
 
-      // 4. Merge: API results first, then cached entries not already in API response
+      // 4. Merge results
       const apiIds = new Set(apiResults.map((r: any) => r.api_id).filter(Boolean));
       const extraCached = cachedResults.filter((c: any) => !apiIds.has(c.api_id));
       const merged = [...apiResults, ...extraCached].slice(0, 25);
@@ -175,7 +115,6 @@ serve(async (req) => {
       });
     } catch (apiErr) {
       console.error("API-Football fetch failed:", apiErr);
-      // Fallback to cache on network error
       return new Response(JSON.stringify(cachedResults), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });

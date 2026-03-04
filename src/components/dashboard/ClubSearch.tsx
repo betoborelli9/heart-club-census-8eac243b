@@ -21,7 +21,8 @@ export const ClubSearch = ({ onSelect }: { onSelect: (club: any) => void }) => {
       });
 
       if (error) throw error;
-      if (data?.results) setResults(data.results);
+      // Edge function returns array directly
+      if (Array.isArray(data)) setResults(data);
     } catch (err) {
       console.error("Erro na busca:", err);
     } finally {
