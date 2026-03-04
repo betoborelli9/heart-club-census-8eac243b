@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
+// 1. IMPORTANTE: Importar o vídeo da pasta assets
+import splashVideo from "@/assets/splash.mp4";
 
 const Splash = () => {
   const navigate = useNavigate();
@@ -9,9 +11,8 @@ const Splash = () => {
   useEffect(() => {
     const timer = setTimeout(() => {
       setShow(false);
-      // Aguarda a animação de fade-out antes de navegar
       setTimeout(() => navigate("/login", { replace: true }), 600);
-    }, 4500); // 4.5 segundos de vídeo
+    }, 4500); 
     return () => clearTimeout(timer);
   }, [navigate]);
 
@@ -29,8 +30,8 @@ const Splash = () => {
             autoPlay
             muted
             playsInline
-            // Usamos o caminho direto da pasta public para evitar erros de build
-            src="/splash.mp4"
+            // 2. ALTERAÇÃO AQUI: Usar a variável do import entre chaves
+            src={splashVideo}
             className="w-full h-full object-cover"
             style={{ 
               width: "100vw", 
