@@ -11,8 +11,7 @@ const Splash = () => {
     const timer = setTimeout(() => {
       setShow(false);
       setTimeout(() => navigate("/login", { replace: true }), 600);
-    }, 4500);
-
+    }, 4500); 
     return () => clearTimeout(timer);
   }, [navigate]);
 
@@ -23,15 +22,19 @@ const Splash = () => {
           initial={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.8 }}
-          className="fixed inset-0 z-[9999] bg-black overflow-hidden"
+          className="fixed inset-0 z-[9999] bg-black flex items-center justify-center overflow-hidden"
         >
-          <video
-            autoPlay
-            muted
-            playsInline
-            src={splashVideo}
-            className="absolute inset-0 w-full h-full object-cover pointer-events-none"
-          />
+          <div className="relative w-full h-full flex items-center justify-center">
+            <video
+              autoPlay
+              muted
+              playsInline
+              src={splashVideo}
+              // A mágica: w-full h-full no mobile, mas com limite de largura no desktop
+              className="w-full h-full object-cover sm:object-contain sm:max-w-[450px] sm:max-h-[800px]"
+              style={{ pointerEvents: 'none' }}
+            />
+          </div>
         </motion.div>
       )}
     </AnimatePresence>
