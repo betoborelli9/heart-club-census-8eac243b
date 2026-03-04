@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-// 1. IMPORTANTE: Importar o vídeo da pasta assets
 import splashVideo from "@/assets/splash.mp4";
 
 const Splash = () => {
@@ -12,7 +11,7 @@ const Splash = () => {
     const timer = setTimeout(() => {
       setShow(false);
       setTimeout(() => navigate("/login", { replace: true }), 600);
-    }, 4500); 
+    }, 4500); // 4.5 segundos de exibição
     return () => clearTimeout(timer);
   }, [navigate]);
 
@@ -23,21 +22,21 @@ const Splash = () => {
           initial={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.8 }}
-          className="fixed inset-0 z-[9999] bg-black overflow-hidden pointer-events-none"
-          style={{ width: "100vw", height: "100vh", position: "fixed", top: 0, left: 0 }}
+          // O segredo está aqui: fixed inset-0 e overflow-hidden
+          className="fixed inset-0 z-[9999] bg-black overflow-hidden flex items-center justify-center"
+          style={{ width: '100vw', height: '100vh' }}
         >
           <video
             autoPlay
             muted
             playsInline
-            // 2. ALTERAÇÃO AQUI: Usar a variável do import entre chaves
             src={splashVideo}
-            className="w-full h-full object-cover"
+            // object-cover garante que o vídeo preencha a tela sem distorcer
+            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 min-w-full min-h-full object-cover"
             style={{ 
-              width: "100vw", 
-              height: "100vh", 
-              objectFit: "cover",
-              display: "block" 
+              width: '100vw', 
+              height: '100vh',
+              pointerEvents: 'none' 
             }}
           />
         </motion.div>
