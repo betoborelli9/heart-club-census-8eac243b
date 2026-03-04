@@ -59,36 +59,34 @@ serve(async (req) => {
     try {
       let apiData: any = null;
 
-      // Attempt 1: RapidAPI with v3.football.api-sports.io host
-      const hosts = [
-        "v3.football.api-sports.io",
-        "api-football-v1.p.rapidapi.com",
-      ];
+      // First: test API status to validate key
+      const statusRes = await fetch("https://api-football-v1.p.rapidapi.com/v3/status", {
+        headers: {
+          "x-rapidapi-key": apiKey,
+          "x-rapidapi-host": "api-football-v1.p.rapidapi.com",
+        },
+      });
+      const statusBody = await statusRes.text();
+      console.log(`API Status check: ${statusRes.status} - ${statusBody}`);
 
-      for (const host of hosts) {
-        const url = `https://${host}/v3/teams?search=${encodeURIComponent(query)}`;
-        console.log(`Trying host: ${host}`);
-        
-        const res = await fetch(url, {
-          headers: {
-            "x-rapidapi-key": apiKey,
-            "x-rapidapi-host": host,
-          },
-        });
+      // Main search via RapidAPI
+      const searchUrl = `https://api-football-v1.p.rapidapi.com/v3/teams?search=${encodeURIComponent(query)}`;
+      console.log(`Searching: ${searchUrl}`);
+      
+      const res = await fetch(searchUrl, {
+        headers: {
+          "x-rapidapi-key": apiKey,
+          "x-rapidapi-host": "api-football-v1.p.rapidapi.com",
+        },
+      });
 
-        if (res.ok) {
-          const json = await res.json();
-          console.log(`Host ${host} returned ${json?.results ?? 0} results`);
-          if (json?.results > 0) {
-            apiData = json;
-            break;
-          }
-          // If 0 results, try next host
-          if (!apiData) apiData = json;
-        } else {
-          const errText = await res.text();
-          console.error(`Host ${host} failed: ${res.status} - ${errText}`);
-        }
+      const resBody = await res.text();
+      console.log(`Search response: ${res.status} - ${resBody.substring(0, 500)}`);
+
+      if (res.ok) {
+        try {
+          apiData = JSON.parse(resBody);
+        } catch { /* ignore parse errors */ }
       }
 
       // Attempt 2: Direct API-Sports key (non-RapidAPI subscription)
