@@ -56,25 +56,59 @@ serve(async (req) => {
     }
 
     try {
-      const apiRes = await fetch(
-        `https://v3.football.api-sports.io/teams?search=${encodeURIComponent(query)}`,
-        {
+      let apiData: any = null;
+
+      // Attempt 1: RapidAPI with v3.football.api-sports.io host
+      const hosts = [
+        "v3.football.api-sports.io",
+        "api-football-v1.p.rapidapi.com",
+      ];
+
+      for (const host of hosts) {
+        const url = `https://${host}/v3/teams?search=${encodeURIComponent(query)}`;
+        console.log(`Trying host: ${host}`);
+        
+        const res = await fetch(url, {
           headers: {
             "x-rapidapi-key": apiKey,
-            "x-rapidapi-host": "v3.football.api-sports.io",
+            "x-rapidapi-host": host,
           },
-        }
-      );
-
-      if (!apiRes.ok) {
-        console.error("API-Football error:", apiRes.status, await apiRes.text());
-        return new Response(JSON.stringify(cachedResults), {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
+
+        if (res.ok) {
+          const json = await res.json();
+          console.log(`Host ${host} returned ${json?.results ?? 0} results`);
+          if (json?.results > 0) {
+            apiData = json;
+            break;
+          }
+          // If 0 results, try next host
+          if (!apiData) apiData = json;
+        } else {
+          const errText = await res.text();
+          console.error(`Host ${host} failed: ${res.status} - ${errText}`);
+        }
       }
 
-      const apiData = await apiRes.json();
+      // Attempt 2: Direct API-Sports key (non-RapidAPI subscription)
+      if (!apiData || (apiData.results === 0 && !apiData.response?.length)) {
+        console.log("Trying direct x-apisports-key header...");
+        const directRes = await fetch(
+          `https://v3.football.api-sports.io/teams?search=${encodeURIComponent(query)}`,
+          { headers: { "x-apisports-key": apiKey } }
+        );
+        if (directRes.ok) {
+          const json = await directRes.json();
+          console.log(`Direct endpoint returned ${json?.results ?? 0} results`);
+          if (json?.results > 0) apiData = json;
+        } else {
+          console.error("Direct endpoint failed:", directRes.status);
+          await directRes.text(); // consume body
+        }
+      }
+
       const teams = apiData?.response || [];
+      console.log("Final teams count:", teams.length);
 
       const apiResults = teams.slice(0, 20).map((item: any) => ({
         id: null,
