@@ -24,14 +24,14 @@ const Splash = () => {
           transition={{ duration: 0.8 }}
           className="fixed inset-0 z-[9999] bg-black flex items-center justify-center overflow-hidden"
         >
-          <div className="relative w-full h-full flex items-center justify-center">
+          <div className="relative w-full h-full flex items-center justify-center p-4">
             <video
               autoPlay
               muted
               playsInline
               src={splashVideo}
-              // A mágica: w-full h-full no mobile, mas com limite de largura no desktop
-              className="w-full h-full object-cover sm:object-contain sm:max-w-[450px] sm:max-h-[800px]"
+              // "object-contain" garante que o logo NUNCA seja cortado, não importa a tela
+              className="w-full h-full object-contain max-w-[100vw] max-h-[100vh] sm:max-w-[450px] sm:max-h-[800px]"
               style={{ pointerEvents: 'none' }}
             />
           </div>
