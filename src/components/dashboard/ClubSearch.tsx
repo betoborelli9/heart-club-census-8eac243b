@@ -1,5 +1,6 @@
 /* Caminho: src/components/dashboard/ClubSearch.tsx
    Objetivo: Busca inteligente Local (Supabase) - SEM ACENTOS e DADOS COMPLETOS
+   Nota: Placeholder alterado para forçar redeploy e sincronização.
 */
 import { useState, useCallback } from "react";
 import { Search, Loader2 } from "lucide-react";
@@ -56,7 +57,7 @@ export const ClubSearch = ({ onSelect }: { onSelect: (club: any) => void }) => {
       <div className="relative">
         <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
         <Input 
-          placeholder="Busque o seu clube..." 
+          placeholder="Digite o nome do seu clube (ex: Anapolina)..." 
           className="bg-zinc-900/80 border-white/10 pl-11 rounded-full h-12 text-white focus:ring-2 focus:ring-orange-600"
           onChange={(e) => debouncedSearch(e.target.value)}
         />
