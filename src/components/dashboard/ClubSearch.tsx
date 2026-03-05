@@ -1,5 +1,5 @@
 /* Caminho: src/components/dashboard/ClubSearch.tsx
-   Objetivo: Busca inteligente Local (Supabase) - Sem acentos e Custo Zero
+   Objetivo: Busca inteligente Local (Supabase) - SEM ACENTOS e DADOS COMPLETOS
 */
 import { useState, useCallback } from "react";
 import { Search, Loader2 } from "lucide-react";
@@ -13,7 +13,6 @@ export const ClubSearch = ({ onSelect }: { onSelect: (club: any) => void }) => {
 
   const debouncedSearch = useCallback(
     debounce(async (query: string) => {
-      // Começa a buscar com 2 caracteres para ser mais ágil
       if (query.length < 2) {
         setResults([]);
         return;
@@ -21,10 +20,9 @@ export const ClubSearch = ({ onSelect }: { onSelect: (club: any) => void }) => {
 
       setLoading(true);
       try {
-        // CORREÇÃO SÊNIOR: Chama a função RPC 'buscar_clube' que criamos no SQL
-        // Essa função ignora acentos (Anápolis/Anapolis) e é instantânea
+        // CORREÇÃO SÊNIOR: Chamando a função v2 que criamos no SQL para ignorar acentos
         const { data, error } = await supabase
-          .rpc('buscar_clube', { termo_busca: query });
+          .rpc('buscar_clube_v2', { termo_busca: query });
 
         if (error) {
           console.error("Erro ao buscar no banco local:", error);
@@ -33,12 +31,13 @@ export const ClubSearch = ({ onSelect }: { onSelect: (club: any) => void }) => {
         }
         
         if (Array.isArray(data)) {
-          // Mapeia os campos do banco para os campos que o seu Layout espera
+          // Mapeia os campos do banco para o padrão visual do Heart Club
           const mappedData = data.map(club => ({
             id: club.api_id,
             name: club.nome,
             logo: club.escudo_url,
-            country: club.cidade || 'Brasil'
+            // Prioriza a cidade/estado completa que inserimos
+            location: club.cidade || 'Brasil' 
           }));
           setResults(mappedData);
         }
@@ -48,7 +47,7 @@ export const ClubSearch = ({ onSelect }: { onSelect: (club: any) => void }) => {
       } finally {
         setLoading(false);
       }
-    }, 300), // Reduzi para 300ms porque o banco local é muito rápido
+    }, 300),
     []
   );
 
@@ -58,12 +57,12 @@ export const ClubSearch = ({ onSelect }: { onSelect: (club: any) => void }) => {
         <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
         <Input 
           placeholder="Busque o seu clube..." 
-          className="bg-zinc-900/80 border-white/10 pl-11 rounded-full h-12 text-white focus:ring-2 focus:ring-red-600"
+          className="bg-zinc-900/80 border-white/10 pl-11 rounded-full h-12 text-white focus:ring-2 focus:ring-orange-600"
           onChange={(e) => debouncedSearch(e.target.value)}
         />
         {loading && (
           <div className="absolute right-4 top-1/2 -translate-y-1/2">
-            <Loader2 className="animate-spin w-4 h-4 text-red-600" />
+            <Loader2 className="animate-spin w-4 h-4 text-orange-600" />
           </div>
         )}
       </div>
@@ -79,12 +78,16 @@ export const ClubSearch = ({ onSelect }: { onSelect: (club: any) => void }) => {
               <img 
                 src={club.logo || '/placeholder-shield.png'} 
                 alt={club.name} 
-                className="w-8 h-8 object-contain"
+                className="w-10 h-10 object-contain"
                 onError={(e) => { (e.target as HTMLImageElement).src = '/placeholder-shield.png' }}
               />
               <div className="flex flex-col">
-                <span className="font-bold text-sm text-white uppercase italic">{club.name}</span>
-                {club.country && <span className="text-[10px] text-white/40">{club.country}</span>}
+                <span className="font-bold text-sm text-white uppercase italic tracking-wider">
+                  {club.name}
+                </span>
+                <span className="text-[10px] text-white/40 uppercase font-medium">
+                  {club.location}
+                </span>
               </div>
             </button>
           ))}
