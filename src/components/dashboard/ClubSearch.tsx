@@ -1,3 +1,6 @@
+/* Caminho: src/components/dashboard/ClubSearch.tsx
+   Objetivo: Busca inteligente Local (Supabase) - Sem acentos e Custo Zero
+*/
 import { useState, useCallback } from "react";
 import { Search, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -8,40 +11,44 @@ export const ClubSearch = ({ onSelect }: { onSelect: (club: any) => void }) => {
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<any[]>([]);
 
-  // Otimização Sênior: Debounce de 500ms para poupar créditos da API
-  // A busca só dispara se houver 3 ou mais caracteres
   const debouncedSearch = useCallback(
     debounce(async (query: string) => {
-      if (query.length < 3) {
+      // Começa a buscar com 2 caracteres para ser mais ágil
+      if (query.length < 2) {
         setResults([]);
         return;
       }
 
       setLoading(true);
       try {
-        const { data, error } = await supabase.functions.invoke('search-clubs', {
-          body: { query }
-        });
+        // CORREÇÃO SÊNIOR: Chama a função RPC 'buscar_clube' que criamos no SQL
+        // Essa função ignora acentos (Anápolis/Anapolis) e é instantânea
+        const { data, error } = await supabase
+          .rpc('buscar_clube', { termo_busca: query });
 
         if (error) {
-          console.error("Edge function error:", error);
+          console.error("Erro ao buscar no banco local:", error);
           setResults([]);
           return;
         }
         
         if (Array.isArray(data)) {
-          setResults(data);
-        } else {
-          console.warn("Unexpected response format:", data);
-          setResults([]);
+          // Mapeia os campos do banco para os campos que o seu Layout espera
+          const mappedData = data.map(club => ({
+            id: club.api_id,
+            name: club.nome,
+            logo: club.escudo_url,
+            country: club.cidade || 'Brasil'
+          }));
+          setResults(mappedData);
         }
       } catch (err) {
-        console.error("Erro na busca:", err);
+        console.error("Erro crítico na busca:", err);
         setResults([]);
       } finally {
         setLoading(false);
       }
-    }, 500),
+    }, 300), // Reduzi para 300ms porque o banco local é muito rápido
     []
   );
 
@@ -67,9 +74,14 @@ export const ClubSearch = ({ onSelect }: { onSelect: (club: any) => void }) => {
             <button
               key={club.id}
               onClick={() => { onSelect(club); setResults([]); }}
-              className="w-full flex items-center gap-4 p-4 hover:bg-white/5 border-b border-white/5 text-left"
+              className="w-full flex items-center gap-4 p-4 hover:bg-white/5 border-b border-white/5 text-left transition-colors"
             >
-              <img src={club.logo} alt={club.name} className="w-8 h-8 object-contain" />
+              <img 
+                src={club.logo || '/placeholder-shield.png'} 
+                alt={club.name} 
+                className="w-8 h-8 object-contain"
+                onError={(e) => { (e.target as HTMLImageElement).src = '/placeholder-shield.png' }}
+              />
               <div className="flex flex-col">
                 <span className="font-bold text-sm text-white uppercase italic">{club.name}</span>
                 {club.country && <span className="text-[10px] text-white/40">{club.country}</span>}
