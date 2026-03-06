@@ -8,6 +8,7 @@ import { useUser } from "@/contexts/UserContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { searchClubsLocal, ClubSearchResult } from "@/lib/search-clubs";
+import { ClubLogo } from "@/components/ClubLogo";
 import logo from "@/assets/logo.png";
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
@@ -154,11 +155,7 @@ const Voting = () => {
         {results.map((club, i) => (
           <button key={`${club.api_id || club.name}-${i}`} onClick={() => onSelect(club)}
             className="w-full flex items-center gap-3 px-4 py-3 hover:bg-primary/10 transition-colors text-left border-b border-border/10 last:border-0">
-            {club.logo ? (
-              <img src={club.logo} alt="" className="w-8 h-8 object-contain rounded" onError={(e) => { (e.target as HTMLImageElement).src = '/placeholder.svg'; }} />
-            ) : (
-              <div className="w-8 h-8 rounded bg-secondary flex items-center justify-center text-xs text-muted-foreground">⚽</div>
-            )}
+            <ClubLogo src={club.logo} alt={club.name} size="sm" />
             <div className="min-w-0 flex-1">
               <p className="font-semibold text-foreground text-sm truncate">{club.name}</p>
               <p className="text-xs text-muted-foreground truncate">{club.location}</p>
@@ -199,8 +196,7 @@ const Voting = () => {
           {heartClub ? (
             <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
               className="flex items-center gap-3 glass-card glow-border rounded-xl p-4">
-              {heartClub.logo ? <img src={heartClub.logo} alt="" className="w-10 h-10 object-contain" /> :
-                <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-lg">⚽</div>}
+              <ClubLogo src={heartClub.logo} alt={heartClub.name} size="md" />
               <div className="flex-1 min-w-0">
                 <p className="font-bold text-foreground">{heartClub.name}</p>
                 <p className="text-xs text-muted-foreground">{heartClub.isCustom ? "Adicionado manualmente" : heartClub.location}</p>
@@ -228,8 +224,7 @@ const Voting = () => {
             {sympathyClubs.map((club, idx) => (
               <motion.div key={`sym-${club.name}-${idx}`} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }}
                 className="flex items-center gap-3 glass-card rounded-xl p-3 border border-border/20">
-                {club.logo ? <img src={club.logo} alt="" className="w-8 h-8 object-contain" /> :
-                  <div className="w-8 h-8 rounded bg-secondary flex items-center justify-center text-sm">⚽</div>}
+                <ClubLogo src={club.logo} alt={club.name} size="sm" />
                 <div className="flex-1 min-w-0">
                   <p className="font-medium text-foreground text-sm">{club.name}</p>
                   <p className="text-xs text-muted-foreground">{club.isCustom ? "Adicionado manualmente" : club.location}</p>

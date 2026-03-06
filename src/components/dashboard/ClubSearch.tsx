@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { ClubLogo } from "@/components/ClubLogo";
 import { searchClubsLocal, ClubSearchResult } from "@/lib/search-clubs";
 
 export const ClubSearch = ({ onSelect }: { onSelect: (club: ClubSearchResult) => void }) => {
@@ -31,12 +32,7 @@ export const ClubSearch = ({ onSelect }: { onSelect: (club: ClubSearchResult) =>
               onClick={() => { onSelect(club); setResults([]); }}
               className="w-full flex items-center gap-4 p-4 hover:bg-primary/10 border-b border-border/10 text-left transition-colors"
             >
-              <img
-                src={club.logo}
-                alt={club.name}
-                className="w-10 h-10 object-contain"
-                onError={(e) => { (e.target as HTMLImageElement).src = '/placeholder.svg'; }}
-              />
+              <ClubLogo src={club.logo} alt={club.name} size="sm" />
               <div className="flex flex-col">
                 <span className="font-bold text-sm text-foreground uppercase italic tracking-wider">
                   {club.name}
