@@ -9,6 +9,7 @@ import { useUser } from "@/contexts/UserContext";
 import { supabase } from "@/integrations/supabase/client";
 import { getTeamTheme } from "@/data/teamColors";
 import { CLUBS_DATA } from "@/clubes-data";
+import { resolveClubLogo } from "@/lib/search-clubs";
 import { ClubSearch } from "@/components/dashboard/ClubSearch";
 import NewsCarousel from "@/components/dashboard/NewsCarousel";
 import HeatmapSection from "@/components/dashboard/HeatmapSection";
@@ -33,8 +34,8 @@ const Dashboard = () => {
       const { data } = await supabase.from("votos").select("clube_nome").eq("user_id", user.id).limit(1).maybeSingle();
       if (data?.clube_nome) {
         setActiveTeam(data.clube_nome);
-        const found = CLUBS_DATA.find(c => c.nome === data.clube_nome);
-        if (found) setTeamLogo(`https://media.api-sports.io/football/teams/${found.api_id}.png`);
+        const found = CLUBS_DATA.find((c) => c.nome === data.clube_nome);
+        if (found) setTeamLogo(resolveClubLogo(found.nome, found.api_id));
       }
     };
     loadTeam();
