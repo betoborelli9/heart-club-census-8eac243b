@@ -1,33 +1,41 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { Eye, Map, Trophy, LogOut, Loader2, Swords, Calendar, Target, TrendingUp } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { LogOut, Loader2 } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { useUser } from "@/contexts/UserContext";
 import { supabase } from "@/integrations/supabase/client";
 import { getTeamTheme } from "@/data/teamColors";
-import logo from "@/assets/logo.png";
-
-// Importação do novo componente de busca global
+import { CLUBS_DATA } from "@/clubes-data";
 import { ClubSearch } from "@/components/dashboard/ClubSearch";
-
 import NewsCarousel from "@/components/dashboard/NewsCarousel";
 import HeatmapSection from "@/components/dashboard/HeatmapSection";
 import CensusDuel from "@/components/dashboard/CensusDuel";
 import AmbassadorHierarchy from "@/components/dashboard/AmbassadorHierarchy";
+import logo from "@/assets/logo.png";
 
 const Dashboard = () => {
   const navigate = useNavigate();
-  const { user, profile, isLoading, signOut } = useUser();
+  const { user, profile, isLoading, isAuthenticated, hasVoted, signOut } = useUser();
   const [activeTeam, setActiveTeam] = useState<string | null>(null);
+  const [teamLogo, setTeamLogo] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) navigate("/login", { replace: true });
+    else if (!isLoading && isAuthenticated && !hasVoted) navigate("/voting", { replace: true });
+  }, [isLoading, isAuthenticated, hasVoted, navigate]);
 
   useEffect(() => {
     const loadTeam = async () => {
       if (!user) return;
-      const { data } = await supabase.from("votos").select("clube_nome").eq("user_id", user.id).maybeSingle();
-      if (data?.clube_nome) setActiveTeam(data.clube_nome);
+      const { data } = await supabase.from("votos").select("clube_nome").eq("user_id", user.id).limit(1).maybeSingle();
+      if (data?.clube_nome) {
+        setActiveTeam(data.clube_nome);
+        const found = CLUBS_DATA.find(c => c.nome === data.clube_nome);
+        if (found) setTeamLogo(`https://media.api-sports.io/football/teams/${found.api_id}.png`);
+      }
     };
     loadTeam();
   }, [user]);
@@ -35,33 +43,28 @@ const Dashboard = () => {
   const theme = getTeamTheme(activeTeam);
   const teamVars = {
     "--primary-team": theme.primaryHex || "#FF0000",
+    "--secondary-team": theme.glow || "rgba(255,0,0,0.15)",
     "--glow-team": theme.glow || "rgba(255, 0, 0, 0.5)",
   } as React.CSSProperties;
 
   if (isLoading || !profile) {
-    return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
-        <Loader2 className="w-10 h-10 animate-spin text-white" />
-      </div>
-    );
+    return <div className="min-h-screen bg-background flex items-center justify-center"><Loader2 className="w-10 h-10 animate-spin text-primary" /></div>;
   }
 
   return (
-    <div className="min-h-screen bg-black text-white" style={teamVars}>
-      <header className="sticky top-0 z-50 border-b border-white/10 bg-black/90 backdrop-blur-xl">
-        <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between gap-4">
+    <div className="min-h-screen bg-background text-foreground" style={teamVars}>
+      {/* Header */}
+      <header className="sticky top-0 z-50 border-b border-border/20 bg-background/90 backdrop-blur-xl">
+        <div className="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between gap-4">
           <div className="flex items-center gap-2">
-            <img src={logo} alt="Logo" className="h-9 w-9 object-contain" />
+            <img src={logo} alt="Logo" className="h-8 w-8 object-contain" />
             <span className="text-lg font-black italic hidden sm:block">HEART CLUB</span>
           </div>
-          
-          {/* BUSCADOR GLOBAL CONECTADO À API FOOTBALL */}
           <div className="flex-1 max-w-xl">
             <ClubSearch onSelect={(club) => console.log("Clube selecionado:", club)} />
           </div>
-
           <Button variant="ghost" size="icon" onClick={() => signOut()} className="rounded-full">
-            <LogOut className="w-4 h-4 text-white/60" />
+            <LogOut className="w-4 h-4 text-muted-foreground" />
           </Button>
         </div>
       </header>
@@ -69,37 +72,38 @@ const Dashboard = () => {
       <main className="max-w-7xl mx-auto px-4 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
           <div className="lg:col-span-8 space-y-8">
-            <Card className="bg-zinc-900/40 border-0 border-l-4 border-[var(--primary-team)]">
+            {/* Profile Card */}
+            <Card className="bg-card/40 border-0 border-l-4" style={{ borderColor: "var(--primary-team)" }}>
               <CardContent className="p-6 flex justify-between items-center">
                 <div className="flex items-center gap-4">
-                  <div className="w-16 h-16 rounded-full bg-black border border-white/10 p-2 shadow-[0_0_15px_var(--glow-team)]">
-                    <img src={logo} alt="Logo" className="w-full h-full object-contain" />
+                  <div className="w-16 h-16 rounded-full bg-background border border-border/20 p-2" style={{ boxShadow: `0 0 15px var(--glow-team)` }}>
+                    {teamLogo ? <img src={teamLogo} alt="" className="w-full h-full object-contain" /> : <img src={logo} alt="Logo" className="w-full h-full object-contain" />}
                   </div>
                   <div>
                     <h1 className="text-2xl font-black uppercase italic leading-none">{profile.nome_exibicao || "Torcedor"}</h1>
-                    <p className="text-[10px] text-white/40 font-bold uppercase tracking-widest mt-1">{profile.cidade} • Embaixador Bronze</p>
+                    <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest mt-1">{profile.cidade} • Embaixador Bronze</p>
                   </div>
                 </div>
                 <div className="text-right">
-                  <p className="text-[10px] font-bold text-white/30 uppercase tracking-widest">Foco</p>
-                  <p className="text-xl font-black italic text-[var(--primary-team)] uppercase">{activeTeam || "---"}</p>
+                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Foco</p>
+                  <p className="text-xl font-black italic uppercase" style={{ color: "var(--primary-team)" }}>{activeTeam || "---"}</p>
                 </div>
               </CardContent>
             </Card>
 
+            {/* Tabs */}
             <Tabs defaultValue="overview" className="w-full">
-              <TabsList className="bg-zinc-900/60 p-1 mb-8 border border-white/5 h-12 flex">
-                <TabsTrigger value="overview" className="flex-1 data-[state=active]:bg-[var(--primary-team)]">GERAL</TabsTrigger>
-                <TabsTrigger value="map" className="flex-1 data-[state=active]:bg-[var(--primary-team)]">MAPA</TabsTrigger>
-                <TabsTrigger value="duel" className="flex-1 data-[state=active]:bg-[var(--primary-team)]">DUELO</TabsTrigger>
+              <TabsList className="bg-card/60 p-1 mb-8 border border-border/10 h-12 flex">
+                <TabsTrigger value="overview" className="flex-1 data-[state=active]:text-primary-foreground" style={{ "--tw-bg-opacity": 1 } as any}
+                  data-active-style={{ backgroundColor: "var(--primary-team)" }}>GERAL</TabsTrigger>
+                <TabsTrigger value="map" className="flex-1">MAPA</TabsTrigger>
+                <TabsTrigger value="duel" className="flex-1">DUELO</TabsTrigger>
               </TabsList>
               <TabsContent value="overview" className="space-y-8">
                 <NewsCarousel />
                 <HeatmapSection />
               </TabsContent>
-              <TabsContent value="map">
-                <HeatmapSection />
-              </TabsContent>
+              <TabsContent value="map"><HeatmapSection /></TabsContent>
               <TabsContent value="duel" className="space-y-8">
                 <CensusDuel />
                 <AmbassadorHierarchy />
@@ -107,33 +111,61 @@ const Dashboard = () => {
             </Tabs>
           </div>
 
+          {/* Sidebar */}
           <div className="lg:col-span-4 space-y-8">
-            <Card className="bg-zinc-900/80 border-0 shadow-[var(--glow-team)]">
+            <Card className="bg-card/80 border-0" style={{ boxShadow: `0 0 20px var(--glow-team)` }}>
               <CardContent className="py-6 space-y-4">
                 <div className="flex justify-around items-center">
                   <div className="text-center">
-                    <div className="w-12 h-12 bg-black rounded-full mb-1 border border-white/10" />
+                    <div className="w-12 h-12 bg-background rounded-full mb-1 border border-border/20 p-1">
+                      {teamLogo && <img src={teamLogo} alt="" className="w-full h-full object-contain" />}
+                    </div>
                     <p className="text-[10px] font-bold uppercase">{activeTeam}</p>
                   </div>
                   <span className="text-xl font-black italic opacity-20">VS</span>
                   <div className="text-center">
-                    <div className="w-12 h-12 bg-black rounded-full mb-1 border border-white/10" />
-                    <p className="text-[10px] font-bold uppercase text-white/40">RIVAL</p>
+                    <div className="w-12 h-12 bg-background rounded-full mb-1 border border-border/20" />
+                    <p className="text-[10px] font-bold uppercase text-muted-foreground">RIVAL</p>
                   </div>
                 </div>
               </CardContent>
             </Card>
-            <Card className="bg-zinc-900/40 border-white/5 p-6">
+            <Card className="bg-card/40 border-border/10 p-6">
               <div className="flex justify-between text-[10px] mb-2 font-black uppercase">
                 <span>Vaga Libertadores</span>
-                <span className="text-[var(--primary-team)]">78%</span>
+                <span style={{ color: "var(--primary-team)" }}>78%</span>
               </div>
-              <div className="h-1 w-full bg-zinc-800 rounded-full overflow-hidden">
-                <div className="h-full bg-[var(--primary-team)]" style={{ width: '78%' }} />
+              <div className="h-1 w-full bg-secondary rounded-full overflow-hidden">
+                <div className="h-full" style={{ width: '78%', backgroundColor: "var(--primary-team)" }} />
               </div>
             </Card>
           </div>
         </div>
+
+        {/* Social Footer */}
+        <footer className="mt-16 border-t border-border/20 pt-8 pb-12 text-center space-y-4">
+          <h3 className="text-lg font-bold text-foreground">Siga o Heart Club</h3>
+          <p className="text-sm text-muted-foreground max-w-md mx-auto">
+            Siga nossas redes para validar seu selo de torcedor e participar de sorteios!
+          </p>
+          <div className="flex justify-center gap-4">
+            <a href="https://instagram.com/heartcluboficial" target="_blank" rel="noopener noreferrer"
+              className="flex items-center gap-2 px-5 py-2.5 rounded-full border border-border/30 bg-card/50 hover:bg-primary/10 transition-colors text-sm font-medium">
+              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg>
+              Instagram
+            </a>
+            <a href="https://youtube.com/@heartcluboficial" target="_blank" rel="noopener noreferrer"
+              className="flex items-center gap-2 px-5 py-2.5 rounded-full border border-border/30 bg-card/50 hover:bg-primary/10 transition-colors text-sm font-medium">
+              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 00-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 00.502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 002.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 002.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+              YouTube
+            </a>
+            <a href="https://tiktok.com/@heartcluboficial" target="_blank" rel="noopener noreferrer"
+              className="flex items-center gap-2 px-5 py-2.5 rounded-full border border-border/30 bg-card/50 hover:bg-primary/10 transition-colors text-sm font-medium">
+              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z"/></svg>
+              TikTok
+            </a>
+          </div>
+        </footer>
       </main>
     </div>
   );
