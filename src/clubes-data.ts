@@ -61,7 +61,7 @@ export const CLUBS_DATA: ClubData[] = [
   { api_id: 1052, nome: 'Ponte Preta', nome_curto: 'PON', serie: 'B', cidade: 'Campinas', estado: 'SP', pais: 'Brasil', mascote: 'Macaca' },
   { api_id: 1049, nome: 'São Bernardo', nome_curto: 'SBE', serie: 'B', cidade: 'São Bernardo do Campo', estado: 'SP', pais: 'Brasil', mascote: 'Tigre' },
   { api_id: 143, nome: 'Sport', nome_curto: 'SPT', serie: 'B', cidade: 'Recife', estado: 'PE', pais: 'Brasil', mascote: 'Leão' },
-  { api_id: 1035, nome: 'Vila Nova', nome_curto: 'VIL', serie: 'B', cidade: 'Goiânia', estado: 'GO', pais: 'Brasil', mascote: 'Tigre' },
+  { api_id: 1062, nome: 'Vila Nova', nome_curto: 'VIL', serie: 'B', cidade: 'Goiânia', estado: 'GO', pais: 'Brasil', mascote: 'Tigre' },
 
   // ═══════════════════════════════════════════════════════════
   // SÉRIE C 2026 (20 CLUBES)
