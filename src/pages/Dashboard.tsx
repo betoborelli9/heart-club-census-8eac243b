@@ -18,14 +18,23 @@ import AmbassadorHierarchy from "@/components/dashboard/AmbassadorHierarchy";
 import logo from "@/assets/logo.png";
 
 const Dashboard = () => {
-...
+  const navigate = useNavigate();
+  const { user, profile, isLoading, isAuthenticated, hasVoted, signOut } = useUser();
+  const [activeTeam, setActiveTeam] = useState<string | null>(null);
+  const [teamLogo, setTeamLogo] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) navigate("/login", { replace: true });
+    else if (!isLoading && isAuthenticated && !hasVoted) navigate("/voting", { replace: true });
+  }, [isLoading, isAuthenticated, hasVoted, navigate]);
+
   useEffect(() => {
     const loadTeam = async () => {
       if (!user) return;
       const { data } = await supabase.from("votos").select("clube_nome").eq("user_id", user.id).limit(1).maybeSingle();
       if (data?.clube_nome) {
         setActiveTeam(data.clube_nome);
-        const found = CLUBS_DATA.find(c => c.nome === data.clube_nome);
+        const found = CLUBS_DATA.find((c) => c.nome === data.clube_nome);
         if (found) setTeamLogo(resolveClubLogo(found.nome, found.api_id));
       }
     };
