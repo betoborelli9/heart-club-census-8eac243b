@@ -232,7 +232,8 @@ const Voting = () => {
                   <div className="w-8 h-8 rounded bg-secondary flex items-center justify-center text-sm">⚽</div>}
                 <div className="flex-1 min-w-0">
                   <p className="font-medium text-foreground text-sm">{club.name}</p>
-                  <p className="text-xs text-muted-foreground">{club.isCustom ? "Adicionado manualmente" : club.city}</p>
+                  <p className="text-xs text-muted-foreground">{club.isCustom ? "Adicionado manualmente" : club.location}</p>
+                  {club.mascote && !club.isCustom && <p className="text-[11px] text-primary/70 italic">🐾 {club.mascote}</p>}
                 </div>
                 <button onClick={() => removeSympathy(idx)} className="text-muted-foreground hover:text-destructive p-1"><X className="w-4 h-4" /></button>
               </motion.div>
