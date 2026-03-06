@@ -18,14 +18,22 @@ interface ClubResult {
   api_id: number | null;
   name: string;
   shortName: string;
-  city: string | null;
-  country: string | null;
+  location: string | null;
   logo: string | null;
+  mascote: string | null;
   isCustom?: boolean;
 }
 
 function toClubResult(c: ClubSearchResult): ClubResult {
-  return { id: c.id, api_id: c.api_id, name: c.name, shortName: c.shortName, city: c.location, country: null, logo: c.logo };
+  return {
+    id: c.id,
+    api_id: c.api_id,
+    name: c.name,
+    shortName: c.shortName,
+    location: c.location,
+    logo: c.logo,
+    mascote: c.mascote || null,
+  };
 }
 
 const Voting = () => {
