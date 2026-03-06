@@ -60,7 +60,9 @@ export type Database = {
           id: string
           is_locked: boolean
           primary_color: string
+          primary_color_name: string | null
           secondary_color: string
+          secondary_color_name: string | null
           suggested_by: string | null
           updated_at: string
           validated_by: string | null
@@ -74,7 +76,9 @@ export type Database = {
           id?: string
           is_locked?: boolean
           primary_color?: string
+          primary_color_name?: string | null
           secondary_color?: string
+          secondary_color_name?: string | null
           suggested_by?: string | null
           updated_at?: string
           validated_by?: string | null
@@ -88,7 +92,9 @@ export type Database = {
           id?: string
           is_locked?: boolean
           primary_color?: string
+          primary_color_name?: string | null
           secondary_color?: string
+          secondary_color_name?: string | null
           suggested_by?: string | null
           updated_at?: string
           validated_by?: string | null
@@ -99,34 +105,55 @@ export type Database = {
         Row: {
           api_id: number | null
           cidade: string | null
+          cor_primaria: string | null
+          cor_secundaria: string | null
           escudo_url: string | null
+          estadio: string | null
+          fundacao: string | null
+          historia: string | null
           id: string
+          mascote: string | null
           nome: string
           nome_curto: string | null
           pais: string | null
           pais_codigo: string | null
+          rivais: string | null
           updated_at: string | null
         }
         Insert: {
           api_id?: number | null
           cidade?: string | null
+          cor_primaria?: string | null
+          cor_secundaria?: string | null
           escudo_url?: string | null
+          estadio?: string | null
+          fundacao?: string | null
+          historia?: string | null
           id?: string
+          mascote?: string | null
           nome: string
           nome_curto?: string | null
           pais?: string | null
           pais_codigo?: string | null
+          rivais?: string | null
           updated_at?: string | null
         }
         Update: {
           api_id?: number | null
           cidade?: string | null
+          cor_primaria?: string | null
+          cor_secundaria?: string | null
           escudo_url?: string | null
+          estadio?: string | null
+          fundacao?: string | null
+          historia?: string | null
           id?: string
+          mascote?: string | null
           nome?: string
           nome_curto?: string | null
           pais?: string | null
           pais_codigo?: string | null
+          rivais?: string | null
           updated_at?: string | null
         }
         Relationships: []
@@ -258,7 +285,34 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      buscar_clube_v2: {
+        Args: { termo_busca: string }
+        Returns: {
+          api_id: number | null
+          cidade: string | null
+          cor_primaria: string | null
+          cor_secundaria: string | null
+          escudo_url: string | null
+          estadio: string | null
+          fundacao: string | null
+          historia: string | null
+          id: string
+          mascote: string | null
+          nome: string
+          nome_curto: string | null
+          pais: string | null
+          pais_codigo: string | null
+          rivais: string | null
+          updated_at: string | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "clubes_cache"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      unaccent: { Args: { "": string }; Returns: string }
     }
     Enums: {
       [_ in never]: never
