@@ -9,7 +9,6 @@ import { useUser } from "@/contexts/UserContext";
 import { supabase } from "@/integrations/supabase/client";
 import { getTeamTheme } from "@/data/teamColors";
 import { CLUBS_DATA } from "@/clubes-data";
-import { resolveClubLogo } from "@/lib/search-clubs";
 import { ClubSearch } from "@/components/dashboard/ClubSearch";
 import NewsCarousel from "@/components/dashboard/NewsCarousel";
 import HeatmapSection from "@/components/dashboard/HeatmapSection";
@@ -35,7 +34,7 @@ const Dashboard = () => {
       if (data?.clube_nome) {
         setActiveTeam(data.clube_nome);
         const found = CLUBS_DATA.find((c) => c.nome === data.clube_nome);
-        if (found) setTeamLogo(resolveClubLogo(found.nome, found.api_id));
+        if (found) setTeamLogo(found.logoUrl);
       }
     };
     loadTeam();
