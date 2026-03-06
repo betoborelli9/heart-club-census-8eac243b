@@ -74,7 +74,7 @@ const Voting = () => {
   useEffect(() => { doSearch(sympathySearch, setSympathyResults, setSympathyOpen); }, [sympathySearch, doSearch]);
 
   const createCustomClub = (name: string): ClubResult => ({
-    id: null, api_id: null, name: name.trim(), shortName: name.trim(), city: null, country: null, logo: null, isCustom: true,
+    id: null, api_id: null, name: name.trim(), shortName: name.trim(), location: null, logo: null, mascote: null, isCustom: true,
   });
 
   const selectHeart = (club: ClubResult) => {
