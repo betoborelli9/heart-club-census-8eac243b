@@ -1,19 +1,11 @@
 /* src/lib/search-clubs.ts
-   Busca local-first no arquivo mestre clubs-data.ts
-   Case-insensitive + Unaccent (NFD) */
+   Busca 100% local usando clubs-data.ts como fonte ÚNICA.
+   Logos vêm exclusivamente do campo logoUrl de cada clube. */
 
 import { CLUBS_DATA } from "@/clubes-data";
 
 const removeAccents = (str: string) =>
   str.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-
-const CLUB_LOGO_OVERRIDES: Record<string, string> = {
-  "Anápolis": "https://upload.wikimedia.org/wikipedia/pt/8/85/An%C3%A1polis-GO_%28BRA%29.png",
-};
-
-export const resolveClubLogo = (clubName: string, apiId: number) => {
-  return CLUB_LOGO_OVERRIDES[clubName] || `https://media.api-sports.io/football/teams/${apiId}.png`;
-};
 
 export interface ClubSearchResult {
   id: string;
@@ -21,7 +13,7 @@ export interface ClubSearchResult {
   name: string;
   shortName: string;
   location: string;
-  logo: string;
+  logo: string;          // ← sempre clube.logoUrl
   city: string;
   state: string;
   country: string;
@@ -44,7 +36,7 @@ export function searchClubsLocal(query: string, limit = 10): ClubSearchResult[] 
     name: c.nome,
     shortName: c.nome_curto,
     location: `${c.cidade}, ${c.estado}, ${c.pais}`,
-    logo: resolveClubLogo(c.nome, c.api_id),
+    logo: c.logoUrl,      // ← direto do dado mestre, sem construção manual
     city: c.cidade,
     state: c.estado,
     country: c.pais,
