@@ -27,7 +27,7 @@ export const ClubSearch = ({ onSelect }: { onSelect: (club: ClubSearchResult) =>
         <div className="absolute top-14 w-full bg-card border border-border/20 rounded-2xl overflow-hidden z-[100] shadow-2xl max-h-[300px] overflow-y-auto">
           {results.map((club) => (
             <button
-              key={club.api_id}
+              key={`${club.api_id}-${club.shortName}`}
               onClick={() => { onSelect(club); setResults([]); }}
               className="w-full flex items-center gap-4 p-4 hover:bg-primary/10 border-b border-border/10 text-left transition-colors"
             >
@@ -35,7 +35,7 @@ export const ClubSearch = ({ onSelect }: { onSelect: (club: ClubSearchResult) =>
                 src={club.logo}
                 alt={club.name}
                 className="w-10 h-10 object-contain"
-                onError={(e) => { (e.target as HTMLImageElement).src = '/placeholder-shield.png'; }}
+                onError={(e) => { (e.target as HTMLImageElement).src = '/placeholder.svg'; }}
               />
               <div className="flex flex-col">
                 <span className="font-bold text-sm text-foreground uppercase italic tracking-wider">
@@ -43,6 +43,9 @@ export const ClubSearch = ({ onSelect }: { onSelect: (club: ClubSearchResult) =>
                 </span>
                 <span className="text-[10px] text-muted-foreground uppercase font-medium">
                   {club.location}
+                </span>
+                <span className="text-[10px] text-primary/70 italic font-medium">
+                  🐾 {club.mascote}
                 </span>
               </div>
             </button>
