@@ -203,7 +203,8 @@ const Voting = () => {
                 <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-lg">⚽</div>}
               <div className="flex-1 min-w-0">
                 <p className="font-bold text-foreground">{heartClub.name}</p>
-                <p className="text-xs text-muted-foreground">{heartClub.isCustom ? "Adicionado manualmente" : heartClub.city}</p>
+                <p className="text-xs text-muted-foreground">{heartClub.isCustom ? "Adicionado manualmente" : heartClub.location}</p>
+                {heartClub.mascote && !heartClub.isCustom && <p className="text-[11px] text-primary/70 italic">🐾 {heartClub.mascote}</p>}
               </div>
               <button onClick={() => setHeartClub(null)} className="text-muted-foreground hover:text-foreground p-1"><X className="w-4 h-4" /></button>
             </motion.div>
