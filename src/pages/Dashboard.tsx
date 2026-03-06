@@ -9,6 +9,7 @@ import { useUser } from "@/contexts/UserContext";
 import { supabase } from "@/integrations/supabase/client";
 import { getTeamTheme } from "@/data/teamColors";
 import { CLUBS_DATA } from "@/clubes-data";
+import { ClubLogo } from "@/components/ClubLogo";
 import { ClubSearch } from "@/components/dashboard/ClubSearch";
 import NewsCarousel from "@/components/dashboard/NewsCarousel";
 import HeatmapSection from "@/components/dashboard/HeatmapSection";
@@ -76,8 +77,8 @@ const Dashboard = () => {
             <Card className="bg-card/40 border-0 border-l-4" style={{ borderColor: "var(--primary-team)" }}>
               <CardContent className="p-6 flex justify-between items-center">
                 <div className="flex items-center gap-4">
-                  <div className="w-16 h-16 rounded-full bg-background border border-border/20 p-2" style={{ boxShadow: `0 0 15px var(--glow-team)` }}>
-                    {teamLogo ? <img src={teamLogo} alt="" className="w-full h-full object-contain" /> : <img src={logo} alt="Logo" className="w-full h-full object-contain" />}
+                  <div className="w-16 h-16 rounded-full bg-background border border-border/20 p-1.5 flex items-center justify-center" style={{ boxShadow: `0 0 15px var(--glow-team)` }}>
+                    <ClubLogo src={teamLogo} alt={activeTeam || "Clube"} size="lg" />
                   </div>
                   <div>
                     <h1 className="text-2xl font-black uppercase italic leading-none">{profile.nome_exibicao || "Torcedor"}</h1>
@@ -117,8 +118,8 @@ const Dashboard = () => {
               <CardContent className="py-6 space-y-4">
                 <div className="flex justify-around items-center">
                   <div className="text-center">
-                    <div className="w-12 h-12 bg-background rounded-full mb-1 border border-border/20 p-1">
-                      {teamLogo && <img src={teamLogo} alt="" className="w-full h-full object-contain" />}
+                    <div className="w-12 h-12 bg-background rounded-full mb-1 border border-border/20 p-1 flex items-center justify-center">
+                      <ClubLogo src={teamLogo} alt={activeTeam || ""} size="sm" />
                     </div>
                     <p className="text-[10px] font-bold uppercase">{activeTeam}</p>
                   </div>
