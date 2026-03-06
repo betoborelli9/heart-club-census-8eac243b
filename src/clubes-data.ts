@@ -90,7 +90,7 @@ export const CLUBS_DATA: ClubData[] = [
   // ═══════════════════════════════════════════════════════════
   // SÉRIE D 2026 (DESTAQUES)
   // ═══════════════════════════════════════════════════════════
-  { api_id: 1051, nome: 'ABC', nome_curto: 'ABC', serie: 'D', cidade: 'Natal', estado: 'RN', pais: 'Brasil', mascote: 'Elefante' },
+  { api_id: 7315, nome: 'ABC', nome_curto: 'ABC', serie: 'D', cidade: 'Natal', estado: 'RN', pais: 'Brasil', mascote: 'Elefante' },
   { api_id: 11028, nome: 'ABECAT', nome_curto: 'ABE', serie: 'D', cidade: 'Aparecida de Goiânia', estado: 'GO', pais: 'Brasil', mascote: 'Gato' },
   { api_id: 2542, nome: 'Água Santa', nome_curto: 'AGU', serie: 'D', cidade: 'Diadema', estado: 'SP', pais: 'Brasil', mascote: 'Netuno' },
   { api_id: 10103, nome: 'Águia de Marabá', nome_curto: 'AGM', serie: 'D', cidade: 'Marabá', estado: 'PA', pais: 'Brasil', mascote: 'Águia' },
