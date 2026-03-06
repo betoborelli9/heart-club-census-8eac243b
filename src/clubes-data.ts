@@ -15,13 +15,8 @@ export interface ClubData {
   logoUrl: string;
 }
 
-/* Overrides manuais para clubes cujo api_id não bate no CDN padrão */
-const LOGO_OVERRIDES: Record<string, string> = {
-  "Anápolis": "https://upload.wikimedia.org/wikipedia/pt/8/85/An%C3%A1polis-GO_%28BRA%29.png",
-};
-
-const buildLogo = (nome: string, apiId: number) =>
-  LOGO_OVERRIDES[nome] || `https://media.api-sports.io/football/teams/${apiId}.png`;
+/* Logos servidos localmente em public/logos/{api_id}.png */
+const buildLogo = (_nome: string, apiId: number) => `/logos/${apiId}.png`;
 
 const RAW_CLUBS: Omit<ClubData, 'logoUrl'>[] = [
   // ═══════════════════════════════════════════════════════════
