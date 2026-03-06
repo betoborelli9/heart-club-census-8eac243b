@@ -63,39 +63,24 @@ const Login = () => {
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center px-4 relative overflow-hidden">
-
       <motion.div
         initial={{ y: 40, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.6, type: "spring" }}
         className="w-full max-w-sm space-y-8 relative z-10"
       >
-        {/* Logo */}
         <div className="text-center space-y-3">
-          <motion.img
-            src={logo}
-            alt="Heart Club"
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
+          <motion.img src={logo} alt="Heart Club"
+            initial={{ scale: 0 }} animate={{ scale: 1 }}
             transition={{ type: "spring", bounce: 0.5, delay: 0.2 }}
-            className="mx-auto w-28 h-28 object-contain"
-          />
-          <p className="text-sm text-muted-foreground">
-            O maior censo de torcidas do mundo
-          </p>
+            className="mx-auto w-28 h-28 object-contain" />
+          <p className="text-sm text-muted-foreground">O maior censo de torcidas do mundo</p>
         </div>
 
-        {/* Social Login Buttons */}
         <div className="space-y-3">
-          <Button
-            variant="outline"
-            className="w-full h-13 font-medium glass-card-hover border-border/50 text-foreground"
-            onClick={() => handleOAuth("google")}
-            disabled={!!loadingProvider}
-          >
-            {loadingProvider === "google" ? (
-              <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-            ) : (
+          <Button variant="outline" className="w-full h-13 font-medium glass-card-hover border-border/50 text-foreground"
+            onClick={() => handleOAuth("google")} disabled={!!loadingProvider}>
+            {loadingProvider === "google" ? <Loader2 className="w-5 h-5 mr-2 animate-spin" /> : (
               <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
                 <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"/>
                 <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
@@ -105,46 +90,27 @@ const Login = () => {
             )}
             Entrar com Google
           </Button>
-
         </div>
 
-        {/* Divider */}
         <div className="relative">
-          <div className="absolute inset-0 flex items-center">
-            <span className="w-full border-t border-border/50" />
-          </div>
+          <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-border/50" /></div>
           <div className="relative flex justify-center text-xs uppercase">
             <span className="bg-background px-3 text-muted-foreground font-medium">
-              ou com Magic Link
+              Acesso Rápido por E-mail (Sem Senha)
             </span>
           </div>
         </div>
 
-        {/* Magic Link Form */}
         <form onSubmit={handleMagicLink} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="email" className="text-sm text-muted-foreground">Email</Label>
-            <Input
-              id="email"
-              type="email"
-              placeholder="seu@email.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              className="h-12 bg-secondary/50 border-border/50 focus:border-primary"
-            />
+            <Input id="email" type="email" placeholder="seu@email.com" value={email}
+              onChange={(e) => setEmail(e.target.value)} required
+              className="h-12 bg-secondary/50 border-border/50 focus:border-primary" />
           </div>
-          <Button
-            type="submit"
-            className="w-full h-12 font-bold btn-orange-gradient rounded-xl"
-            disabled={!!loadingProvider}
-          >
-            {loadingProvider === "magic" ? (
-              <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-            ) : (
-              <Mail className="w-5 h-5 mr-2" />
-            )}
-            Enviar Magic Link
+          <Button type="submit" className="w-full h-12 font-bold btn-orange-gradient rounded-xl" disabled={!!loadingProvider}>
+            {loadingProvider === "magic" ? <Loader2 className="w-5 h-5 mr-2 animate-spin" /> : <Mail className="w-5 h-5 mr-2" />}
+            Enviar Link de Acesso
           </Button>
         </form>
 
