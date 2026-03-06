@@ -67,7 +67,7 @@ export const CLUBS_DATA: ClubData[] = [
   // SÉRIE C 2026 (20 CLUBES)
   // ═══════════════════════════════════════════════════════════
   { api_id: 10069, nome: 'Amazonas FC', nome_curto: 'AMA', serie: 'C', cidade: 'Manaus', estado: 'AM', pais: 'Brasil', mascote: 'Onça-Pintada' },
-  { api_id: 150, nome: 'Anápolis', nome_curto: 'ANA', serie: 'C', cidade: 'Anápolis', estado: 'GO', pais: 'Brasil', mascote: 'Xavante' },
+  { api_id: 11943, nome: 'Anápolis', nome_curto: 'ANA', serie: 'C', cidade: 'Anápolis', estado: 'GO', pais: 'Brasil', mascote: 'Xavante' },
   { api_id: 11033, nome: 'Barra-SC', nome_curto: 'BAR', serie: 'C', cidade: 'Balneário Camboriú', estado: 'SC', pais: 'Brasil', mascote: 'Leão' },
   { api_id: 1055, nome: 'Botafogo-PB', nome_curto: 'BPB', serie: 'C', cidade: 'João Pessoa', estado: 'PB', pais: 'Brasil', mascote: 'Belo' },
   { api_id: 1059, nome: 'Brusque', nome_curto: 'BRU', serie: 'C', cidade: 'Brusque', estado: 'SC', pais: 'Brasil', mascote: 'Marreco' },
