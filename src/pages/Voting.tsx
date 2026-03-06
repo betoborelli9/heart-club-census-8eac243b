@@ -155,7 +155,7 @@ const Voting = () => {
           <button key={`${club.api_id || club.name}-${i}`} onClick={() => onSelect(club)}
             className="w-full flex items-center gap-3 px-4 py-3 hover:bg-primary/10 transition-colors text-left border-b border-border/10 last:border-0">
             {club.logo ? (
-              <img src={club.logo} alt="" className="w-8 h-8 object-contain rounded" onError={(e) => { (e.target as HTMLImageElement).src = '/placeholder-shield.png'; }} />
+              <img src={club.logo} alt="" className="w-8 h-8 object-contain rounded" onError={(e) => { (e.target as HTMLImageElement).src = '/placeholder.svg'; }} />
             ) : (
               <div className="w-8 h-8 rounded bg-secondary flex items-center justify-center text-xs text-muted-foreground">⚽</div>
             )}
