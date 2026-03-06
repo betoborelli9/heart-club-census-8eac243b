@@ -1,0 +1,97 @@
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useUser } from "@/contexts/UserContext";
+import { supabase } from "@/integrations/supabase/client";
+import { Loader2, ShieldAlert, ArrowLeft } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import AdminAuditTable from "@/components/admin/AdminAuditTable";
+import AdminBIStats from "@/components/admin/AdminBIStats";
+import logo from "@/assets/logo.png";
+
+const Admin = () => {
+  const navigate = useNavigate();
+  const { user, profile, isLoading } = useUser();
+  const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    if (isLoading) return;
+    if (!user) {
+      navigate("/login");
+      return;
+    }
+    // Check admin role from profile
+    if (profile?.role === "admin") {
+      setIsAdmin(true);
+    } else {
+      setIsAdmin(false);
+    }
+  }, [user, profile, isLoading, navigate]);
+
+  if (isLoading || isAdmin === null) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="w-10 h-10 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!isAdmin) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-6 px-4">
+        <div className="glass-card rounded-2xl p-12 text-center max-w-md">
+          <ShieldAlert className="w-16 h-16 text-destructive mx-auto mb-4" />
+          <h1 className="text-2xl font-black text-foreground mb-2">Acesso Restrito</h1>
+          <p className="text-muted-foreground mb-6">
+            Este painel é exclusivo para administradores do Heart Club.
+          </p>
+          <Button onClick={() => navigate("/dashboard")} className="btn-orange-gradient">
+            <ArrowLeft className="w-4 h-4 mr-2" /> Voltar ao Dashboard
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-background text-foreground">
+      <header className="sticky top-0 z-50 border-b border-border bg-background/90 backdrop-blur-xl">
+        <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <img src={logo} alt="Logo" className="h-9 w-9 object-contain" />
+            <span className="text-lg font-black italic">HEART CLUB</span>
+            <span className="text-xs font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-full uppercase tracking-wider">
+              Admin
+            </span>
+          </div>
+          <Button variant="ghost" size="sm" onClick={() => navigate("/dashboard")}>
+            <ArrowLeft className="w-4 h-4 mr-1" /> Dashboard
+          </Button>
+        </div>
+      </header>
+
+      <main className="max-w-7xl mx-auto px-4 py-8">
+        <Tabs defaultValue="audit" className="w-full">
+          <TabsList className="bg-card border border-border mb-8 h-12">
+            <TabsTrigger value="audit" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              🔍 Auditoria de Votos
+            </TabsTrigger>
+            <TabsTrigger value="bi" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              📊 BI & Estatísticas
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="audit">
+            <AdminAuditTable />
+          </TabsContent>
+
+          <TabsContent value="bi">
+            <AdminBIStats />
+          </TabsContent>
+        </Tabs>
+      </main>
+    </div>
+  );
+};
+
+export default Admin;
