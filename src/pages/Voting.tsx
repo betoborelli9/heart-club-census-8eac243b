@@ -161,7 +161,8 @@ const Voting = () => {
             )}
             <div className="min-w-0 flex-1">
               <p className="font-semibold text-foreground text-sm truncate">{club.name}</p>
-              <p className="text-xs text-muted-foreground truncate">{club.city}</p>
+              <p className="text-xs text-muted-foreground truncate">{club.location}</p>
+              {club.mascote && <p className="text-[11px] text-primary/70 italic truncate">🐾 {club.mascote}</p>}
             </div>
           </button>
         ))}
