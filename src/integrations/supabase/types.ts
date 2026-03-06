@@ -215,6 +215,8 @@ export type Database = {
           fingerprint: string | null
           id: string
           ip_address: string | null
+          is_fraud_attempt: boolean
+          is_original_vote: boolean
           is_suspicious: boolean | null
           pais: string
           user_id: string | null
@@ -227,6 +229,8 @@ export type Database = {
           fingerprint?: string | null
           id?: string
           ip_address?: string | null
+          is_fraud_attempt?: boolean
+          is_original_vote?: boolean
           is_suspicious?: boolean | null
           pais: string
           user_id?: string | null
@@ -239,6 +243,8 @@ export type Database = {
           fingerprint?: string | null
           id?: string
           ip_address?: string | null
+          is_fraud_attempt?: boolean
+          is_original_vote?: boolean
           is_suspicious?: boolean | null
           pais?: string
           user_id?: string | null
@@ -285,6 +291,36 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_clean_fraud_by_fingerprint: {
+        Args: never
+        Returns: {
+          deleted_count: number
+          marked_count: number
+        }[]
+      }
+      admin_get_bi_stats: { Args: never; Returns: Json }
+      admin_get_votes_with_tracking: {
+        Args: never
+        Returns: {
+          cidade: string
+          clube_nome: string
+          created_at: string
+          estado: string
+          fingerprint: string
+          ip_address: string
+          is_fraud_attempt: boolean
+          is_original_vote: boolean
+          is_suspicious: boolean
+          pais: string
+          user_email: string
+          user_genero: string
+          user_id: string
+          user_nascimento: string
+          user_nome: string
+          user_profissao: string
+          voto_id: string
+        }[]
+      }
       buscar_clube_v2: {
         Args: { termo_busca: string }
         Returns: {
