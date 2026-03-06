@@ -8,13 +8,11 @@ const removeAccents = (str: string) =>
   str.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 
 const CLUB_LOGO_OVERRIDES: Record<string, string> = {
-  "Vila Nova": "https://media.api-football.com/teams/1062.png",
   "Anápolis": "https://upload.wikimedia.org/wikipedia/pt/8/85/An%C3%A1polis-GO_%28BRA%29.png",
-  "Athletico-PR": "https://media.api-football.com/teams/154.png",
 };
 
 export const resolveClubLogo = (clubName: string, apiId: number) => {
-  return CLUB_LOGO_OVERRIDES[clubName] || `https://media.api-football.com/teams/${apiId}.png`;
+  return CLUB_LOGO_OVERRIDES[clubName] || `https://media.api-sports.io/football/teams/${apiId}.png`;
 };
 
 export interface ClubSearchResult {
