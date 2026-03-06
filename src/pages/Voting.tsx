@@ -18,14 +18,22 @@ interface ClubResult {
   api_id: number | null;
   name: string;
   shortName: string;
-  city: string | null;
-  country: string | null;
+  location: string | null;
   logo: string | null;
+  mascote: string | null;
   isCustom?: boolean;
 }
 
 function toClubResult(c: ClubSearchResult): ClubResult {
-  return { id: c.id, api_id: c.api_id, name: c.name, shortName: c.shortName, city: c.location, country: null, logo: c.logo };
+  return {
+    id: c.id,
+    api_id: c.api_id,
+    name: c.name,
+    shortName: c.shortName,
+    location: c.location,
+    logo: c.logo,
+    mascote: c.mascote || null,
+  };
 }
 
 const Voting = () => {
@@ -66,7 +74,7 @@ const Voting = () => {
   useEffect(() => { doSearch(sympathySearch, setSympathyResults, setSympathyOpen); }, [sympathySearch, doSearch]);
 
   const createCustomClub = (name: string): ClubResult => ({
-    id: null, api_id: null, name: name.trim(), shortName: name.trim(), city: null, country: null, logo: null, isCustom: true,
+    id: null, api_id: null, name: name.trim(), shortName: name.trim(), location: null, logo: null, mascote: null, isCustom: true,
   });
 
   const selectHeart = (club: ClubResult) => {
@@ -147,13 +155,14 @@ const Voting = () => {
           <button key={`${club.api_id || club.name}-${i}`} onClick={() => onSelect(club)}
             className="w-full flex items-center gap-3 px-4 py-3 hover:bg-primary/10 transition-colors text-left border-b border-border/10 last:border-0">
             {club.logo ? (
-              <img src={club.logo} alt="" className="w-8 h-8 object-contain rounded" onError={(e) => { (e.target as HTMLImageElement).src = '/placeholder-shield.png'; }} />
+              <img src={club.logo} alt="" className="w-8 h-8 object-contain rounded" onError={(e) => { (e.target as HTMLImageElement).src = '/placeholder.svg'; }} />
             ) : (
               <div className="w-8 h-8 rounded bg-secondary flex items-center justify-center text-xs text-muted-foreground">⚽</div>
             )}
             <div className="min-w-0 flex-1">
               <p className="font-semibold text-foreground text-sm truncate">{club.name}</p>
-              <p className="text-xs text-muted-foreground truncate">{club.city}</p>
+              <p className="text-xs text-muted-foreground truncate">{club.location}</p>
+              {club.mascote && <p className="text-[11px] text-primary/70 italic truncate">🐾 {club.mascote}</p>}
             </div>
           </button>
         ))}
@@ -194,7 +203,8 @@ const Voting = () => {
                 <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-lg">⚽</div>}
               <div className="flex-1 min-w-0">
                 <p className="font-bold text-foreground">{heartClub.name}</p>
-                <p className="text-xs text-muted-foreground">{heartClub.isCustom ? "Adicionado manualmente" : heartClub.city}</p>
+                <p className="text-xs text-muted-foreground">{heartClub.isCustom ? "Adicionado manualmente" : heartClub.location}</p>
+                {heartClub.mascote && !heartClub.isCustom && <p className="text-[11px] text-primary/70 italic">🐾 {heartClub.mascote}</p>}
               </div>
               <button onClick={() => setHeartClub(null)} className="text-muted-foreground hover:text-foreground p-1"><X className="w-4 h-4" /></button>
             </motion.div>
@@ -222,7 +232,8 @@ const Voting = () => {
                   <div className="w-8 h-8 rounded bg-secondary flex items-center justify-center text-sm">⚽</div>}
                 <div className="flex-1 min-w-0">
                   <p className="font-medium text-foreground text-sm">{club.name}</p>
-                  <p className="text-xs text-muted-foreground">{club.isCustom ? "Adicionado manualmente" : club.city}</p>
+                  <p className="text-xs text-muted-foreground">{club.isCustom ? "Adicionado manualmente" : club.location}</p>
+                  {club.mascote && !club.isCustom && <p className="text-[11px] text-primary/70 italic">🐾 {club.mascote}</p>}
                 </div>
                 <button onClick={() => removeSympathy(idx)} className="text-muted-foreground hover:text-destructive p-1"><X className="w-4 h-4" /></button>
               </motion.div>

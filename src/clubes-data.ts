@@ -61,13 +61,13 @@ export const CLUBS_DATA: ClubData[] = [
   { api_id: 1052, nome: 'Ponte Preta', nome_curto: 'PON', serie: 'B', cidade: 'Campinas', estado: 'SP', pais: 'Brasil', mascote: 'Macaca' },
   { api_id: 1049, nome: 'São Bernardo', nome_curto: 'SBE', serie: 'B', cidade: 'São Bernardo do Campo', estado: 'SP', pais: 'Brasil', mascote: 'Tigre' },
   { api_id: 143, nome: 'Sport', nome_curto: 'SPT', serie: 'B', cidade: 'Recife', estado: 'PE', pais: 'Brasil', mascote: 'Leão' },
-  { api_id: 1062, nome: 'Vila Nova', nome_curto: 'VIL', serie: 'B', cidade: 'Goiânia', estado: 'GO', pais: 'Brasil', mascote: 'Tigre' },
+  { api_id: 1035, nome: 'Vila Nova', nome_curto: 'VIL', serie: 'B', cidade: 'Goiânia', estado: 'GO', pais: 'Brasil', mascote: 'Tigre' },
 
   // ═══════════════════════════════════════════════════════════
   // SÉRIE C 2026 (20 CLUBES)
   // ═══════════════════════════════════════════════════════════
   { api_id: 10069, nome: 'Amazonas FC', nome_curto: 'AMA', serie: 'C', cidade: 'Manaus', estado: 'AM', pais: 'Brasil', mascote: 'Onça-Pintada' },
-  { api_id: 150, nome: 'Anápolis', nome_curto: 'ANA', serie: 'C', cidade: 'Anápolis', estado: 'GO', pais: 'Brasil', mascote: 'Xavante' },
+  { api_id: 11943, nome: 'Anápolis', nome_curto: 'ANA', serie: 'C', cidade: 'Anápolis', estado: 'GO', pais: 'Brasil', mascote: 'Xavante' },
   { api_id: 11033, nome: 'Barra-SC', nome_curto: 'BAR', serie: 'C', cidade: 'Balneário Camboriú', estado: 'SC', pais: 'Brasil', mascote: 'Leão' },
   { api_id: 1055, nome: 'Botafogo-PB', nome_curto: 'BPB', serie: 'C', cidade: 'João Pessoa', estado: 'PB', pais: 'Brasil', mascote: 'Belo' },
   { api_id: 1059, nome: 'Brusque', nome_curto: 'BRU', serie: 'C', cidade: 'Brusque', estado: 'SC', pais: 'Brasil', mascote: 'Marreco' },
