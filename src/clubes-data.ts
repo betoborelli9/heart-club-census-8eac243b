@@ -12,9 +12,18 @@ export interface ClubData {
   estado: string;
   pais: string;
   mascote: string;
+  logoUrl: string;
 }
 
-export const CLUBS_DATA: ClubData[] = [
+/* Overrides manuais para clubes cujo api_id não bate no CDN padrão */
+const LOGO_OVERRIDES: Record<string, string> = {
+  "Anápolis": "https://upload.wikimedia.org/wikipedia/pt/8/85/An%C3%A1polis-GO_%28BRA%29.png",
+};
+
+const buildLogo = (nome: string, apiId: number) =>
+  LOGO_OVERRIDES[nome] || `https://media.api-sports.io/football/teams/${apiId}.png`;
+
+const RAW_CLUBS: Omit<ClubData, 'logoUrl'>[] = [
   // ═══════════════════════════════════════════════════════════
   // SÉRIE A 2026 (20 CLUBES)
   // ═══════════════════════════════════════════════════════════
@@ -198,3 +207,9 @@ export const CLUBS_DATA: ClubData[] = [
   { api_id: 1138, nome: 'Defensor Sporting', nome_curto: 'DEF', serie: 'INT', cidade: 'Montevidéu', estado: 'Montevidéu', pais: 'Uruguai', mascote: 'Violeta' },
   { api_id: 1139, nome: 'Emelec', nome_curto: 'EME', serie: 'INT', cidade: 'Guayaquil', estado: 'Guayas', pais: 'Equador', mascote: 'Eléctrico' },
 ];
+
+/** Lista mestra com logoUrl já resolvido — fonte ÚNICA de verdade */
+export const CLUBS_DATA: ClubData[] = RAW_CLUBS.map((c) => ({
+  ...c,
+  logoUrl: buildLogo(c.nome, c.api_id),
+}));
