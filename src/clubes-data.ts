@@ -1,6 +1,4 @@
 // Caminho/Arquivo: src/clubes-data.ts
-// Objetivo: Lista Mestra Heart Club 2026 - PARTE 1 (Séries A e B)
-
 export interface ClubData {
   nome: string;
   nome_curto: string;
@@ -14,201 +12,113 @@ export interface ClubData {
 
 const getLogoUrl = (nome: string, cidade: string, estado: string, pais: string): string => {
   const normalize = (str: string) => 
-    str.toLowerCase()
-       .normalize("NFD")
-       .replace(/[\u0300-\u036f]/g, "")
-       .replace(/[^a-z0-9]/g, "-")
-       .replace(/-+/g, "-")
-       .replace(/^-|-$/g, "");
-
+    str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "");
   const overrides: Record<string, string> = {
     "Vila Nova": "vila-nova-goiania-go-brasil",
     "Atlético-MG": "atletico-mineiro-belo-horizonte-mg-brasil",
     "Goiás": "goias-goiania-go-brasil",
     "Atlético-GO": "atletico-goianiense-goiania-go-brasil",
-    "Athletico-PR": "athletico-pr-curitiba-pr-brasil",
     "Santos": "santos-santos-sp-brasil"
   };
-
   const slug = overrides[nome] || `${normalize(nome)}-${normalize(cidade)}-${normalize(estado)}-${normalize(pais)}`;
   return `/logos/${slug}.png`;
 };
 
 const RAW_CLUBS: Omit<ClubData, 'logoUrl'>[] = [
-  // ═══════════════════════════════════════════════════════════
-  // SÉRIE A 2026 (19 CLUBES CONFORME SUA LISTA)
-  // ═══════════════════════════════════════════════════════════
   { nome: 'Athletico-PR', nome_curto: 'CAP', serie: 'A', cidade: 'Curitiba', estado: 'PR', pais: 'Brasil', mascote: 'Furacão' },
   { nome: 'Atlético-MG', nome_curto: 'CAM', serie: 'A', cidade: 'Belo Horizonte', estado: 'MG', pais: 'Brasil', mascote: 'Galo' },
   { nome: 'Bahia', nome_curto: 'BAH', serie: 'A', cidade: 'Salvador', estado: 'BA', pais: 'Brasil', mascote: 'Super-Homem' },
   { nome: 'Botafogo', nome_curto: 'BOT', serie: 'A', cidade: 'Rio de Janeiro', estado: 'RJ', pais: 'Brasil', mascote: 'Manequinho' },
-  { nome: 'Chapecoense', nome_curto: 'CHA', serie: 'A', cidade: 'Chapecó', estado: 'SC', pais: 'Brasil', mascote: 'Índio Condá' },
   { nome: 'Corinthians', nome_curto: 'COR', serie: 'A', cidade: 'São Paulo', estado: 'SP', pais: 'Brasil', mascote: 'Mosqueteiro' },
-  { nome: 'Coritiba', nome_curto: 'CFC', serie: 'A', cidade: 'Curitiba', estado: 'PR', pais: 'Brasil', mascote: 'Vovô Coxa' },
   { nome: 'Cruzeiro', nome_curto: 'CRU', serie: 'A', cidade: 'Belo Horizonte', estado: 'MG', pais: 'Brasil', mascote: 'Raposa' },
   { nome: 'Flamengo', nome_curto: 'FLA', serie: 'A', cidade: 'Rio de Janeiro', estado: 'RJ', pais: 'Brasil', mascote: 'Urubu' },
   { nome: 'Fluminense', nome_curto: 'FLU', serie: 'A', cidade: 'Rio de Janeiro', estado: 'RJ', pais: 'Brasil', mascote: 'Guerreiro' },
   { nome: 'Grêmio', nome_curto: 'GRE', serie: 'A', cidade: 'Porto Alegre', estado: 'RS', pais: 'Brasil', mascote: 'Mosqueteiro' },
   { nome: 'Internacional', nome_curto: 'INT', serie: 'A', cidade: 'Porto Alegre', estado: 'RS', pais: 'Brasil', mascote: 'Saci' },
-  { nome: 'Mirassol', nome_curto: 'MIR', serie: 'A', cidade: 'Mirassol', estado: 'SP', pais: 'Brasil', mascote: 'Leão' },
   { nome: 'Palmeiras', nome_curto: 'PAL', serie: 'A', cidade: 'São Paulo', estado: 'SP', pais: 'Brasil', mascote: 'Periquito' },
-  { nome: 'Bragantino', nome_curto: 'BGT', serie: 'A', cidade: 'Bragança Paulista', estado: 'SP', pais: 'Brasil', mascote: 'Massa Bruta' },
-  { nome: 'Remo', nome_curto: 'REM', serie: 'A', cidade: 'Belém', estado: 'PA', pais: 'Brasil', mascote: 'Leão Azul' },
   { nome: 'Santos', nome_curto: 'SAN', serie: 'A', cidade: 'Santos', estado: 'SP', pais: 'Brasil', mascote: 'Baleia' },
   { nome: 'São Paulo', nome_curto: 'SAO', serie: 'A', cidade: 'São Paulo', estado: 'SP', pais: 'Brasil', mascote: 'Santo Paulo' },
   { nome: 'Vasco', nome_curto: 'VAS', serie: 'A', cidade: 'Rio de Janeiro', estado: 'RJ', pais: 'Brasil', mascote: 'Almirante' },
-  { nome: 'Vitória', nome_curto: 'VIT', serie: 'A', cidade: 'Salvador', estado: 'BA', pais: 'Brasil', mascote: 'Leão' },
-
-  // ═══════════════════════════════════════════════════════════
-  // SÉRIE B 2026 (20 CLUBES)
-  // ═══════════════════════════════════════════════════════════
-  { nome: 'América-MG', nome_curto: 'AMG', serie: 'B', cidade: 'Belo Horizonte', estado: 'MG', pais: 'Brasil', mascote: 'Coelho' },
-  { nome: 'Athletic Club', nome_curto: 'ATH', serie: 'B', cidade: 'São João del-Rei', estado: 'MG', pais: 'Brasil', mascote: 'Esquilo' },
-  { nome: 'Atlético-GO', nome_curto: 'ACG', serie: 'B', cidade: 'Goiânia', estado: 'GO', pais: 'Brasil', mascote: 'Dragão' },
-  { nome: 'Avaí', nome_curto: 'AVA', serie: 'B', cidade: 'Florianópolis', estado: 'SC', pais: 'Brasil', mascote: 'Leão da Ilha' },
-  { nome: 'Botafogo-SP', nome_curto: 'BSP', serie: 'B', cidade: 'Ribeirão Preto', estado: 'SP', pais: 'Brasil', mascote: 'Pantera' },
-  { nome: 'Ceará', nome_curto: 'CEA', serie: 'B', cidade: 'Fortaleza', estado: 'CE', pais: 'Brasil', mascote: 'Vozão' },
-  { nome: 'CRB', nome_curto: 'CRB', serie: 'B', cidade: 'Maceió', estado: 'AL', pais: 'Brasil', mascote: 'Galo' },
-  { nome: 'Criciúma', nome_curto: 'CRI', serie: 'B', cidade: 'Criciúma', estado: 'SC', pais: 'Brasil', mascote: 'Tigre' },
-  { nome: 'Cuiabá', nome_curto: 'CUI', serie: 'B', cidade: 'Cuiabá', estado: 'MT', pais: 'Brasil', mascote: 'Dourado' },
-  { nome: 'Fortaleza', nome_curto: 'FOR', serie: 'B', cidade: 'Fortaleza', estado: 'CE', pais: 'Brasil', mascote: 'Leão do Pici' },
   { nome: 'Goiás', nome_curto: 'GOI', serie: 'B', cidade: 'Goiânia', estado: 'GO', pais: 'Brasil', mascote: 'Periquito' },
-  { nome: 'Juventude', nome_curto: 'JUV', serie: 'B', cidade: 'Caxias do Sul', estado: 'RS', pais: 'Brasil', mascote: 'Papo' },
-  { nome: 'Londrina', nome_curto: 'LON', serie: 'B', cidade: 'Londrina', estado: 'PR', pais: 'Brasil', mascote: 'Tubarão' },
-  { nome: 'Náutico', nome_curto: 'NAU', serie: 'B', cidade: 'Recife', estado: 'PE', pais: 'Brasil', mascote: 'Timbu' },
-  { nome: 'Novorizontino', nome_curto: 'NOV', serie: 'B', cidade: 'Novo Horizonte', estado: 'SP', pais: 'Brasil', mascote: 'Tigre' },
-  { nome: 'Operário-PR', nome_curto: 'OPE', serie: 'B', cidade: 'Ponta Grossa', estado: 'PR', pais: 'Brasil', mascote: 'Fantasma' },
-  { nome: 'Ponte Preta', nome_curto: 'PON', serie: 'B', cidade: 'Campinas', estado: 'SP', pais: 'Brasil', mascote: 'Macaca' },
-  { nome: 'São Bernardo', nome_curto: 'SBE', serie: 'B', cidade: 'São Bernardo do Campo', estado: 'SP', pais: 'Brasil', mascote: 'Tigre' },
-  { nome: 'Sport', nome_curto: 'SPT', serie: 'B', cidade: 'Recife', estado: 'PE', pais: 'Brasil', mascote: 'Leão' },
   { nome: 'Vila Nova', nome_curto: 'VIL', serie: 'B', cidade: 'Goiânia', estado: 'GO', pais: 'Brasil', mascote: 'Tigre' },
-  // ═══════════════════════════════════════════════════════════
+  { nome: 'Atlético-GO', nome_curto: 'ACG', serie: 'B', cidade: 'Goiânia', estado: 'GO', pais: 'Brasil', mascote: 'Dragão' },
+  { nome: 'Juventude', nome_curto: 'JUV', serie: 'B', cidade: 'Caxias do Sul', estado: 'RS', pais: 'Brasil', mascote: 'Papo' },
+  { nome: 'Sport', nome_curto: 'SPT', serie: 'B', cidade: 'Recife', estado: 'PE', pais: 'Brasil', mascote: 'Leão' },
+  ];
+
+export const CLUBS_DATA: ClubData[] = RAW_CLUBS.map((c) => ({
+  ...c,
+  logoUrl: getLogoUrl(c.nome, c.cidade, c.estado, c.pais),
+}));
+// ═══════════════════════════════════════════════════════════
   // SÉRIE C 2026 (20 CLUBES)
   // ═══════════════════════════════════════════════════════════
   { nome: 'Amazonas FC', nome_curto: 'AMA', serie: 'C', cidade: 'Manaus', estado: 'AM', pais: 'Brasil', mascote: 'Onça-Pintada' },
   { nome: 'Anápolis', nome_curto: 'ANA', serie: 'C', cidade: 'Anápolis', estado: 'GO', pais: 'Brasil', mascote: 'Galo da Comarca' },
-  { nome: 'Barra-SC', nome_curto: 'BAR', serie: 'C', cidade: 'Balneário Camboriú', estado: 'SC', pais: 'Brasil', mascote: 'Pescador' },
-  { nome: 'Botafogo-PB', nome_curto: 'BPB', serie: 'C', cidade: 'João Pessoa', estado: 'PB', pais: 'Brasil', mascote: 'Belo' },
+  { nome: 'Barra-SC', nome_curto: 'BAR', serie: 'C', cidade: 'Balneario Camboriu', estado: 'SC', pais: 'Brasil', mascote: 'Pescador' },
+  { nome: 'Botafogo-PB', nome_curto: 'BPB', serie: 'C', cidade: 'Joao Pessoa', estado: 'PB', pais: 'Brasil', mascote: 'Belo' },
   { nome: 'Brusque', nome_curto: 'BRU', serie: 'C', cidade: 'Brusque', estado: 'SC', pais: 'Brasil', mascote: 'Marreco' },
   { nome: 'Caxias', nome_curto: 'CAX', serie: 'C', cidade: 'Caxias do Sul', estado: 'RS', pais: 'Brasil', mascote: 'Bepe' },
   { nome: 'Confiança', nome_curto: 'CON', serie: 'C', cidade: 'Aracaju', estado: 'SE', pais: 'Brasil', mascote: 'Dragão' },
   { nome: 'Ferroviária', nome_curto: 'AFE', serie: 'C', cidade: 'Araraquara', estado: 'SP', pais: 'Brasil', mascote: 'Locomotiva' },
-  { nome: 'Figueirense', nome_curto: 'FIG', serie: 'C', cidade: 'Florianópolis', estado: 'SC', pais: 'Brasil', mascote: 'Furacão' },
+  { nome: 'Figueirense', nome_curto: 'FIG', serie: 'C', cidade: 'Florianopolis', estado: 'SC', pais: 'Brasil', mascote: 'Furacão' },
   { nome: 'Floresta', nome_curto: 'FLO', serie: 'C', cidade: 'Fortaleza', estado: 'CE', pais: 'Brasil', mascote: 'Lobo' },
   { nome: 'Guarani', nome_curto: 'GUA', serie: 'C', cidade: 'Campinas', estado: 'SP', pais: 'Brasil', mascote: 'Bugre' },
   { nome: 'Inter de Limeira', nome_curto: 'ITL', serie: 'C', cidade: 'Limeira', estado: 'SP', pais: 'Brasil', mascote: 'Leão' },
   { nome: 'Itabaiana', nome_curto: 'ITA', serie: 'C', cidade: 'Itabaiana', estado: 'SE', pais: 'Brasil', mascote: 'Tremendão' },
   { nome: 'Ituano', nome_curto: 'ITU', serie: 'C', cidade: 'Itu', estado: 'SP', pais: 'Brasil', mascote: 'Galo de Itu' },
-  { nome: 'Maranhão', nome_curto: 'MAC', serie: 'C', cidade: 'São Luís', estado: 'MA', pais: 'Brasil', mascote: 'Demolidor' },
-  { nome: 'Maringá', nome_curto: 'MGA', serie: 'C', cidade: 'Maringá', estado: 'PR', pais: 'Brasil', mascote: 'Dogão' },
-  { nome: 'Paysandu', nome_curto: 'PAY', serie: 'C', cidade: 'Belém', estado: 'PA', pais: 'Brasil', mascote: 'Papão' },
+  { nome: 'Maranhão', nome_curto: 'MAC', serie: 'C', cidade: 'Sao Luis', estado: 'MA', pais: 'Brasil', mascote: 'Demolidor' },
+  { nome: 'Maringá', nome_curto: 'MGA', serie: 'C', cidade: 'Maringa', estado: 'PR', pais: 'Brasil', mascote: 'Dogão' },
+  { nome: 'Paysandu', nome_curto: 'PAY', serie: 'C', cidade: 'Belem', estado: 'PA', pais: 'Brasil', mascote: 'Papão' },
   { nome: 'Santa Cruz', nome_curto: 'STC', serie: 'C', cidade: 'Recife', estado: 'PE', pais: 'Brasil', mascote: 'Cobra Coral' },
   { nome: 'Volta Redonda', nome_curto: 'VRE', serie: 'C', cidade: 'Volta Redonda', estado: 'RJ', pais: 'Brasil', mascote: 'Voltaço' },
   { nome: 'Ypiranga-RS', nome_curto: 'YPI', serie: 'C', cidade: 'Erechim', estado: 'RS', pais: 'Brasil', mascote: 'Canarinho' },
 
   // ═══════════════════════════════════════════════════════════
-  // SÉRIE D 2026 (PARTE A)
+  // SÉRIE C 2026 (20 CLUBES)
+  // ═══════════════════════════════════════════════════════════
+  { nome: 'Amazonas FC', nome_curto: 'AMA', serie: 'C', cidade: 'Manaus', estado: 'AM', pais: 'Brasil', mascote: 'Onça-Pintada' },
+  { nome: 'Anápolis', nome_curto: 'ANA', serie: 'C', cidade: 'Anápolis', estado: 'GO', pais: 'Brasil', mascote: 'Galo da Comarca' },
+  { nome: 'Barra-SC', nome_curto: 'BAR', serie: 'C', cidade: 'Balneario Camboriu', estado: 'SC', pais: 'Brasil', mascote: 'Pescador' },
+  { nome: 'Botafogo-PB', nome_curto: 'BPB', serie: 'C', cidade: 'Joao Pessoa', estado: 'PB', pais: 'Brasil', mascote: 'Belo' },
+  { nome: 'Brusque', nome_curto: 'BRU', serie: 'C', cidade: 'Brusque', estado: 'SC', pais: 'Brasil', mascote: 'Marreco' },
+  { nome: 'Caxias', nome_curto: 'CAX', serie: 'C', cidade: 'Caxias do Sul', estado: 'RS', pais: 'Brasil', mascote: 'Bepe' },
+  { nome: 'Confiança', nome_curto: 'CON', serie: 'C', cidade: 'Aracaju', estado: 'SE', pais: 'Brasil', mascote: 'Dragão' },
+  { nome: 'Ferroviária', nome_curto: 'AFE', serie: 'C', cidade: 'Araraquara', estado: 'SP', pais: 'Brasil', mascote: 'Locomotiva' },
+  { nome: 'Figueirense', nome_curto: 'FIG', serie: 'C', cidade: 'Florianopolis', estado: 'SC', pais: 'Brasil', mascote: 'Furacão' },
+  { nome: 'Floresta', nome_curto: 'FLO', serie: 'C', cidade: 'Fortaleza', estado: 'CE', pais: 'Brasil', mascote: 'Lobo' },
+  { nome: 'Guarani', nome_curto: 'GUA', serie: 'C', cidade: 'Campinas', estado: 'SP', pais: 'Brasil', mascote: 'Bugre' },
+  { nome: 'Inter de Limeira', nome_curto: 'ITL', serie: 'C', cidade: 'Limeira', estado: 'SP', pais: 'Brasil', mascote: 'Leão' },
+  { nome: 'Itabaiana', nome_curto: 'ITA', serie: 'C', cidade: 'Itabaiana', estado: 'SE', pais: 'Brasil', mascote: 'Tremendão' },
+  { nome: 'Ituano', nome_curto: 'ITU', serie: 'C', cidade: 'Itu', estado: 'SP', pais: 'Brasil', mascote: 'Galo de Itu' },
+  { nome: 'Maranhão', nome_curto: 'MAC', serie: 'C', cidade: 'Sao Luis', estado: 'MA', pais: 'Brasil', mascote: 'Demolidor' },
+  { nome: 'Maringá', nome_curto: 'MGA', serie: 'C', cidade: 'Maringa', estado: 'PR', pais: 'Brasil', mascote: 'Dogão' },
+  { nome: 'Paysandu', nome_curto: 'PAY', serie: 'C', cidade: 'Belem', estado: 'PA', pais: 'Brasil', mascote: 'Papão' },
+  { nome: 'Santa Cruz', nome_curto: 'STC', serie: 'C', cidade: 'Recife', estado: 'PE', pais: 'Brasil', mascote: 'Cobra Coral' },
+  { nome: 'Volta Redonda', nome_curto: 'VRE', serie: 'C', cidade: 'Volta Redonda', estado: 'RJ', pais: 'Brasil', mascote: 'Voltaço' },
+  { nome: 'Ypiranga-RS', nome_curto: 'YPI', serie: 'C', cidade: 'Erechim', estado: 'RS', pais: 'Brasil', mascote: 'Canarinho' },
+
+  // ═══════════════════════════════════════════════════════════
+  // SÉRIE D 2026 (PRINCIPAIS DESTAQUES)
   // ═══════════════════════════════════════════════════════════
   { nome: 'ABC', nome_curto: 'ABC', serie: 'D', cidade: 'Natal', estado: 'RN', pais: 'Brasil', mascote: 'Elefante' },
   { nome: 'ABECAT', nome_curto: 'ABE', serie: 'D', cidade: 'Ouvidor', estado: 'GO', pais: 'Brasil', mascote: 'Gato' },
   { nome: 'Água Santa', nome_curto: 'AGU', serie: 'D', cidade: 'Diadema', estado: 'SP', pais: 'Brasil', mascote: 'Netuno' },
-  { nome: 'Águia de Marabá', nome_curto: 'AGM', serie: 'D', cidade: 'Marabá', estado: 'PA', pais: 'Brasil', mascote: 'Águia' },
-  { nome: 'Altos', nome_curto: 'ALT', serie: 'D', cidade: 'Altos', estado: 'PI', pais: 'Brasil', mascote: 'Jacaré' },
   { nome: 'America-RJ', nome_curto: 'ARJ', serie: 'D', cidade: 'Rio de Janeiro', estado: 'RJ', pais: 'Brasil', mascote: 'Diabo' },
   { nome: 'América-RN', nome_curto: 'ARN', serie: 'D', cidade: 'Natal', estado: 'RN', pais: 'Brasil', mascote: 'Mecão' },
-  { nome: 'Aparecidense', nome_curto: 'APA', serie: 'D', cidade: 'Aparecida de Goiânia', estado: 'GO', pais: 'Brasil', mascote: 'Camaleão' },
-  { nome: 'Araguaína', nome_curto: 'ARA', serie: 'D', cidade: 'Araguaína', estado: 'TO', pais: 'Brasil', mascote: 'Tourão' },
-  { nome: 'ASA', nome_curto: 'ASA', serie: 'D', cidade: 'Arapiraca', estado: 'AL', pais: 'Brasil', mascote: 'Fantasma' },
-  { nome: 'Atlético de Alagoinhas', nome_curto: 'AAL', serie: 'D', cidade: 'Alagoinhas', estado: 'BA', pais: 'Brasil', mascote: 'Carcará' },
-  { nome: 'Atlético-CE', nome_curto: 'ACE', serie: 'D', cidade: 'Fortaleza', estado: 'CE', pais: 'Brasil', mascote: 'Águia da Precabusa' },
-  { nome: 'Azuriz', nome_curto: 'AZU', serie: 'D', cidade: 'Pato Branco', estado: 'PR', pais: 'Brasil', mascote: 'Gralha' },
-  { nome: 'Betim', nome_curto: 'BET', serie: 'D', cidade: 'Betim', estado: 'MG', pais: 'Brasil', mascote: 'Guerreiro' },
-  { nome: 'Blumenau', nome_curto: 'BEC', serie: 'D', cidade: 'Blumenau', estado: 'SC', pais: 'Brasil', mascote: 'Tricolor' },
-  { nome: 'Brasil de Pelotas', nome_curto: 'GEB', serie: 'D', cidade: 'Pelotas', estado: 'RS', pais: 'Brasil', mascote: 'Xavante' },
-  { nome: 'Brasiliense', nome_curto: 'BSE', serie: 'D', cidade: 'Brasília', estado: 'DF', pais: 'Brasil', mascote: 'Jacaré' },
-  { nome: 'Capital', nome_curto: 'CAP', serie: 'D', cidade: 'Palmas', estado: 'TO', pais: 'Brasil', mascote: 'Rei' },
-  { nome: 'Ceilândia', nome_curto: 'CEI', serie: 'D', cidade: 'Ceilândia', estado: 'DF', pais: 'Brasil', mascote: 'Gato' },
-  { nome: 'Central', nome_curto: 'CEN', serie: 'D', cidade: 'Caruaru', estado: 'PE', pais: 'Brasil', mascote: 'Patativa' },
-  { nome: 'Cianorte', nome_curto: 'CIA', serie: 'D', cidade: 'Cianorte', estado: 'PR', pais: 'Brasil', mascote: 'Leão do Vale' },
-  { nome: 'CRAC', nome_curto: 'CRA', serie: 'D', cidade: 'Catalão', estado: 'GO', pais: 'Brasil', mascote: 'Leão do Sul' },
-  { nome: 'CSA', nome_curto: 'CSA', serie: 'D', cidade: 'Maceió', estado: 'AL', pais: 'Brasil', mascote: 'Azulão' },
-  { nome: 'CSE', nome_curto: 'CSE', serie: 'D', cidade: 'Palmeira dos Índios', estado: 'AL', pais: 'Brasil', mascote: 'Tricolor' },
-  { nome: 'Decisão', nome_curto: 'DEC', serie: 'D', cidade: 'Bonito', estado: 'PE', pais: 'Brasil', mascote: 'Falcão' },
-  { nome: 'Democrata GV', nome_curto: 'DGV', serie: 'D', cidade: 'Governador Valadares', estado: 'MG', pais: 'Brasil', mascote: 'Pantera' },
-  { nome: 'FC Cascavel', nome_curto: 'FCC', serie: 'D', cidade: 'Cascavel', estado: 'PR', pais: 'Brasil', mascote: 'Serpente' },
-  { nome: 'Ferroviário', nome_curto: 'FAC', serie: 'D', cidade: 'Fortaleza', estado: 'CE', pais: 'Brasil', mascote: 'Tubarão da Barra' },
-  { nome: 'Fluminense-PI', nome_curto: 'FPI', serie: 'D', cidade: 'Teresina', estado: 'PI', pais: 'Brasil', mascote: 'Vaqueiro' },
-  { nome: 'Galvez', nome_curto: 'GAL', serie: 'D', cidade: 'Rio Branco', estado: 'AC', pais: 'Brasil', mascote: 'Imperador' },
+  { nome: 'Aparecidense', nome_curto: 'APA', serie: 'D', cidade: 'Aparecida de Goiania', estado: 'GO', pais: 'Brasil', mascote: 'Camaleão' },
+  { nome: 'CRAC', nome_curto: 'CRA', serie: 'D', cidade: 'Catalao', estado: 'GO', pais: 'Brasil', mascote: 'Leão do Sul' },
   { nome: 'Gama', nome_curto: 'GAM', serie: 'D', cidade: 'Gama', estado: 'DF', pais: 'Brasil', mascote: 'Periquito' },
-  { nome: 'GAS', nome_curto: 'GAS', serie: 'D', cidade: 'Boa Vista', estado: 'RR', pais: 'Brasil', mascote: 'Leão' },
   { nome: 'Goiatuba', nome_curto: 'GTB', serie: 'D', cidade: 'Goiatuba', estado: 'GO', pais: 'Brasil', mascote: 'Azulão' },
-  { nome: 'Guaporé', nome_curto: 'GUA', serie: 'D', cidade: 'Rolim de Moura', estado: 'RO', pais: 'Brasil', mascote: 'Guardião' },
-  { nome: 'Guarany de Bagé', nome_curto: 'GBA', serie: 'D', cidade: 'Bagé', estado: 'RS', pais: 'Brasil', mascote: 'Índio' },
-  { nome: 'Humaitá-AC', nome_curto: 'HUM', serie: 'D', cidade: 'Porto Acre', estado: 'AC', pais: 'Brasil', mascote: 'Tourão' },
-  { nome: 'IAPE', nome_curto: 'IAP', serie: 'D', cidade: 'São Luís', estado: 'MA', pais: 'Brasil', mascote: 'Canário' },
-  { nome: 'Iguatu', nome_curto: 'IGU', serie: 'D', cidade: 'Iguatu', estado: 'CE', pais: 'Brasil', mascote: 'Azulão' },
-  { nome: 'Imperatriz', nome_curto: 'IMP', serie: 'D', cidade: 'Imperatriz', estado: 'MA', pais: 'Brasil', mascote: 'Cavalo de Aço' },
-  { nome: 'Independência', nome_curto: 'IND', serie: 'D', cidade: 'Rio Branco', estado: 'AC', pais: 'Brasil', mascote: 'Tricolor' },
   { nome: 'Inhumas', nome_curto: 'INH', serie: 'D', cidade: 'Inhumas', estado: 'GO', pais: 'Brasil', mascote: 'Pantera' },
-  { nome: 'Jacuipense', nome_curto: 'JAC', serie: 'D', cidade: 'Riachão do Jacuípe', estado: 'BA', pais: 'Brasil', mascote: 'Leão do Sisal' },
-  { nome: 'Joinville', nome_curto: 'JEC', serie: 'D', cidade: 'Joinville', estado: 'SC', pais: 'Brasil', mascote: 'Coelho' },
-  { nome: 'Juazeirense', nome_curto: 'JUA', serie: 'D', cidade: 'Juazeiro', estado: 'BA', pais: 'Brasil', mascote: 'Cancão de Fogo' },
-  { nome: 'Lagarto', nome_curto: 'LAG', serie: 'D', cidade: 'Lagarto', estado: 'SE', pais: 'Brasil', mascote: 'Periquito' },
-  { nome: 'Laguna', nome_curto: 'LGU', serie: 'D', cidade: 'Tibau do Sul', estado: 'RN', pais: 'Brasil', mascote: 'Vegano' },
-  { nome: 'Luverdense', nome_curto: 'LUV', serie: 'D', cidade: 'Lucas do Rio Verde', estado: 'MT', pais: 'Brasil', mascote: 'Espantoso' },
-  { nome: 'Madureira', nome_curto: 'MAD', serie: 'D', cidade: 'Rio de Janeiro', estado: 'RJ', pais: 'Brasil', mascote: 'Mourisco' },
-  { nome: 'Maguary', nome_curto: 'MAG', serie: 'D', cidade: 'Bonito', estado: 'PE', pais: 'Brasil', mascote: 'Príncipe' },
-  { nome: 'Manaus', nome_curto: 'MAN', serie: 'D', cidade: 'Manaus', estado: 'AM', pais: 'Brasil', mascote: 'Gavião do Norte' },
-  { nome: 'Manauara', nome_curto: 'MRA', serie: 'D', cidade: 'Manaus', estado: 'AM', pais: 'Brasil', mascote: 'Robô' },
-  { nome: 'Marcílio Dias', nome_curto: 'MAR', serie: 'D', cidade: 'Itajaí', estado: 'SC', pais: 'Brasil', mascote: 'Marinheiro' },
-  { nome: 'Maracanã', nome_curto: 'MAC', serie: 'D', cidade: 'Maracanaú', estado: 'CE', pais: 'Brasil', mascote: 'Alviceleste' },
-  { nome: 'Maricá', nome_curto: 'MRI', serie: 'D', cidade: 'Maricá', estado: 'RJ', pais: 'Brasil', mascote: 'Tsunami' },
-  { nome: 'Mixto', nome_curto: 'MIX', serie: 'D', cidade: 'Cuiabá', estado: 'MT', pais: 'Brasil', mascote: 'Tigre' },
-  { nome: 'Monte Roraima', nome_curto: 'MON', serie: 'D', cidade: 'Boa Vista', estado: 'RR', pais: 'Brasil', mascote: 'Tamanduá' },
-  { nome: 'Moto Club', nome_curto: 'MOT', serie: 'D', cidade: 'São Luís', estado: 'MA', pais: 'Brasil', mascote: 'Papão do Norte' },
-  { nome: 'Nacional', nome_curto: 'NAC', serie: 'D', cidade: 'Manaus', estado: 'AM', pais: 'Brasil', mascote: 'Leão da Vila' },
-  { nome: 'Noroeste', nome_curto: 'NOR', serie: 'D', cidade: 'Bauru', estado: 'SP', pais: 'Brasil', mascote: 'Maquininha Vermelha' },
-  { nome: 'Nova Iguaçu', nome_curto: 'NIG', serie: 'D', cidade: 'Nova Iguaçu', estado: 'RJ', pais: 'Brasil', mascote: 'Laranja da Baixada' },
-  { nome: 'Operário-MS', nome_curto: 'OMS', serie: 'D', cidade: 'Campo Grande', estado: 'MS', pais: 'Brasil', mascote: 'Galo' },
-  { nome: 'Operário Várzea-grandense', nome_curto: 'CEOV', serie: 'D', cidade: 'Várzea Grande', estado: 'MT', pais: 'Brasil', mascote: 'Chicote da Fronteira' },
-  { nome: 'Oratório', nome_curto: 'ORA', serie: 'D', cidade: 'Macapá', estado: 'AP', pais: 'Brasil', mascote: 'Orca' },
-  { nome: 'Pantanal', nome_curto: 'PAN', serie: 'D', cidade: 'Ladário', estado: 'MS', pais: 'Brasil', mascote: 'Tuiuiú' },
-  { nome: 'Parnahyba', nome_curto: 'PAR', serie: 'D', cidade: 'Parnaíba', estado: 'PI', pais: 'Brasil', mascote: 'Tubarão' },
-  { nome: 'Piauí', nome_curto: 'PEC', serie: 'D', cidade: 'Teresina', estado: 'PI', pais: 'Brasil', mascote: 'Enxuga Rato' },
-  { nome: 'Porto-BA', nome_curto: 'PBA', serie: 'D', cidade: 'Porto Seguro', estado: 'BA', pais: 'Brasil', mascote: 'Descobridor' },
-  { nome: 'Porto Velho', nome_curto: 'PVE', serie: 'D', cidade: 'Porto Velho', estado: 'RO', pais: 'Brasil', mascote: 'Locomotiva' },
-  { nome: 'Portuguesa', nome_curto: 'POR', serie: 'D', cidade: 'São Paulo', estado: 'SP', pais: 'Brasil', mascote: 'Lusa' },
-  { nome: 'Portuguesa-RJ', nome_curto: 'PRJ', serie: 'D', cidade: 'Rio de Janeiro', estado: 'RJ', pais: 'Brasil', mascote: 'Lusa' },
-  { nome: 'Pouso Alegre', nome_curto: 'POA', serie: 'D', cidade: 'Pouso Alegre', estado: 'MG', pais: 'Brasil', mascote: 'Dragão' },
-  { nome: 'Primavera-MT', nome_curto: 'PRI', serie: 'D', cidade: 'Primavera do Leste', estado: 'MT', pais: 'Brasil', mascote: 'Gigante' },
-  { nome: 'Real Noroeste', nome_curto: 'RNO', serie: 'D', cidade: 'Águia Branca', estado: 'ES', pais: 'Brasil', mascote: 'Merengue' },
   { nome: 'Retrô', nome_curto: 'RET', serie: 'D', cidade: 'Camaragibe', estado: 'PE', pais: 'Brasil', mascote: 'Fênix' },
-  { nome: 'Rio Branco-ES', nome_curto: 'RBE', serie: 'D', cidade: 'Vitória', estado: 'ES', pais: 'Brasil', mascote: 'Capa-Preta' },
-  { nome: 'Sampaio Corrêa', nome_curto: 'SAM', serie: 'D', cidade: 'São Luís', estado: 'MA', pais: 'Brasil', mascote: 'Tubarão' },
-  { nome: 'Santa Catarina', nome_curto: 'SCA', serie: 'D', cidade: 'Rio do Sul', estado: 'SC', pais: 'Brasil', mascote: 'Águia' },
-  { nome: 'São José-RS', nome_curto: 'SJO', serie: 'D', cidade: 'Porto Alegre', estado: 'RS', pais: 'Brasil', mascote: 'Zequinha' },
-  { nome: 'São Joseense', nome_curto: 'ISJ', serie: 'D', cidade: 'São José dos Pinhais', estado: 'PR', pais: 'Brasil', mascote: 'Pinhão' },
-  { nome: 'São Luiz', nome_curto: 'SLU', serie: 'D', cidade: 'Ijuí', estado: 'RS', pais: 'Brasil', mascote: 'Rubro' },
-  { nome: 'São Raimundo-RR', nome_curto: 'SRR', serie: 'D', cidade: 'Boa Vista', estado: 'RR', pais: 'Brasil', mascote: 'Mundão' },
-  { nome: 'Serra Branca', nome_curto: 'SBR', serie: 'D', cidade: 'Serra Branca', estado: 'PB', pais: 'Brasil', mascote: 'Carcará' },
-  { nome: 'Sergipe', nome_curto: 'SER', serie: 'D', cidade: 'Aracaju', estado: 'SE', pais: 'Brasil', mascote: 'Gipão' },
-  { nome: 'Sousa', nome_curto: 'SOU', serie: 'D', cidade: 'Sousa', estado: 'PB', pais: 'Brasil', mascote: 'Dinossauro' },
-  { nome: 'Tirol', nome_curto: 'TIR', serie: 'D', cidade: 'Fortaleza', estado: 'CE', pais: 'Brasil', mascote: 'Coruja' },
-  { nome: 'Tocantinópolis', nome_curto: 'TOC', serie: 'D', cidade: 'Tocantinópolis', estado: 'TO', pais: 'Brasil', mascote: 'Verdão do Norte' },
   { nome: 'Tombense', nome_curto: 'TOM', serie: 'D', cidade: 'Tombos', estado: 'MG', pais: 'Brasil', mascote: 'Gavião' },
-  { nome: 'Treze', nome_curto: 'TRE', serie: 'D', cidade: 'Campina Grande', estado: 'PB', pais: 'Brasil', mascote: 'Galo da Borborema' },
-  { nome: 'Trem', nome_curto: 'TRM', serie: 'D', cidade: 'Macapá', estado: 'AP', pais: 'Brasil', mascote: 'Locomotiva' },
-  { nome: 'Tuna Luso', nome_curto: 'TUN', serie: 'D', cidade: 'Belém', estado: 'PA', pais: 'Brasil', mascote: 'Águia Guerreira' },
-  { nome: 'Uberlândia', nome_curto: 'UEC', serie: 'D', cidade: 'Uberlândia', estado: 'MG', pais: 'Brasil', mascote: 'Periquito' },
-  { nome: 'União Rondonópolis', nome_curto: 'UNI', serie: 'D', cidade: 'Rondonópolis', estado: 'MT', pais: 'Brasil', mascote: 'Colorado' },
-  { nome: 'Velo Clube', nome_curto: 'VEL', serie: 'D', cidade: 'Rio Claro', estado: 'SP', pais: 'Brasil', mascote: 'Galo Vermelho' },
-  { nome: 'Vitória-ES', nome_curto: 'VES', serie: 'D', cidade: 'Vitória', estado: 'ES', pais: 'Brasil', mascote: 'Alvianil' },
   { nome: 'XV de Piracicaba', nome_curto: 'XVP', serie: 'D', cidade: 'Piracicaba', estado: 'SP', pais: 'Brasil', mascote: 'Nhô Quim' },
   // ═══════════════════════════════════════════════════════════
   // INTERNACIONAL - EUROPA (50 CLUBES)
   // ═══════════════════════════════════════════════════════════
-  { nome: 'Real Madrid', nome_curto: 'RMA', serie: 'EUR', cidade: 'Madrid', estado: 'Madrid', pais: 'Espanha', mascote: 'Los Blancos' },
-  { nome: 'Barcelona', nome_curto: 'BAR', serie: 'EUR', cidade: 'Barcelona', estado: 'Catalunha', pais: 'Espanha', mascote: 'Blaugrana' },
+  { nome: 'Real Madrid', nome_curto: 'RMA', serie: 'EUR', cidade: 'Madrid', estado: 'Madrid', pais: 'Espanha', mascote: 'Merengues' },
+  { nome: 'Barcelona', nome_curto: 'BAR', serie: 'EUR', cidade: 'Barcelona', estado: 'Catalunha', pais: 'Espanha', mascote: 'Culés' },
   { nome: 'Manchester City', nome_curto: 'MCI', serie: 'EUR', cidade: 'Manchester', estado: 'Manchester', pais: 'Inglaterra', mascote: 'Moonchester' },
   { nome: 'Liverpool', nome_curto: 'LIV', serie: 'EUR', cidade: 'Liverpool', estado: 'Merseyside', pais: 'Inglaterra', mascote: 'Mighty Red' },
   { nome: 'Bayern Munich', nome_curto: 'BAY', serie: 'EUR', cidade: 'Munique', estado: 'Baviera', pais: 'Alemanha', mascote: 'Berni' },
@@ -216,7 +126,7 @@ const RAW_CLUBS: Omit<ClubData, 'logoUrl'>[] = [
   { nome: 'Juventus', nome_curto: 'JUV', serie: 'EUR', cidade: 'Turim', estado: 'Piemonte', pais: 'Italia', mascote: 'Jay' },
   { nome: 'PSG', nome_curto: 'PSG', serie: 'EUR', cidade: 'Paris', estado: 'Paris', pais: 'Franca', mascote: 'Germain' },
   { nome: 'Arsenal', nome_curto: 'ARS', serie: 'EUR', cidade: 'Londres', estado: 'Londres', pais: 'Inglaterra', mascote: 'Gunnersaurus' },
-  { nome: 'Chelsea', nome_curto: 'CHE', serie: 'EUR', cidade: 'Londres', estado: 'Londres', pais: 'Inglaterra', mascote: 'Stamford' },
+  { nome: 'Chelsea', nome_curto: 'CHE', serie: 'EUR', cidade: 'Londres', estado: 'Londres', pais: 'Inglaterra', mascote: 'Lion' },
   { nome: 'AC Milan', nome_curto: 'ACM', serie: 'EUR', cidade: 'Milao', estado: 'Lombardia', pais: 'Italia', mascote: 'Diavolo' },
   { nome: 'Inter Milan', nome_curto: 'INT', serie: 'EUR', cidade: 'Milao', estado: 'Lombardia', pais: 'Italia', mascote: 'Biscione' },
   { nome: 'Atletico Madrid', nome_curto: 'ATM', serie: 'EUR', cidade: 'Madrid', estado: 'Madrid', pais: 'Espanha', mascote: 'Indi' },
@@ -233,10 +143,10 @@ const RAW_CLUBS: Omit<ClubData, 'logoUrl'>[] = [
   { nome: 'Bayer Leverkusen', nome_curto: 'B04', serie: 'EUR', cidade: 'Leverkusen', estado: 'Rhein', pais: 'Alemanha', mascote: 'Brian' },
   { nome: 'Eintracht Frankfurt', nome_curto: 'SGE', serie: 'EUR', cidade: 'Frankfurt', estado: 'Hessen', pais: 'Alemanha', mascote: 'Attila' },
   { nome: 'Lazio', nome_curto: 'LAZ', serie: 'EUR', cidade: 'Roma', estado: 'Lazio', pais: 'Italia', mascote: 'Olimpia' },
-  { nome: 'Fiorentina', nome_curto: 'FIO', serie: 'EUR', cidade: 'Florenca', estado: 'Toscana', pais: 'Italia', mascote: 'Grifone' },
+  { nome: 'Fiorentina', nome_curto: 'FIO', serie: 'EUR', cidade: 'Florenca', estado: 'Toscana', pais: 'Italia', mascote: 'Viola' },
   { nome: 'Atalanta', nome_curto: 'ATA', serie: 'EUR', cidade: 'Bergamo', estado: 'Lombardia', pais: 'Italia', mascote: 'La Dea' },
   { nome: 'Villarreal', nome_curto: 'VIL', serie: 'EUR', cidade: 'Vila-real', estado: 'Castellon', pais: 'Espanha', mascote: 'Groguet' },
-  { nome: 'Valencia', nome_curto: 'VAL', serie: 'EUR', cidade: 'Valencia', estado: 'Valencia', pais: 'Espanha', mascote: 'Rat Penat' },
+  { nome: 'Valencia', nome_curto: 'VAL', serie: 'EUR', cidade: 'Valencia', estado: 'Valencia', pais: 'Espanha', mascote: 'Morcego' },
   { nome: 'Athletic Bilbao', nome_curto: 'ATH', serie: 'EUR', cidade: 'Bilbao', estado: 'Basco', pais: 'Espanha', mascote: 'Leones' },
   { nome: 'Real Sociedad', nome_curto: 'RSO', serie: 'EUR', cidade: 'San Sebastian', estado: 'Basco', pais: 'Espanha', mascote: 'Txuri-urdin' },
   { nome: 'Marseille', nome_curto: 'OM', serie: 'EUR', cidade: 'Marselha', estado: 'Provenca', pais: 'Franca', mascote: 'Droit au But' },
@@ -250,13 +160,13 @@ const RAW_CLUBS: Omit<ClubData, 'logoUrl'>[] = [
   { nome: 'Galatasaray', nome_curto: 'GAL', serie: 'EUR', cidade: 'Istambul', estado: 'Istambul', pais: 'Turquia', mascote: 'Aslan' },
   { nome: 'Fenerbahce', nome_curto: 'FEN', serie: 'EUR', cidade: 'Istambul', estado: 'Istambul', pais: 'Turquia', mascote: 'Kanarya' },
   { nome: 'Besiktas', nome_curto: 'BES', serie: 'EUR', cidade: 'Istambul', estado: 'Istambul', pais: 'Turquia', mascote: 'Kartal' },
-  { nome: 'Shakhtar Donetsk', nome_curto: 'SHA', serie: 'EUR', cidade: 'Donetsk', estado: 'Donetsk', pais: 'Ucrania', mascote: 'Mole' },
+  { nome: 'Shakhtar Donetsk', nome_curto: 'SHA', serie: 'EUR', cidade: 'Donetsk', estado: 'Donetsk', pais: 'Ucrania', mascote: 'Minerador' },
   { nome: 'Dynamo Kyiv', nome_curto: 'DKV', serie: 'EUR', cidade: 'Kiev', estado: 'Kiev', pais: 'Ucrania', mascote: 'Kyi' },
   { nome: 'Zenit', nome_curto: 'ZEN', serie: 'EUR', cidade: 'Sao Petersburgo', estado: 'St Petersburg', pais: 'Russia', mascote: 'Lion' },
   { nome: 'Olympiakos', nome_curto: 'OLY', serie: 'EUR', cidade: 'Pireu', estado: 'Atica', pais: 'Grecia', mascote: 'Thrylos' },
-  { nome: 'Panathinaikos', nome_curto: 'PAN', serie: 'EUR', cidade: 'Atenas', estado: 'Atica', pais: 'Grecia', mascote: 'Trifylli' },
+  { nome: 'Panathinaikos', nome_curto: 'PAN', serie: 'EUR', cidade: 'Atenas', estado: 'Atica', pais: 'Grecia', mascote: 'Trevo' },
   { nome: 'Aston Villa', nome_curto: 'AVL', serie: 'EUR', cidade: 'Birmingham', estado: 'West Midlands', pais: 'Inglaterra', mascote: 'Hercules' },
-  { nome: 'West Ham', nome_curto: 'WHU', serie: 'EUR', cidade: 'Londres', estado: 'Londres', pais: 'Inglaterra', mascote: 'Hammerhead' },
+  { nome: 'West Ham', nome_curto: 'WHU', serie: 'EUR', cidade: 'Londres', estado: 'Londres', pais: 'Inglaterra', mascote: 'Hammer' },
 
   // ═══════════════════════════════════════════════════════════
   // INTERNACIONAL - AMÉRICA DO SUL (30 CLUBES)
@@ -293,8 +203,9 @@ const RAW_CLUBS: Omit<ClubData, 'logoUrl'>[] = [
   { nome: 'Defensor Sporting', nome_curto: 'DEF', serie: 'INT', cidade: 'Montevideo', estado: 'Montevideo', pais: 'Uruguai', mascote: 'Violeta' },
 ];
 
-/** Lista mestra com logoUrl já resolvido — fonte ÚNICA de verdade */
+/** Lista mestra com logoUrl resolvido via Slugs Semânticos */
 export const CLUBS_DATA: ClubData[] = RAW_CLUBS.map((c) => ({
   ...c,
   logoUrl: getLogoUrl(c.nome, c.cidade, c.estado, c.pais),
 }));
+
