@@ -46,11 +46,6 @@ const RAW_CLUBS: Omit<ClubData, 'logoUrl'>[] = [
   { nome: 'Sport', nome_curto: 'SPT', serie: 'B', cidade: 'Recife', estado: 'PE', pais: 'Brasil', mascote: 'Leão' },
 
 
-export const CLUBS_DATA: ClubData[] = RAW_CLUBS.map((c) => ({
-  ...c,
-  logoUrl: getLogoUrl(c.nome, c.cidade, c.estado, c.pais),
-}));
-
   // SÉRIE C 2026 (20 CLUBES)
   // ═══════════════════════════════════════════════════════════
   { nome: 'Amazonas FC', nome_curto: 'AMA', serie: 'C', cidade: 'Manaus', estado: 'AM', pais: 'Brasil', mascote: 'Onça-Pintada' },
