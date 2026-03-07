@@ -50,7 +50,9 @@ export const CLUBS_DATA: ClubData[] = RAW_CLUBS.map((c) => ({
   ...c,
   logoUrl: getLogoUrl(c.nome, c.cidade, c.estado, c.pais),
 }));
-// ═══════════════════════════════════════════════════════════
+// ═══git commit -m "fix: unificação de listas e correção de sintaxe"
+// 
+════════════════════════════════════════════════════════
   // SÉRIE C 2026 (20 CLUBES)
   // ═══════════════════════════════════════════════════════════
   { nome: 'Amazonas FC', nome_curto: 'AMA', serie: 'C', cidade: 'Manaus', estado: 'AM', pais: 'Brasil', mascote: 'Onça-Pintada' },
