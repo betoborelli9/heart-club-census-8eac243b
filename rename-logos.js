@@ -1,111 +1,282 @@
-#!/usr/bin/env node
-/**
- * rename-logos.js
- * Renomeia em massa logos de {api_id}.png -> {nome-cidade-estado-pais}.png
- * Fonte única: src/clubes-data.ts
- *
- * Uso:
- *   node rename-logos.js
- *   node rename-logos.js --dry-run
- */
+// Caminho: /rename-logos.js (RAIZ)
 const fs = require("fs");
 const path = require("path");
 
-const ROOT_DIR = __dirname;
-const LOGOS_DIR = path.join(ROOT_DIR, "public", "logos");
-const CLUBS_DATA_FILE = path.join(ROOT_DIR, "src", "clubes-data.ts");
-const DRY_RUN = process.argv.includes("--dry-run");
+const LOGOS_DIR = path.join(__dirname, "public", "logos");
 
-function generateSlug(nome, cidade, estado, pais) {
-  return `${nome}-${cidade}-${estado}-${pais}`
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "");
-}
+/**
+ * MAPEAMENTO EXCLUSIVO SÉRIE A 2026
+ * ID -> Slug (nome-cidade-estado-pais)
+ */
+const SERIE_A_MAPPING = {
+  "130": "athletico-pr-curitiba-pr-brasil",
+  "1035": "atletico-mg-belo-horizonte-mg-brasil",
+  "1062": "atletico-mg-belo-horizonte-mg-brasil", // Variação de ID
+  "131": "bahia-salvador-ba-brasil",
+  "133": "botafogo-rio-de-janeiro-rj-brasil",
+  "134": "chapecoense-chapeco-sc-brasil",
+  "135": "corinthians-sao-paulo-sp-brasil",
+  "136": "coritiba-curitiba-pr-brasil",
+  "137": "cruzeiro-belo-horizonte-mg-brasil",
+  "138": "flamengo-rio-de-janeiro-rj-brasil",
+  "139": "fluminense-rio-de-janeiro-rj-brasil",
+  "140": "gremio-porto-alegre-rs-brasil",
+  "141": "internacional-porto-alegre-rs-brasil",
+  "142": "mirassol-mirassol-sp-brasil",
+  "143": "palmeiras-sao-paulo-sp-brasil",
+  "144": "bragantino-braganca-paulista-sp-brasil",
+  "162": "remo-belem-pa-brasil",
+  "145": "santos-santos-sp-brasil",
+  "146": "sao-paulo-sao-paulo-sp-brasil",
+  "147": "vasco-rio-de-janeiro-rj-brasil",
+  "148": "vitoria-salvador-ba-brasil"
+};
 
-function readClubsFromSource() {
-  if (!fs.existsSync(CLUBS_DATA_FILE)) {
-    throw new Error(`Arquivo não encontrado: ${CLUBS_DATA_FILE}`);
-  }
-
-  const fileContent = fs.readFileSync(CLUBS_DATA_FILE, "utf8");
-  const clubRegex = /\{\s*api_id:\s*(\d+),\s*nome:\s*'([^']+)',\s*nome_curto:\s*'[^']*',\s*serie:\s*'[^']*',\s*cidade:\s*'([^']+)',\s*estado:\s*'([^']+)',\s*pais:\s*'([^']+)'/g;
-
-  const clubs = [];
-  let match;
-
-  while ((match = clubRegex.exec(fileContent)) !== null) {
-    clubs.push({
-      api_id: Number(match[1]),
-      nome: match[2],
-      cidade: match[3],
-      estado: match[4],
-      pais: match[5],
-    });
-  }
-
-  if (clubs.length < 180) {
-    throw new Error(`Mapeamento incompleto detectado (${clubs.length} clubes lidos).`);
-  }
-
-  return clubs;
-}
-
-function renameLogos() {
+function renameSerieA() {
   if (!fs.existsSync(LOGOS_DIR)) {
-    throw new Error(`Pasta não encontrada: ${LOGOS_DIR}`);
+    console.error("❌ Pasta public/logos não encontrada!");
+    return;
   }
 
-  const clubs = readClubsFromSource();
-  let renamed = 0;
-  let skipped = 0;
-  let missing = 0;
+  console.log("🚀 Renomeando logos da SÉRIE A...");
+  let count = 0;
 
-  console.log(`🔎 Clubes mapeados: ${clubs.length}`);
-  console.log(`📁 Pasta de logos: ${LOGOS_DIR}`);
-  console.log(`🧪 Modo: ${DRY_RUN ? "DRY RUN (sem alterações)" : "EXECUÇÃO REAL"}`);
-  console.log("─".repeat(96));
+  Object.entries(SERIE_A_MAPPING).forEach(([id, slug]) => {
+    const oldPath = path.join(LOGOS_DIR, `${id}.png`);
+    const newPath = path.join(LOGOS_DIR, `${slug}.png`);
 
-  for (const club of clubs) {
-    const oldFileName = `${club.api_id}.png`;
-    const newFileName = `${generateSlug(club.nome, club.cidade, club.estado, club.pais)}.png`;
-    const oldPath = path.join(LOGOS_DIR, oldFileName);
-    const newPath = path.join(LOGOS_DIR, newFileName);
-
-    if (fs.existsSync(newPath)) {
-      skipped += 1;
-      continue;
-    }
-
-    if (!fs.existsSync(oldPath)) {
-      missing += 1;
-      console.log(`⚠️  ${oldFileName.padEnd(12)} -> ${newFileName}  [não encontrado]`);
-      continue;
-    }
-
-    if (!DRY_RUN) {
+    if (fs.existsSync(oldPath)) {
       fs.renameSync(oldPath, newPath);
+      console.log(`✅ [${id}.png] -> [${slug}.png]`);
+      count++;
     }
+  });
 
-    renamed += 1;
-    console.log(`✅ ${oldFileName.padEnd(12)} -> ${newFileName}`);
-  }
-
-  console.log("─".repeat(96));
-  console.log(`✅ Renomeados: ${renamed}`);
-  console.log(`⏭️  Já no padrão: ${skipped}`);
-  console.log(`⚠️  IDs sem arquivo: ${missing}`);
-
-  if (DRY_RUN) {
-    console.log("\nℹ️ Nenhum arquivo foi alterado (--dry-run). Remova a flag para executar de verdade.");
-  }
+  console.log(`\n✨ Pronto! ${count} logos da Série A processadas.`);
 }
 
-try {
-  renameLogos();
-} catch (error) {
-  console.error("❌ Falha na renomeação:", error.message);
-  process.exit(1);
-}
+renameSerieA();
+// BRASIL - SÉRIE B
+  "149": "america-mg-belo-horizonte-mg-brasil",
+  "1137": "athletic-club-sao-joao-del-rei-mg-brasil",
+  "150": "atletico-go-goiania-go-brasil",
+  "151": "avai-florianopolis-sc-brasil",
+  "132": "botafogo-sp-ribeirao-preto-sp-brasil",
+  "152": "ceara-fortaleza-ce-brasil",
+  "165": "crb-maceio-al-brasil",
+  "153": "criciuma-criciuma-sc-brasil",
+  "166": "cuiaba-cuiaba-mt-brasil",
+  "154": "fortaleza-fortaleza-ce-brasil",
+  "155": "goias-goiania-go-brasil",
+  "157": "juventude-caxias-do-sul-rs-brasil",
+  "167": "londrina-londrina-pr-brasil",
+  "168": "nautico-recife-pe-brasil",
+  "169": "novorizontino-novo-horizonte-sp-brasil",
+  "170": "operario-pr-ponta-grossa-pr-brasil",
+  "158": "ponte-preta-campinas-sp-brasil",
+  "171": "sao-bernardo-sao-bernardo-do-campo-sp-brasil",
+  "159": "sport-recife-pe-brasil",
+  "160": "vila-nova-goiania-go-brasil",
+
+  // BRASIL - SÉRIE C
+  "172": "amazonas-fc-manaus-am-brasil",
+  "173": "anapolis-anapolis-go-brasil",
+  "174": "barra-sc-balneario-camboriu-sc-brasil",
+  "175": "botafogo-pb-joao-pessoa-pb-brasil",
+  "176": "brusque-brusque-sc-brasil",
+  "177": "caxias-caxias-do-sul-rs-brasil",
+  "178": "confianca-aracaju-se-brasil",
+  "179": "ferroviaria-araraquara-sp-brasil",
+  "180": "figueirense-florianopolis-sc-brasil",
+  "181": "floresta-fortaleza-ce-brasil",
+  "156": "guarani-campinas-sp-brasil",
+  "182": "inter-de-limeira-limeira-sp-brasil",
+  "183": "itabaiana-itabaiana-se-brasil",
+  "184": "ituano-itu-sp-brasil",
+  "185": "maranhao-sao-luis-ma-brasil",
+  "186": "maringa-maringa-pr-brasil",
+  "163": "paysandu-belem-pa-brasil",
+  "164": "santa-cruz-recife-pe-brasil",
+  "187": "volta-redonda-volta-redonda-rj-brasil",
+  "188": "ypiranga-rs-erechim-rs-brasil",
+
+  // BRASIL - SÉRIE D (COMPLETA)
+  "161": "abc-natal-rn-brasil",
+  "189": "abecat-aparecida-de-goiania-go-brasil",
+  "190": "agua-santa-diadema-sp-brasil",
+  "191": "aguia-de-maraba-maraba-pa-brasil",
+  "192": "altos-altos-pi-brasil",
+  "193": "america-rj-rio-de-janeiro-rj-brasil",
+  "194": "america-rn-natal-rn-brasil",
+  "195": "aparecidense-aparecida-de-goiania-go-brasil",
+  "196": "araguaina-araguaina-to-brasil",
+  "197": "asa-arapiraca-al-brasil",
+  "300": "atletico-de-alagoinhas-alagoinhas-ba-brasil",
+  "301": "atletico-ce-fortaleza-ce-brasil",
+  "302": "azuriz-pato-branco-pr-brasil",
+  "303": "betim-betim-mg-brasil",
+  "304": "blumenau-blumenau-sc-brasil",
+  "305": "brasil-de-pelotas-pelotas-rs-brasil",
+  "306": "brasiliense-taguatinga-df-brasil",
+  "307": "capital-palmas-to-brasil",
+  "308": "ceilandia-ceilandia-df-brasil",
+  "309": "central-caruaru-pe-brasil",
+  "310": "cianorte-cianorte-pr-brasil",
+  "198": "crac-catalao-go-brasil",
+  "199": "csa-maceio-al-brasil",
+  "311": "cse-palmeira-dos-indios-al-brasil",
+  "312": "decisao-bonito-pe-brasil",
+  "313": "democrata-gv-governador-valadares-mg-brasil",
+  "314": "fc-cascavel-cascavel-pr-brasil",
+  "315": "ferroviario-fortaleza-ce-brasil",
+  "316": "fluminense-pi-teresina-pi-brasil",
+  "317": "galvez-rio-branco-ac-brasil",
+  "200": "gama-brasilia-df-brasil",
+  "318": "gas-boavista-rr-brasil",
+  "201": "goiatuba-goiatuba-go-brasil",
+  "319": "guapore-rolim-de-moura-ro-brasil",
+  "320": "guarany-de-bage-bage-rs-brasil",
+  "321": "humaita-ac-porto-acre-ac-brasil",
+  "322": "iape-sao-luis-ma-brasil",
+  "323": "iguatu-iguatu-ce-brasil",
+  "324": "imperatriz-imperatriz-ma-brasil",
+  "325": "independencia-rio-branco-ac-brasil",
+  "202": "inhumas-inhumas-go-brasil",
+  "326": "jacuipense-riachao-do-jacuipe-ba-brasil",
+  "327": "joinville-joinville-sc-brasil",
+  "328": "juazeirense-juazeiro-ba-brasil",
+  "329": "lagarto-lagarto-se-brasil",
+  "330": "laguna-tibau-do-sul-rn-brasil",
+  "331": "luverdense-lucas-do-rio-verde-mt-brasil",
+  "332": "madureira-rio-de-janeiro-rj-brasil",
+  "333": "maguary-bonito-pe-brasil",
+  "334": "manaus-manaus-am-brasil",
+  "335": "manauara-manaus-am-brasil",
+  "336": "marcilio-dias-itajai-sc-brasil",
+  "337": "maracana-maracanau-ce-brasil",
+  "338": "marica-marica-rj-brasil",
+  "339": "mixto-cuiaba-mt-brasil",
+  "340": "monte-roraima-boa-vista-rr-brasil",
+  "341": "moto-club-sao-luis-ma-brasil",
+  "342": "nacional-manaus-am-brasil",
+  "343": "noroeste-bauru-sp-brasil",
+  "344": "nova-iguacu-nova-iguacu-rj-brasil",
+  "345": "operario-ms-campo-grande-ms-brasil",
+  "346": "operario-varzea-grandense-varzea-grande-mt-brasil",
+  "347": "oratorio-macapa-ap-brasil",
+  "348": "pantanal-campo-grande-ms-brasil",
+  "349": "parnahyba-parnaiba-pi-brasil",
+  "350": "piaui-teresina-pi-brasil",
+  "351": "porto-ba-porto-seguro-ba-brasil",
+  "352": "porto-velho-porto-velho-ro-brasil",
+  "353": "portuguesa-sao-paulo-sp-brasil",
+  "354": "portuguesa-rj-rio-de-janeiro-rj-brasil",
+  "355": "pouso-alegre-pouso-alegre-mg-brasil",
+  "356": "primavera-mt-primavera-do-leste-mt-brasil",
+  "357": "real-noroeste-aguia-branca-es-brasil",
+  "204": "retro-camaragibe-pe-brasil",
+  "358": "rio-branco-es-vitoria-es-brasil",
+  "359": "sampaio-correa-sao-luis-ma-brasil",
+  "360": "santa-catarina-rio-do-sul-sc-brasil",
+  "361": "sao-jose-rs-porto-alegre-rs-brasil",
+  "362": "sao-joseense-sao-jose-dos-pinhais-pr-brasil",
+  "363": "sao-luiz-ijui-rs-brasil",
+  "364": "sao-raimundo-rr-boa-vista-rr-brasil",
+  "365": "serra-branca-serra-branca-pb-brasil",
+  "366": "sergipe-aracaju-se-brasil",
+  "367": "sousa-sousa-pb-brasil",
+  "368": "tirol-fortaleza-ce-brasil",
+  "369": "tocantinopolis-tocantinopolis-to-brasil",
+  "205": "tombense-tombos-mg-brasil",
+  "370": "treze-campina-grande-pb-brasil",
+  "371": "trem-macapa-ap-brasil",
+  "372": "tuna-luso-belem-pa-brasil",
+  "373": "uberlandia-uberlandia-mg-brasil",
+  "374": "uniao-rondonopolis-rondonopolis-mt-brasil",
+  "375": "velo-clube-rio-claro-sp-brasil",
+  "376": "vitoria-es-vitoria-es-brasil",
+  "206": "xv-de-piracicaba-piracicaba-sp-brasil",
+
+  // INTERNACIONAL - EUROPA (50 CLUBES)
+  "541": "real-madrid-madrid-comunidad-de-madrid-espanha",
+  "529": "barcelona-barcelona-catalunha-espanha",
+  "50": "manchester-city-manchester-england-inglaterra",
+  "51": "liverpool-liverpool-england-inglaterra",
+  "52": "bayern-munich-munique-baviera-alemanha",
+  "53": "manchester-united-manchester-england-inglaterra",
+  "496": "juventus-turim-piemonte-italia",
+  "54": "psg-paris-ile-de-france-franca",
+  "492": "napoli-napoles-campania-italia",
+  "505": "inter-milan-milao-lombardia-italia",
+  "489": "ac-milan-milao-lombardia-italia",
+  "55": "newcastle-newcastle-england-inglaterra",
+  "56": "arsenal-londres-england-inglaterra",
+  "57": "dortmund-dortmund-renania-do-norte-vestfalia-alemanha",
+  "530": "atletico-madrid-madrid-comunidad-de-madrid-espanha",
+  "211": "benfica-lisboa-lisboa-portugal",
+  "212": "fc-porto-porto-porto-portugal",
+  "58": "rb-leipzig-leipzig-saxonia-alemanha",
+  "59": "bayer-leverkusen-leverkusen-renania-do-norte-vestfalia-alemanha",
+  "60": "ajax-amsterda-holanda-do-norte-holanda",
+  "61": "tottenham-londres-england-inglaterra",
+  "62": "chelsea-londres-england-inglaterra",
+  "497": "as-roma-roma-lacio-italia",
+  "63": "lazio-roma-lacio-italia",
+  "502": "fiorentina-florenca-toscana-italia",
+  "499": "atalanta-bergamo-lombardia-italia",
+  "536": "sevilla-sevilha-andaluzia-espanha",
+  "64": "villarreal-vila-real-comunidade-valenciana-espanha",
+  "532": "valencia-valencia-comunidade-valenciana-espanha",
+  "531": "athletic-bilbao-bilbao-pais-basco-espanha",
+  "65": "wolfsburg-wolfsburg-baixa-saxonia-alemanha",
+  "66": "hertha-berlin-berlim-berlim-alemanha",
+  "67": "marseille-marselha-provenca-franca",
+  "68": "lille-lille-hauts-de-france-franca",
+  "69": "monaco-monaco-monaco-monaco",
+  "70": "rennes-rennes-bretanha-franca",
+  "231": "sporting-cp-lisboa-lisboa-portugal",
+  "71": "braga-braga-braga-portugal",
+  "72": "feyenoord-roterda-holanda-do-sul-holanda",
+  "73": "psv-eindhoven-eindhoven-brabante-do-norte-holanda",
+  "247": "celtic-glasgow-scotland-escocia",
+  "74": "rangers-glasgow-scotland-escocia",
+  "611": "galatasaray-istambul-istambul-turquia",
+  "551": "fenerbahce-istambul-istambul-turquia",
+  "75": "besiktas-istambul-istambul-turquia",
+  "550": "shakhtar-donetsk-donetsk-donetsk-ucrania",
+  "76": "dynamo-kyiv-kiev-kiev-ucrania",
+  "77": "olympiakos-pireu-atica-grecia",
+  "78": "panathinaikos-atenas-atica-grecia",
+  "79": "paok-salonica-macedonia-central-grecia",
+
+  // INTERNACIONAL - AMÉRICA DO SUL (30 CLUBES)
+  "451": "boca-juniors-buenos-aires-buenos-aires-argentina",
+  "80": "river-plate-buenos-aires-buenos-aires-argentina",
+  "81": "penarol-montevideu-montevideu-uruguai",
+  "82": "olimpia-assuncao-central-paraguai",
+  "1137": "atletico-nacional-medellin-antioquia-colombia",
+  "83": "libertad-assuncao-central-paraguai",
+  "84": "racing-club-avellaneda-buenos-aires-argentina",
+  "85": "independiente-avellaneda-buenos-aires-argentina",
+  "86": "nacional-uru-montevideu-montevideu-uruguai",
+  "87": "san-lorenzo-buenos-aires-buenos-aires-argentina",
+  "88": "colo-colo-santiago-regiao-metropolitana-chile",
+  "89": "ind-del-valle-sangolqui-pichincha-equador",
+  "90": "ldu-quito-quito-pichincha-equador",
+  "91": "barcelona-equ-guayaquil-guayas-equador",
+  "92": "cerro-porteno-assuncao-central-paraguai",
+  "450": "estudiantes-la-plata-buenos-aires-argentina",
+  "93": "velez-sarsfield-buenos-aires-buenos-aires-argentina",
+  "94": "u-de-chile-santiago-regiao-metropolitana-chile",
+  "95": "u-catolica-santiago-regiao-metropolitana-chile",
+  "96": "alianza-lima-lima-lima-peru",
+  "97": "universitario-lima-lima-peru",
+  "98": "bolivar-la-paz-la-paz-bolivia",
+  "99": "the-strongest-la-paz-la-paz-bolivia",
+  "100": "millonarios-bogota-cundinamarca-colombia",
+  "1135": "junior-barranquilla-barranquilla-atlantico-colombia",
+  "101": "caracas-fc-caracas-distrito-capital-venezuela",
+  "102": "dep-tachira-san-christobal-tachira-venezuela",
+  "103": "melgar-arequipa-arequipa-peru",
+  "104": "defensor-sporting-montevideu-montevideu-uruguai",
+  "105": "emelec-guayaquil-guayas-equador",
