@@ -1,9 +1,9 @@
 /* Caminho: src/pages/Voting.tsx
-   Contexto: Correção de Clique em Dropdown e Fluxo de Foco Contínuo (UX Elite) */
+   Contexto: Correção Crítica de Clique (Race Condition) e Variáveis de Estado */
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Heart, Search, Loader2, Shield, X, Sparkles, Plus } from "lucide-react";
+import { Heart, Search, Loader2, X, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useNavigate } from "react-router-dom";
@@ -24,7 +24,6 @@ interface ClubResult {
   location: string | null;
   logo: string | null;
   mascote: string | null;
-  isCustom?: boolean;
 }
 
 function toClubResult(c: ClubSearchResult): ClubResult {
@@ -43,7 +42,6 @@ const Voting = () => {
   const { user, profile, isLoading, isAuthenticated, isProfileComplete, hasVoted, refreshProfile } = useUser();
   const { toast } = useToast();
 
-  // REFS PARA FOCO PROGRAMÁTICO
   const heartInputRef = useRef<HTMLInputElement>(null);
   const sympathyInputRef = useRef<HTMLInputElement>(null);
 
@@ -82,14 +80,12 @@ const Voting = () => {
     setHeartResults([]);
     setHeartOpen(false);
     toast({ title: `${club.name} selecionado! ❤️`, duration: 1500 });
-    
-    // FOCO: Pula para simpatia após 150ms
     setTimeout(() => sympathyInputRef.current?.focus(), 150);
   };
 
   const selectSympathy = (club: ClubResult) => {
     if (sympathyClubs.length >= 4) return;
-    const isDuplicate = sympathyClubs.find(c => (c.id && c.id === club.id) || (!c.id && !club.id && c.name.toLowerCase() === club.name.toLowerCase()));
+    const isDuplicate = sympathyClubs.find(c => (c.id === club.id) || (c.name.toLowerCase() === club.name.toLowerCase()));
     if (isDuplicate) return;
     if (heartClub && (heartClub.id === club.id || heartClub.name.toLowerCase() === club.name.toLowerCase())) return;
 
@@ -97,8 +93,6 @@ const Voting = () => {
     setSympathySearch("");
     setSympathyResults([]);
     setSympathyOpen(false);
-    
-    // FOCO: Mantém no input para a próxima simpatia
     setTimeout(() => sympathyInputRef.current?.focus(), 150);
   };
 
@@ -106,17 +100,14 @@ const Voting = () => {
     if (!heartClub || !user || !profile) return;
     setSubmitting(true);
     try {
-      // Inserção com integridade referencial
-      const { data: mainVote, error: mainError } = await supabase
-        .from("votos")
-        .insert({
-          user_id: user.id,
-          clube_nome: heartClub.name,
-          cidade: profile.cidade || "",
-          estado: profile.estado || "",
-          pais: profile.pais || "BR",
-          is_original_vote: true
-        }).select().single();
+      const { error: mainError } = await supabase.from("votos").insert({
+        user_id: user.id,
+        clube_nome: heartClub.name,
+        cidade: profile.cidade || "",
+        estado: profile.estado || "",
+        pais: profile.pais || "BR",
+        is_original_vote: true
+      }).select().single();
 
       if (mainError) throw mainError;
 
@@ -150,7 +141,7 @@ const Voting = () => {
         </div>
 
         {/* CORAÇÃO */}
-        <div className="space-y-2">
+        <div className="space-y-2 relative">
           <label className="text-sm font-semibold flex items-center gap-2">
             <Heart className="w-4 h-4 text-primary" fill="currentColor" /> Clube do Coração
           </label>
@@ -158,7 +149,7 @@ const Voting = () => {
             <div className="flex items-center gap-3 glass-card rounded-xl p-4 border border-primary/50">
               <ClubLogo src={heartClub.logo} alt={heartClub.name} size="md" />
               <div className="flex-1 font-bold">{heartClub.name}</div>
-              <button onClick={() => setHeartClub(null)} className="p-1 hover:text-primary"><X className="w-4 h-4" /></button>
+              <button onClick={() => setHeartClub(null)} className="p-1"><X className="w-4 h-4" /></button>
             </div>
           ) : (
             <div className="relative">
@@ -166,22 +157,21 @@ const Voting = () => {
               <Input 
                 ref={heartInputRef}
                 className="pl-10 h-12 bg-secondary/20" 
-                placeholder="Busque seu time do coração..."
+                placeholder="Busque seu time..."
                 value={heartSearch} 
                 onChange={e => setHeartSearch(e.target.value)}
-                onFocus={() => heartSearch.length >= 2 && setHeartOpen(true)}
                 onBlur={() => setTimeout(() => setHeartOpen(false), 200)}
               />
               {heartOpen && (
-                <div className="absolute top-full left-0 right-0 z-[100] mt-1 glass-card border rounded-xl max-h-60 overflow-y-auto">
+                <div className="absolute top-full left-0 right-0 z-[999] mt-1 bg-neutral-900 border border-white/10 rounded-xl shadow-2xl overflow-hidden">
                   {heartResults.map((c, i) => (
                     <div 
                       key={i} 
                       onMouseDown={(e) => { e.preventDefault(); selectHeart(c); }}
-                      className="flex items-center gap-3 p-3 hover:bg-primary/10 cursor-pointer border-b last:border-0"
+                      className="flex items-center gap-3 p-3 hover:bg-white/10 cursor-pointer border-b border-white/5 last:border-0"
                     >
                       <ClubLogo src={c.logo} alt={c.name} size="sm" />
-                      <span className="text-sm font-medium">{c.name}</span>
+                      <span className="text-sm font-medium text-white">{c.name}</span>
                     </div>
                   ))}
                 </div>
@@ -191,43 +181,40 @@ const Voting = () => {
         </div>
 
         {/* SIMPATIAS */}
-        <div className="space-y-3">
+        <div className="space-y-3 relative">
           <label className="text-sm font-semibold flex items-center gap-2">
             <Sparkles className="w-4 h-4 text-primary" /> Clubes de Simpatia ({sympathyClubs.length}/4)
           </label>
-          <div className="grid grid-cols-1 gap-2">
+          <div className="space-y-2">
             {sympathyClubs.map((c, i) => (
-              <motion.div key={i} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }}
-                className="flex items-center gap-3 p-3 glass-card rounded-xl border border-border/50">
+              <div key={i} className="flex items-center gap-3 p-3 glass-card rounded-xl border border-border/50">
                 <ClubLogo src={c.logo} alt={c.name} size="sm" />
                 <span className="flex-1 text-sm font-medium">{c.name}</span>
                 <button onClick={() => setSympathyClubs(p => p.filter((_, idx) => idx !== i))}><X className="w-4 h-4" /></button>
-              </motion.div>
+              </div>
             ))}
           </div>
-          
           {sympathyClubs.length < 4 && (
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input 
                 ref={sympathyInputRef}
                 className="pl-10 h-12 bg-secondary/10" 
-                placeholder="Busque um clube de simpatia..."
+                placeholder="Próxima simpatia..."
                 value={sympathySearch} 
                 onChange={e => setSympathySearch(e.target.value)}
-                onFocus={() => sympathySearch.length >= 2 && setSympathyOpen(true)}
-                onBlur={() => setTimeout(() => setOpen(false), 200)}
+                onBlur={() => setTimeout(() => setSympathyOpen(false), 200)}
               />
               {sympathyOpen && (
-                <div className="absolute top-full left-0 right-0 z-[100] mt-1 glass-card border rounded-xl max-h-60 overflow-y-auto">
+                <div className="absolute top-full left-0 right-0 z-[999] mt-1 bg-neutral-900 border border-white/10 rounded-xl shadow-2xl overflow-hidden">
                   {sympathyResults.map((c, i) => (
                     <div 
                       key={i} 
                       onMouseDown={(e) => { e.preventDefault(); selectSympathy(c); }}
-                      className="flex items-center gap-3 p-3 hover:bg-primary/10 cursor-pointer border-b last:border-0"
+                      className="flex items-center gap-3 p-3 hover:bg-white/10 cursor-pointer border-b border-white/5 last:border-0"
                     >
                       <ClubLogo src={c.logo} alt={c.name} size="sm" />
-                      <span className="text-sm font-medium">{c.name}</span>
+                      <span className="text-sm font-medium text-white">{c.name}</span>
                     </div>
                   ))}
                 </div>
