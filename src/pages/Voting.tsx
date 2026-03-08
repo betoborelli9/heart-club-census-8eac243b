@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Heart, Search, Loader2, Shield, X, Sparkles, Plus } from "lucide-react";
+import { Heart, Search, Check, Loader2, Shield, X, Sparkles, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useNavigate } from "react-router-dom";
@@ -16,7 +16,6 @@ import {
 
 interface ClubResult {
   id: string | null;
-  api_id: number | null;
   name: string;
   shortName: string;
   location: string | null;
@@ -28,7 +27,6 @@ interface ClubResult {
 function toClubResult(c: ClubSearchResult): ClubResult {
   return {
     id: c.id,
-    api_id: c.api_id,
     name: c.name,
     shortName: c.shortName,
     location: c.location,
@@ -42,11 +40,13 @@ const Voting = () => {
   const { user, profile, isLoading, isAuthenticated, isProfileComplete, hasVoted, refreshProfile } = useUser();
   const { toast } = useToast();
 
+  // Heart club
   const [heartSearch, setHeartSearch] = useState("");
   const [heartResults, setHeartResults] = useState<ClubResult[]>([]);
   const [heartClub, setHeartClub] = useState<ClubResult | null>(null);
   const [heartOpen, setHeartOpen] = useState(false);
 
+  // Sympathy clubs
   const [sympathySearch, setSympathySearch] = useState("");
   const [sympathyResults, setSympathyResults] = useState<ClubResult[]>([]);
   const [sympathyClubs, setSympathyClubs] = useState<ClubResult[]>([]);
@@ -61,6 +61,7 @@ const Voting = () => {
     else if (!isLoading && isAuthenticated && hasVoted) navigate("/dashboard", { replace: true });
   }, [isLoading, isAuthenticated, isProfileComplete, hasVoted, navigate]);
 
+  // Local search - instantaneous
   const doSearch = useCallback((query: string, setter: (r: ClubResult[]) => void, setOpen: (b: boolean) => void) => {
     if (query.length < 2) { setter([]); setOpen(false); return; }
     const results = searchClubsLocal(query, 10).map(toClubResult);
@@ -72,7 +73,7 @@ const Voting = () => {
   useEffect(() => { doSearch(sympathySearch, setSympathyResults, setSympathyOpen); }, [sympathySearch, doSearch]);
 
   const createCustomClub = (name: string): ClubResult => ({
-    id: null, api_id: null, name: name.trim(), shortName: name.trim(), location: null, logo: null, mascote: null, isCustom: true,
+    id: null, name: name.trim(), shortName: name.trim(), location: null, logo: null, mascote: null, isCustom: true,
   });
 
   const selectHeart = (club: ClubResult) => {
@@ -83,10 +84,10 @@ const Voting = () => {
 
   const selectSympathy = (club: ClubResult) => {
     if (sympathyClubs.length >= 4) return;
-    const isDuplicate = sympathyClubs.find(c => (c.api_id && c.api_id === club.api_id) || (!c.api_id && !club.api_id && c.name.toLowerCase() === club.name.toLowerCase()));
+    const isDuplicate = sympathyClubs.find(c => (c.id && c.id === club.id) || (!c.id && !club.id && c.name.toLowerCase() === club.name.toLowerCase()));
     if (isDuplicate) return;
-    if (heartClub && heartClub.api_id && heartClub.api_id === club.api_id) return;
-    if (heartClub && !heartClub.api_id && heartClub.name.toLowerCase() === club.name.toLowerCase()) return;
+    if (heartClub && heartClub.id && heartClub.id === club.id) return;
+    if (heartClub && !heartClub.id && heartClub.name.toLowerCase() === club.name.toLowerCase()) return;
     setSympathyClubs(prev => [...prev, club]); setSympathySearch(""); setSympathyResults([]); setSympathyOpen(false);
     toast({ title: `${club.name} adicionado! ✨`, duration: 1500 });
   };
@@ -109,7 +110,7 @@ const Voting = () => {
     try {
       const fingerprint = await generateFingerprint();
 
-      // 1. Inserir o Clube do Coração e obter o ID (Evita erro de Foreign Key no Tracking)
+      // Insert principal com .select().single() para garantir o ID antes do trigger de tracking
       const { data: mainVote, error: mainError } = await supabase
         .from("votos")
         .insert({
@@ -119,35 +120,40 @@ const Voting = () => {
           estado: profile.estado || "",
           pais: profile.pais || "BR",
           fingerprint,
-          is_original_vote: true
         })
         .select()
         .single();
 
       if (mainError) throw mainError;
+      if (!mainVote?.id) throw new Error("Falha ao registrar voto principal.");
 
-      // 2. Inserir Clubes de Simpatia sequencialmente
+      // Inserir simpatias sequencialmente, cada uma com .select().single()
       for (const sym of sympathyClubs) {
-        await supabase.from("votos").insert({
-          user_id: user.id,
-          clube_nome: sym.name,
-          cidade: profile.cidade || "",
-          estado: profile.estado || "",
-          pais: profile.pais || "BR",
-          fingerprint,
-          is_suspicious: false,
-          is_original_vote: false
-        });
+        const { error: symError } = await supabase
+          .from("votos")
+          .insert({
+            user_id: user.id,
+            clube_nome: sym.name,
+            cidade: profile.cidade || "",
+            estado: profile.estado || "",
+            pais: profile.pais || "BR",
+            fingerprint,
+            is_original_vote: false,
+          })
+          .select()
+          .single();
+
+        if (symError) throw symError;
       }
 
       await refreshProfile();
       toast({ title: "Voto registrado! 🎉", description: `Seu coração é ${heartClub.name} para sempre!` });
       navigate("/dashboard", { replace: true });
     } catch (err: any) {
-      console.error("Erro ao votar:", err);
-      toast({ variant: "destructive", title: "Erro ao votar", description: "Ocorreu um erro de integridade. Tente novamente." });
+      toast({ variant: "destructive", title: "Erro ao votar", description: err.message });
     } finally {
-      setSubmitting(false); setShowConfirm(false);
+      setSubmitting(false);
+      setShowConfirm(false);
     }
   };
 
@@ -170,7 +176,7 @@ const Voting = () => {
           </div>
         )}
         {results.map((club, i) => (
-          <button key={`${club.api_id || club.name}-${i}`} onClick={() => onSelect(club)}
+          <button key={`${club.id || club.name}-${i}`} onClick={() => onSelect(club)}
             className="w-full flex items-center gap-3 px-4 py-3 hover:bg-primary/10 transition-colors text-left border-b border-border/10 last:border-0">
             <ClubLogo src={club.logo} alt={club.name} size="sm" />
             <div className="min-w-0 flex-1">
@@ -205,6 +211,7 @@ const Voting = () => {
           </p>
         </motion.div>
 
+        {/* Heart Club */}
         <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.1 }} className="space-y-2">
           <label className="text-sm font-semibold text-foreground flex items-center gap-2">
             <Heart className="w-4 h-4 text-primary" fill="currentColor" /> Clube do Coração
@@ -230,6 +237,7 @@ const Voting = () => {
           )}
         </motion.div>
 
+        {/* Sympathy */}
         <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.2 }} className="space-y-3">
           <label className="text-sm font-semibold text-foreground flex items-center gap-2">
             <Sparkles className="w-4 h-4 text-primary" /> Clubes de Simpatia
@@ -260,6 +268,7 @@ const Voting = () => {
           )}
         </motion.div>
 
+        {/* Warning + Submit */}
         <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.3 }} className="space-y-4 pt-2">
           <div className="glass-card rounded-xl p-4 text-center space-y-2">
             <Shield className="w-5 h-5 text-primary mx-auto" />
@@ -273,6 +282,7 @@ const Voting = () => {
         </motion.div>
       </div>
 
+      {/* Confirm Dialog */}
       <Dialog open={showConfirm} onOpenChange={setShowConfirm}>
         <DialogContent className="max-w-sm glass-card border-border/30">
           <DialogHeader>
