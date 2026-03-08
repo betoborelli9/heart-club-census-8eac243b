@@ -1,5 +1,5 @@
 /* Caminho: src/pages/Voting.tsx 
-   Contexto: Correção de Integridade de Banco e Aviso de Imutabilidade */
+   Contexto: Versão FINAL com Redirecionamento Blindado e Correção de Banco */
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -102,8 +102,7 @@ const Voting = () => {
     setSubmitting(true);
     
     try {
-      // 1. Inserir o voto principal PRIMEIRO e aguardar o retorno com .select().single()
-      // Isso garante que o ID exista antes de qualquer trigger de rastreamento disparar
+      // 1. Inserir o voto principal PRIMEIRO de forma atômica
       const { data: mainVote, error: mainError } = await supabase
         .from("votos")
         .insert({
@@ -119,7 +118,7 @@ const Voting = () => {
 
       if (mainError) throw mainError;
 
-      // 2. Inserir as simpatias em seguida
+      // 2. Inserir as simpatias somente após o sucesso do principal
       if (sympathyClubs.length > 0) {
         const sympathyVotes = sympathyClubs.map(s => ({
           user_id: user.id,
@@ -134,15 +133,19 @@ const Voting = () => {
         if (symError) console.error("Erro nas simpatias:", symError);
       }
 
+      // 3. Atualizar perfil e redirecionar
       await refreshProfile();
       toast({ title: "Voto registrado com sucesso! 🎉" });
+      
+      // Queima a ponte: impede o usuário de voltar para esta página
       navigate("/dashboard", { replace: true });
+
     } catch (err: any) {
       console.error("Erro ao votar:", err);
       toast({ 
         variant: "destructive", 
         title: "Erro ao votar", 
-        description: "Houve um conflito de integridade. Tente novamente em instantes." 
+        description: "Houve um conflito de dados. Verifique se você já votou ou tente novamente." 
       });
     } finally {
       setSubmitting(false);
@@ -158,7 +161,7 @@ const Voting = () => {
           <h1 className="text-2xl font-bold">Voto Sagrado</h1>
         </div>
 
-        {/* CORAÇÃO */}
+        {/* BUSCA CORAÇÃO */}
         <div className="space-y-2 relative">
           <label className="text-sm font-semibold flex items-center gap-2">
             <Heart className="w-4 h-4 text-primary" fill="currentColor" /> Clube do Coração
@@ -200,7 +203,7 @@ const Voting = () => {
           )}
         </div>
 
-        {/* SIMPATIAS */}
+        {/* BUSCA SIMPATIAS */}
         <div className="space-y-3 relative">
           <label className="text-sm font-semibold flex items-center gap-2">
             <Sparkles className="w-4 h-4 text-primary" /> Clubes de Simpatia ({sympathyClubs.length}/4)
@@ -245,11 +248,12 @@ const Voting = () => {
           )}
         </div>
 
+        {/* BANNER DE IMPACTO */}
         <div className="glass-card rounded-xl p-4 border border-orange-500/20 bg-orange-500/5 text-center space-y-2">
           <Shield className="w-5 h-5 text-primary mx-auto" />
           <p className="text-xs text-muted-foreground leading-relaxed">
-            <strong className="text-foreground block mb-1">DECISÃO DEFINITIVA</strong>
-            Ao confirmar, seu voto será registrado permanentemente. Você <strong className="text-foreground">não poderá alterar</strong> suas escolhas e esta página ficará inacessível para sempre.
+            <strong className="text-foreground block mb-1 uppercase tracking-wider">Atenção Sagrada</strong>
+            Após confirmar, o seu voto será registrado na história do Heart Club. <strong className="text-foreground">Não será possível alterar</strong> suas escolhas e esta página ficará bloqueada.
           </p>
         </div>
 
@@ -263,14 +267,15 @@ const Voting = () => {
       </div>
 
       <Dialog open={showConfirm} onOpenChange={setShowConfirm}>
-        <DialogContent className="max-w-xs border-primary/20 bg-[#0a0a0a]">
+        <DialogContent className="max-w-xs border-primary/20 bg-[#0a0a0a] text-white">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-white">
-              <AlertTriangle className="w-5 h-5 text-primary" /> Decisão Final
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 text-primary" /> Confirmação Única
             </DialogTitle>
           </DialogHeader>
           <div className="py-2 text-sm text-gray-400">
-            Você tem certeza? Após confirmar, suas escolhas de clube não poderão ser modificadas nunca mais.
+            Deseja registrar seu voto agora? <br/><br/>
+            Uma vez confirmado, você será levado ao Dashboard e **nunca mais poderá voltar a esta tela** ou editar seus clubes.
           </div>
           <DialogFooter className="flex-col gap-2 mt-4">
             <Button 
@@ -285,7 +290,7 @@ const Voting = () => {
               disabled={submitting} 
               className="btn-orange-gradient w-full"
             >
-              {submitting ? <Loader2 className="animate-spin" /> : "Sim, Confirmar Voto"}
+              {submitting ? <Loader2 className="animate-spin" /> : "Sim, Confirmar Agora"}
             </Button>
           </DialogFooter>
         </DialogContent>
