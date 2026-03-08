@@ -1,452 +1,175 @@
-/* src/pages/Voting.tsx */
-
-import { useState, useEffect, useRef, useCallback } from "react";
-import { Heart, Search, Loader2, X, Sparkles } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useUser } from "@/contexts/UserContext";
-import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
-import { searchClubsLocal, ClubSearchResult } from "@/lib/search-clubs";
-import { ClubLogo } from "@/components/ClubLogo";
-import logo from "@/assets/logo.png";
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Search } from "lucide-react";
 
-interface ClubResult {
-  id: string | null;
+interface Club {
+  id: string;
   name: string;
-  shortName: string;
-  location: string | null;
-  logo: string | null;
-  mascote: string | null;
-}
-
-function toClubResult(c: ClubSearchResult): ClubResult {
-  return {
-    id: c.id,
-    name: c.name,
-    shortName: c.shortName,
-    location: c.location,
-    logo: c.logo,
-    mascote: c.mascote || null,
-  };
+  logo: string;
 }
 
 export default function Voting() {
-
   const navigate = useNavigate();
-  const { user, profile, isLoading, isAuthenticated, isProfileComplete, hasVoted, refreshProfile } = useUser();
-  const { toast } = useToast();
 
-  const heartInputRef = useRef<HTMLInputElement>(null);
-  const sympathyInputRef = useRef<HTMLInputElement>(null);
+  const [clubs, setClubs] = useState<Club[]>([]);
+  const [searchHeart, setSearchHeart] = useState("");
+  const [searchSympathy, setSearchSympathy] = useState("");
 
-  const [heartSearch, setHeartSearch] = useState("");
-  const [heartResults, setHeartResults] = useState<ClubResult[]>([]);
-  const [heartClub, setHeartClub] = useState<ClubResult | null>(null);
-  const [heartOpen, setHeartOpen] = useState(false);
+  const [heartClub, setHeartClub] = useState<Club | null>(null);
+  const [sympathies, setSympathies] = useState<Club[]>([]);
 
-  const [sympathySearch, setSympathySearch] = useState("");
-  const [sympathyResults, setSympathyResults] = useState<ClubResult[]>([]);
-  const [sympathyClubs, setSympathyClubs] = useState<ClubResult[]>([]);
-  const [sympathyOpen, setSympathyOpen] = useState(false);
-
-  const [showConfirm, setShowConfirm] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
+  const [showHeartResults, setShowHeartResults] = useState(false);
+  const [showSympathyResults, setShowSympathyResults] = useState(false);
 
   useEffect(() => {
-
-    if (isLoading) return;
-
-    if (!isAuthenticated) {
-      navigate("/login", { replace: true });
-      return;
+    async function loadClubs() {
+      const response = await fetch("/clubs.json");
+      const data = await response.json();
+      setClubs(data);
     }
 
-    if (!isProfileComplete) {
-      navigate("/profile-setup", { replace: true });
-      return;
-    }
-
-    if (hasVoted) {
-      navigate("/dashboard", { replace: true });
-      return;
-    }
-
-  }, [isLoading, isAuthenticated, isProfileComplete, hasVoted, navigate]);
-
-  const doSearch = useCallback((query: string, setter: (r: ClubResult[]) => void, open: (b: boolean) => void) => {
-
-    if (query.length < 2) {
-      setter([]);
-      open(false);
-      return;
-    }
-
-    const results = searchClubsLocal(query, 10).map(toClubResult);
-
-    setter(results);
-    open(results.length > 0);
-
+    loadClubs();
   }, []);
 
-  useEffect(() => {
-    doSearch(heartSearch, setHeartResults, setHeartOpen);
-  }, [heartSearch, doSearch]);
-
-  useEffect(() => {
-    doSearch(sympathySearch, setSympathyResults, setSympathyOpen);
-  }, [sympathySearch, doSearch]);
-
-  const selectHeart = (club: ClubResult) => {
-
-    setHeartClub(club);
-    setHeartSearch("");
-    setHeartResults([]);
-    setHeartOpen(false);
-
-    toast({
-      title: `${club.name} selecionado! ❤️`,
-      duration: 1500
-    });
-
-    setTimeout(() => {
-      sympathyInputRef.current?.focus();
-    }, 120);
-
-  };
-
-  const selectSympathy = (club: ClubResult) => {
-
-    if (sympathyClubs.length >= 4) return;
-
-    const duplicate = sympathyClubs.find(
-      c => c.id === club.id || c.name.toLowerCase() === club.name.toLowerCase()
-    );
-
-    if (duplicate) return;
-
-    if (heartClub && (
-      heartClub.id === club.id ||
-      heartClub.name.toLowerCase() === club.name.toLowerCase()
-    )) return;
-
-    const updated = [...sympathyClubs, club];
-
-    setSympathyClubs(updated);
-    setSympathySearch("");
-    setSympathyResults([]);
-    setSympathyOpen(false);
-
-    if (updated.length < 4) {
-
-      setTimeout(() => {
-        sympathyInputRef.current?.focus();
-      }, 120);
-
-    }
-
-  };
-
-  const handleConfirmVote = async () => {
-
-    if (!heartClub || !user || !profile) return;
-
-    if (hasVoted) {
-      navigate("/dashboard", { replace: true });
-      return;
-    }
-
-    setSubmitting(true);
-
-    try {
-
-      await supabase.from("votos").insert({
-        user_id: user.id,
-        clube_nome: heartClub.name,
-        cidade: profile.cidade || "",
-        estado: profile.estado || "",
-        pais: profile.pais || "BR",
-        is_original_vote: true
-      });
-
-      for (const sym of sympathyClubs) {
-
-        await supabase.from("votos").insert({
-          user_id: user.id,
-          clube_nome: sym.name,
-          cidade: profile.cidade || "",
-          estado: profile.estado || "",
-          pais: profile.pais || "BR",
-          is_original_vote: false
-        });
-
-      }
-
-      await refreshProfile();
-
-      navigate("/dashboard", { replace: true });
-
-    } catch (err: any) {
-
-      toast({
-        variant: "destructive",
-        title: "Erro ao votar",
-        description: err.message
-      });
-
-    } finally {
-
-      setSubmitting(false);
-      setShowConfirm(false);
-
-    }
-
-  };
-
-  return (
-
-    <div className="min-h-screen bg-background flex flex-col items-center px-4 py-6">
-
-      <div className="w-full max-w-lg space-y-6">
-
-        <div className="text-center space-y-3">
-
-          <img src={logo} alt="Heart Club" className="mx-auto w-20 h-20" />
-
-          <h1 className="text-2xl font-bold">
-            Voto Sagrado
-          </h1>
-
-        </div>
-
-        {/* CORAÇÃO */}
-
-        <div className="space-y-2 relative">
-
-          <label className="text-sm font-semibold flex items-center gap-2">
-
-            <Heart className="w-4 h-4 text-primary" fill="currentColor" />
-
-            Clube do Coração
-
-          </label>
-
-          {heartClub ? (
-
-            <div className="flex items-center gap-3 glass-card rounded-xl p-4 border border-primary/50">
-
-              <ClubLogo src={heartClub.logo} alt={heartClub.name} size="md" />
-
-              <div className="flex-1 font-bold">
-
-                {heartClub.name}
-
-              </div>
-
-              <button onClick={() => setHeartClub(null)}>
-
-                <X className="w-4 h-4" />
-
-              </button>
-
-            </div>
-
-          ) : (
-
-            <div className="relative">
-
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-primary" />
-
-              <Input
-                ref={heartInputRef}
-                className="pl-10 h-12"
-                placeholder="Busque seu time do coração..."
-                value={heartSearch}
-                onChange={(e) => setHeartSearch(e.target.value)}
-              />
-
-              {heartOpen && heartResults.length > 0 && (
-
-                <div className="absolute top-full left-0 right-0 mt-2 bg-[#1a1a1a] border border-white/20 rounded-xl shadow-xl overflow-hidden">
-
-                  {heartResults.map((c, i) => (
-
-                    <div
-                      key={i}
-                      onMouseDown={() => selectHeart(c)}
-                      className="flex items-center gap-3 p-4 hover:bg-white/10 cursor-pointer"
-                    >
-
-                      <ClubLogo src={c.logo} alt={c.name} size="sm" />
-
-                      <span className="text-sm font-bold text-white">
-
-                        {c.name}
-
-                      </span>
-
-                    </div>
-
-                  ))}
-
-                </div>
-
-              )}
-
-            </div>
-
-          )}
-
-        </div>
-
-        {/* SIMPATIAS */}
-
-        <div className="space-y-3 relative">
-
-          <label className="text-sm font-semibold flex items-center gap-2">
-
-            <Sparkles className="w-4 h-4 text-primary" />
-
-            Clubes de Simpatia ({sympathyClubs.length}/4)
-
-          </label>
-
-          <div className="space-y-2">
-
-            {sympathyClubs.map((c, i) => (
-
-              <div key={i} className="flex items-center gap-3 p-3 glass-card rounded-xl border border-border/50">
-
-                <ClubLogo src={c.logo} alt={c.name} size="sm" />
-
-                <span className="flex-1 text-sm font-medium">
-
-                  {c.name}
-
-                </span>
-
-                <button onClick={() => setSympathyClubs(p => p.filter((_, idx) => idx !== i))}>
-
-                  <X className="w-4 h-4" />
-
-                </button>
-
-              </div>
-
-            ))}
-
-          </div>
-
-          {sympathyClubs.length < 4 && (
-
-            <div className="relative">
-
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-
-              <Input
-                ref={sympathyInputRef}
-                className="pl-10 h-12"
-                placeholder="Próxima simpatia..."
-                value={sympathySearch}
-                onChange={(e) => setSympathySearch(e.target.value)}
-              />
-
-              {sympathyOpen && sympathyResults.length > 0 && (
-
-                <div className="absolute top-full left-0 right-0 mt-2 bg-[#1a1a1a] border border-white/20 rounded-xl shadow-xl overflow-hidden">
-
-                  {sympathyResults.map((c, i) => (
-
-                    <div
-                      key={i}
-                      onMouseDown={() => selectSympathy(c)}
-                      className="flex items-center gap-3 p-4 hover:bg-white/10 cursor-pointer"
-                    >
-
-                      <ClubLogo src={c.logo} alt={c.name} size="sm" />
-
-                      <span className="text-sm font-bold text-white">
-
-                        {c.name}
-
-                      </span>
-
-                    </div>
-
-                  ))}
-
-                </div>
-
-              )}
-
-            </div>
-
-          )}
-
-        </div>
-
-        <Button
-          className="w-full h-14 btn-orange-gradient font-bold"
-          disabled={!heartClub}
-          onClick={() => setShowConfirm(true)}
-        >
-
-          Confirmar Voto
-
-        </Button>
-
-      </div>
-
-      <Dialog open={showConfirm} onOpenChange={setShowConfirm}>
-
-        <DialogContent className="max-w-xs">
-
-          <DialogHeader>
-
-            <DialogTitle>
-              Finalizar?
-            </DialogTitle>
-
-          </DialogHeader>
-
-          <DialogFooter className="flex-col gap-2">
-
-            <Button
-              variant="outline"
-              onClick={() => setShowConfirm(false)}
-            >
-              Ajustar
-            </Button>
-
-            <Button
-              onClick={handleConfirmVote}
-              disabled={submitting}
-              className="btn-orange-gradient"
-            >
-
-              {submitting
-                ? <Loader2 className="animate-spin" />
-                : "Confirmar Voto"
-              }
-
-            </Button>
-
-          </DialogFooter>
-
-        </DialogContent>
-
-      </Dialog>
-
-    </div>
-
+  const filteredHeart = clubs.filter((club) =>
+    club.name.toLowerCase().includes(searchHeart.toLowerCase())
   );
 
+  const filteredSympathy = clubs.filter(
+    (club) =>
+      club.name.toLowerCase().includes(searchSympathy.toLowerCase()) &&
+      club.id !== heartClub?.id &&
+      !sympathies.find((s) => s.id === club.id)
+  );
+
+  function addSympathy(club: Club) {
+    if (sympathies.length >= 4) return;
+
+    setSympathies([...sympathies, club]);
+    setSearchSympathy("");
+    setShowSympathyResults(false);
+  }
+
+  function confirmVote() {
+    if (!heartClub) return;
+
+    console.log({
+      heart: heartClub,
+      sympathies,
+    });
+
+    navigate("/dashboard");
+  }
+
+  return (
+    <div className="min-h-screen bg-black text-white px-6 pt-10">
+
+      <h1 className="text-3xl font-bold text-center mb-10">
+        Voto Sagrado
+      </h1>
+
+      {/* CLUBE DO CORAÇÃO */}
+
+      <div className="mb-10 relative z-10">
+
+        <p className="mb-2 font-semibold">
+          ❤️ Clube do Coração
+        </p>
+
+        <div className="flex items-center bg-zinc-900 rounded-lg px-3 py-3">
+          <Search size={18} />
+          <input
+            value={searchHeart}
+            onChange={(e) => {
+              setSearchHeart(e.target.value);
+              setShowHeartResults(true);
+            }}
+            placeholder="Buscar clube..."
+            className="bg-transparent outline-none ml-2 w-full"
+          />
+        </div>
+
+        {showHeartResults && searchHeart && (
+          <div className="absolute top-full mt-2 w-full bg-zinc-900 rounded-lg max-h-60 overflow-y-auto border border-zinc-800">
+            {filteredHeart.map((club) => (
+              <div
+                key={club.id}
+                onClick={() => {
+                  setHeartClub(club);
+                  setSearchHeart(club.name);
+                  setShowHeartResults(false);
+                }}
+                className="flex items-center gap-3 px-4 py-3 hover:bg-zinc-800 cursor-pointer"
+              >
+                <img src={club.logo} className="w-6 h-6" />
+                {club.name}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* SIMPATIAS */}
+
+      <div className="mb-10 relative z-0">
+
+        <p className="mb-2 font-semibold">
+          ✨ Clubes de Simpatia ({sympathies.length}/4)
+        </p>
+
+        <div className="flex items-center bg-zinc-900 rounded-lg px-3 py-3">
+          <Search size={18} />
+          <input
+            value={searchSympathy}
+            onChange={(e) => {
+              setSearchSympathy(e.target.value);
+              setShowSympathyResults(true);
+            }}
+            placeholder="Próxima simpatia..."
+            className="bg-transparent outline-none ml-2 w-full"
+          />
+        </div>
+
+        {showSympathyResults && searchSympathy && (
+          <div className="absolute top-full mt-2 w-full bg-zinc-900 rounded-lg max-h-60 overflow-y-auto border border-zinc-800">
+            {filteredSympathy.map((club) => (
+              <div
+                key={club.id}
+                onClick={() => addSympathy(club)}
+                className="flex items-center gap-3 px-4 py-3 hover:bg-zinc-800 cursor-pointer"
+              >
+                <img src={club.logo} className="w-6 h-6" />
+                {club.name}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {sympathies.length > 0 && (
+          <div className="flex flex-wrap gap-2 mt-4">
+            {sympathies.map((club) => (
+              <div
+                key={club.id}
+                className="flex items-center gap-2 bg-zinc-800 px-3 py-2 rounded-lg text-sm"
+              >
+                <img src={club.logo} className="w-4 h-4" />
+                {club.name}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* BOTÃO */}
+
+      <button
+        onClick={confirmVote}
+        disabled={!heartClub}
+        className="w-full py-4 rounded-xl bg-red-700 hover:bg-red-600 transition disabled:opacity-40"
+      >
+        Confirmar Voto
+      </button>
+
+    </div>
+  );
 }
