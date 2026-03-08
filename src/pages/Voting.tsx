@@ -1,5 +1,5 @@
 /* Caminho: src/pages/Voting.tsx 
-   Contexto: Versão FINAL com Redirecionamento Blindado e Correção de Banco */
+   Contexto: Versão BLINDADA com Redirecionamento Automático e Bloqueio de Retorno */
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -58,10 +58,18 @@ const Voting = () => {
   const [showConfirm, setShowConfirm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
+  // GUARDA DE ROTA: Se já votou ou não está logado, ejeta daqui.
   useEffect(() => {
-    if (!isLoading && !isAuthenticated) navigate("/login", { replace: true });
-    else if (!isLoading && isAuthenticated && !isProfileComplete) navigate("/profile-setup", { replace: true });
-    else if (!isLoading && isAuthenticated && hasVoted) navigate("/dashboard", { replace: true });
+    if (isLoading) return;
+
+    if (!isAuthenticated) {
+      navigate("/login", { replace: true });
+    } else if (!isProfileComplete) {
+      navigate("/profile-setup", { replace: true });
+    } else if (hasVoted) {
+      // Se hasVoted for true, o usuário é mandado direto para o dashboard
+      navigate("/dashboard", { replace: true });
+    }
   }, [isLoading, isAuthenticated, isProfileComplete, hasVoted, navigate]);
 
   const doSearch = useCallback((query: string, setter: (r: ClubResult[]) => void, setOpen: (b: boolean) => void) => {
@@ -102,7 +110,7 @@ const Voting = () => {
     setSubmitting(true);
     
     try {
-      // 1. Inserir o voto principal PRIMEIRO de forma atômica
+      // Inserção sequencial para evitar erros de integridade (Status 409)
       const { data: mainVote, error: mainError } = await supabase
         .from("votos")
         .insert({
@@ -118,7 +126,6 @@ const Voting = () => {
 
       if (mainError) throw mainError;
 
-      // 2. Inserir as simpatias somente após o sucesso do principal
       if (sympathyClubs.length > 0) {
         const sympathyVotes = sympathyClubs.map(s => ({
           user_id: user.id,
@@ -133,20 +140,27 @@ const Voting = () => {
         if (symError) console.error("Erro nas simpatias:", symError);
       }
 
-      // 3. Atualizar perfil e redirecionar
+      // 1. Atualiza o perfil no contexto global
       await refreshProfile();
+      
       toast({ title: "Voto registrado com sucesso! 🎉" });
       
-      // Queima a ponte: impede o usuário de voltar para esta página
+      // 2. Redireciona para o dashboard substituindo o histórico
       navigate("/dashboard", { replace: true });
 
     } catch (err: any) {
       console.error("Erro ao votar:", err);
-      toast({ 
-        variant: "destructive", 
-        title: "Erro ao votar", 
-        description: "Houve um conflito de dados. Verifique se você já votou ou tente novamente." 
-      });
+      // Se o erro for 409, significa que o banco já tem o voto
+      if (err.code === "23505" || err.message?.includes("duplicate")) {
+          await refreshProfile();
+          navigate("/dashboard", { replace: true });
+      } else {
+          toast({ 
+            variant: "destructive", 
+            title: "Erro ao votar", 
+            description: "Não conseguimos processar seu voto agora. Tente novamente." 
+          });
+      }
     } finally {
       setSubmitting(false);
       setShowConfirm(false);
@@ -161,7 +175,7 @@ const Voting = () => {
           <h1 className="text-2xl font-bold">Voto Sagrado</h1>
         </div>
 
-        {/* BUSCA CORAÇÃO */}
+        {/* CORAÇÃO */}
         <div className="space-y-2 relative">
           <label className="text-sm font-semibold flex items-center gap-2">
             <Heart className="w-4 h-4 text-primary" fill="currentColor" /> Clube do Coração
@@ -203,7 +217,7 @@ const Voting = () => {
           )}
         </div>
 
-        {/* BUSCA SIMPATIAS */}
+        {/* SIMPATIAS */}
         <div className="space-y-3 relative">
           <label className="text-sm font-semibold flex items-center gap-2">
             <Sparkles className="w-4 h-4 text-primary" /> Clubes de Simpatia ({sympathyClubs.length}/4)
@@ -270,12 +284,12 @@ const Voting = () => {
         <DialogContent className="max-w-xs border-primary/20 bg-[#0a0a0a] text-white">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <AlertTriangle className="w-5 h-5 text-primary" /> Confirmação Única
+              <AlertTriangle className="w-5 h-5 text-primary" /> Decisão Final
             </DialogTitle>
           </DialogHeader>
           <div className="py-2 text-sm text-gray-400">
-            Deseja registrar seu voto agora? <br/><br/>
-            Uma vez confirmado, você será levado ao Dashboard e **nunca mais poderá voltar a esta tela** ou editar seus clubes.
+            Você confirma seu voto agora? <br/><br/>
+            Esta ação é irreversível. Você será levado ao Dashboard e **não poderá mais editar ou voltar a esta tela**.
           </div>
           <DialogFooter className="flex-col gap-2 mt-4">
             <Button 
