@@ -1,7 +1,9 @@
-// Caminho: src/pages/Voting.tsx
+/* Caminho: src/pages/Voting.tsx
+   Contexto: Fluxo de Voto Definitivo e Redirecionamento Pós-Voto */
+
 import { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Heart, Search, Loader2, X, Sparkles } from "lucide-react";
+import { Heart, Search, Loader2, X, Sparkles, Shield } from "lucide-react"; // Adicionado Shield
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useNavigate } from "react-router-dom";
@@ -73,13 +75,8 @@ const Voting = () => {
     setOpen(true);
   }, []);
 
-  useEffect(() => {
-    doSearch(heartSearch, setHeartResults, setHeartOpen);
-  }, [heartSearch, doSearch]);
-
-  useEffect(() => {
-    doSearch(sympathySearch, setSympathyResults, setSympathyOpen);
-  }, [sympathySearch, doSearch]);
+  useEffect(() => { doSearch(heartSearch, setHeartResults, setHeartOpen); }, [heartSearch, doSearch]);
+  useEffect(() => { doSearch(sympathySearch, setSympathyResults, setSympathyOpen); }, [sympathySearch, doSearch]);
 
   const selectHeart = (club: ClubResult) => {
     setHeartClub(club);
@@ -92,17 +89,16 @@ const Voting = () => {
 
   const selectSympathy = (club: ClubResult) => {
     if (sympathyClubs.length >= 4) return;
-    
     const isDuplicate = sympathyClubs.some(c => c.name === club.name) || (heartClub?.name === club.name);
     if (isDuplicate) {
       toast({ title: "Clube já selecionado", variant: "destructive" });
       return;
     }
-
     setSympathyClubs(prev => [...prev, club]);
     setSympathySearch("");
     setSympathyResults([]);
     setSympathyOpen(false);
+    setTimeout(() => sympathyInputRef.current?.focus(), 200);
   };
 
   const handleConfirmVote = async () => {
@@ -113,8 +109,16 @@ const Voting = () => {
         { user_id: user.id, clube_nome: heartClub.name, cidade: profile.cidade || "", estado: profile.estado || "", pais: profile.pais || "BR", is_original_vote: true },
         ...sympathyClubs.map(s => ({ user_id: user.id, clube_nome: s.name, cidade: profile.cidade || "", estado: profile.estado || "", pais: profile.pais || "BR", is_original_vote: false }))
       ];
-      await supabase.from("votos").insert(votes);
+      
+      const { error } = await supabase.from("votos").insert(votes);
+      if (error) throw error;
+
+      // ATUALIZAÇÃO CRÍTICA: Força o refresh do perfil para o hasVoted virar true
       await refreshProfile();
+      
+      toast({ title: "Voto Sagrado Registrado! 🎉" });
+      
+      // REDIRECIONAMENTO DEFINITIVO: Impede o usuário de voltar para esta página
       navigate("/dashboard", { replace: true });
     } catch (err: any) {
       toast({ variant: "destructive", title: "Erro ao votar", description: err.message });
@@ -132,7 +136,7 @@ const Voting = () => {
           <h1 className="text-2xl font-bold">Voto Sagrado</h1>
         </div>
 
-        {/* CLUBE DO CORAÇÃO */}
+        {/* CORAÇÃO */}
         <div className="space-y-2 relative">
           <label className="text-sm font-semibold flex items-center gap-2">
             <Heart className="w-4 h-4 text-primary" fill="currentColor" /> Clube do Coração
@@ -160,7 +164,7 @@ const Voting = () => {
                   {heartResults.map((c, i) => (
                     <div
                       key={i}
-                      onMouseDown={(e) => e.preventDefault()} // Impede o blur do input antes do clique
+                      onMouseDown={(e) => e.preventDefault()}
                       onClick={() => selectHeart(c)}
                       className="flex items-center gap-3 p-4 hover:bg-white/10 cursor-pointer border-b border-white/5 last:border-0"
                     >
@@ -205,7 +209,7 @@ const Voting = () => {
                   {sympathyResults.map((c, i) => (
                     <div
                       key={i}
-                      onMouseDown={(e) => e.preventDefault()} // CRÍTICO: Impede o fechamento da lista antes do clique
+                      onMouseDown={(e) => e.preventDefault()}
                       onClick={() => selectSympathy(c)}
                       className="flex items-center gap-3 p-4 hover:bg-white/10 cursor-pointer border-b border-white/5 last:border-0"
                     >
@@ -217,6 +221,15 @@ const Voting = () => {
               )}
             </div>
           )}
+        </div>
+
+        {/* AVISO DE VOTO ÚNICO */}
+        <div className="glass-card rounded-xl p-4 border border-orange-500/20 bg-orange-500/5 text-center space-y-2">
+          <Shield className="w-5 h-5 text-primary mx-auto" />
+          <p className="text-xs text-muted-foreground leading-relaxed">
+            <strong className="text-foreground block mb-1">DECISÃO DEFINITIVA</strong>
+            Ao confirmar, seu voto será registrado permanentemente. Você <strong className="text-foreground">não poderá alterar</strong> suas escolhas e esta página ficará inacessível para sempre.
+          </p>
         </div>
 
         <Button
