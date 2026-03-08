@@ -1,5 +1,6 @@
 /* Caminho: src/pages/Voting.tsx
-   Contexto: Correção definitiva de Race Condition, Clique Fantasma e UX de foco */
+   Versão corrigida: elimina clique fantasma, garante foco correto e impede
+   qualquer elemento invisível de bloquear o botão */
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Heart, Search, Loader2, X, Sparkles } from "lucide-react";
@@ -75,19 +76,16 @@ const Voting = () => {
     else if (!isLoading && isAuthenticated && hasVoted) navigate("/dashboard", { replace: true });
   }, [isLoading, isAuthenticated, isProfileComplete, hasVoted, navigate]);
 
-  const doSearch = useCallback(
-    (query: string, setter: (r: ClubResult[]) => void, setOpen: (b: boolean) => void) => {
-      if (query.length < 2) {
-        setter([]);
-        setOpen(false);
-        return;
-      }
-      const results = searchClubsLocal(query, 10).map(toClubResult);
-      setter(results);
-      setOpen(true);
-    },
-    []
-  );
+  const doSearch = useCallback((query: string, setter: (r: ClubResult[]) => void, setOpen: (b: boolean) => void) => {
+    if (query.length < 2) {
+      setter([]);
+      setOpen(false);
+      return;
+    }
+    const results = searchClubsLocal(query, 10).map(toClubResult);
+    setter(results);
+    setOpen(true);
+  }, []);
 
   useEffect(() => {
     doSearch(heartSearch, setHeartResults, setHeartOpen);
@@ -113,17 +111,12 @@ const Voting = () => {
   const selectSympathy = (club: ClubResult) => {
     if (sympathyClubs.length >= 4) return;
 
-    const isDuplicate = sympathyClubs.find(
+    const duplicate = sympathyClubs.find(
       (c) => c.id === club.id || c.name.toLowerCase() === club.name.toLowerCase()
     );
+    if (duplicate) return;
 
-    if (isDuplicate) return;
-
-    if (
-      heartClub &&
-      (heartClub.id === club.id ||
-        heartClub.name.toLowerCase() === club.name.toLowerCase())
-    )
+    if (heartClub && (heartClub.id === club.id || heartClub.name.toLowerCase() === club.name.toLowerCase()))
       return;
 
     setSympathyClubs((prev) => [...prev, club]);
@@ -185,8 +178,9 @@ const Voting = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col items-center px-4 py-6">
-      <div className="w-full max-w-lg space-y-6 z-10">
+    <div className="min-h-screen bg-background flex flex-col items-center px-4 py-6 relative">
+
+      <div className="relative w-full max-w-lg space-y-6 z-10">
 
         <div className="text-center space-y-3">
           <img src={logo} alt="Heart Club" className="mx-auto w-20 h-20" />
@@ -223,14 +217,14 @@ const Voting = () => {
                 onBlur={(e) => {
                   const related = e.relatedTarget as Node | null;
                   if (isClickInsideDropdown(heartDropdownRef, related)) return;
-                  setTimeout(() => setHeartOpen(false), 100);
+                  setTimeout(() => setHeartOpen(false), 80);
                 }}
               />
 
               {heartOpen && (
                 <div
                   ref={heartDropdownRef}
-                  className="absolute top-full left-0 right-0 z-[9999] mt-2 bg-[#1a1a1a] border border-white/20 rounded-xl shadow-2xl overflow-hidden backdrop-blur-xl"
+                  className="absolute top-full left-0 right-0 z-[9999] mt-2 bg-[#1a1a1a] border border-white/20 rounded-xl shadow-2xl overflow-hidden pointer-events-auto"
                 >
                   {heartResults.map((c, i) => (
                     <div
@@ -243,9 +237,7 @@ const Voting = () => {
                       className="flex items-center gap-3 p-4 hover:bg-white/10 cursor-pointer border-b border-white/5 last:border-0"
                     >
                       <ClubLogo src={c.logo} alt={c.name} size="sm" />
-                      <span className="text-sm font-bold text-white">
-                        {c.name}
-                      </span>
+                      <span className="text-sm font-bold text-white">{c.name}</span>
                     </div>
                   ))}
                 </div>
@@ -264,17 +256,10 @@ const Voting = () => {
 
           <div className="space-y-2">
             {sympathyClubs.map((c, i) => (
-              <div
-                key={i}
-                className="flex items-center gap-3 p-3 glass-card rounded-xl border border-border/50"
-              >
+              <div key={i} className="flex items-center gap-3 p-3 glass-card rounded-xl border border-border/50">
                 <ClubLogo src={c.logo} alt={c.name} size="sm" />
                 <span className="flex-1 text-sm font-medium">{c.name}</span>
-                <button
-                  onClick={() =>
-                    setSympathyClubs((p) => p.filter((_, idx) => idx !== i))
-                  }
-                >
+                <button onClick={() => setSympathyClubs((p) => p.filter((_, idx) => idx !== i))}>
                   <X className="w-4 h-4" />
                 </button>
               </div>
@@ -291,21 +276,18 @@ const Voting = () => {
                 placeholder="Próxima simpatia..."
                 value={sympathySearch}
                 onChange={(e) => setSympathySearch(e.target.value)}
-                onFocus={() =>
-                  sympathySearch.length >= 2 && setSympathyOpen(true)
-                }
+                onFocus={() => sympathySearch.length >= 2 && setSympathyOpen(true)}
                 onBlur={(e) => {
                   const related = e.relatedTarget as Node | null;
-                  if (isClickInsideDropdown(sympathyDropdownRef, related))
-                    return;
-                  setTimeout(() => setSympathyOpen(false), 100);
+                  if (isClickInsideDropdown(sympathyDropdownRef, related)) return;
+                  setTimeout(() => setSympathyOpen(false), 80);
                 }}
               />
 
               {sympathyOpen && (
                 <div
                   ref={sympathyDropdownRef}
-                  className="absolute top-full left-0 right-0 z-[9999] mt-2 bg-[#1a1a1a] border border-white/20 rounded-xl shadow-2xl overflow-hidden backdrop-blur-xl"
+                  className="absolute top-full left-0 right-0 z-[9999] mt-2 bg-[#1a1a1a] border border-white/20 rounded-xl shadow-2xl overflow-hidden pointer-events-auto"
                 >
                   {sympathyResults.map((c, i) => (
                     <div
@@ -318,9 +300,7 @@ const Voting = () => {
                       className="flex items-center gap-3 p-4 hover:bg-white/10 cursor-pointer border-b border-white/5 last:border-0"
                     >
                       <ClubLogo src={c.logo} alt={c.name} size="sm" />
-                      <span className="text-sm font-bold text-white">
-                        {c.name}
-                      </span>
+                      <span className="text-sm font-bold text-white">{c.name}</span>
                     </div>
                   ))}
                 </div>
@@ -330,15 +310,16 @@ const Voting = () => {
         </div>
 
         <Button
-          className="w-full h-14 btn-orange-gradient font-bold"
+          className="relative z-20 w-full h-14 btn-orange-gradient font-bold"
           disabled={!heartClub}
           onClick={() => setShowConfirm(true)}
         >
           Confirmar Voto
         </Button>
+
       </div>
 
-      <Dialog open={showConfirm} onOpenChange={setShowConfirm}>
+      <Dialog open={showConfirm} onOpenChange={(v) => setShowConfirm(v)}>
         <DialogContent className="max-w-xs">
           <DialogHeader>
             <DialogTitle>Finalizar?</DialogTitle>
@@ -349,20 +330,13 @@ const Voting = () => {
               Ajustar
             </Button>
 
-            <Button
-              onClick={handleConfirmVote}
-              disabled={submitting}
-              className="btn-orange-gradient"
-            >
-              {submitting ? (
-                <Loader2 className="animate-spin" />
-              ) : (
-                "Confirmar Voto"
-              )}
+            <Button onClick={handleConfirmVote} disabled={submitting} className="btn-orange-gradient">
+              {submitting ? <Loader2 className="animate-spin" /> : "Confirmar Voto"}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
     </div>
   );
 };
