@@ -1,9 +1,9 @@
-/* Caminho: src/pages/Voting.tsx
-   Contexto: Fluxo de Voto Definitivo e Redirecionamento Pós-Voto */
+/* Caminho: src/pages/Voting.tsx 
+   Contexto: Correção de Integridade de Banco e Aviso de Imutabilidade */
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Heart, Search, Loader2, X, Sparkles, Shield } from "lucide-react"; // Adicionado Shield
+import { Heart, Search, Loader2, X, Sparkles, Shield, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useNavigate } from "react-router-dom";
@@ -65,11 +65,7 @@ const Voting = () => {
   }, [isLoading, isAuthenticated, isProfileComplete, hasVoted, navigate]);
 
   const doSearch = useCallback((query: string, setter: (r: ClubResult[]) => void, setOpen: (b: boolean) => void) => {
-    if (query.length < 2) {
-      setter([]);
-      setOpen(false);
-      return;
-    }
+    if (query.length < 2) { setter([]); setOpen(false); return; }
     const results = searchClubsLocal(query, 10).map(toClubResult);
     setter(results);
     setOpen(true);
@@ -104,24 +100,50 @@ const Voting = () => {
   const handleConfirmVote = async () => {
     if (!heartClub || !user || !profile) return;
     setSubmitting(true);
+    
     try {
-      const votes = [
-        { user_id: user.id, clube_nome: heartClub.name, cidade: profile.cidade || "", estado: profile.estado || "", pais: profile.pais || "BR", is_original_vote: true },
-        ...sympathyClubs.map(s => ({ user_id: user.id, clube_nome: s.name, cidade: profile.cidade || "", estado: profile.estado || "", pais: profile.pais || "BR", is_original_vote: false }))
-      ];
-      
-      const { error } = await supabase.from("votos").insert(votes);
-      if (error) throw error;
+      // 1. Inserir o voto principal PRIMEIRO e aguardar o retorno com .select().single()
+      // Isso garante que o ID exista antes de qualquer trigger de rastreamento disparar
+      const { data: mainVote, error: mainError } = await supabase
+        .from("votos")
+        .insert({
+          user_id: user.id,
+          clube_nome: heartClub.name,
+          cidade: profile.cidade || "",
+          estado: profile.estado || "",
+          pais: profile.pais || "BR",
+          is_original_vote: true
+        })
+        .select()
+        .single();
 
-      // ATUALIZAÇÃO CRÍTICA: Força o refresh do perfil para o hasVoted virar true
+      if (mainError) throw mainError;
+
+      // 2. Inserir as simpatias em seguida
+      if (sympathyClubs.length > 0) {
+        const sympathyVotes = sympathyClubs.map(s => ({
+          user_id: user.id,
+          clube_nome: s.name,
+          cidade: profile.cidade || "",
+          estado: profile.estado || "",
+          pais: profile.pais || "BR",
+          is_original_vote: false
+        }));
+        
+        const { error: symError } = await supabase.from("votos").insert(sympathyVotes);
+        if (symError) console.error("Erro nas simpatias:", symError);
+      }
+
       await refreshProfile();
-      
-      toast({ title: "Voto Sagrado Registrado! 🎉" });
-      
-      // REDIRECIONAMENTO DEFINITIVO: Impede o usuário de voltar para esta página
+      toast({ title: "Voto registrado com sucesso! 🎉" });
       navigate("/dashboard", { replace: true });
     } catch (err: any) {
-      toast({ variant: "destructive", title: "Erro ao votar", description: err.message });
+      console.error("Erro ao votar:", err);
+      toast({ 
+        variant: "destructive", 
+        title: "Erro ao votar", 
+        description: "Houve um conflito de integridade. Tente novamente em instantes." 
+      });
     } finally {
       setSubmitting(false);
       setShowConfirm(false);
@@ -223,7 +245,6 @@ const Voting = () => {
           )}
         </div>
 
-        {/* AVISO DE VOTO ÚNICO */}
         <div className="glass-card rounded-xl p-4 border border-orange-500/20 bg-orange-500/5 text-center space-y-2">
           <Shield className="w-5 h-5 text-primary mx-auto" />
           <p className="text-xs text-muted-foreground leading-relaxed">
@@ -242,12 +263,29 @@ const Voting = () => {
       </div>
 
       <Dialog open={showConfirm} onOpenChange={setShowConfirm}>
-        <DialogContent className="max-w-xs">
-          <DialogHeader><DialogTitle>Finalizar?</DialogTitle></DialogHeader>
-          <DialogFooter className="flex-col gap-2">
-            <Button variant="outline" onClick={() => setShowConfirm(false)}>Ajustar</Button>
-            <Button onClick={handleConfirmVote} disabled={submitting} className="btn-orange-gradient">
-              {submitting ? <Loader2 className="animate-spin" /> : "Confirmar Voto"}
+        <DialogContent className="max-w-xs border-primary/20 bg-[#0a0a0a]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-white">
+              <AlertTriangle className="w-5 h-5 text-primary" /> Decisão Final
+            </DialogTitle>
+          </DialogHeader>
+          <div className="py-2 text-sm text-gray-400">
+            Você tem certeza? Após confirmar, suas escolhas de clube não poderão ser modificadas nunca mais.
+          </div>
+          <DialogFooter className="flex-col gap-2 mt-4">
+            <Button 
+              variant="outline" 
+              onClick={() => setShowConfirm(false)}
+              className="border-white/10 hover:bg-white/5 text-white"
+            >
+              Revisar Escolhas
+            </Button>
+            <Button 
+              onClick={handleConfirmVote} 
+              disabled={submitting} 
+              className="btn-orange-gradient w-full"
+            >
+              {submitting ? <Loader2 className="animate-spin" /> : "Sim, Confirmar Voto"}
             </Button>
           </DialogFooter>
         </DialogContent>
