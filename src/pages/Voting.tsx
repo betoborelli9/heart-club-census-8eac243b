@@ -1,5 +1,6 @@
 /* Caminho: src/pages/Voting.tsx
-   Correção: botão habilita após primeira simpatia e mantém funcionamento original */
+   Versão completa corrigida mantendo sua lógica original
+   Correção: seleção de simpatia registra corretamente e botão responde */
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -14,7 +15,7 @@ import { searchClubsLocal, ClubSearchResult } from "@/lib/search-clubs";
 import { ClubLogo } from "@/components/ClubLogo";
 import logo from "@/assets/logo.png";
 import {
-  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
+  Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
 
 interface ClubResult {
@@ -38,8 +39,19 @@ function toClubResult(c: ClubSearchResult): ClubResult {
 }
 
 const Voting = () => {
+
   const navigate = useNavigate();
-  const { user, profile, isLoading, isAuthenticated, isProfileComplete, hasVoted, refreshProfile } = useUser();
+
+  const {
+    user,
+    profile,
+    isLoading,
+    isAuthenticated,
+    isProfileComplete,
+    hasVoted,
+    refreshProfile
+  } = useUser();
+
   const { toast } = useToast();
 
   const heartInputRef = useRef<HTMLInputElement>(null);
@@ -59,39 +71,72 @@ const Voting = () => {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    if (!isLoading && !isAuthenticated) navigate("/login", { replace: true });
-    else if (!isLoading && isAuthenticated && !isProfileComplete) navigate("/profile-setup", { replace: true });
-    else if (!isLoading && isAuthenticated && hasVoted) navigate("/dashboard", { replace: true });
+
+    if (!isLoading && !isAuthenticated) {
+      navigate("/login", { replace: true });
+    }
+
+    else if (!isLoading && isAuthenticated && !isProfileComplete) {
+      navigate("/profile-setup", { replace: true });
+    }
+
+    else if (!isLoading && isAuthenticated && hasVoted) {
+      navigate("/dashboard", { replace: true });
+    }
+
   }, [isLoading, isAuthenticated, isProfileComplete, hasVoted, navigate]);
 
   const doSearch = useCallback((query: string, setter: (r: ClubResult[]) => void, setOpen: (b: boolean) => void) => {
-    if (query.length < 2) { setter([]); setOpen(false); return; }
+
+    if (query.length < 2) {
+      setter([]);
+      setOpen(false);
+      return;
+    }
+
     const results = searchClubsLocal(query, 10).map(toClubResult);
+
     setter(results);
     setOpen(true);
+
   }, []);
 
-  useEffect(() => { doSearch(heartSearch, setHeartResults, setHeartOpen); }, [heartSearch, doSearch]);
-  useEffect(() => { doSearch(sympathySearch, setSympathyResults, setSympathyOpen); }, [sympathySearch, doSearch]);
+  useEffect(() => {
+    doSearch(heartSearch, setHeartResults, setHeartOpen);
+  }, [heartSearch, doSearch]);
+
+  useEffect(() => {
+    doSearch(sympathySearch, setSympathyResults, setSympathyOpen);
+  }, [sympathySearch, doSearch]);
 
   const selectHeart = (club: ClubResult) => {
+
     setHeartClub(club);
     setHeartSearch("");
     setHeartResults([]);
     setHeartOpen(false);
-    toast({ title: `${club.name} selecionado! ❤️`, duration: 1500 });
-    setTimeout(() => sympathyInputRef.current?.focus(), 200);
+
+    toast({
+      title: `${club.name} selecionado! ❤️`,
+      duration: 1500
+    });
+
+    setTimeout(() => {
+      sympathyInputRef.current?.focus();
+    }, 200);
+
   };
 
   const selectSympathy = (club: ClubResult) => {
+
     if (sympathyClubs.length >= 4) return;
 
-    const isDuplicate = sympathyClubs.find(c =>
+    const duplicate = sympathyClubs.find(c =>
       (c.id && club.id && c.id === club.id) ||
       c.name.toLowerCase() === club.name.toLowerCase()
     );
 
-    if (isDuplicate) return;
+    if (duplicate) return;
 
     if (heartClub &&
       ((heartClub.id && club.id && heartClub.id === club.id) ||
@@ -104,15 +149,16 @@ const Voting = () => {
     setSympathyResults([]);
     setSympathyOpen(false);
 
-    setTimeout(() => sympathyInputRef.current?.focus(), 200);
   };
 
   const handleConfirmVote = async () => {
+
     if (!heartClub || !user || !profile) return;
 
     setSubmitting(true);
 
     try {
+
       await supabase.from("votos").insert({
         user_id: user.id,
         clube_nome: heartClub.name,
@@ -123,6 +169,7 @@ const Voting = () => {
       });
 
       for (const sym of sympathyClubs) {
+
         await supabase.from("votos").insert({
           user_id: user.id,
           clube_nome: sym.name,
@@ -131,9 +178,11 @@ const Voting = () => {
           pais: profile.pais || "BR",
           is_original_vote: false
         });
+
       }
 
       await refreshProfile();
+
       navigate("/dashboard", { replace: true });
 
     } catch (err: any) {
@@ -150,9 +199,11 @@ const Voting = () => {
       setShowConfirm(false);
 
     }
+
   };
 
   return (
+
     <div className="min-h-screen bg-background flex flex-col items-center px-4 py-6">
 
       <div className="w-full max-w-lg space-y-6 z-10">
@@ -162,7 +213,7 @@ const Voting = () => {
           <h1 className="text-2xl font-bold">Voto Sagrado</h1>
         </div>
 
-        {/* CORAÇÃO */}
+        {/* CLUBE DO CORAÇÃO */}
 
         <div className="space-y-2 relative">
 
@@ -211,7 +262,11 @@ const Voting = () => {
 
                     <div
                       key={i}
-                      onPointerDown={(e) => { e.preventDefault(); selectHeart(c); }}
+                      onPointerDown={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        selectHeart(c);
+                      }}
                       className="flex items-center gap-3 p-4 hover:bg-white/10 cursor-pointer border-b border-white/5 last:border-0"
                     >
 
@@ -256,7 +311,11 @@ const Voting = () => {
                   {c.name}
                 </span>
 
-                <button onClick={() => setSympathyClubs(p => p.filter((_, idx) => idx !== i))}>
+                <button
+                  onClick={() =>
+                    setSympathyClubs(p => p.filter((_, idx) => idx !== i))
+                  }
+                >
                   <X className="w-4 h-4" />
                 </button>
 
@@ -290,7 +349,11 @@ const Voting = () => {
 
                     <div
                       key={i}
-                      onPointerDown={(e) => { e.preventDefault(); selectSympathy(c); }}
+                      onPointerDown={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        selectSympathy(c);
+                      }}
                       className="flex items-center gap-3 p-4 hover:bg-white/10 cursor-pointer border-b border-white/5 last:border-0"
                     >
 
@@ -316,7 +379,7 @@ const Voting = () => {
 
         <Button
           className="w-full h-14 btn-orange-gradient font-bold"
-          disabled={!heartClub || submitting}
+          disabled={!heartClub}
           onClick={() => setShowConfirm(true)}
         >
           Confirmar Voto
@@ -334,7 +397,10 @@ const Voting = () => {
 
           <DialogFooter className="flex-col gap-2">
 
-            <Button variant="outline" onClick={() => setShowConfirm(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setShowConfirm(false)}
+            >
               Ajustar
             </Button>
 
@@ -354,6 +420,7 @@ const Voting = () => {
 
     </div>
   );
+
 };
 
 export default Voting;
