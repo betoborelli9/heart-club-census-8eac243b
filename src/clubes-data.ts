@@ -191,3 +191,9 @@ export const CLUBES: ClubData[] = RAW_CLUBS.map(club => ({
   ...club,
   logoUrl: getLogoUrl(club.nome, club.cidade, club.estado, club.pais)
 }));
+
+// Adicione isto ao final do arquivo para exportar a constante que o sistema de busca utiliza
+export const CLUBS_DATA: ClubData[] = RAW_CLUBS.map((c) => ({
+  ...c,
+  logoUrl: getLogoUrl(c.nome, c.cidade, c.estado, c.pais),
+}));
