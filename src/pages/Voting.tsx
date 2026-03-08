@@ -1,5 +1,5 @@
 /* Caminho: src/pages/Voting.tsx
-   Contexto: Correção de Clique em Dropdown (Protocolo de Prioridade de Evento) */
+   Contexto: Correção Definitiva de Clique e Foco (Protocolo de Prioridade de Evento) */
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -100,25 +100,15 @@ const Voting = () => {
     if (!heartClub || !user || !profile) return;
     setSubmitting(true);
     try {
-      const { error: mainError } = await supabase.from("votos").insert({
-        user_id: user.id,
-        clube_nome: heartClub.name,
-        cidade: profile.cidade || "",
-        estado: profile.estado || "",
-        pais: profile.pais || "BR",
-        is_original_vote: true
+      await supabase.from("votos").insert({
+        user_id: user.id, clube_nome: heartClub.name, cidade: profile.cidade || "",
+        estado: profile.estado || "", pais: profile.pais || "BR", is_original_vote: true
       }).select().single();
-
-      if (mainError) throw mainError;
 
       for (const sym of sympathyClubs) {
         await supabase.from("votos").insert({
-          user_id: user.id,
-          clube_nome: sym.name,
-          cidade: profile.cidade || "",
-          estado: profile.estado || "",
-          pais: profile.pais || "BR",
-          is_original_vote: false
+          user_id: user.id, clube_nome: sym.name, cidade: profile.cidade || "",
+          estado: profile.estado || "", pais: profile.pais || "BR", is_original_vote: false
         }).select().single();
       }
 
@@ -127,8 +117,7 @@ const Voting = () => {
     } catch (err: any) {
       toast({ variant: "destructive", title: "Erro ao votar", description: err.message });
     } finally {
-      setSubmitting(false);
-      setShowConfirm(false);
+      setSubmitting(false); setShowConfirm(false);
     }
   };
 
@@ -160,16 +149,14 @@ const Voting = () => {
                 placeholder="Busque seu time do coração..."
                 value={heartSearch} 
                 onChange={e => setHeartSearch(e.target.value)}
+                onFocus={() => heartSearch.length >= 2 && setHeartOpen(true)}
                 onBlur={() => setTimeout(() => setHeartOpen(false), 300)}
               />
               {heartOpen && (
                 <div className="absolute top-full left-0 right-0 z-[9999] mt-2 bg-[#1a1a1a] border border-white/20 rounded-xl shadow-2xl overflow-hidden">
                   {heartResults.map((c, i) => (
-                    <div 
-                      key={i} 
-                      onPointerDown={(e) => { e.preventDefault(); selectHeart(c); }}
-                      className="flex items-center gap-3 p-4 hover:bg-white/10 cursor-pointer border-b border-white/5 last:border-0"
-                    >
+                    <div key={i} onPointerDown={(e) => { e.preventDefault(); selectHeart(c); }}
+                      className="flex items-center gap-3 p-4 hover:bg-white/10 cursor-pointer border-b border-white/5 last:border-0">
                       <ClubLogo src={c.logo} alt={c.name} size="sm" />
                       <span className="text-sm font-bold text-white">{c.name}</span>
                     </div>
@@ -203,16 +190,14 @@ const Voting = () => {
                 placeholder="Próxima simpatia..."
                 value={sympathySearch} 
                 onChange={e => setSympathySearch(e.target.value)}
+                onFocus={() => sympathySearch.length >= 2 && setSympathyOpen(true)}
                 onBlur={() => setTimeout(() => setSympathyOpen(false), 300)}
               />
               {sympathyOpen && (
                 <div className="absolute top-full left-0 right-0 z-[9999] mt-2 bg-[#1a1a1a] border border-white/20 rounded-xl shadow-2xl overflow-hidden">
                   {sympathyResults.map((c, i) => (
-                    <div 
-                      key={i} 
-                      onPointerDown={(e) => { e.preventDefault(); selectSympathy(c); }}
-                      className="flex items-center gap-3 p-4 hover:bg-white/10 cursor-pointer border-b border-white/5 last:border-0"
-                    >
+                    <div key={i} onPointerDown={(e) => { e.preventDefault(); selectSympathy(c); }}
+                      className="flex items-center gap-3 p-4 hover:bg-white/10 cursor-pointer border-b border-white/5 last:border-0">
                       <ClubLogo src={c.logo} alt={c.name} size="sm" />
                       <span className="text-sm font-bold text-white">{c.name}</span>
                     </div>
