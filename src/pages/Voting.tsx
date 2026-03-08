@@ -1,5 +1,5 @@
 /* Caminho: src/pages/Voting.tsx
-   Contexto: Correção Crítica de Clique (Race Condition) e Variáveis de Estado */
+   Contexto: Correção de Clique em Dropdown (Protocolo de Prioridade de Evento) */
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -80,7 +80,7 @@ const Voting = () => {
     setHeartResults([]);
     setHeartOpen(false);
     toast({ title: `${club.name} selecionado! ❤️`, duration: 1500 });
-    setTimeout(() => sympathyInputRef.current?.focus(), 150);
+    setTimeout(() => sympathyInputRef.current?.focus(), 200);
   };
 
   const selectSympathy = (club: ClubResult) => {
@@ -93,7 +93,7 @@ const Voting = () => {
     setSympathySearch("");
     setSympathyResults([]);
     setSympathyOpen(false);
-    setTimeout(() => sympathyInputRef.current?.focus(), 150);
+    setTimeout(() => sympathyInputRef.current?.focus(), 200);
   };
 
   const handleConfirmVote = async () => {
@@ -157,21 +157,21 @@ const Voting = () => {
               <Input 
                 ref={heartInputRef}
                 className="pl-10 h-12 bg-secondary/20" 
-                placeholder="Busque seu time..."
+                placeholder="Busque seu time do coração..."
                 value={heartSearch} 
                 onChange={e => setHeartSearch(e.target.value)}
-                onBlur={() => setTimeout(() => setHeartOpen(false), 200)}
+                onBlur={() => setTimeout(() => setHeartOpen(false), 300)}
               />
               {heartOpen && (
-                <div className="absolute top-full left-0 right-0 z-[999] mt-1 bg-neutral-900 border border-white/10 rounded-xl shadow-2xl overflow-hidden">
+                <div className="absolute top-full left-0 right-0 z-[9999] mt-2 bg-[#1a1a1a] border border-white/20 rounded-xl shadow-2xl overflow-hidden">
                   {heartResults.map((c, i) => (
                     <div 
                       key={i} 
-                      onMouseDown={(e) => { e.preventDefault(); selectHeart(c); }}
-                      className="flex items-center gap-3 p-3 hover:bg-white/10 cursor-pointer border-b border-white/5 last:border-0"
+                      onPointerDown={(e) => { e.preventDefault(); selectHeart(c); }}
+                      className="flex items-center gap-3 p-4 hover:bg-white/10 cursor-pointer border-b border-white/5 last:border-0"
                     >
                       <ClubLogo src={c.logo} alt={c.name} size="sm" />
-                      <span className="text-sm font-medium text-white">{c.name}</span>
+                      <span className="text-sm font-bold text-white">{c.name}</span>
                     </div>
                   ))}
                 </div>
@@ -203,18 +203,18 @@ const Voting = () => {
                 placeholder="Próxima simpatia..."
                 value={sympathySearch} 
                 onChange={e => setSympathySearch(e.target.value)}
-                onBlur={() => setTimeout(() => setSympathyOpen(false), 200)}
+                onBlur={() => setTimeout(() => setSympathyOpen(false), 300)}
               />
               {sympathyOpen && (
-                <div className="absolute top-full left-0 right-0 z-[999] mt-1 bg-neutral-900 border border-white/10 rounded-xl shadow-2xl overflow-hidden">
+                <div className="absolute top-full left-0 right-0 z-[9999] mt-2 bg-[#1a1a1a] border border-white/20 rounded-xl shadow-2xl overflow-hidden">
                   {sympathyResults.map((c, i) => (
                     <div 
                       key={i} 
-                      onMouseDown={(e) => { e.preventDefault(); selectSympathy(c); }}
-                      className="flex items-center gap-3 p-3 hover:bg-white/10 cursor-pointer border-b border-white/5 last:border-0"
+                      onPointerDown={(e) => { e.preventDefault(); selectSympathy(c); }}
+                      className="flex items-center gap-3 p-4 hover:bg-white/10 cursor-pointer border-b border-white/5 last:border-0"
                     >
                       <ClubLogo src={c.logo} alt={c.name} size="sm" />
-                      <span className="text-sm font-medium text-white">{c.name}</span>
+                      <span className="text-sm font-bold text-white">{c.name}</span>
                     </div>
                   ))}
                 </div>
