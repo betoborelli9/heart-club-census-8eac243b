@@ -18,34 +18,23 @@ const Dashboard = () => {
   const { user, profile, isLoading, signOut } = useUser();
   const [activeTeam, setActiveTeam] = useState<string>("Vila Nova");
   const [teamLogo, setTeamLogo] = useState<string | null>(null);
-  
-  const [colors, setColors] = useState({ 
-    primary: "#E21A21", 
-    secondary: "#FFFFFF"
-  });
+  const [colors, setColors] = useState({ primary: "#E21A21", secondary: "#FFFFFF" });
 
-  // Função Global para mudar o time - Injetada para garantir o clique
   const updateDashboardTeam = (clubData: any) => {
     const name = clubData?.nome || clubData;
     if (!name) return;
-
     const clubInfo = CLUBS_DATA.find(c => c.nome.toLowerCase() === name.toLowerCase()) || 
                     CLUBS_DATA.find(c => c.nome.toLowerCase().includes(name.toLowerCase()));
-    
     if (clubInfo) {
       setActiveTeam(clubInfo.nome);
       setTeamLogo(clubInfo.logoUrl);
-      
       const n = clubInfo.nome.toLowerCase();
-      // Paletas de Cores Reais
       if (n.includes("vila nova") || n.includes("flamengo") || n.includes("são paulo")) {
         setColors({ primary: "#E21A21", secondary: "#FFFFFF" });
-      } else if (n.includes("palmeiras") || n.includes("goiás") || n.includes("coritiba")) {
+      } else if (n.includes("palmeiras") || n.includes("goiás")) {
         setColors({ primary: "#006437", secondary: "#FFFFFF" });
-      } else if (n.includes("corinthians") || n.includes("santos") || n.includes("real madrid")) {
+      } else if (n.includes("corinthians") || n.includes("santos")) {
         setColors({ primary: "#111111", secondary: "#FFFFFF" });
-      } else if (n.includes("cruzeiro") || n.includes("gremio") || n.includes("manchester city")) {
-        setColors({ primary: "#005BA3", secondary: "#FFFFFF" });
       } else {
         setColors({ primary: clubInfo.cor_principal || "#E21A21", secondary: "#FFFFFF" });
       }
@@ -65,94 +54,81 @@ const Dashboard = () => {
 
   return (
     <div className="min-h-screen bg-[#020202] text-white">
-      {/* Header com Logo HEART CLUB GIGANTE */}
-      <header className="h-24 border-b border-white/5 bg-black/90 backdrop-blur-xl sticky top-0 z-50">
-        <div className="max-w-6xl mx-auto px-4 h-full flex items-center justify-between gap-8">
-          <div className="flex items-center gap-5 shrink-0 cursor-pointer" onClick={() => navigate("/")}>
-            <img src={logo} alt="Heart Club" className="h-16 w-auto object-contain scale-110" />
-            <span className="font-black italic text-3xl tracking-tighter hidden xl:block">HEART CLUB</span>
+      {/* Header com Logo HEART CLUB Imponente */}
+      <header className="h-20 border-b border-white/5 bg-black/90 backdrop-blur-xl sticky top-0 z-50">
+        <div className="max-w-6xl mx-auto px-4 h-full flex items-center justify-between gap-6">
+          <div className="flex items-center gap-4 shrink-0 cursor-pointer" onClick={() => navigate("/")}>
+            <img src={logo} alt="Heart Club" className="h-12 w-auto object-contain" />
+            <span className="font-black italic text-2xl tracking-tighter hidden xl:block">HEART CLUB</span>
           </div>
-          
-          <div className="flex-1 max-w-sm relative z-[60]">
-            <ClubSearch onSelect={(club) => {
-                console.log("Selecionado:", club);
-                updateDashboardTeam(club);
-            }} />
+          <div className="flex-1 max-w-sm relative z-[70]">
+            <ClubSearch onSelect={(club) => updateDashboardTeam(club)} />
           </div>
-
-          <Button variant="ghost" size="icon" onClick={() => signOut()} className="hover:text-red-500"><LogOut className="w-7 h-7" /></Button>
+          <Button variant="ghost" size="icon" onClick={() => signOut()} className="hover:text-red-500"><LogOut className="w-6 h-6" /></Button>
         </div>
       </header>
 
-      <main className="max-w-6xl mx-auto px-4 py-8">
-        {/* Banner Slim de Alta Performance */}
+      <main className="max-w-6xl mx-auto px-4 py-4">
+        {/* Banner SLIM - Altura reduzida para elegância */}
         <section 
-          className="relative overflow-hidden rounded-t-[2.5rem] border-t border-x border-white/10 transition-all duration-700" 
-          style={{ background: `linear-gradient(135deg, ${colors.primary} 0%, ${colors.primary}CC 100%)` }}
+          className="relative overflow-hidden rounded-t-3xl border-t border-x border-white/10 transition-all duration-700" 
+          style={{ background: `linear-gradient(135deg, ${colors.primary} 0%, ${colors.primary}EE 100%)` }}
         >
-          {/* Faixas Diagonais Estilizadas */}
-          <div className="absolute top-0 right-0 w-80 h-full pointer-events-none overflow-hidden opacity-30">
-            <div className="absolute top-0 right-16 w-16 h-[200%] bg-white/20 rotate-[25deg] transform origin-top" />
-            <div className="absolute top-0 right-36 w-4 h-[200%] bg-white/40 rotate-[25deg] transform origin-top" />
+          {/* Faixas Diagonais Sutis */}
+          <div className="absolute top-0 right-0 w-64 h-full pointer-events-none overflow-hidden opacity-20">
+            <div className="absolute top-0 right-10 w-12 h-[200%] bg-white/20 rotate-[25deg] transform origin-top" />
           </div>
 
-          <div className="relative z-10 p-10 flex flex-col md:flex-row items-center justify-between gap-10">
-            <div className="flex items-center gap-10">
-              {/* Círculo com Logo GIGANTE (95% do espaço) */}
+          <div className="relative z-10 px-8 py-4 flex flex-col md:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-6">
+              {/* Círculo Branco com ESCUDO GIGANTE (Quase encostando na borda) */}
               <div 
-                className="w-32 h-32 rounded-full flex items-center justify-center shadow-[0_0_50px_rgba(0,0,0,0.5)] shrink-0 transition-colors duration-500"
+                className="w-20 h-20 rounded-full flex items-center justify-center shadow-2xl shrink-0 border border-black/5"
                 style={{ backgroundColor: colors.secondary }}
               >
-                <div className="w-[92%] h-[92%] flex items-center justify-center">
+                <div className="w-[96%] h-[96%] flex items-center justify-center p-0.5">
                   <ClubLogo src={teamLogo} alt={activeTeam} size="lg" className="w-full h-full object-contain" />
                 </div>
               </div>
               
               <div className="text-left">
-                <h1 className="text-4xl font-black uppercase italic tracking-tighter text-white drop-shadow-2xl leading-none mb-3">
-                  {profile.nome_exibicao}
-                </h1>
-                <div className="flex items-center gap-4 text-white font-bold uppercase text-[12px] tracking-[0.25em]">
-                  <span className="flex items-center gap-1.5"><MapPin className="w-4 h-4" /> {profile.cidade}</span>
-                  <span className="w-2 h-2 rounded-full bg-white/40" />
-                  <span className="flex items-center gap-1.5 text-yellow-300"><Trophy className="w-4 h-4" /> Embaixador Bronze</span>
+                <h1 className="text-2xl font-black uppercase italic tracking-tighter leading-none">{profile.nome_exibicao}</h1>
+                <div className="flex items-center gap-2 text-white/80 font-bold uppercase text-[9px] tracking-[0.2em] mt-1">
+                  <MapPin className="w-3 h-3" /> {profile.cidade}
+                  <span className="w-1 h-1 rounded-full bg-white/30" />
+                  <Trophy className="w-3 h-3 text-yellow-300" /> Bronze
                 </div>
               </div>
             </div>
 
             <div className="text-center md:text-right">
-              <p className="text-[14px] font-black uppercase tracking-[0.6em] text-white/60 mb-1">Clube do Coração</p>
-              <h2 className="text-7xl font-black italic uppercase leading-none text-white drop-shadow-2xl">
-                {activeTeam}
-              </h2>
+              <p className="text-[10px] font-black uppercase tracking-[0.5em] text-white/50 mb-0">Clube do Coração</p>
+              <h2 className="text-4xl font-black italic uppercase leading-none text-white drop-shadow-xl">{activeTeam}</h2>
             </div>
           </div>
         </section>
 
-        {/* Barra de Navegação Vitrificada (Glassmorphism 2.0) */}
-        <section className="relative z-20 -mt-px border border-white/10 rounded-b-[2.5rem] overflow-hidden shadow-2xl">
-          <div className="absolute inset-0 bg-black/95 backdrop-blur-3xl" />
-          <div className="relative px-14 py-6 flex items-center gap-14 overflow-x-auto no-scrollbar">
-            <Link to="#" className="flex items-center gap-4 text-[13px] font-black uppercase tracking-widest text-zinc-400 hover:text-white transition-all group">
-              <Globe className="w-6 h-6 group-hover:scale-110 transition-transform" style={{ color: colors.primary }} /> 
-              Mapa Nacional
+        {/* Barra de Links Vitrificada FINA */}
+        <section className="relative z-20 -mt-px border border-white/10 rounded-b-3xl overflow-hidden">
+          <div className="absolute inset-0 bg-black/90 backdrop-blur-3xl" />
+          <div className="relative px-10 py-3 flex items-center gap-8 overflow-x-auto no-scrollbar">
+            <Link to="#" className="flex items-center gap-2.5 text-[10px] font-black uppercase tracking-widest text-zinc-400 hover:text-white transition-all">
+              <Globe className="w-4 h-4" style={{ color: colors.primary }} /> Mapa Nacional
             </Link>
-            <Link to="#" className="flex items-center gap-4 text-[13px] font-black uppercase tracking-widest text-zinc-400 hover:text-white transition-all group">
-              <Users className="w-6 h-6 group-hover:scale-110 transition-transform" style={{ color: colors.primary }} /> 
-              Ranking Geral
+            <Link to="#" className="flex items-center gap-2.5 text-[10px] font-black uppercase tracking-widest text-zinc-400 hover:text-white transition-all">
+              <Users className="w-4 h-4" style={{ color: colors.primary }} /> Ranking Geral
             </Link>
-            <Link to="#" className="flex items-center gap-4 text-[13px] font-black uppercase tracking-widest text-zinc-400 hover:text-white transition-all group">
-              <Gift className="w-6 h-6 group-hover:scale-110 transition-transform" style={{ color: colors.primary }} /> 
-              Benefícios
+            <Link to="#" className="flex items-center gap-2.5 text-[10px] font-black uppercase tracking-widest text-zinc-400 hover:text-white transition-all">
+              <Gift className="w-4 h-4" style={{ color: colors.primary }} /> Benefícios
             </Link>
           </div>
         </section>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 mt-12">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 mt-10">
           <div className="lg:col-span-8">
             <NewsCarousel />
           </div>
-          <div className="lg:col-span-4 space-y-12">
+          <div className="lg:col-span-4 space-y-10">
             <CensusDuel />
             <AmbassadorHierarchy />
           </div>
