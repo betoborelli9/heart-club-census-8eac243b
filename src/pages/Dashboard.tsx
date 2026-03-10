@@ -1,6 +1,6 @@
 // Path: src/pages/Dashboard.tsx
 import { useEffect, useState } from "react";
-import { LogOut, Loader2, MapPin, Trophy, Flame, BarChart3, Medal, Newspaper } from "lucide-react";
+import { LogOut, Loader2, MapPin, Trophy, Flame, BarChart3, Medal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate, Link } from "react-router-dom";
 import { useUser } from "@/contexts/UserContext";
@@ -9,8 +9,6 @@ import { CLUBS_DATA } from "@/clubes-data";
 import { ClubLogo } from "@/components/ClubLogo";
 import { ClubSearch } from "@/components/dashboard/ClubSearch";
 import NewsCarousel from "@/components/dashboard/NewsCarousel";
-import CensusDuel from "@/components/dashboard/CensusDuel";
-import AmbassadorHierarchy from "@/components/dashboard/AmbassadorHierarchy";
 import logo from "@/assets/logo.png";
 
 const Dashboard = () => {
@@ -37,75 +35,87 @@ const Dashboard = () => {
 
   return (
     <div className="min-h-screen bg-[#020202] text-white selection:bg-red-600">
-      <header className="h-20 border-b border-white/5 bg-black/80 backdrop-blur-xl sticky top-0 z-50">
-        <div className="max-w-6xl mx-auto px-4 h-full flex items-center justify-between gap-6">
-          <div className="flex items-center gap-4 shrink-0 cursor-pointer h-full py-2" onClick={() => navigate("/")}>
-            <img src={logo} alt="Heart Club" className="h-full w-auto object-contain scale-150" />
-            <span className="font-black italic text-2xl tracking-tighter hidden xl:block ml-4 text-white">HEART CLUB</span>
+      {/* Header Responsivo */}
+      <header className="h-16 md:h-20 border-b border-white/5 bg-black/80 backdrop-blur-xl sticky top-0 z-50">
+        <div className="max-w-6xl mx-auto px-4 h-full flex items-center justify-between gap-2 md:gap-6">
+          <div className="flex items-center gap-2 md:gap-4 shrink-0 cursor-pointer h-full py-2" onClick={() => navigate("/")}>
+            <img src={logo} alt="Heart Club" className="h-8 md:h-14 w-auto object-contain" />
+            <span className="font-black italic text-sm md:text-2xl tracking-tighter hidden sm:block">HEART CLUB</span>
           </div>
-          <div className="flex-1 max-w-sm relative z-[70]">
+          <div className="flex-1 max-w-[200px] md:max-w-sm relative z-[70]">
             <ClubSearch onSelect={(club) => setQueriedTeam(club)} />
           </div>
-          <Button variant="ghost" size="icon" onClick={() => signOut()} className="hover:text-red-500"><LogOut className="w-6 h-6" /></Button>
+          <Button variant="ghost" size="icon" onClick={() => signOut()} className="hover:text-red-500 shrink-0"><LogOut className="w-5 h-5 md:w-6 md:h-6" /></Button>
         </div>
       </header>
 
-      <main className="max-w-6xl mx-auto px-4 py-4">
-        {/* BANNER TIME DO CORAÇÃO */}
-        <section className="relative overflow-hidden rounded-t-3xl border border-white/10" style={{ backgroundColor: colors.primary }}>
-          <div className="absolute top-0 right-0 w-72 h-full pointer-events-none overflow-hidden opacity-30">
-            <div className="absolute top-[-20%] right-[15%] w-16 h-[150%] rotate-[25deg] transform origin-top shadow-2xl" style={{ backgroundColor: colors.secondary }} />
-            <div className="absolute top-[-20%] right-[35%] w-4 h-[150%] rotate-[25deg] transform origin-top shadow-2xl" style={{ backgroundColor: colors.secondary }} />
+      <main className="max-w-6xl mx-auto px-2 md:px-4 py-4">
+        {/* BANNER TIME DO CORAÇÃO - RESPONSIVO */}
+        <section className="relative overflow-hidden rounded-t-2xl md:rounded-t-3xl border border-white/10" style={{ backgroundColor: colors.primary }}>
+          
+          {/* 3 FAIXAS DIAGONAIS XIQUES (Conforme solicitado) */}
+          <div className="absolute top-0 right-0 w-full md:w-96 h-full pointer-events-none overflow-hidden opacity-30">
+            <div className="absolute top-[-20%] right-[10%] w-10 md:w-20 h-[150%] rotate-[25deg] transform origin-top" style={{ backgroundColor: colors.secondary }} />
+            <div className="absolute top-[-20%] right-[25%] w-2 md:w-4 h-[150%] rotate-[25deg] transform origin-top" style={{ backgroundColor: colors.secondary }} />
+            <div className="absolute top-[-20%] right-[32%] w-1 md:w-2 h-[150%] rotate-[25deg] transform origin-top" style={{ backgroundColor: colors.secondary }} />
           </div>
-          <div className="relative z-10 p-10 flex flex-col md:flex-row items-center justify-between gap-10">
-            <div className="flex items-center gap-10">
-              <div className="w-32 h-32 rounded-full flex items-center justify-center shadow-2xl shrink-0 border-2 border-black/5 overflow-hidden" style={{ backgroundColor: colors.secondary }}>
-                <div className="w-[96%] h-[96%] flex items-center justify-center">
+
+          <div className="relative z-10 p-4 md:p-10 flex flex-col md:flex-row items-center md:justify-between gap-4 md:gap-10">
+            <div className="flex flex-col md:flex-row items-center gap-4 md:gap-10 text-center md:text-left">
+              {/* Círculo do emblema GIGANTE (98% do espaço) */}
+              <div className="w-24 h-24 md:w-32 md:h-32 rounded-full flex items-center justify-center shadow-2xl shrink-0 border-2 border-black/5 overflow-hidden" style={{ backgroundColor: colors.secondary }}>
+                <div className="w-[98%] h-[98%] flex items-center justify-center">
                   <ClubLogo src={heartTeam?.logoUrl} alt={heartTeam?.nome} size="lg" className="w-full h-full object-contain" />
                 </div>
               </div>
-              <div className="text-left text-white">
-                <h1 className="text-4xl font-black uppercase italic tracking-tighter leading-none mb-3 drop-shadow-xl">{profile.nome_exibicao}</h1>
-                <div className="flex flex-col gap-1.5 font-medium uppercase text-[10px] tracking-widest text-white/90 drop-shadow-lg">
-                  <span className="flex items-center gap-1.5"><MapPin className="w-4 h-4" /> {profile.cidade || "GOIÂNIA"}, GO, BRASIL • Mascote: {heartTeam?.mascote || "TIGRE"}</span>
-                  <span className="flex items-center gap-1.5 text-yellow-300"><Trophy className="w-4 h-4" /> EMBAIXADOR BRONZE</span>
+              
+              <div className="text-white">
+                <h1 className="text-2xl md:text-4xl font-black uppercase italic tracking-tighter leading-none mb-2 md:mb-3 drop-shadow-xl">{profile.nome_exibicao}</h1>
+                <div className="flex flex-col gap-1 text-[9px] md:text-[10px] tracking-widest text-white/90 drop-shadow-lg">
+                  <span className="flex items-center justify-center md:justify-start gap-1.5 uppercase font-medium">
+                    <MapPin className="w-3 h-3 md:w-4 md:h-4" /> {profile.cidade || "GOIÂNIA"}, GO, BRASIL • Mascote: {heartTeam?.mascote || "TIGRÃO"}
+                  </span>
+                  <span className="flex items-center justify-center md:justify-start gap-1.5 text-yellow-300 font-medium">
+                    <Trophy className="w-3 h-3 md:w-4 md:h-4" /> EMBAIXADOR BRONZE
+                  </span>
                 </div>
               </div>
             </div>
-            <div className="text-center md:text-right text-white">
-              <p className="text-[12px] font-black uppercase tracking-[0.6em] text-white/60 mb-1">Clube do Coração</p>
-              <h2 className="text-6xl font-black italic uppercase leading-none drop-shadow-2xl">{heartTeam?.nome || "VILA NOVA"}</h2>
+
+            <div className="text-center md:text-right text-white mt-2 md:mt-0">
+              <p className="text-[10px] md:text-[12px] font-black uppercase tracking-[0.4em] md:tracking-[0.6em] text-white/60 mb-0 md:mb-1">Clube do Coração</p>
+              <h2 className="text-4xl md:text-6xl font-black italic uppercase leading-none drop-shadow-2xl">{heartTeam?.nome || "VILA NOVA"}</h2>
             </div>
           </div>
         </section>
 
-        {/* BARRA DE LINKS NOVOS - VITRIFICADA */}
-        <section className="relative z-20 -mt-px border border-white/10 rounded-b-3xl overflow-hidden shadow-2xl">
+        {/* BARRA DE LINKS VITRIFICADA - MOBILE FRIENDLY */}
+        <section className="relative z-20 -mt-px border border-white/10 rounded-b-2xl md:rounded-b-3xl overflow-hidden shadow-2xl">
           <div className="absolute inset-0 bg-black/95 backdrop-blur-3xl" />
-          <div className="relative px-12 py-5 flex items-center gap-12 overflow-x-auto no-scrollbar">
-            <Link to="#" className="flex items-center gap-3 text-[12px] font-black uppercase tracking-widest text-zinc-400 hover:text-white transition-all">
-              <Flame className="w-5 h-5 text-red-600" /> Mapa de Calor
+          <div className="relative px-4 md:px-12 py-3 md:py-5 flex items-center justify-around md:justify-start gap-4 md:gap-12 overflow-x-auto no-scrollbar text-center">
+            <Link to="#" className="flex flex-col md:flex-row items-center gap-1 md:gap-3 text-[8px] md:text-[12px] font-black uppercase tracking-widest text-zinc-400 hover:text-white transition-all min-w-fit">
+              <Flame className="w-4 h-4 md:w-5 md:h-5 text-red-600" /> Mapa de Calor
             </Link>
-            <Link to="#" className="flex items-center gap-3 text-[12px] font-black uppercase tracking-widest text-zinc-400 hover:text-white transition-all">
-              <BarChart3 className="w-5 h-5 text-red-600" /> Estatísticas do seu time
+            <Link to="#" className="flex flex-col md:flex-row items-center gap-1 md:gap-3 text-[8px] md:text-[12px] font-black uppercase tracking-widest text-zinc-400 hover:text-white transition-all min-w-fit text-center">
+              <BarChart3 className="w-4 h-4 md:w-5 md:h-5 text-red-600" /> Estatísticas <span className="hidden md:inline">do time</span>
             </Link>
-            <Link to="#" className="flex items-center gap-3 text-[12px] font-black uppercase tracking-widest text-zinc-400 hover:text-white transition-all">
-              <Medal className="w-5 h-5 text-red-600" /> Ranking de Embaixadores
+            <Link to="#" className="flex flex-col md:flex-row items-center gap-1 md:gap-3 text-[8px] md:text-[12px] font-black uppercase tracking-widest text-zinc-400 hover:text-white transition-all min-w-fit text-center">
+              <Medal className="w-4 h-4 md:w-5 md:h-5 text-red-600" /> Ranking <span className="hidden md:inline">Embaixadores</span>
             </Link>
           </div>
         </section>
 
-        {/* BARRA DO INTRUSO (MANTIDA) */}
+        {/* BARRA DO INTRUSO (MANTIDA INTACTA E RESPONSIVA) */}
         {queriedTeam && (
-          <div className="mt-6 overflow-hidden rounded-2xl border border-white/5 bg-zinc-900/60 p-5 flex items-center justify-between shadow-2xl animate-in fade-in slide-in-from-top duration-500">
-            <div className="flex items-center gap-5">
-              <div className="w-14 h-14 bg-white rounded-full p-2 flex items-center justify-center shadow-lg">
+          <div className="mt-4 md:mt-6 overflow-hidden rounded-xl md:rounded-2xl border border-white/5 bg-zinc-900/60 p-3 md:p-5 flex items-center justify-between shadow-2xl animate-in fade-in slide-in-from-top duration-500">
+            <div className="flex items-center gap-3 md:gap-5">
+              <div className="w-10 h-10 md:w-14 md:h-14 bg-white rounded-full p-1 md:p-2 flex items-center justify-center shadow-lg">
                  <ClubLogo src={queriedTeam.logo} alt={queriedTeam.name} size="sm" />
               </div>
               <div>
-                <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Consultando:</span>
-                <h3 className="text-2xl font-black italic uppercase text-white leading-none">
-                  {queriedTeam.name} <span className="text-[10px] text-zinc-600 not-italic ml-2 uppercase">{queriedTeam.location} • {queriedTeam.mascote}</span>
+                <span className="text-[8px] md:text-[10px] font-black uppercase tracking-widest text-zinc-500">Consultando:</span>
+                <h3 className="text-sm md:text-2xl font-black italic uppercase text-white leading-none">
+                  {queriedTeam.name} <span className="text-[8px] md:text-[10px] text-zinc-600 not-italic ml-1 uppercase">{queriedTeam.location}</span>
                 </h3>
               </div>
             </div>
@@ -113,8 +123,8 @@ const Dashboard = () => {
           </div>
         )}
 
-        {/* PAINEL DE NOTÍCIAS (Único conteúdo abaixo dos links agora) */}
-        <div className="mt-10">
+        {/* PAINEL DE NOTÍCIAS REAIS */}
+        <div className="mt-6 md:mt-10">
           <NewsCarousel teamName={queriedTeam?.name || heartTeam?.nome || "Vila Nova"} />
         </div>
       </main>
