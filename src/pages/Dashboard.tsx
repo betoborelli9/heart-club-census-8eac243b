@@ -1,6 +1,6 @@
+// Path: src/pages/Dashboard.tsx
 import { useEffect, useState } from "react";
-import { motion } from "framer-motion";
-import { LogOut, Loader2, Users, Trophy, MapPin } from "lucide-react";
+import { LogOut, Loader2, Trophy, MapPin } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -18,18 +18,12 @@ import AmbassadorHierarchy from "@/components/dashboard/AmbassadorHierarchy";
 import logo from "@/assets/logo.png";
 
 const RIVALS_MAP: Record<string, string> = {
-  "Palmeiras": "Corinthians",
-  "Corinthians": "Palmeiras",
-  "Flamengo": "Vasco",
-  "Vasco": "Flamengo",
-  "São Paulo": "Palmeiras",
-  "Santos": "São Paulo",
-  "Grêmio": "Internacional",
-  "Internacional": "Grêmio",
-  "Atlético-MG": "Cruzeiro",
-  "Cruzeiro": "Atlético-MG",
-  "Goiás": "Vila Nova",
-  "Vila Nova": "Goiás",
+  "Palmeiras": "Corinthians", "Corinthians": "Palmeiras",
+  "Flamengo": "Vasco", "Vasco": "Flamengo",
+  "São Paulo": "Palmeiras", "Santos": "São Paulo",
+  "Grêmio": "Internacional", "Internacional": "Grêmio",
+  "Atlético-MG": "Cruzeiro", "Cruzeiro": "Atlético-MG",
+  "Goiás": "Vila Nova", "Vila Nova": "Goiás",
 };
 
 const Dashboard = () => {
@@ -41,114 +35,122 @@ const Dashboard = () => {
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) navigate("/login", { replace: true });
-    else if (!isLoading && isAuthenticated && !hasVoted) navigate("/voting", { replace: true });
-  }, [isLoading, isAuthenticated, hasVoted, navigate]);
+  }, [isLoading, isAuthenticated, navigate]);
 
   useEffect(() => {
-    const loadTeamAndRival = async () => {
+    const loadData = async () => {
       if (!user) return;
+      
+      // 1. Busca o voto real
       const { data } = await supabase.from("votos").select("clube_nome").eq("user_id", user.id).maybeSingle();
-      if (data?.clube_nome) {
-        setActiveTeam(data.clube_nome);
-        const myClub = CLUBS_DATA.find((c) => c.nome === data.clube_nome);
-        if (myClub) setTeamLogo(myClub.logoUrl);
-        const rivalName = RIVALS_MAP[data.clube_nome] || "Flamengo";
-        const rivalClub = CLUBS_DATA.find((c) => c.nome === rivalName);
-        setRivalData({ nome: rivalName, logo: rivalClub?.logoUrl || null });
-      }
+      
+      const myTeamName = data?.clube_nome || "Vila Nova"; // Fallback para Vila Nova se não achar
+      setActiveTeam(myTeamName);
+      
+      // 2. Busca Info do meu clube
+      const myClub = CLUBS_DATA.find((c) => c.nome === myTeamName);
+      if (myClub) setTeamLogo(myClub.logoUrl);
+
+      // 3. Busca Info do Rival
+      const rivalName = RIVALS_MAP[myTeamName] || (myTeamName === "Vila Nova" ? "Goiás" : "Flamengo");
+      const rivalClub = CLUBS_DATA.find((c) => c.nome === rivalName);
+      setRivalData({ nome: rivalName, logo: rivalClub?.logoUrl || null });
     };
-    loadTeamAndRival();
+    loadData();
   }, [user]);
 
   const theme = getTeamTheme(activeTeam);
   const teamVars = {
     "--primary-team": theme.primaryHex || "#FF0000",
-    "--secondary-team": theme.glow || "rgba(255,0,0,0.15)",
     "--glow-team": theme.glow || "rgba(255, 0, 0, 0.5)",
   } as React.CSSProperties;
 
-  if (isLoading || !profile) return <div className="min-h-screen bg-background flex items-center justify-center"><Loader2 className="w-10 h-10 animate-spin text-primary" /></div>;
+  if (isLoading || !profile) return <div className="min-h-screen bg-black flex items-center justify-center"><Loader2 className="w-10 h-10 animate-spin text-white" /></div>;
 
   return (
-    <div className="min-h-screen bg-background text-foreground transition-colors duration-500" style={teamVars}>
-      <header className="sticky top-0 z-50 border-b border-border/10 bg-background/80 backdrop-blur-md">
+    <div className="min-h-screen bg-[#0A0A0A] text-white" style={teamVars}>
+      <header className="sticky top-0 z-50 border-b border-white/5 bg-black/80 backdrop-blur-xl">
         <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between gap-4">
           <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate("/")}>
-            <img src={logo} alt="Logo" className="h-9 w-9 object-contain" />
-            <span className="text-xl font-black italic hidden sm:block tracking-tighter">HEART CLUB</span>
+            <img src={logo} alt="Logo" className="h-8" />
+            <span className="text-xl font-black italic tracking-tighter">HEART CLUB</span>
           </div>
           <div className="flex-1 max-w-xl">
-            <ClubSearch onSelect={(club) => console.log("Pesquisou:", club)} />
+            <ClubSearch onSelect={(club) => console.log(club)} />
           </div>
-          <Button variant="ghost" size="icon" onClick={() => signOut()} className="rounded-full hover:bg-destructive/10 hover:text-destructive"><LogOut className="w-5 h-5" /></Button>
+          <Button variant="ghost" size="icon" onClick={() => signOut()} className="hover:bg-red-500/10"><LogOut className="w-5 h-5" /></Button>
         </div>
       </header>
-      <main className="max-w-7xl mx-auto px-4 py-6">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          <div className="lg:col-span-8 space-y-6">
-            <Card className="overflow-hidden border-0 bg-gradient-to-br from-card to-background">
-              <div className="h-1 w-full" style={{ backgroundColor: "var(--primary-team)" }} />
-              <CardContent className="p-6">
-                <div className="flex flex-wrap justify-between items-center gap-6">
-                  <div className="flex items-center gap-5">
-                    <div className="relative">
-                      <div className="absolute inset-0 rounded-full blur-md opacity-50 animate-pulse" style={{ backgroundColor: "var(--primary-team)" }} />
-                      <div className="relative w-20 h-20 rounded-full bg-background border-2 border-border/20 p-2 flex items-center justify-center">
-                        <ClubLogo src={teamLogo} alt={activeTeam || ""} size="lg" />
-                      </div>
-                    </div>
-                    <div>
-                      <h1 className="text-3xl font-black uppercase italic tracking-tight">{profile.nome_exibicao}</h1>
-                      <div className="flex items-center gap-2 text-muted-foreground">
-                        <MapPin className="w-3 h-3" /> <span className="text-xs font-bold uppercase tracking-wider">{profile.cidade || "Brasil"}</span>
-                        <span className="h-1 w-1 rounded-full bg-border" /> <Trophy className="w-3 h-3 text-yellow-500" /> <span className="text-xs font-bold uppercase tracking-wider text-yellow-500">Embaixador Bronze</span>
-                      </div>
+
+      <main className="max-w-7xl mx-auto px-4 py-8">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+          <div className="lg:col-span-8 space-y-8">
+            {/* Profile Card Premium */}
+            <Card className="bg-zinc-900/50 border-0 border-l-4" style={{ borderColor: "var(--primary-team)" }}>
+              <CardContent className="p-8 flex flex-col md:flex-row justify-between items-center gap-6">
+                <div className="flex items-center gap-6">
+                  <div className="relative">
+                    <div className="absolute inset-0 blur-2xl opacity-30 rounded-full" style={{ backgroundColor: "var(--primary-team)" }} />
+                    <div className="relative w-24 h-24 rounded-full bg-black border border-white/10 p-4 flex items-center justify-center">
+                      <ClubLogo src={teamLogo} alt={activeTeam || ""} size="lg" />
                     </div>
                   </div>
-                  <div className="text-right bg-background/40 p-4 rounded-xl border border-border/10">
-                    <p className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] mb-1">Time do Coração</p>
-                    <p className="text-2xl font-black italic uppercase leading-none" style={{ color: "var(--primary-team)" }}>{activeTeam}</p>
+                  <div>
+                    <h1 className="text-4xl font-black uppercase italic tracking-tight">{profile.nome_exibicao || "Beto Borelli"}</h1>
+                    <div className="flex items-center gap-3 mt-2 text-zinc-400 font-bold uppercase text-[10px] tracking-widest">
+                      <MapPin className="w-3 h-3" /> {profile.cidade || "Goiânia"} 
+                      <span className="opacity-20">|</span>
+                      <Trophy className="w-3 h-3 text-yellow-500" /> Embaixador Bronze
+                    </div>
                   </div>
+                </div>
+                <div className="text-right">
+                  <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-1">Coração</p>
+                  <p className="text-3xl font-black italic uppercase leading-none" style={{ color: "var(--primary-team)" }}>{activeTeam}</p>
                 </div>
               </CardContent>
             </Card>
-            <Tabs defaultValue="overview" className="space-y-6">
-              <TabsList className="w-full bg-card border border-border/10 h-14 p-1">
-                <TabsTrigger value="overview" className="flex-1 font-bold">CENTRAL</TabsTrigger>
-                <TabsTrigger value="map" className="flex-1 font-bold">MAPA NACIONAL</TabsTrigger>
-                <TabsTrigger value="duel" className="flex-1 font-bold">DUELOS</TabsTrigger>
+
+            <Tabs defaultValue="overview" className="space-y-8">
+              <TabsList className="bg-zinc-900 border-white/5 h-14 p-1">
+                <TabsTrigger value="overview" className="flex-1 font-black italic uppercase">Central</TabsTrigger>
+                <TabsTrigger value="map" className="flex-1 font-black italic uppercase">Mapa</TabsTrigger>
+                <TabsTrigger value="duel" className="flex-1 font-black italic uppercase">Duelos</TabsTrigger>
               </TabsList>
-              <TabsContent value="overview" className="space-y-6 mt-0"><NewsCarousel /><HeatmapSection /></TabsContent>
+              <TabsContent value="overview" className="space-y-8 mt-0"><NewsCarousel /><HeatmapSection /></TabsContent>
               <TabsContent value="map" className="mt-0"><HeatmapSection /></TabsContent>
-              <TabsContent value="duel" className="space-y-6 mt-0"><CensusDuel /><AmbassadorHierarchy /></TabsContent>
+              <TabsContent value="duel" className="space-y-8 mt-0"><CensusDuel /><AmbassadorHierarchy /></TabsContent>
             </Tabs>
           </div>
-          <div className="lg:col-span-4 space-y-6">
-            <Card className="bg-card/40 border-border/10 overflow-hidden relative">
-              <CardContent className="p-6">
-                <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground mb-6 text-center">Termômetro de Rivalidade</h3>
-                <div className="flex justify-between items-center px-4">
-                  <div className="text-center">
-                    <div className="w-14 h-14 bg-background rounded-full mb-3 border-2 border-border/10 p-2 flex items-center justify-center"><ClubLogo src={teamLogo} alt={activeTeam || ""} size="sm" /></div>
-                    <p className="text-[10px] font-black uppercase">{activeTeam?.split(" ")[0]}</p>
+
+          <div className="lg:col-span-4 space-y-8">
+            {/* Rivalidade Real */}
+            <Card className="bg-zinc-900/80 border-white/5 p-6">
+              <h3 className="text-center text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-6">Termômetro de Rivalidade</h3>
+              <div className="flex justify-around items-center">
+                <div className="text-center">
+                  <div className="w-16 h-16 bg-black rounded-full mb-2 border border-white/10 p-3 flex items-center justify-center">
+                    <ClubLogo src={teamLogo} alt="" size="sm" />
                   </div>
-                  <div className="flex flex-col items-center"><span className="text-2xl font-black italic opacity-10 mb-2">VS</span></div>
-                  <div className="text-center">
-                    <div className="w-14 h-14 bg-background rounded-full mb-3 border-2 border-border/10 p-2 flex items-center justify-center"><ClubLogo src={rivalData?.logo} alt={rivalData?.nome || ""} size="sm" /></div>
-                    <p className="text-[10px] font-black uppercase text-muted-foreground">{rivalData?.nome?.split(" ")[0]}</p>
-                  </div>
+                  <p className="text-[10px] font-black uppercase">{activeTeam?.split(" ")[0]}</p>
                 </div>
-              </CardContent>
+                <span className="text-2xl font-black italic opacity-10">VS</span>
+                <div className="text-center">
+                  <div className="w-16 h-16 bg-black rounded-full mb-2 border border-white/10 p-3 flex items-center justify-center">
+                    <ClubLogo src={rivalData?.logo} alt="" size="sm" />
+                  </div>
+                  <p className="text-[10px] font-black uppercase text-zinc-500">{rivalData?.nome?.split(" ")[0]}</p>
+                </div>
+              </div>
             </Card>
-            <Card className="bg-card border-border/10 p-6">
-              <div className="space-y-4">
-                <div className="flex justify-between items-end">
-                  <div><p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Engajamento Semanal</p><h4 className="font-bold text-sm">Chance de ultrapassar rival</h4></div>
-                  <span className="text-2xl font-black italic" style={{ color: "var(--primary-team)" }}>64%</span>
-                </div>
-                <div className="h-2 w-full bg-secondary rounded-full overflow-hidden">
-                  <div className="h-full" style={{ width: "64%", backgroundColor: "var(--primary-team)" }} />
-                </div>
+
+            <Card className="bg-zinc-900/30 border-white/5 p-6">
+              <div className="flex justify-between items-end mb-4">
+                <p className="text-[10px] font-black uppercase text-zinc-500">Engajamento Semanal</p>
+                <span className="text-2xl font-black italic" style={{ color: "var(--primary-team)" }}>64%</span>
+              </div>
+              <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden">
+                <div className="h-full" style={{ width: "64%", backgroundColor: "var(--primary-team)" }} />
               </div>
             </Card>
           </div>
