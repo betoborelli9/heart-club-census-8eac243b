@@ -69,7 +69,7 @@ const Index = () => {
           </h2>
           
           {!heartTeam ? (
-            <div className="relative z-[100]">
+            <div className="relative z-[9999]">
               <ClubSearch onSelect={(club) => setHeartTeam(club)} />
               <p className="text-[9px] text-zinc-600 mt-2 uppercase font-bold italic">Busque pelo nome do seu time...</p>
             </div>
@@ -99,7 +99,7 @@ const Index = () => {
           </h2>
           
           {sympathyTeams.length < 4 && (
-            <div className="relative z-[50]">
+            <div className="relative z-[9999]">
               <ClubSearch onSelect={(club) => {
                 if (heartTeam?.nome === club.nome) {
                   toast.error("Este já é seu time do coração!");
@@ -130,7 +130,7 @@ const Index = () => {
         </div>
 
         {/* BOTÃO FINAL - DESTRAVADO COM Z-INDEX MÁXIMO */}
-        <div className="pt-4 relative z-[110]">
+        <div className="pt-4 relative z-[9999]">
           <Button 
             onClick={handleConfirmVote}
             disabled={issubmitting || !heartTeam}
