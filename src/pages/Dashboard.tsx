@@ -1,7 +1,6 @@
 // Path: src/pages/Dashboard.tsx
 import { useEffect, useState } from "react";
 import { LogOut, Loader2, MapPin, Trophy, Globe, Users, Gift } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useNavigate, Link } from "react-router-dom";
 import { useUser } from "@/contexts/UserContext";
@@ -19,16 +18,35 @@ const Dashboard = () => {
   const { user, profile, isLoading, isAuthenticated, signOut } = useUser();
   const [activeTeam, setActiveTeam] = useState<string>("Vila Nova");
   const [teamLogo, setTeamLogo] = useState<string | null>(null);
-  const [colors, setColors] = useState({ primary: "#E21A21", secondary: "#FFFFFF" });
+  
+  // Estado de Cores Dinâmico
+  const [colors, setColors] = useState({ 
+    primary: "#E21A21", 
+    secondary: "#FFFFFF", 
+    text: "#FFFFFF" 
+  });
 
   const updateDashboardTeam = (teamName: string) => {
-    setActiveTeam(teamName);
-    const club = CLUBS_DATA.find(c => c.nome === teamName);
+    const club = CLUBS_DATA.find(c => c.nome.toLowerCase() === teamName.toLowerCase()) || 
+                 CLUBS_DATA.find(c => c.nome.toLowerCase().includes(teamName.toLowerCase()));
+    
     if (club) {
+      setActiveTeam(club.nome);
       setTeamLogo(club.logoUrl);
-      if (teamName.includes("São Paulo")) setColors({ primary: "#FF0000", secondary: "#000000" });
-      else if (teamName.includes("Palmeiras") || teamName.includes("Goiás")) setColors({ primary: "#006437", secondary: "#FFFFFF" });
-      else setColors({ primary: club.cor_principal || "#E21A21", secondary: "#FFFFFF" });
+      
+      // Lógica de Cores por Clube (Primária / Secundária)
+      const name = club.nome.toLowerCase();
+      if (name.includes("vila nova") || name.includes("flamengo") || name.includes("são paulo")) {
+        setColors({ primary: "#E21A21", secondary: "#FFFFFF", text: "#FFFFFF" });
+      } else if (name.includes("palmeiras") || name.includes("goiás") || name.includes("coritiba")) {
+        setColors({ primary: "#006437", secondary: "#FFFFFF", text: "#FFFFFF" });
+      } else if (name.includes("corinthians") || name.includes("botafogo") || name.includes("santos")) {
+        setColors({ primary: "#111111", secondary: "#FFFFFF", text: "#FFFFFF" });
+      } else if (name.includes("cruzeiro") || name.includes("gremio") || name.includes("bahia")) {
+        setColors({ primary: "#005BA3", secondary: "#FFFFFF", text: "#FFFFFF" });
+      } else {
+        setColors({ primary: club.cor_principal || "#E21A21", secondary: "#FFFFFF", text: "#FFFFFF" });
+      }
     }
   };
 
@@ -36,8 +54,7 @@ const Dashboard = () => {
     const loadInitialTeam = async () => {
       if (!user) return;
       const { data } = await supabase.from("votos").select("clube_nome").eq("user_id", user.id).maybeSingle();
-      if (data?.clube_nome) updateDashboardTeam(data.clube_nome);
-      else updateDashboardTeam("Vila Nova");
+      updateDashboardTeam(data?.clube_nome || "Vila Nova");
     };
     loadInitialTeam();
   }, [user]);
@@ -45,7 +62,8 @@ const Dashboard = () => {
   if (isLoading || !profile) return <div className="h-screen flex items-center justify-center bg-black"><Loader2 className="animate-spin text-white" /></div>;
 
   return (
-    <div className="min-h-screen bg-[#050505] text-white">
+    <div className="min-h-screen bg-[#050505] text-white selection:bg-red-500">
+      {/* Header Fixo */}
       <header className="h-14 border-b border-white/5 bg-black/60 backdrop-blur-xl sticky top-0 z-50">
         <div className="max-w-6xl mx-auto px-4 h-full flex items-center justify-between gap-4">
           <div className="flex items-center gap-2">
@@ -60,67 +78,74 @@ const Dashboard = () => {
       </header>
 
       <main className="max-w-6xl mx-auto px-4 py-6">
-        {/* Banner Slim Vermelho Vila Nova */}
-        <section className="relative overflow-hidden rounded-2xl border border-white/10 mb-8" style={{ background: `linear-gradient(135deg, ${colors.primary} 0%, #8b1115 100%)` }}>
-          
-          <div className="absolute top-0 right-0 w-48 h-full pointer-events-none overflow-hidden">
-            <div className="absolute top-0 right-8 w-10 h-[200%] bg-white/10 rotate-[25deg] transform origin-top" />
-            <div className="absolute top-0 right-14 w-2 h-[200%] bg-white/20 rotate-[25deg] transform origin-top" />
+        {/* BANNER PRINCIPAL COM CORES DO CLUBE */}
+        <section 
+          className="relative overflow-hidden rounded-t-2xl border-t border-x border-white/10" 
+          style={{ background: `linear-gradient(135deg, ${colors.primary} 0%, ${colors.primary}CC 100%)` }}
+        >
+          {/* Faixas de Gala Diagonais */}
+          <div className="absolute top-0 right-0 w-64 h-full pointer-events-none overflow-hidden opacity-30">
+            <div className="absolute top-0 right-10 w-12 h-[200%] bg-white/20 rotate-[25deg] transform origin-top" />
+            <div className="absolute top-0 right-20 w-3 h-[200%] bg-white/40 rotate-[25deg] transform origin-top" />
           </div>
 
-          <div className="relative z-10 p-6 flex flex-col md:flex-row items-center justify-between gap-6">
+          <div className="relative z-10 p-7 flex flex-col md:flex-row items-center justify-between gap-6">
             <div className="flex items-center gap-6">
-              <div className="w-20 h-20 bg-black rounded-full flex items-center justify-center p-3 border-2 border-white/20 shadow-2xl shrink-0">
+              {/* Círculo na Cor Secundária (Ex: Branco para o Vila) */}
+              <div 
+                className="w-20 h-20 rounded-full flex items-center justify-center p-3 shadow-2xl shrink-0 transition-all duration-500"
+                style={{ backgroundColor: colors.secondary }}
+              >
                 <ClubLogo src={teamLogo} alt={activeTeam} size="lg" className="w-full h-full object-contain" />
               </div>
+              
               <div className="text-left">
-                <h1 className="text-2xl font-black uppercase italic tracking-tighter text-white drop-shadow-md">
+                <h1 className="text-2xl font-black uppercase italic tracking-tighter drop-shadow-md text-white">
                   {profile.nome_exibicao}
                 </h1>
-                <div className="flex items-center gap-3 text-white/70 font-bold uppercase text-[9px] tracking-[0.2em] mt-1">
+                <div className="flex items-center gap-3 text-white/80 font-bold uppercase text-[9px] tracking-[0.2em] mt-1">
                   <span className="flex items-center gap-1"><MapPin className="w-3 h-3" /> {profile.cidade}</span>
-                  <span className="w-1 h-1 bg-white/30 rounded-full" />
+                  <span className="w-1.5 h-1.5 rounded-full bg-white/20" />
                   <span className="flex items-center gap-1"><Trophy className="w-3 h-3 text-yellow-400" /> Embaixador Bronze</span>
                 </div>
               </div>
             </div>
 
             <div className="text-center md:text-right">
-              <p className="text-[9px] font-black uppercase tracking-[0.4em] text-white/50 mb-1">Clube do Coração</p>
-              <h2 className="text-4xl font-black italic uppercase leading-none text-white drop-shadow-lg">
+              <p className="text-[10px] font-black uppercase tracking-[0.4em] text-white/60 mb-1">Clube do Coração</p>
+              <h2 className="text-4xl font-black italic uppercase leading-none text-white drop-shadow-xl">
                 {activeTeam}
               </h2>
             </div>
           </div>
+        </section>
 
-          <div className="bg-black/20 backdrop-blur-sm border-t border-white/10 px-6 py-3 flex items-center gap-6 overflow-x-auto no-scrollbar">
-            <Link to="#" className="flex items-center gap-2 text-[9px] font-black uppercase tracking-widest text-white/80 hover:text-white transition-all">
-              <Globe className="w-3 h-3" /> Mapa Nacional
+        {/* BARRA DE LINKS VITRIFICADA (GLASSMORPHISM) */}
+        <section className="relative z-20 -mt-px border border-white/10 rounded-b-2xl overflow-hidden">
+          <div className="absolute inset-0 bg-[#0a0a0a]/60 backdrop-blur-md" />
+          <div className="relative px-8 py-3.5 flex items-center gap-8 overflow-x-auto no-scrollbar">
+            <Link to="#" className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-zinc-400 hover:text-white transition-all group">
+              <Globe className="w-3.5 h-3.5 group-hover:scale-110 transition-transform" style={{ color: colors.primary }} /> 
+              Mapa Nacional
             </Link>
-            <Link to="#" className="flex items-center gap-2 text-[9px] font-black uppercase tracking-widest text-white/80 hover:text-white transition-all">
-              <Users className="w-3 h-3" /> Ranking Geral
+            <Link to="#" className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-zinc-400 hover:text-white transition-all group">
+              <Users className="w-3.5 h-3.5 group-hover:scale-110 transition-transform" style={{ color: colors.primary }} /> 
+              Ranking Geral
             </Link>
-            <Link to="#" className="flex items-center gap-2 text-[9px] font-black uppercase tracking-widest text-white/80 hover:text-white transition-all">
-              <Gift className="w-3 h-3" /> Benefícios
+            <Link to="#" className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-zinc-400 hover:text-white transition-all group">
+              <Gift className="w-3.5 h-3.5 group-hover:scale-110 transition-transform" style={{ color: colors.primary }} /> 
+              Benefícios
             </Link>
           </div>
         </section>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          <div className="lg:col-span-8 space-y-8">
+        {/* Grid de Conteúdo */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 mt-10">
+          <div className="lg:col-span-8 space-y-10">
             <NewsCarousel />
           </div>
-          <div className="lg:col-span-4 space-y-8">
+          <div className="lg:col-span-4 space-y-10">
             <CensusDuel />
-            <div className="p-6 rounded-2xl bg-zinc-900/40 border border-white/5">
-              <div className="flex justify-between items-end mb-4">
-                <p className="text-[9px] font-black uppercase text-zinc-500 tracking-[0.2em]">Engajamento Global</p>
-                <span className="text-xl font-black italic" style={{ color: colors.primary }}>64%</span>
-              </div>
-              <div className="h-1 w-full bg-white/5 rounded-full overflow-hidden p-[1px]">
-                <div className="h-full rounded-full transition-all duration-1000" style={{ width: "64%", backgroundColor: colors.primary }} />
-              </div>
-            </div>
             <AmbassadorHierarchy />
           </div>
         </div>
