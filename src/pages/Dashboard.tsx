@@ -19,12 +19,22 @@ const Dashboard = () => {
   const [heartTeam, setHeartTeam] = useState<any>(null);
   const [queriedTeam, setQueriedTeam] = useState<any>(null);
 
+  // Cores dinâmicas para a barra do coração
+  const [heartColors, setHeartColors] = useState({ primary: "#E21A21", secondary: "#FFFFFF" });
+
   useEffect(() => {
     const loadInitial = async () => {
       if (!user) return;
       const { data } = await supabase.from("votos").select("clube_nome").eq("user_id", user.id).maybeSingle();
       const teamName = data?.clube_nome || "Vila Nova";
-      setHeartTeam(CLUBS_DATA.find(c => c.nome === teamName));
+      const clubInfo = CLUBS_DATA.find(c => c.nome === teamName);
+      setHeartTeam(clubInfo);
+
+      // Define cores da barra do coração baseado no time (Ex: Vila = Vermelho/Branco, Flamengo = Vermelho/Preto)
+      if (teamName.includes("Vila Nova")) setHeartColors({ primary: "#E21A21", secondary: "#FFFFFF" });
+      else if (teamName.includes("Flamengo")) setHeartColors({ primary: "#E21A21", secondary: "#000000" });
+      else if (teamName.includes("Palmeiras")) setHeartColors({ primary: "#006437", secondary: "#FFFFFF" });
+      else setHeartColors({ primary: clubInfo?.cor_principal || "#E21A21", secondary: "#FFFFFF" });
     };
     loadInitial();
   }, [user]);
@@ -35,79 +45,90 @@ const Dashboard = () => {
     <div className="min-h-screen bg-[#020202] text-white">
       <header className="h-20 border-b border-white/5 bg-black/80 backdrop-blur-xl sticky top-0 z-50">
         <div className="max-w-6xl mx-auto px-4 h-full flex items-center justify-between gap-6">
-          <div className="flex items-center gap-4 shrink-0 cursor-pointer h-full py-2" onClick={() => navigate("/")}>
-            <img src={logo} alt="Heart Club" className="h-full w-auto object-contain scale-150" />
-            <span className="font-black italic text-2xl tracking-tighter hidden xl:block ml-4 text-white">HEART CLUB</span>
+          <div className="flex items-center gap-4 shrink-0 cursor-pointer h-full py-1" onClick={() => navigate("/")}>
+            <img src={logo} alt="Heart Club" className="h-full w-auto object-contain scale-125" />
+            <span className="font-black italic text-2xl tracking-tighter hidden xl:block">HEART CLUB</span>
           </div>
-          <div className="flex-1 max-w-sm relative z-[1200]">
-            <ClubSearch onSelect={(club) => {
-              console.log("DASHBOARD RECEBEU:", club.name);
-              setQueriedTeam(club);
-            }} />
+          <div className="flex-1 max-w-sm relative z-[70]">
+            <ClubSearch onSelect={(club) => setQueriedTeam(club)} />
           </div>
           <Button variant="ghost" size="icon" onClick={() => signOut()} className="hover:text-red-500"><LogOut className="w-6 h-6" /></Button>
         </div>
       </header>
 
-      <main className="max-w-6xl mx-auto px-4 py-6">
-        {/* BARRA DO TIME DO CORAÇÃO - VISUAL QUE VOCÊ GOSTA */}
-        <section className="relative overflow-hidden rounded-3xl border border-white/10 bg-[#0A0A0A] shadow-2xl">
-          <div className="absolute inset-y-0 left-0 w-1.5 bg-[#E21A21]" />
-          <div className="relative z-10 px-8 py-6 flex flex-col md:flex-row items-center justify-between gap-6">
-            <div className="flex items-center gap-8">
-              <div className="w-24 h-24 rounded-full bg-black flex items-center justify-center shadow-2xl border border-white/5 shrink-0">
-                 <ClubLogo src={heartTeam?.logoUrl} alt={heartTeam?.nome} size="lg" />
+      <main className="max-w-6xl mx-auto px-4 py-4">
+        {/* BARRA DO CORAÇÃO - RESTAURADA COM FAIXAS E CORES DO TIME */}
+        <section 
+          className="relative overflow-hidden rounded-t-3xl border-t border-x border-white/10 transition-all duration-700" 
+          style={{ backgroundColor: heartColors.primary }}
+        >
+          {/* Faixas Diagonais na cor secundária (Ex: Branco para o Vila) */}
+          <div className="absolute top-0 right-0 w-64 h-full pointer-events-none overflow-hidden opacity-20">
+            <div className="absolute top-0 right-10 w-12 h-[200%] rotate-[25deg] transform origin-top" style={{ backgroundColor: heartColors.secondary }} />
+            <div className="absolute top-0 right-20 w-3 h-[200%] rotate-[25deg] transform origin-top" style={{ backgroundColor: heartColors.secondary }} />
+          </div>
+
+          <div className="relative z-10 px-8 py-4 flex flex-col md:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-6">
+              {/* Círculo do emblema na cor secundária */}
+              <div 
+                className="w-20 h-20 rounded-full flex items-center justify-center shadow-2xl shrink-0 border border-black/5 overflow-hidden"
+                style={{ backgroundColor: heartColors.secondary }}
+              >
+                <div className="w-[98%] h-[98%] flex items-center justify-center">
+                  <ClubLogo src={heartTeam?.logoUrl} alt={heartTeam?.nome} size="lg" className="w-full h-full object-contain" />
+                </div>
               </div>
-              <div className="text-left">
-                <h1 className="text-4xl font-black uppercase italic tracking-tighter leading-none mb-2">{profile.nome_exibicao}</h1>
-                <div className="flex flex-col gap-1">
-                  <span className="text-zinc-400 font-bold uppercase text-[10px] tracking-widest">
-                    <MapPin className="inline w-3 h-3 mr-1 text-red-600" /> 
-                    {profile.cidade || "GOIÂNIA"}, GO, BRASIL • 🐾 {heartTeam?.mascote || "TIGRE"}
+              <div className="text-left text-white">
+                <h1 className="text-2xl font-black uppercase italic tracking-tighter leading-none mb-1">{profile.nome_exibicao}</h1>
+                <div className="flex flex-col gap-0.5 opacity-90">
+                  <span className="text-[9px] font-bold uppercase tracking-widest flex items-center gap-1">
+                    <MapPin className="w-3 h-3" /> {profile.cidade || "GOIÂNIA"}, GO, BRASIL • 🐾 {heartTeam?.mascote || "TIGRE"}
                   </span>
-                  <span className="text-yellow-500 font-black uppercase text-[10px] tracking-widest flex items-center gap-1">
+                  <span className="text-[9px] font-black uppercase tracking-widest flex items-center gap-1 text-yellow-300">
                     <Trophy className="w-3 h-3" /> EMBAIXADOR BRONZE
                   </span>
                 </div>
               </div>
             </div>
-            <div className="text-right">
-              <p className="text-[10px] font-black uppercase tracking-[0.5em] text-zinc-600 mb-1">Coração</p>
-              <h2 className="text-5xl font-black italic uppercase leading-none text-[#E21A21]">{heartTeam?.nome || "VILA NOVA"}</h2>
+            <div className="text-right text-white">
+              <p className="text-[10px] font-black uppercase tracking-[0.5em] opacity-60 mb-0">Clube do Coração</p>
+              <h2 className="text-4xl font-black italic uppercase leading-none drop-shadow-xl">{heartTeam?.nome || "VILA NOVA"}</h2>
             </div>
           </div>
         </section>
 
-        {/* LINKS VITRIFICADOS */}
-        <section className="relative z-20 border border-white/10 bg-black/90 backdrop-blur-3xl px-10 py-4 flex items-center gap-8 rounded-b-3xl shadow-xl">
-          <Link to="#" className="text-[10px] font-black uppercase tracking-widest text-zinc-400 hover:text-white flex items-center gap-2">
-            <Globe className="w-4 h-4 text-red-600" /> Mapa Nacional
-          </Link>
-          <Link to="#" className="text-[10px] font-black uppercase tracking-widest text-zinc-400 hover:text-white flex items-center gap-2">
-            <Users className="w-4 h-4 text-red-600" /> Ranking Geral
-          </Link>
-          <Link to="#" className="text-[10px] font-black uppercase tracking-widest text-zinc-400 hover:text-white flex items-center gap-2">
-            <Gift className="w-4 h-4 text-red-600" /> Benefícios
-          </Link>
+        {/* BARRA DE LINKS VITRIFICADA */}
+        <section className="relative z-20 -mt-px border border-white/10 rounded-b-3xl overflow-hidden shadow-2xl">
+          <div className="absolute inset-0 bg-black/90 backdrop-blur-3xl" />
+          <div className="relative px-10 py-3 flex items-center gap-8 overflow-x-auto no-scrollbar">
+            <Link to="#" className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-zinc-400 hover:text-white transition-all">
+              <Globe className="w-4 h-4 text-red-600" /> Mapa Nacional
+            </Link>
+            <Link to="#" className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-zinc-400 hover:text-white transition-all">
+              <Users className="w-4 h-4 text-red-600" /> Ranking Geral
+            </Link>
+            <Link to="#" className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-zinc-400 hover:text-white transition-all">
+              <Gift className="w-4 h-4 text-red-600" /> Benefícios
+            </Link>
+          </div>
         </section>
 
-        {/* A BARRA DO INTRUSO - SLIM, ELEGANTE E FUNCIONAL */}
+        {/* BARRA DO INTRUSO (MANTIDA INTACTA) */}
         {queriedTeam && (
-          <div className="mt-6 overflow-hidden rounded-2xl border border-red-600/20 bg-zinc-950/80 p-5 flex items-center justify-between shadow-2xl animate-in fade-in slide-in-from-top duration-500">
+          <div className="mt-6 overflow-hidden rounded-2xl border border-white/5 bg-zinc-900/60 p-5 flex items-center justify-between shadow-2xl animate-in fade-in slide-in-from-top duration-500">
             <div className="flex items-center gap-5">
               <div className="w-14 h-14 bg-white rounded-full p-2 flex items-center justify-center shadow-lg">
                  <ClubLogo src={queriedTeam.logo} alt={queriedTeam.name} size="sm" />
               </div>
               <div>
-                <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Consultando Agora:</span>
+                <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Consultando:</span>
                 <h3 className="text-2xl font-black italic uppercase text-white leading-none">
-                  {queriedTeam.name} <span className="text-[10px] text-zinc-600 not-italic ml-2">{queriedTeam.location} • {queriedTeam.mascote}</span>
+                  {queriedTeam.name} <span className="text-[10px] text-zinc-600 not-italic ml-2 uppercase">{queriedTeam.location} • {queriedTeam.mascote}</span>
                 </h3>
               </div>
             </div>
-            <button onClick={() => setQueriedTeam(null)} className="bg-red-600/10 hover:bg-red-600/20 text-red-500 text-[10px] font-black px-4 py-2 rounded-full transition-colors">
-              FECHAR X
-            </button>
+            <button onClick={() => setQueriedTeam(null)} className="text-red-500 text-[10px] font-black uppercase hover:underline">Fechar X</button>
           </div>
         )}
 
