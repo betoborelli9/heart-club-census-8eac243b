@@ -1,5 +1,4 @@
-# 1. Comando para atualizar o arquivo com o texto "Clube do Coração" e design refinado
-cat << 'EOF' > src/pages/Dashboard.tsx
+// Path: src/pages/Dashboard.tsx
 import { useEffect, useState } from "react";
 import { LogOut, Loader2, MapPin, Trophy, Globe, Users, Gift } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
@@ -46,7 +45,7 @@ const Dashboard = () => {
   if (isLoading || !profile) return <div className="h-screen flex items-center justify-center bg-black"><Loader2 className="animate-spin text-white" /></div>;
 
   return (
-    <div className="min-h-screen bg-[#050505] text-white selection:bg-red-500">
+    <div className="min-h-screen bg-[#050505] text-white">
       <header className="h-14 border-b border-white/5 bg-black/60 backdrop-blur-xl sticky top-0 z-50">
         <div className="max-w-6xl mx-auto px-4 h-full flex items-center justify-between gap-4">
           <div className="flex items-center gap-2">
@@ -61,7 +60,9 @@ const Dashboard = () => {
       </header>
 
       <main className="max-w-6xl mx-auto px-4 py-6">
+        {/* Banner Slim Vermelho Vila Nova */}
         <section className="relative overflow-hidden rounded-2xl border border-white/10 mb-8" style={{ background: `linear-gradient(135deg, ${colors.primary} 0%, #8b1115 100%)` }}>
+          
           <div className="absolute top-0 right-0 w-48 h-full pointer-events-none overflow-hidden">
             <div className="absolute top-0 right-8 w-10 h-[200%] bg-white/10 rotate-[25deg] transform origin-top" />
             <div className="absolute top-0 right-14 w-2 h-[200%] bg-white/20 rotate-[25deg] transform origin-top" />
