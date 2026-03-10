@@ -72,7 +72,7 @@ const Dashboard = () => {
               
               <div className="text-white">
                 <h1 className="text-3xl md:text-5xl font-black uppercase italic tracking-tighter leading-none mb-3 drop-shadow-xl">
-                  <p className="text-[10px] bg-yellow-400 text-black px-2 inline-block font-bold mb-1">TESTE DE SINCRONIZAÇÃO V2</p>{profile.nome_exibicao}
+                  <p className="text-[10px] bg-yellow-400 text-black px-2 inline-block font-bold mb-1">TESTE DE SINCRONIZAÇÃO V2</p><p className="text-[10px] bg-yellow-400 text-black px-2 inline-block font-bold mb-1">TESTE DE SINCRONIZAÇÃO V2</p>{profile.nome_exibicao}
                 </h1>
                 <div className="flex flex-col gap-1.5 font-medium uppercase text-[10px] md:text-xs tracking-widest text-white/90">
                   <span className="flex items-center gap-1.5">
