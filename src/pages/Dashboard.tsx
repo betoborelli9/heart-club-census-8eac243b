@@ -72,7 +72,7 @@ const Dashboard = () => {
               
               <div className="text-white">
                 <h1 className="text-3xl md:text-5xl font-black uppercase italic tracking-tighter leading-none mb-3 drop-shadow-xl">
-                  {profile.nome_exibicao}
+                  <p className="text-[10px] bg-yellow-400 text-black px-2 inline-block font-bold mb-1">TESTE DE SINCRONIZAÇÃO V2</p>{profile.nome_exibicao}
                 </h1>
                 <div className="flex flex-col gap-1.5 font-medium uppercase text-[10px] md:text-xs tracking-widest text-white/90">
                   <span className="flex items-center gap-1.5">
@@ -99,10 +99,10 @@ const Dashboard = () => {
               <Flame className="w-5 h-5 text-red-600" /> Mapa de Calor
             </Link>
             <Link to="#" className="flex flex-col md:flex-row items-center gap-1 md:gap-3 text-[9px] md:text-[12px] font-black uppercase tracking-widest text-zinc-400 hover:text-white transition-all min-w-max">
-              <BarChart3 className="w-5 h-5 text-red-600" /> Estatísticas do seu time
+              <BarChart3 className="w-5 h-5 text-red-600" /> ESTATÍSTICAS
             </Link>
             <Link to="#" className="flex flex-col md:flex-row items-center gap-1 md:gap-3 text-[9px] md:text-[12px] font-black uppercase tracking-widest text-zinc-400 hover:text-white transition-all min-w-max">
-              <Medal className="w-5 h-5 text-red-600" /> Ranking de Embaixadores
+              <Medal className="w-5 h-5 text-red-600" /> RANKING
             </Link>
           </div>
         </section>
