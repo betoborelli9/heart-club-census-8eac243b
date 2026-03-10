@@ -1,49 +1,30 @@
+// Path: src/pages/api/noticias.ts
 import type { NextApiRequest, NextApiResponse } from 'next';
 import Parser from 'rss-parser';
 
-type NewsItem = {
-  title: string;
-  link: string;
-  pubDate: string;
-  source: string;
-  guid: string;
-};
+const parser = new Parser({
+  headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36' }
+});
 
-const parser = new Parser();
-
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse<NewsItem[] | { error: string }>
-) {
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { clube } = req.query;
-
-  if (!clube || typeof clube !== 'string') {
-    return res.status(400).json({ error: 'Parâmetro clube é obrigatório.' });
-  }
+  if (!clube) return res.status(400).json({ error: 'Clube missing' });
 
   try {
-    const query = encodeURIComponent(`${clube} futebol when:7d`);
-    const feedUrl = `https://news.google.com/rss/search?q=${query}&hl=pt-BR&gl=BR&ceid=BR:pt-419`;
+    const query = encodeURIComponent(`${clube} futebol`);
+    const feed = await parser.parseURL(`https://news.google.com/rss/search?q=${query}+when:7d&hl=pt-BR&gl=BR&ceid=BR:pt-419`);
     
-    const feed = await parser.parseURL(feedUrl);
+    const items = feed.items.slice(0, 6).map(item => ({
+      title: item.title?.split(' - ')[0],
+      link: item.link,
+      pubDate: item.pubDate,
+      source: item.title?.split(' - ').pop(),
+      guid: item.guid
+    }));
 
-    const newsItems: NewsItem[] = feed.items.slice(0, 6).map((item) => {
-      const titleParts = item.title ? item.title.split(' - ') : ['Sem título'];
-      const title = titleParts.slice(0, -1).join(' - ') || titleParts[0];
-      const source = titleParts.length > 1 ? titleParts[titleParts.length - 1] : 'Portal de Notícias';
-
-      return {
-        title: title,
-        link: item.link || '',
-        pubDate: item.pubDate || new Date().toISOString(),
-        source: source,
-        guid: item.guid || item.link || title,
-      };
-    });
-
-    res.status(200).json(newsItems);
+    res.setHeader('Cache-Control', 's-maxage=60, stale-while-revalidate');
+    res.status(200).json(items);
   } catch (error) {
-    console.error(`Erro ao buscar notícias do clube ${clube}:`, error);
-    res.status(500).json({ error: 'Erro ao buscar notícias.' });
+    res.status(500).json({ error: 'Erro ao buscar' });
   }
 }
