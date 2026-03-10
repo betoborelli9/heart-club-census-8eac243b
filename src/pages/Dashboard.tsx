@@ -54,11 +54,11 @@ const Dashboard = () => {
 
   return (
     <div className="min-h-screen bg-[#020202] text-white">
-      {/* Header com Logo HEART CLUB Imponente */}
+      {/* Header com Logo HEART CLUB GIGANTE (Ocupando quase toda a barra) */}
       <header className="h-20 border-b border-white/5 bg-black/90 backdrop-blur-xl sticky top-0 z-50">
         <div className="max-w-6xl mx-auto px-4 h-full flex items-center justify-between gap-6">
-          <div className="flex items-center gap-4 shrink-0 cursor-pointer" onClick={() => navigate("/")}>
-            <img src={logo} alt="Heart Club" className="h-12 w-auto object-contain" />
+          <div className="flex items-center gap-4 shrink-0 cursor-pointer h-full py-1" onClick={() => navigate("/")}>
+            <img src={logo} alt="Heart Club" className="h-full w-auto object-contain scale-125" />
             <span className="font-black italic text-2xl tracking-tighter hidden xl:block">HEART CLUB</span>
           </div>
           <div className="flex-1 max-w-sm relative z-[70]">
@@ -69,24 +69,23 @@ const Dashboard = () => {
       </header>
 
       <main className="max-w-6xl mx-auto px-4 py-4">
-        {/* Banner SLIM - Altura reduzida para elegância */}
+        {/* Banner SLIM - Identidade Visual de Elite */}
         <section 
           className="relative overflow-hidden rounded-t-3xl border-t border-x border-white/10 transition-all duration-700" 
           style={{ background: `linear-gradient(135deg, ${colors.primary} 0%, ${colors.primary}EE 100%)` }}
         >
-          {/* Faixas Diagonais Sutis */}
           <div className="absolute top-0 right-0 w-64 h-full pointer-events-none overflow-hidden opacity-20">
             <div className="absolute top-0 right-10 w-12 h-[200%] bg-white/20 rotate-[25deg] transform origin-top" />
           </div>
 
           <div className="relative z-10 px-8 py-4 flex flex-col md:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-6">
-              {/* Círculo Branco com ESCUDO GIGANTE (Quase encostando na borda) */}
+              {/* Círculo Branco com ESCUDO GIGANTE (98% do espaço - Quase sem borda) */}
               <div 
-                className="w-20 h-20 rounded-full flex items-center justify-center shadow-2xl shrink-0 border border-black/5"
+                className="w-24 h-24 rounded-full flex items-center justify-center shadow-2xl shrink-0 border border-black/5 overflow-hidden"
                 style={{ backgroundColor: colors.secondary }}
               >
-                <div className="w-[96%] h-[96%] flex items-center justify-center p-0.5">
+                <div className="w-[98%] h-[98%] flex items-center justify-center p-0">
                   <ClubLogo src={teamLogo} alt={activeTeam} size="lg" className="w-full h-full object-contain" />
                 </div>
               </div>
@@ -103,13 +102,13 @@ const Dashboard = () => {
 
             <div className="text-center md:text-right">
               <p className="text-[10px] font-black uppercase tracking-[0.5em] text-white/50 mb-0">Clube do Coração</p>
-              <h2 className="text-4xl font-black italic uppercase leading-none text-white drop-shadow-xl">{activeTeam}</h2>
+              <h2 className="text-5xl font-black italic uppercase leading-none text-white drop-shadow-xl">{activeTeam}</h2>
             </div>
           </div>
         </section>
 
-        {/* Barra de Links Vitrificada FINA */}
-        <section className="relative z-20 -mt-px border border-white/10 rounded-b-3xl overflow-hidden">
+        {/* Barra de Links Vitrificada */}
+        <section className="relative z-20 -mt-px border border-white/10 rounded-b-3xl overflow-hidden shadow-2xl">
           <div className="absolute inset-0 bg-black/90 backdrop-blur-3xl" />
           <div className="relative px-10 py-3 flex items-center gap-8 overflow-x-auto no-scrollbar">
             <Link to="#" className="flex items-center gap-2.5 text-[10px] font-black uppercase tracking-widest text-zinc-400 hover:text-white transition-all">
