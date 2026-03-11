@@ -52,18 +52,13 @@ const Dashboard = () => {
       </header>
 
       <main className="max-w-6xl mx-auto px-2 md:px-4 py-4">
-        {/* BANNER PRINCIPAL - DESIGN UNIFICADO E BLINDADO */}
         <section className="relative overflow-hidden rounded-t-3xl border border-white/10 h-[200px] sm:h-[220px] md:h-[280px] landscape:h-[180px]" style={{ backgroundColor: colors.primary }}>
-          {/* FAIXAS COM OPACIDADE GRADUAL */}
           <div className="absolute inset-0 pointer-events-none overflow-hidden">
             <div className="absolute top-[-50%] right-[5%] w-[80px] md:w-[150px] h-[200%] bg-white opacity-40 rotate-[25deg] shadow-2xl transition-all" />
-            <div className="absolute top-[-50%] right-[15%] w-[20px] md:w-[40px] h-[200%] bg-white opacity-20 rotate-[25deg] transition-all" />
-            <div className="absolute top-[-50%] right-[20%] w-[8px] md:w-[15px] h-[200%] bg-white opacity-10 rotate-[25deg] transition-all" />
           </div>
 
           <div className="relative z-10 h-full px-4 md:px-12 flex items-center justify-between">
             <div className="flex items-center gap-5 md:gap-12 min-w-0 flex-1">
-              {/* EMBLEMA GIGANTE - AUMENTADO E PREENCHIMENTO 98% */}
               <div className="w-32 h-32 sm:w-36 sm:h-36 md:w-56 md:h-56 landscape:w-28 landscape:h-28 rounded-full flex items-center justify-center bg-white shadow-2xl border-4 border-black/10 overflow-hidden shrink-0 transition-all">
                 <div className="w-[98%] h-[98%] flex items-center justify-center">
                   <ClubLogo src={heartTeam?.logoUrl} alt={heartTeam?.nome} size="lg" className="w-full h-full object-contain" />
@@ -71,44 +66,32 @@ const Dashboard = () => {
               </div>
               
               <div className="text-white min-w-0 flex-1">
-                {/* NOME RESPONSIVO: Sem truncate, com quebra de linha e tamanhos ajustados */}
-                <h1 className="text-3xl sm:text-4xl md:text-6xl font-black uppercase italic tracking-tighter leading-none mb-3 drop-shadow-xl text-wrap break-words">
+                {/* O ajuste de tamanho está aqui: diminui o texto se for longo */}
+                <h1 className="text-xl sm:text-2xl md:text-5xl font-black uppercase italic tracking-tighter leading-none mb-3 drop-shadow-xl text-wrap break-words max-w-full">
                   {profile.nome_exibicao}
                 </h1>
                 <div className="flex flex-col gap-1.5 font-medium uppercase text-[10px] sm:text-xs md:text-sm tracking-widest text-white/90">
-                  <span className="flex items-center gap-1.5 text-wrap break-words">
-                    <MapPin className="w-4 h-4 shrink-0" /> {profile.cidade || "CIDADE"}, {profile.estado || "UF"} • Mascote: {heartTeam?.mascote || "MASCOTE"}
-                  </span>
-                  <span className="flex items-center gap-1.5 text-yellow-300 font-bold">
-                    <Trophy className="w-4 h-4 shrink-0" /> EMBAIXADOR BRONZE
-                  </span>
+                  <span className="flex items-center gap-1.5"><MapPin className="w-4 h-4" /> {profile.cidade || "GOIÂNIA"}, {profile.estado || "GO"} • {heartTeam?.mascote || "TIGRÃO"}</span>
+                  <span className="flex items-center gap-1.5 text-yellow-300 font-bold"><Trophy className="w-4 h-4" /> EMBAIXADOR BRONZE</span>
                 </div>
               </div>
             </div>
 
             <div className="text-right hidden lg:block pr-6 shrink-0">
-              <p className="text-[14px] font-black uppercase tracking-[0.6em] text-white/60 mb-1">Clube do Coração</p>
-              <h2 className="text-6xl md:text-8xl font-black italic uppercase leading-none drop-shadow-2xl">{heartTeam?.nome || "CLUBE"}</h2>
+              <p className="text-[12px] font-black uppercase tracking-[0.6em] text-white/60 mb-1">Clube do Coração</p>
+              <h2 className="text-4xl md:text-7xl font-black italic uppercase leading-none drop-shadow-2xl">{heartTeam?.nome || "VILA NOVA"}</h2>
             </div>
           </div>
         </section>
 
-        {/* BARRA DE LINKS ESTRATÉGICOS */}
         <section className="relative z-20 -mt-px border border-white/10 rounded-b-3xl overflow-hidden shadow-2xl bg-black/95">
           <div className="relative px-4 md:px-12 py-4 md:py-6 flex items-center justify-around md:justify-start gap-4 md:gap-12 overflow-x-auto no-scrollbar">
-            <Link to="#" className="flex flex-col md:flex-row items-center gap-1 md:gap-3 text-[10px] md:text-[14px] font-black uppercase tracking-widest text-zinc-400 hover:text-white transition-all min-w-max">
-              <Flame className="w-6 h-6 text-red-600" /> Mapa de Calor
-            </Link>
-            <Link to="#" className="flex flex-col md:flex-row items-center gap-1 md:gap-3 text-[10px] md:text-[14px] font-black uppercase tracking-widest text-zinc-400 hover:text-white transition-all min-w-max">
-              <BarChart3 className="w-6 h-6 text-red-600" /> ESTATÍSTICAS
-            </Link>
-            <Link to="#" className="flex flex-col md:flex-row items-center gap-1 md:gap-3 text-[10px] md:text-[14px] font-black uppercase tracking-widest text-zinc-400 hover:text-white transition-all min-w-max">
-              <Medal className="w-6 h-6 text-red-600" /> RANKING
-            </Link>
+            <Link to="#" className="flex flex-col md:flex-row items-center gap-1 md:gap-3 text-[10px] md:text-[14px] font-black uppercase tracking-widest text-zinc-400 hover:text-white transition-all min-w-max"><Flame className="w-6 h-6 text-red-600" /> Mapa de Calor</Link>
+            <Link to="#" className="flex flex-col md:flex-row items-center gap-1 md:gap-3 text-[10px] md:text-[14px] font-black uppercase tracking-widest text-zinc-400 hover:text-white transition-all min-w-max"><BarChart3 className="w-6 h-6 text-red-600" /> ESTATÍSTICAS</Link>
+            <Link to="#" className="flex flex-col md:flex-row items-center gap-1 md:gap-3 text-[10px] md:text-[14px] font-black uppercase tracking-widest text-zinc-400 hover:text-white transition-all min-w-max"><Medal className="w-6 h-6 text-red-600" /> RANKING</Link>
           </div>
         </section>
 
-        {/* BARRA DO INTRUSO */}
         {queriedTeam && (
           <div className="mt-6 overflow-hidden rounded-2xl border border-white/5 bg-zinc-900/60 p-5 flex items-center justify-between shadow-2xl animate-in fade-in slide-in-from-top duration-500">
             <div className="flex items-center gap-5">
@@ -117,19 +100,14 @@ const Dashboard = () => {
               </div>
               <div>
                 <span className="text-[12px] font-black uppercase tracking-widest text-zinc-500">Consultando:</span>
-                <h3 className="text-3xl font-black italic uppercase text-white leading-none text-wrap break-words">
-                  {queriedTeam.name} <span className="text-[12px] text-zinc-600 not-italic ml-2 uppercase font-medium">{queriedTeam.location} • {queriedTeam.mascote}</span>
-                </h3>
+                <h3 className="text-2xl font-black italic uppercase text-white leading-none">{queriedTeam.name}</h3>
               </div>
             </div>
             <button onClick={() => setQueriedTeam(null)} className="text-red-500 text-[12px] font-black uppercase hover:underline">Fechar X</button>
           </div>
         )}
 
-        {/* RADAR DE NOTÍCIAS REAL-TIME */}
-        <div className="mt-10">
-          <NewsCarousel teamName={queriedTeam?.name || heartTeam?.nome || "Vila Nova"} />
-        </div>
+        <div className="mt-10"><NewsCarousel teamName={queriedTeam?.name || heartTeam?.nome || "Vila Nova"} /></div>
       </main>
     </div>
   );
