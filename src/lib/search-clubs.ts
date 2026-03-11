@@ -29,9 +29,8 @@ export function searchClubsLocal(query: string, limit = 10): ClubSearchResult[] 
     removeAccents(c.cidade.toLowerCase()).includes(normalizedQuery)
   );
 
-  return matches.slice(0, limit).map((c) => ({
-    id: String(c.api_id),
-    api_id: c.api_id,
+  return matches.slice(0, limit).map((c, i) => ({
+    id: String(i),
     name: c.nome,
     shortName: c.nome_curto,
     location: `${c.cidade}, ${c.estado}, ${c.pais}`,
