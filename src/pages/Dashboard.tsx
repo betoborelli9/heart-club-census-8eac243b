@@ -79,7 +79,7 @@ const Dashboard = () => {
                     <MapPin className="w-3.5 h-3.5" /> {profile.cidade || "GOIÂNIA"}, {profile.estado || "GO"} • Mascote: {heartTeam?.mascote || "TIGRÃO"}
                   </span>
                   <span className="flex items-center gap-1.5 text-yellow-300 font-bold">
-                    <Trophy className="w-3.5 h-3.5" /> EMBAIXADOR do BRONZE
+                    <Trophy className="w-3.5 h-3.5" /> EMBAIXADOR BRONZE
                   </span>
                 </div>
               </div>
