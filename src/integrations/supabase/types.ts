@@ -219,7 +219,7 @@ export type Database = {
           is_original_vote: boolean
           is_suspicious: boolean | null
           pais: string
-          user_id: string | null
+          user_id: string
         }
         Insert: {
           cidade: string
@@ -233,7 +233,7 @@ export type Database = {
           is_original_vote?: boolean
           is_suspicious?: boolean | null
           pais: string
-          user_id?: string | null
+          user_id: string
         }
         Update: {
           cidade?: string
@@ -247,7 +247,7 @@ export type Database = {
           is_original_vote?: boolean
           is_suspicious?: boolean | null
           pais?: string
-          user_id?: string | null
+          user_id?: string
         }
         Relationships: []
       }
