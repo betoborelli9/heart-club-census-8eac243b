@@ -9,11 +9,10 @@ const removeAccents = (str: string) =>
 
 export interface ClubSearchResult {
   id: string;
-  api_id: number;
   name: string;
   shortName: string;
   location: string;
-  logo: string;          // ← sempre clube.logoUrl
+  logo: string;
   city: string;
   state: string;
   country: string;
