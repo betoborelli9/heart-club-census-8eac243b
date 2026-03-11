@@ -1,4 +1,5 @@
-// BUILD: 2026-03-08T12:00:00Z - CORREÇÃO DE REDIRECIONAMENTO E VOTO ÚNICO
+// Path: src/pages/Voting.tsx
+// BUILD: 2026-03-08T12:00:00Z - CORREÇÃO DE REDIRECIONAMENTO E VOTO ÚNICO (Z-INDEX FIX)
 import { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Heart, Search, Check, Loader2, Shield, X, Sparkles, Plus } from "lucide-react";
@@ -41,17 +42,14 @@ const Voting = () => {
   const { user, profile, isLoading, isAuthenticated, isProfileComplete, hasVoted, refreshProfile } = useUser();
   const { toast } = useToast();
 
-  // Refs
   const heartInputRef = useRef<HTMLInputElement>(null);
   const sympathyInputRef = useRef<HTMLInputElement>(null);
 
-  // Heart club
   const [heartSearch, setHeartSearch] = useState("");
   const [heartResults, setHeartResults] = useState<ClubResult[]>([]);
   const [heartClub, setHeartClub] = useState<ClubResult | null>(null);
   const [heartOpen, setHeartOpen] = useState(false);
 
-  // Sympathy clubs
   const [sympathySearch, setSympathySearch] = useState("");
   const [sympathyResults, setSympathyResults] = useState<ClubResult[]>([]);
   const [sympathyClubs, setSympathyClubs] = useState<ClubResult[]>([]);
@@ -66,7 +64,6 @@ const Voting = () => {
     else if (!isLoading && isAuthenticated && hasVoted) navigate("/dashboard", { replace: true });
   }, [isLoading, isAuthenticated, isProfileComplete, hasVoted, navigate]);
 
-  // Local search - instantaneous
   const doSearch = useCallback((query: string, setter: (r: ClubResult[]) => void, setOpen: (b: boolean) => void) => {
     if (query.length < 2) { setter([]); setOpen(false); return; }
     const results = searchClubsLocal(query, 10).map(toClubResult);
@@ -116,8 +113,6 @@ const Voting = () => {
     setSubmitting(true);
     try {
       const fingerprint = await generateFingerprint();
-
-      // Insert principal com .select().single() para garantir o ID antes do trigger de tracking
       const { data: mainVote, error: mainError } = await supabase
         .from("votos")
         .insert({
@@ -134,9 +129,8 @@ const Voting = () => {
       if (mainError) throw mainError;
       if (!mainVote?.id) throw new Error("Falha ao registrar voto principal.");
 
-      // Inserir simpatias sequencialmente, cada uma com .select().single()
       for (const sym of sympathyClubs) {
-        const { error: symError } = await supabase
+        await supabase
           .from("votos")
           .insert({
             user_id: user.id,
@@ -149,8 +143,6 @@ const Voting = () => {
           })
           .select()
           .single();
-
-        if (symError) throw symError;
       }
 
       await refreshProfile();
@@ -173,18 +165,18 @@ const Voting = () => {
   }) => {
     if (!open) return null;
     return (
-      <div className="absolute top-full left-0 right-0 z-[9999] mt-1 rounded-xl border border-border/30 max-h-72 overflow-y-auto bg-card shadow-2xl">
+      <div className="absolute top-full left-0 right-0 z-[999] mt-1 rounded-xl border border-border/30 max-h-72 overflow-y-auto bg-card shadow-2xl">
         {results.length === 0 && searchQuery.trim().length >= 2 && (
           <div className="py-3 px-4 text-center space-y-2">
             <p className="text-sm text-muted-foreground">Nenhum clube encontrado para "{searchQuery}"</p>
-            <button onMouseDown={(e) => { e.preventDefault(); onCustom(); }} className="inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline">
+            <button onMouseDown={(e) => { e.preventDefault(); onCustom(); }} className="inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline cursor-pointer">
               <Plus className="w-4 h-4" /> Adicionar "{searchQuery.trim()}" manualmente
             </button>
           </div>
         )}
         {results.map((club, i) => (
           <button key={`${club.id || club.name}-${i}`} onMouseDown={(e) => { e.preventDefault(); onSelect(club); }}
-            className="w-full flex items-center gap-3 px-4 py-3 hover:bg-primary/10 transition-colors text-left border-b border-border/10 last:border-0">
+            className="w-full flex items-center gap-3 px-4 py-3 hover:bg-primary/10 transition-colors text-left border-b border-border/10 last:border-0 cursor-pointer">
             <ClubLogo src={club.logo} alt={club.name} size="sm" />
             <div className="min-w-0 flex-1">
               <p className="font-semibold text-foreground text-sm truncate">{club.name}</p>
@@ -193,13 +185,6 @@ const Voting = () => {
             </div>
           </button>
         ))}
-        {results.length > 0 && searchQuery.trim().length >= 2 && (
-          <button onMouseDown={(e) => { e.preventDefault(); onCustom(); }}
-            className="w-full flex items-center gap-3 px-4 py-3 hover:bg-primary/10 transition-colors text-left border-t border-border/20">
-            <div className="w-8 h-8 rounded bg-primary/10 flex items-center justify-center"><Plus className="w-4 h-4 text-primary" /></div>
-            <p className="text-sm text-muted-foreground">Não encontrou? Adicionar <strong className="text-foreground">"{searchQuery.trim()}"</strong></p>
-          </button>
-        )}
       </div>
     );
   };
@@ -214,30 +199,28 @@ const Voting = () => {
           <img src={logo} alt="Heart Club" className="mx-auto w-20 h-20 object-contain" />
           <h1 className="text-2xl font-display font-bold text-foreground">Voto Sagrado</h1>
           <p className="text-sm text-muted-foreground max-w-xs mx-auto">
-            Escolha seu Clube do Coração e até 4 clubes de simpatia. Busque qualquer time do planeta! 🌍
+            Escolha seu Clube do Coração e até 4 clubes de simpatia.🌍
           </p>
         </motion.div>
 
         {/* Heart Club */}
-        <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.1 }} className="space-y-2">
+        <motion.div className="space-y-2 relative z-[100]">
           <label className="text-sm font-semibold text-foreground flex items-center gap-2">
             <Heart className="w-4 h-4 text-primary" fill="currentColor" /> Clube do Coração
           </label>
           {heartClub ? (
-            <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
-              className="flex items-center gap-3 glass-card glow-border rounded-xl p-4">
+            <div className="flex items-center gap-3 glass-card glow-border rounded-xl p-4 relative z-[101]">
               <ClubLogo src={heartClub.logo} alt={heartClub.name} size="md" />
               <div className="flex-1 min-w-0">
                 <p className="font-bold text-foreground">{heartClub.name}</p>
-                <p className="text-xs text-muted-foreground">{heartClub.isCustom ? "Adicionado manualmente" : heartClub.location}</p>
-                {heartClub.mascote && !heartClub.isCustom && <p className="text-[11px] text-primary/70 italic">🐾 {heartClub.mascote}</p>}
+                <p className="text-xs text-muted-foreground">{heartClub.isCustom ? "Manual" : heartClub.location}</p>
               </div>
-              <button onClick={() => setHeartClub(null)} className="text-muted-foreground hover:text-foreground p-1"><X className="w-4 h-4" /></button>
-            </motion.div>
+              <button onClick={() => setHeartClub(null)} className="text-muted-foreground hover:text-foreground p-1 cursor-pointer relative z-[110]"><X className="w-4 h-4" /></button>
+            </div>
           ) : (
-            <div className="relative">
+            <div className="relative z-[101]">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-primary" />
-              <Input ref={heartInputRef} className="pl-10 h-12 bg-secondary/30 border-primary/30 focus:border-primary" placeholder="Buscar qualquer clube do mundo..."
+              <Input ref={heartInputRef} className="pl-10 h-12 bg-secondary/30 border-primary/30 focus:border-primary" placeholder="Buscar clube..."
                 value={heartSearch} onChange={e => setHeartSearch(e.target.value)} onBlur={() => setTimeout(() => setHeartOpen(false), 200)} autoComplete="off" />
               <ClubDropdown results={heartResults} open={heartOpen} onSelect={selectHeart} searchQuery={heartSearch} onCustom={selectHeartCustom} />
             </div>
@@ -245,67 +228,61 @@ const Voting = () => {
         </motion.div>
 
         {/* Sympathy */}
-        <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.2 }} className="space-y-3">
+        <motion.div className="space-y-3 relative z-[50]">
           <label className="text-sm font-semibold text-foreground flex items-center gap-2">
             <Sparkles className="w-4 h-4 text-primary" /> Clubes de Simpatia
-            <span className="text-xs font-normal text-muted-foreground ml-1">(opcionais, até 4)</span>
           </label>
-          <AnimatePresence>
-            {sympathyClubs.map((club, idx) => (
-              <motion.div key={`sym-${club.name}-${idx}`} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }}
-                className="flex items-center gap-3 glass-card rounded-xl p-3 border border-border/20">
-                <ClubLogo src={club.logo} alt={club.name} size="sm" />
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium text-foreground text-sm">{club.name}</p>
-                  <p className="text-xs text-muted-foreground">{club.isCustom ? "Adicionado manualmente" : club.location}</p>
-                  {club.mascote && !club.isCustom && <p className="text-[11px] text-primary/70 italic">🐾 {club.mascote}</p>}
-                </div>
-                <button onClick={() => removeSympathy(idx)} className="text-muted-foreground hover:text-destructive p-1"><X className="w-4 h-4" /></button>
-              </motion.div>
-            ))}
-          </AnimatePresence>
+          <div className="space-y-2">
+            <AnimatePresence>
+              {sympathyClubs.map((club, idx) => (
+                <motion.div key={`sym-${idx}`} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                  className="flex items-center gap-3 glass-card rounded-xl p-3 border border-border/20 relative z-[60]">
+                  <ClubLogo src={club.logo} alt={club.name} size="sm" />
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-foreground text-sm">{club.name}</p>
+                  </div>
+                  <button 
+                    type="button"
+                    onMouseDown={(e) => { e.preventDefault(); removeSympathy(idx); }}
+                    className="text-muted-foreground hover:text-destructive p-2 cursor-pointer relative z-[70] pointer-events-auto"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </motion.div>
+              ))}
+            </AnimatePresence>
+          </div>
           {sympathyClubs.length < 4 && (
-            <div className="relative">
+            <div className="relative z-[55]">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input ref={sympathyInputRef} className="pl-10 h-11 bg-secondary/30 border-border/30 focus:border-primary"
-                placeholder={`Buscar clube de simpatia ${sympathyClubs.length + 1}...`}
+                placeholder="Buscar simpatia..."
                 value={sympathySearch} onChange={e => setSympathySearch(e.target.value)} onBlur={() => setTimeout(() => setSympathyOpen(false), 200)} autoComplete="off" />
               <ClubDropdown results={sympathyResults} open={sympathyOpen} onSelect={selectSympathy} searchQuery={sympathySearch} onCustom={selectSympathyCustom} />
             </div>
           )}
         </motion.div>
 
-        {/* Warning + Submit */}
-        <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.3 }} className="space-y-4 pt-2">
-          <div className="glass-card rounded-xl p-4 text-center space-y-2">
-            <Shield className="w-5 h-5 text-primary mx-auto" />
-            <p className="text-xs text-muted-foreground leading-relaxed">
-              <strong className="text-foreground">Atenção:</strong> Após confirmar, seu voto não poderá ser alterado.
-            </p>
-          </div>
-          <Button className="w-full h-14 font-bold text-lg btn-orange-gradient rounded-xl" disabled={!heartClub} onClick={() => setShowConfirm(true)}>
+        {/* Submit */}
+        <div className="pt-2 relative z-10">
+          <Button className="w-full h-14 font-bold text-lg btn-orange-gradient rounded-xl cursor-pointer" disabled={!heartClub} onClick={() => setShowConfirm(true)}>
             <Heart className="w-5 h-5 mr-2" fill="currentColor" /> Confirmar Voto
           </Button>
-        </motion.div>
+        </div>
       </div>
 
-      {/* Confirm Dialog */}
       <Dialog open={showConfirm} onOpenChange={setShowConfirm}>
-        <DialogContent className="max-w-sm glass-card border-border/30">
+        <DialogContent className="max-w-sm glass-card border-border/30 z-[9999]">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 font-display">
-              <Heart className="w-5 h-5 text-primary" fill="currentColor" /> Confirmar Voto
-            </DialogTitle>
-            <DialogDescription className="text-muted-foreground space-y-2">
-              <span>Clube do Coração: <strong className="text-foreground">{heartClub?.name}</strong></span>
-              {sympathyClubs.length > 0 && <span className="block">Simpatia: {sympathyClubs.map(c => c.name).join(", ")}</span>}
+            <DialogTitle className="flex items-center gap-2 font-display">Confirmar Voto</DialogTitle>
+            <DialogDescription>
+              Coração: <strong>{heartClub?.name}</strong>
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => setShowConfirm(false)} className="glass-card border-border/50">Voltar</Button>
+            <Button variant="outline" onClick={() => setShowConfirm(false)}>Voltar</Button>
             <Button onClick={handleConfirmVote} className="font-bold btn-orange-gradient" disabled={submitting}>
-              {submitting ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <Heart className="w-4 h-4 mr-1" fill="currentColor" />}
-              Confirmar
+              {submitting ? <Loader2 className="w-5 h-5 animate-spin" /> : "Confirmar"}
             </Button>
           </DialogFooter>
         </DialogContent>
