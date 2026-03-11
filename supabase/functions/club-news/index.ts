@@ -12,6 +12,29 @@ function extractSource(title: string): { cleanTitle: string; source: string } {
   return { cleanTitle: title, source: "Google News" };
 }
 
+function extractImage(block: string): string | null {
+  // Try enclosure
+  const enclosure = block.match(/<enclosure[^>]+url="([^"]+)"/);
+  if (enclosure) return enclosure[1];
+
+  // Try media:content
+  const media = block.match(/<media:content[^>]+url="([^"]+)"/);
+  if (media) return media[1];
+
+  // Try media:thumbnail
+  const thumb = block.match(/<media:thumbnail[^>]+url="([^"]+)"/);
+  if (thumb) return thumb[1];
+
+  // Try img inside description
+  const descImg = block.match(/<description[^>]*>([\s\S]*?)<\/description>/);
+  if (descImg) {
+    const imgMatch = (descImg[1] || "").match(/src="([^"]+)"/);
+    if (imgMatch) return imgMatch[1];
+  }
+
+  return null;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -44,7 +67,6 @@ serve(async (req) => {
 
     const xml = await rssResponse.text();
 
-    // Parse XML items manually (no external deps)
     const items: any[] = [];
     const itemRegex = /<item>([\s\S]*?)<\/item>/g;
     let match;
@@ -57,12 +79,14 @@ serve(async (req) => {
 
       const rawTitle = get("title");
       const { cleanTitle, source } = extractSource(rawTitle);
+      const imageUrl = extractImage(block);
 
       items.push({
         title: cleanTitle,
         link: get("link"),
         pubDate: get("pubDate"),
         source,
+        imageUrl,
         guid: get("guid") || `${items.length}`,
       });
     }
