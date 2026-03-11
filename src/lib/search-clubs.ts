@@ -9,11 +9,10 @@ const removeAccents = (str: string) =>
 
 export interface ClubSearchResult {
   id: string;
-  api_id: number;
   name: string;
   shortName: string;
   location: string;
-  logo: string;          // ← sempre clube.logoUrl
+  logo: string;
   city: string;
   state: string;
   country: string;
@@ -30,9 +29,8 @@ export function searchClubsLocal(query: string, limit = 10): ClubSearchResult[] 
     removeAccents(c.cidade.toLowerCase()).includes(normalizedQuery)
   );
 
-  return matches.slice(0, limit).map((c) => ({
-    id: String(c.api_id),
-    api_id: c.api_id,
+  return matches.slice(0, limit).map((c, i) => ({
+    id: String(i),
     name: c.nome,
     shortName: c.nome_curto,
     location: `${c.cidade}, ${c.estado}, ${c.pais}`,

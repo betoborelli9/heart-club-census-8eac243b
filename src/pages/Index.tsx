@@ -29,11 +29,12 @@ const Index = () => {
     setIsSubmitting(true);
     try {
       const { error } = await supabase.from("votos").upsert({
-        user_id: user?.id,
+        user_id: user?.id!,
         clube_nome: heartTeam.nome,
-        simpatia: sympathyTeams.map(t => t.nome),
-        updated_at: new Date().toISOString(),
-      });
+        pais: "Brasil",
+        estado: profile?.estado || "",
+        cidade: profile?.cidade || "",
+      }, { onConflict: "user_id" });
 
       if (error) throw error;
 
@@ -109,11 +110,11 @@ const Index = () => {
           {sympathyTeams.length < 4 && (
             <div className="relative z-50">
               <ClubSearch onSelect={(club) => {
-                if (heartTeam?.nome === club.nome) {
+                if (heartTeam?.nome === club.name) {
                   toast.error("Este já é seu time do coração!");
                   return;
                 }
-                if (sympathyTeams.find(t => t.nome === club.nome)) return;
+                if (sympathyTeams.find(t => t.name === club.name)) return;
                 setSympathyTeams([...sympathyTeams, club]);
               }} />
             </div>

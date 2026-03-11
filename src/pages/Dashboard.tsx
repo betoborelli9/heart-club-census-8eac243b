@@ -33,7 +33,7 @@ const Dashboard = () => {
             else if (teamName.includes("Palmeiras")) setColors({ primary: "#006437", secondary: "#FFFFFF" });
             else if (teamName.includes("Sampaio Corrêa")) setColors({ primary: "#ffc107", secondary: "#198754" });
             else if (teamName.includes("São Paulo")) setColors({ primary: "#FFFFFF", secondary: "#E21A21" });
-            else setColors({ primary: clubInfo?.cor_principal || "#E21A21", secondary: "#FFFFFF" });
+            else setColors({ primary: "#E21A21", secondary: "#FFFFFF" });
         };
         loadInitial();
     }, [user]);
@@ -86,7 +86,7 @@ const Dashboard = () => {
                         <div className="flex items-center gap-5 md:gap-12 min-w-0 flex-1">
                             {/* Emblema (PREENCHENDO 99%) */}
                             <div className="w-32 h-32 sm:w-36 sm:h-36 md:w-56 md:h-56 landscape:w-28 landscape:h-28 rounded-full bg-white shadow-2xl border-4 border-black/10 overflow-hidden shrink-0 transition-all flex items-center justify-center">
-                                <ClubLogo src={heartTeam?.logoUrl} alt={heartTeam?.nome} size="lg" className="w-full h-full object-contain" style={{ maxWidth: '90%', maxHeight: '90%' }} />
+                                <ClubLogo src={heartTeam?.logoUrl} alt={heartTeam?.nome || ""} size="lg" className="w-full h-full object-contain" />
                             </div>
                             <div className="text-white min-w-0 flex-1">
                                 <h1 className="font-black uppercase italic tracking-tighter leading-none mb-3 drop-shadow-xl text-wrap break-words max-w-full text-xl sm:text-2xl md:text-3xl lg:text-4xl truncate">
