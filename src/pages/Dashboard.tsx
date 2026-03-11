@@ -33,7 +33,7 @@ const Dashboard = () => {
             else if (teamName.includes("Palmeiras")) setColors({ primary: "#006437", secondary: "#FFFFFF" });
             else if (teamName.includes("Sampaio Corrêa")) setColors({ primary: "#ffc107", secondary: "#198754" });
             else if (teamName.includes("São Paulo")) setColors({ primary: "#FFFFFF", secondary: "#E21A21" });
-            else setColors({ primary: clubInfo?.cor_principal || "#E21A21", secondary: "#FFFFFF" });
+            else setColors({ primary: "#E21A21", secondary: "#FFFFFF" });
         };
         loadInitial();
     }, [user]);
