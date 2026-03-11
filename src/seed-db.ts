@@ -17,11 +17,10 @@ async function seedDatabase() {
     const { error } = await supabase
       .from('clubes_cache')
       .upsert({
-        api_id: club.api_id,
         nome: club.nome,
         nome_curto: club.nome_curto,
-        escudo_url: `https://media.api-football.com/teams/${club.api_id}.png`
-      }, { onConflict: 'api_id' });
+        escudo_url: club.logoUrl,
+      }, { onConflict: 'nome' });
 
     if (error) {
       console.error(`❌ Erro em ${club.nome}:`, error.message);

@@ -29,11 +29,12 @@ const Index = () => {
     setIsSubmitting(true);
     try {
       const { error } = await supabase.from("votos").upsert({
-        user_id: user?.id,
+        user_id: user?.id!,
         clube_nome: heartTeam.nome,
-        simpatia: sympathyTeams.map(t => t.nome),
-        updated_at: new Date().toISOString(),
-      });
+        pais: "Brasil",
+        estado: profile?.estado || "",
+        cidade: profile?.cidade || "",
+      }, { onConflict: "user_id" });
 
       if (error) throw error;
 
