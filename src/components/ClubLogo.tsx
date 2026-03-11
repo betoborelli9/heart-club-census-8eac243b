@@ -12,9 +12,9 @@ type LogoSize = "xs" | "sm" | "md" | "lg" | "xl";
 const sizeClasses: Record<LogoSize, string> = {
   xs: "w-6 h-6 sm:w-7 sm:h-7",
   sm: "w-8 h-8 sm:w-10 sm:h-10",       // dropdown / lista
-  md: "w-10 h-10 sm:w-12 sm:h-12",      // voto
-  lg: "w-14 h-14 sm:w-16 sm:h-16",      // dashboard profile
-  xl: "w-20 h-20 sm:w-24 sm:h-24",      // destaque
+  md: "w-10 h-10 sm:w-12 sm:h-12",     // voto
+  lg: "w-14 h-14 sm:w-16 sm:h-16",     // dashboard profile
+  xl: "w-20 h-20 sm:w-24 sm:h-24",     // destaque
 };
 
 const fallbackIconSize: Record<LogoSize, string> = {
@@ -40,7 +40,7 @@ export const ClubLogo = ({ src, alt, size = "md", className }: ClubLogoProps) =>
       <div
         className={cn(
           sizeClasses[size],
-          "rounded-full bg-secondary/50 flex items-center justify-center flex-shrink-0",
+          "rounded-full bg-secondary/50 flex items-center justify-center shrink-0",
           className
         )}
         title={alt}
@@ -51,12 +51,21 @@ export const ClubLogo = ({ src, alt, size = "md", className }: ClubLogoProps) =>
   }
 
   return (
-    <img
-      src={src}
-      alt={alt}
-      className={cn(sizeClasses[size], "object-contain flex-shrink-0", className)}
-      onError={() => setError(true)}
-      loading="lazy"
-    />
+    <div
+      className={cn(
+        sizeClasses[size],
+        "flex items-center justify-center shrink-0 overflow-hidden rounded-full",
+        className
+      )}
+      title={alt}
+    >
+      <img
+        src={src}
+        alt={alt}
+        className="w-full h-full object-contain"
+        onError={() => setError(true)}
+        loading="lazy"
+      />
+    </div>
   );
 };

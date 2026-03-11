@@ -42,14 +42,13 @@ export const ClubSearch = ({ onSelect }: { onSelect: (club: ClubSearchResult) =>
       </div>
 
       {results.length > 0 && (
-        <div className="absolute top-14 left-0 right-0 bg-zinc-950 border border-white/10 rounded-2xl overflow-hidden z-[1000] shadow-[0_20px_50px_rgba(0,0,0,1)] max-h-[400px] overflow-y-auto">
+        <div className="absolute top-14 left-0 right-0 bg-zinc-950 border border-white/10 rounded-2xl overflow-hidden z-[1200] shadow-[0_20px_50px_rgba(0,0,0,1)] max-h-[400px] overflow-y-auto">
           {results.map((club) => (
-            <div
+            <button
               key={`${club.api_id}-${club.shortName}`}
-              // O SEGREDO É O ONMOUSEDOWN PARA CAPTURAR O CLIQUE ANTES DO INPUT FECHAR
+              // Usando button + onMouseDown para capturar clique antes do input perder foco
               onMouseDown={(e) => {
                 e.preventDefault();
-                console.log("CLIQUE RECONHECIDO NO CLUBE:", club.name);
                 onSelect(club);
                 setResults([]);
                 setQuery("");
@@ -67,7 +66,7 @@ export const ClubSearch = ({ onSelect }: { onSelect: (club: ClubSearchResult) =>
                   {club.location} • 🐾 {club.mascote}
                 </span>
               </div>
-            </div>
+            </button>
           ))}
         </div>
       )}
