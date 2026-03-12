@@ -71,8 +71,13 @@ const Voting = () => {
   useEffect(() => { doSearch(sympathySearch, setSympathyResults, setSympathyOpen); }, [sympathySearch, doSearch]);
 
   const selectHeart = (club: ClubResult) => {
-    setHeartClub(club); setHeartSearch(""); setHeartResults([]); setHeartOpen(false);
+    setHeartClub(club);
+    setHeartSearch("");
+    setHeartResults([]);
+    setHeartOpen(false);
     toast({ title: `${club.name} selecionado! ❤️`, duration: 1500 });
+    // PULA O CURSOR PARA O CAMPO DE SIMPATIA
+    setTimeout(() => sympathyInputRef.current?.focus(), 100);
   };
 
   const selectSympathy = (club: ClubResult) => {
@@ -86,10 +91,8 @@ const Voting = () => {
     setSympathyResults([]);
     setSympathyOpen(false);
 
-    setTimeout(() => {
-      sympathyInputRef.current?.focus();
-    }, 100);
-
+    // MANTÉM O CURSOR NO CAMPO PARA O PRÓXIMO TIME
+    setTimeout(() => sympathyInputRef.current?.focus(), 100);
     toast({ title: `${club.name} adicionado! ✨`, duration: 1500 });
   };
 
@@ -148,13 +151,21 @@ const Voting = () => {
     }
   };
 
+  // DROPDOWN COM FIX DE CLIQUE (onMouseDown)
   const ClubDropdown = ({ results, open, onSelect }: any) => {
     if (!open) return null;
     return (
       <div className="absolute top-full left-0 right-0 z-[999] mt-1 rounded-xl border border-border/30 max-h-72 overflow-y-auto bg-card shadow-2xl">
         {results.map((club: any, i: number) => (
-          <button key={i} onMouseDown={(e) => { e.preventDefault(); onSelect(club); }}
-            className="w-full flex items-center gap-3 px-4 py-3 hover:bg-primary/10 text-left border-b border-border/10 last:border-0">
+          <button 
+            key={i} 
+            type="button"
+            onMouseDown={(e) => { 
+              e.preventDefault(); // Impede o "onBlur" do Input de fechar a lista antes do clique
+              onSelect(club); 
+            }}
+            className="w-full flex items-center gap-3 px-4 py-3 hover:bg-primary/10 text-left border-b border-border/10 last:border-0 cursor-pointer"
+          >
             <ClubLogo src={club.logo} alt={club.name} size="sm" />
             <div className="min-w-0 flex-1">
               <p className="font-semibold text-foreground text-sm truncate">{club.name}</p>
@@ -181,13 +192,20 @@ const Voting = () => {
             <div className="flex items-center gap-3 glass-card rounded-xl p-4 border-2 border-primary">
               <ClubLogo src={heartClub.logo} alt={heartClub.name} size="md" />
               <p className="font-bold flex-1 italic">{heartClub.name}</p>
-              <button onClick={() => setHeartClub(null)}><X className="w-5 h-5" /></button>
+              <button onClick={() => setHeartClub(null)} className="cursor-pointer"><X className="w-5 h-5" /></button>
             </div>
           ) : (
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-primary" />
-              <Input ref={heartInputRef} className="pl-10 h-12" placeholder="Buscar seu time..." value={heartSearch}
-                onChange={e => setHeartSearch(e.target.value)} onBlur={() => setTimeout(() => setHeartOpen(false), 200)} />
+              <Input 
+                ref={heartInputRef} 
+                className="pl-10 h-12" 
+                placeholder="Buscar seu time..." 
+                value={heartSearch}
+                onChange={e => setHeartSearch(e.target.value)} 
+                onFocus={() => heartSearch.length >= 2 && setHeartOpen(true)}
+                onBlur={() => setTimeout(() => setHeartOpen(false), 200)} 
+              />
               <ClubDropdown results={heartResults} open={heartOpen} onSelect={selectHeart} />
             </div>
           )}
@@ -203,8 +221,16 @@ const Voting = () => {
                   className="flex items-center gap-3 glass-card rounded-xl p-3 border border-border/20">
                   <ClubLogo src={club.logo} alt={club.name} size="sm" />
                   <p className="font-medium flex-1 text-sm italic">{club.name}</p>
-                  <button type="button" onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); removeSympathy(idx); }}>
-                    <X className="w-4 h-4 text-muted-foreground hover:text-destructive" />
+                  <button 
+                    type="button" 
+                    onMouseDown={(e) => { 
+                      e.preventDefault(); 
+                      e.stopPropagation(); 
+                      removeSympathy(idx); 
+                    }}
+                    className="cursor-pointer p-1 hover:text-destructive"
+                  >
+                    <X className="w-4 h-4 text-muted-foreground" />
                   </button>
                 </motion.div>
               ))}
@@ -213,8 +239,15 @@ const Voting = () => {
           {sympathyClubs.length < 4 && (
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input ref={sympathyInputRef} className="pl-10 h-11" placeholder="Buscar simpatia..." value={sympathySearch}
-                onChange={e => setSympathySearch(e.target.value)} onBlur={() => setTimeout(() => setSympathyOpen(false), 200)} />
+              <Input 
+                ref={sympathyInputRef} 
+                className="pl-10 h-11" 
+                placeholder="Buscar simpatia..." 
+                value={sympathySearch}
+                onChange={e => setSympathySearch(e.target.value)} 
+                onFocus={() => sympathySearch.length >= 2 && setSympathyOpen(true)}
+                onBlur={() => setTimeout(() => setSympathyOpen(false), 200)} 
+              />
               <ClubDropdown results={sympathyResults} open={sympathyOpen} onSelect={selectSympathy} />
             </div>
           )}
