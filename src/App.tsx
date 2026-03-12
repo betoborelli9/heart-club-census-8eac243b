@@ -11,6 +11,7 @@ import ProfileSetup from "./pages/ProfileSetup";
 import Voting from "./pages/Voting";
 import Dashboard from "./pages/Dashboard";
 import Admin from "./pages/Admin";
+import MapaCalor from "./pages/MapaCalor";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
