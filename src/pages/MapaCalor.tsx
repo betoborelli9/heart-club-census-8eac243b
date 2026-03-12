@@ -153,7 +153,7 @@ const MapaCalor = () => {
       p_filter_value: filter,
     });
     if (!error && data) {
-      const entries = (Array.isArray(data) ? data : []) as HeatmapEntry[];
+      const entries = (Array.isArray(data) ? data : []) as unknown as HeatmapEntry[];
       setHeatData(entries);
       setTotalVotes(entries.reduce((s, e) => s + Number(e.votes), 0));
     } else {
