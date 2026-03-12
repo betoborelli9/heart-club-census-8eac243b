@@ -171,7 +171,7 @@ const MapaCalor = () => {
       p_filter_value: filterValue,
     });
     if (data) {
-      setDuelData((Array.isArray(data) ? data : []) as HeatmapEntry[]);
+      setDuelData((Array.isArray(data) ? data : []) as unknown as HeatmapEntry[]);
     }
   };
 
