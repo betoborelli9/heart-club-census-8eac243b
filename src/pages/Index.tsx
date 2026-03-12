@@ -111,13 +111,12 @@ const Index = () => {
           {sympathyTeams.length < 4 && (
             <div className="relative z-[40]">
               <ClubSearch onSelect={(club) => {
-                // Ajustado para aceitar .nome ou .name (dependendo de como a Lovable configurou)
-                const teamName = club.nome || club.name;
+                const teamName = (club as any).nome || club.name;
                 if (heartTeam?.nome === teamName) {
                   toast.error("Este já é seu time do coração!");
                   return;
                 }
-                if (sympathyTeams.find(t => (t.nome || t.name) === teamName)) return;
+                if (sympathyTeams.find(t => ((t as any).nome || t.name) === teamName)) return;
                 setSympathyTeams([...sympathyTeams, club]);
               }} />
             </div>
@@ -125,16 +124,16 @@ const Index = () => {
           
           <div className="grid grid-cols-1 gap-2 mt-4 relative z-[35]">
             {sympathyTeams.map(club => (
-              <div key={club.nome || club.name} className="bg-zinc-900/60 border border-white/5 p-3 rounded-xl flex items-center justify-between group pointer-events-auto">
+              <div key={(club as any).nome || club.name} className="bg-zinc-900/60 border border-white/5 p-3 rounded-xl flex items-center justify-between group pointer-events-auto">
                 <div className="flex items-center gap-3">
-                  <ClubLogo src={club.logoUrl} alt={club.nome || club.name} size="xs" />
-                  <span className="text-[11px] font-black uppercase italic">{club.nome || club.name}</span>
+                  <ClubLogo src={(club as any).logoUrl || club.logo} alt={(club as any).nome || club.name} size="xs" />
+                  <span className="text-[11px] font-black uppercase italic">{(club as any).nome || club.name}</span>
                 </div>
                 <button 
                   type="button"
                   onClick={(e) => {
                     e.preventDefault();
-                    setSympathyTeams(sympathyTeams.filter(t => (t.nome || t.name) !== (club.nome || club.name)));
+                    setSympathyTeams(sympathyTeams.filter(t => ((t as any).nome || t.name) !== ((club as any).nome || club.name)));
                   }}
                   className="text-zinc-600 hover:text-red-500 transition-colors cursor-pointer p-2 relative z-[40]"
                 >
