@@ -194,14 +194,13 @@ const Voting = () => {
   <div className="space-y-2">
     <AnimatePresence>
       {sympathyClubs.map((club, idx) => (
-        <motion.button
+        <motion.div
           key={idx}
-          type="button"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          onClick={() => handleSympathyVote(club)}   // clique para votar
-          className="flex items-center gap-3 glass-card rounded-xl p-3 border border-border/20 w-full text-left hover:bg-zinc-800 transition-colors"
+          className="flex items-center gap-3 glass-card rounded-xl p-3 border border-border/20 cursor-pointer hover:bg-zinc-800 transition-colors"
+          onClick={() => handleSympathyVote(club)}   // <-- clique para votar
         >
           <ClubLogo src={club.logo} alt={club.name} size="sm" />
           <p className="font-medium flex-1 text-sm italic">{club.name}</p>
@@ -215,7 +214,7 @@ const Voting = () => {
           >
             <X className="w-4 h-4 text-muted-foreground hover:text-destructive" />
           </button>
-        </motion.button>
+        </motion.div>
       ))}
     </AnimatePresence>
   </div>
