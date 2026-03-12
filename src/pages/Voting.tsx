@@ -200,7 +200,7 @@ const Voting = () => {
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           className="flex items-center gap-3 glass-card rounded-xl p-3 border border-border/20 cursor-pointer hover:bg-zinc-800 transition-colors"
-          onClick={() => handleSympathyVote(club)}   // <-- clique para votar
+          onClick={() => handleSympathyVote(club)}   // <-- todos os clubes clicáveis
         >
           <ClubLogo src={club.logo} alt={club.name} size="sm" />
           <p className="font-medium flex-1 text-sm italic">{club.name}</p>
