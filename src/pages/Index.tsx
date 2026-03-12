@@ -133,7 +133,7 @@ const Index = () => {
                   type="button"
                   onClick={(e) => {
                     e.preventDefault();
-                    setSympathyTeams(sympathyTeams.filter(t => (t.nome || t.name) !== (club.nome || club.name)));
+                    setSympathyTeams(sympathyTeams.filter(t => ((t as any).nome || t.name) !== ((club as any).nome || club.name)));
                   }}
                   className="text-zinc-600 hover:text-red-500 transition-colors cursor-pointer p-2 relative z-[40]"
                 >
