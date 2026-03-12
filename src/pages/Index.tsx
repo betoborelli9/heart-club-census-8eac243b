@@ -111,13 +111,12 @@ const Index = () => {
           {sympathyTeams.length < 4 && (
             <div className="relative z-[40]">
               <ClubSearch onSelect={(club) => {
-                // Ajustado para aceitar .nome ou .name (dependendo de como a Lovable configurou)
-                const teamName = club.nome || club.name;
+                const teamName = (club as any).nome || club.name;
                 if (heartTeam?.nome === teamName) {
                   toast.error("Este já é seu time do coração!");
                   return;
                 }
-                if (sympathyTeams.find(t => (t.nome || t.name) === teamName)) return;
+                if (sympathyTeams.find(t => ((t as any).nome || t.name) === teamName)) return;
                 setSympathyTeams([...sympathyTeams, club]);
               }} />
             </div>
