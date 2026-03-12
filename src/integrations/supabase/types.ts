@@ -348,6 +348,10 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      get_heatmap_data: {
+        Args: { p_club_name: string; p_filter_value?: string; p_level?: string }
+        Returns: Json
+      }
       unaccent: { Args: { "": string }; Returns: string }
     }
     Enums: {

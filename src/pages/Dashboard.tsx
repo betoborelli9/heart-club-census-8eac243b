@@ -114,7 +114,7 @@ const Dashboard = () => {
                 {/* --- BLOCO: LINKS ESTRATÉGICOS --- */}
                 <section className="relative z-20 -mt-px border border-white/10 rounded-b-3xl overflow-hidden shadow-2xl bg-black/95">
                     <div className="relative px-4 md:px-12 py-4 md:py-6 flex items-center justify-around md:justify-start gap-4 md:gap-12 overflow-x-auto no-scrollbar">
-                        <Link to="#" className="flex flex-col md:flex-row items-center gap-1 md:gap-3 text-[10px] md:text-[14px] font-black uppercase tracking-widest text-zinc-400 hover:text-white transition-all min-w-max">
+                        <Link to="/mapa-calor" className="flex flex-col md:flex-row items-center gap-1 md:gap-3 text-[10px] md:text-[14px] font-black uppercase tracking-widest text-zinc-400 hover:text-white transition-all min-w-max">
                             <Flame className="w-6 h-6 text-red-600" /> Mapa de Calor
                         </Link>
                         <Link to="#" className="flex flex-col md:flex-row items-center gap-1 md:gap-3 text-[10px] md:text-[14px] font-black uppercase tracking-widest text-zinc-400 hover:text-white transition-all min-w-max">
