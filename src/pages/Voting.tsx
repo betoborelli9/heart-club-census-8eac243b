@@ -156,10 +156,6 @@ const Voting = () => {
     }
   };
 
-  if (isLoading) {
-    return <div className="min-h-screen bg-background flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>;
-  }
-
   const ClubDropdown = ({ results, open, onSelect, searchQuery, onCustom }: {
     results: ClubResult[]; open: boolean; onSelect: (c: ClubResult) => void; searchQuery: string; onCustom: () => void;
   }) => {
@@ -243,7 +239,7 @@ const Voting = () => {
                   </div>
                   <button 
                     type="button"
-                    onMouseDown={(e) => { e.preventDefault(); removeSympathy(idx); }}
+                    onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); removeSympathy(idx); }}
                     className="text-muted-foreground hover:text-destructive p-2 cursor-pointer relative z-[70] pointer-events-auto"
                   >
                     <X className="w-4 h-4" />
