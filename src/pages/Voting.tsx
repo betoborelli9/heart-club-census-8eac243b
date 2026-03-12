@@ -7,7 +7,7 @@ import { useNavigate } from "react-router-dom";
 import { useUser } from "@/contexts/UserContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { searchClubsLocal, ClubSearchResult } from "@/lib/search-clubs";
+import { searchClubsLocal } from "@/lib/search-clubs";
 import { ClubLogo } from "@/components/ClubLogo";
 import logo from "@/assets/logo.png";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
@@ -54,40 +54,67 @@ const Voting = () => {
     setHeartSearch("");
     setHeartOpen(false);
     toast({ title: `${club.name} selecionado! ❤️` });
-    // SALTO AUTOMÁTICO: Foca no campo de simpatia após escolher o coração
     setTimeout(() => sympathyInputRef.current?.focus(), 150);
   };
 
   const selectSympathy = (club: any) => {
     if (sympathyClubs.length >= 4) return;
-    const isDuplicate = sympathyClubs.find(c => c.name === club.name);
-    if (isDuplicate || (heartClub && heartClub.name === club.name)) return;
-
+    if (sympathyClubs.find(c => c.name === club.name) || (heartClub?.name === club.name)) return;
     setSympathyClubs(prev => [...prev, club]);
     setSympathySearch("");
     setSympathyOpen(false);
-    // MANTÉM O CURSOR NO CAMPO: Para você digitar o próximo sem precisar clicar
     setTimeout(() => sympathyInputRef.current?.focus(), 150);
-    toast({ title: `${club.name} adicionado! ✨` });
   };
 
   const removeSympathy = (idx: number) => setSympathyClubs(prev => prev.filter((_, i) => i !== idx));
 
-  // --- O COMPONENTE QUE RESOLVE O CLIQUE DO FLUMINENSE ---
+  // FUNÇÃO QUE GRAVA NO BANCO (O que o botão "Juro Lealdade" faz)
+  const handleConfirmVote = async () => {
+    if (!heartClub || !user || !profile) return;
+    setSubmitting(true);
+    try {
+      // Grava o Clube do Coração
+      const { error: mainError } = await supabase.from("votos").insert({
+        user_id: user.id,
+        clube_nome: heartClub.name,
+        cidade: profile.cidade || "",
+        estado: profile.estado || "",
+        pais: profile.pais || "BR",
+        is_original_vote: true
+      });
+
+      if (mainError) throw mainError;
+
+      // Grava as Simpatias
+      for (const sym of sympathyClubs) {
+        await supabase.from("votos").insert({
+          user_id: user.id,
+          clube_nome: sym.name,
+          cidade: profile.cidade || "",
+          estado: profile.estado || "",
+          pais: profile.pais || "BR",
+          is_original_vote: false
+        });
+      }
+
+      await refreshProfile();
+      toast({ title: "Voto Sagrado registrado! 🦅" });
+      navigate("/dashboard", { replace: true });
+    } catch (err: any) {
+      toast({ variant: "destructive", title: "Erro ao votar", description: err.message });
+    } finally {
+      setSubmitting(false);
+      setShowConfirm(false);
+    }
+  };
+
   const ClubDropdown = ({ results, open, onSelect }: any) => {
     if (!open || results.length === 0) return null;
     return (
       <div className="absolute top-full left-0 right-0 z-[999] mt-1 rounded-xl border border-border/30 max-h-72 overflow-y-auto bg-card shadow-2xl">
         {results.map((club: any, i: number) => (
-          <button 
-            key={i} 
-            type="button"
-            onMouseDown={(e) => { 
-              e.preventDefault(); // IMPORTANTE: Impede o fechamento antes da seleção
-              onSelect(club); 
-            }}
-            className="w-full flex items-center gap-3 px-4 py-3 hover:bg-primary/10 text-left border-b border-border/10 last:border-0 cursor-pointer"
-          >
+          <button key={i} type="button" onMouseDown={(e) => { e.preventDefault(); onSelect(club); }}
+            className="w-full flex items-center gap-3 px-4 py-3 hover:bg-primary/10 text-left border-b border-border/10 last:border-0 cursor-pointer">
             <ClubLogo src={club.logo} alt={club.name} size="sm" />
             <div className="min-w-0 flex-1">
               <p className="font-semibold text-foreground text-sm truncate italic">{club.name}</p>
@@ -107,7 +134,6 @@ const Voting = () => {
           <h1 className="text-2xl font-bold italic font-display">Voto Sagrado</h1>
         </div>
 
-        {/* Heart Club */}
         <div className="space-y-2 relative">
           <label className="text-sm font-semibold flex items-center gap-2">❤️ Clube do Coração</label>
           {heartClub ? (
@@ -126,7 +152,6 @@ const Voting = () => {
           )}
         </div>
 
-        {/* Sympathy */}
         <div className="space-y-3">
           <label className="text-sm font-semibold flex items-center gap-2">✨ Clubes de Simpatia</label>
           <div className="space-y-2">
@@ -136,7 +161,7 @@ const Voting = () => {
                   className="flex items-center gap-3 glass-card rounded-xl p-3 border border-border/20">
                   <ClubLogo src={club.logo} alt={club.name} size="sm" />
                   <p className="font-medium flex-1 text-sm italic">{club.name}</p>
-                  <button type="button" onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); removeSympathy(idx); }} className="cursor-pointer">
+                  <button type="button" onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); removeSympathy(idx); }}>
                     <X className="w-4 h-4 text-muted-foreground" />
                   </button>
                 </motion.div>
@@ -153,20 +178,25 @@ const Voting = () => {
           )}
         </div>
 
-        <Button className="w-full h-14 font-bold text-lg btn-orange-gradient rounded-xl" disabled={!heartClub} onClick={() => setShowConfirm(true)}>
-          Confirmar Voto
+        <Button className="w-full h-14 font-bold text-lg btn-orange-gradient rounded-xl" 
+          disabled={!heartClub || submitting} onClick={() => setShowConfirm(true)}>
+          {submitting ? <Loader2 className="animate-spin" /> : "Confirmar Voto"}
         </Button>
       </div>
 
-      {/* Dialog Simples para não quebrar */}
       <Dialog open={showConfirm} onOpenChange={setShowConfirm}>
-        <DialogContent className="max-w-sm">
+        <DialogContent className="max-w-sm glass-card border-white/10">
           <DialogHeader>
-            <DialogTitle className="italic">Confirmar Lealdade?</DialogTitle>
+            <DialogTitle className="italic text-xl">Confirmar Lealdade?</DialogTitle>
+            <DialogDescription className="italic">
+              Você jura lealdade ao <strong>{heartClub?.name}</strong>? Esta ação é definitiva.
+            </DialogDescription>
           </DialogHeader>
-          <DialogFooter className="gap-2">
+          <DialogFooter className="gap-2 mt-4">
             <Button variant="outline" onClick={() => setShowConfirm(false)}>Voltar</Button>
-            <Button onClick={() => {/* função handleConfirmVote aqui */}} className="btn-orange-gradient">Juro Lealdade</Button>
+            <Button onClick={handleConfirmVote} className="btn-orange-gradient font-bold" disabled={submitting}>
+              {submitting ? <Loader2 className="animate-spin" /> : "Juro Lealdade"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
