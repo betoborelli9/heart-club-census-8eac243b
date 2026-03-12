@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Heart, Search, Check, Loader2, Shield, X, Sparkles, Plus } from "lucide-react";
+import { Heart, Loader2, X, Search, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useNavigate } from "react-router-dom";
@@ -10,7 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { searchClubsLocal, ClubSearchResult } from "@/lib/search-clubs";
 import { ClubLogo } from "@/components/ClubLogo";
 import logo from "@/assets/logo.png";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 
 interface ClubResult {
   id: string | null;
@@ -85,6 +85,11 @@ const Voting = () => {
     setSympathySearch("");
     setSympathyResults([]);
     setSympathyOpen(false);
+
+    setTimeout(() => {
+      sympathyInputRef.current?.focus();
+    }, 100);
+
     toast({ title: `${club.name} adicionado! ✨`, duration: 1500 });
   };
 
@@ -113,6 +118,7 @@ const Voting = () => {
           estado: profile.estado || "",
           pais: profile.pais || "BR",
           fingerprint,
+          is_original_vote: true,
         })
         .select()
         .single();
@@ -142,7 +148,7 @@ const Voting = () => {
     }
   };
 
-  const ClubDropdown = ({ results, open, onSelect, searchQuery }: any) => {
+  const ClubDropdown = ({ results, open, onSelect }: any) => {
     if (!open) return null;
     return (
       <div className="absolute top-full left-0 right-0 z-[999] mt-1 rounded-xl border border-border/30 max-h-72 overflow-y-auto bg-card shadow-2xl">
@@ -179,91 +185,60 @@ const Voting = () => {
             </div>
           ) : (
             <div className="relative">
-              <Input className="pl-10 h-12" placeholder="Buscar clube..." value={heartSearch}
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-primary" />
+              <Input ref={heartInputRef} className="pl-10 h-12" placeholder="Buscar seu time..." value={heartSearch}
                 onChange={e => setHeartSearch(e.target.value)} onBlur={() => setTimeout(() => setHeartOpen(false), 200)} />
-              <ClubDropdown results={heartResults} open={heartOpen} onSelect={selectHeart} searchQuery={heartSearch} />
+              <ClubDropdown results={heartResults} open={heartOpen} onSelect={selectHeart} />
             </div>
           )}
         </div>
 
-{/* Sympathy */}
-<div className="space-y-3">
-  <label className="text-sm font-semibold flex items-center gap-2">
-    ✨ Clubes de Simpatia
-  </label>
-  <div className="space-y-2">
-    <AnimatePresence>
-      {sympathyClubs.map((club, idx) => (
-        <motion.div
-          key={idx}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          className="flex items-center gap-3 glass-card rounded-xl p-3 border border-border/20 cursor-pointer hover:bg-zinc-800 transition-colors"
-          onClick={() => handleSympathyVote(club)}   // <-- todos os clubes clicáveis
-        >
-          <ClubLogo src={club.logo} alt={club.name} size="sm" />
-          <p className="font-medium flex-1 text-sm italic">{club.name}</p>
-          <button
-            type="button"
-            onMouseDown={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              removeSympathy(idx);
-            }}
-          >
-            <X className="w-4 h-4 text-muted-foreground hover:text-destructive" />
-          </button>
-        </motion.div>
-      ))}
-    </AnimatePresence>
-  </div>
+        {/* Sympathy */}
+        <div className="space-y-3">
+          <label className="text-sm font-semibold flex items-center gap-2">✨ Clubes de Simpatia</label>
+          <div className="space-y-2">
+            <AnimatePresence>
+              {sympathyClubs.map((club, idx) => (
+                <motion.div key={idx} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                  className="flex items-center gap-3 glass-card rounded-xl p-3 border border-border/20">
+                  <ClubLogo src={club.logo} alt={club.name} size="sm" />
+                  <p className="font-medium flex-1 text-sm italic">{club.name}</p>
+                  <button type="button" onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); removeSympathy(idx); }}>
+                    <X className="w-4 h-4 text-muted-foreground hover:text-destructive" />
+                  </button>
+                </motion.div>
+              ))}
+            </AnimatePresence>
+          </div>
+          {sympathyClubs.length < 4 && (
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input ref={sympathyInputRef} className="pl-10 h-11" placeholder="Buscar simpatia..." value={sympathySearch}
+                onChange={e => setSympathySearch(e.target.value)} onBlur={() => setTimeout(() => setSympathyOpen(false), 200)} />
+              <ClubDropdown results={sympathyResults} open={sympathyOpen} onSelect={selectSympathy} />
+            </div>
+          )}
+        </div>
 
-  {sympathyClubs.length < 4 && (
-    <div className="relative">
-      <Input
-        className="pl-10 h-11"
-        placeholder="Buscar simpatia..."
-        value={sympathySearch}
-        onChange={(e) => setSympathySearch(e.target.value)}
-        onBlur={() => setTimeout(() => setSympathyOpen(false), 200)}
-      />
-      <ClubDropdown
-        results={sympathyResults}
-        open={sympathyOpen}
-        onSelect={selectSympathy}
-        searchQuery={sympathySearch}
-      />
+        <Button className="w-full h-14 font-bold text-lg btn-orange-gradient" disabled={!heartClub || submitting} onClick={() => setShowConfirm(true)}>
+          {submitting ? <Loader2 className="animate-spin" /> : "Confirmar Voto"}
+        </Button>
+      </div>
+
+      <Dialog open={showConfirm} onOpenChange={setShowConfirm}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="italic">Confirmar Lealdade?</DialogTitle>
+            <DialogDescription>Esta ação registrará seu time do coração definitivamente.</DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setShowConfirm(false)}>Voltar</Button>
+            <Button onClick={handleConfirmVote} className="btn-orange-gradient">Juro Lealdade</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
-  )}
-</div>
-
-<Button
-  className="w-full h-14 font-bold text-lg btn-orange-gradient"
-  disabled={!heartClub || submitting}
-  onClick={() => setShowConfirm(true)}
->
-  {submitting ? <Loader2 className="animate-spin" /> : "Confirmar Voto"}
-</Button>
-</div>
-
-<Dialog open={showConfirm} onOpenChange={setShowConfirm}>
-  <DialogContent className="max-w-sm">
-    <DialogHeader>
-      <DialogTitle className="italic">Confirmar Lealdade?</DialogTitle>
-    </DialogHeader>
-    <DialogFooter className="gap-2">
-      <Button variant="outline" onClick={() => setShowConfirm(false)}>
-        Voltar
-      </Button>
-      <Button onClick={handleConfirmVote} className="btn-orange-gradient">
-        Juro Lealdade
-      </Button>
-    </DialogFooter>
-  </DialogContent>
-</Dialog>
-</div>
-);
+  );
 };
 
 export default Voting;
