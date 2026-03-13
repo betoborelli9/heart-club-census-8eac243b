@@ -12,36 +12,36 @@
     --card-foreground: 0 0% 95%;
     --popover: 0 0% 6%;
     --popover-foreground: 0 0% 95%;
-    --primary: 347 77% 50%;
+    --primary: 24 100% 50%;
     --primary-foreground: 0 0% 100%;
     --secondary: 0 0% 12%;
     --secondary-foreground: 0 0% 95%;
     --muted: 0 0% 12%;
     --muted-foreground: 0 0% 55%;
-    --accent: 347 77% 50%;
+    --accent: 24 100% 50%;
     --accent-foreground: 0 0% 100%;
     --destructive: 0 62.8% 50%;
     --destructive-foreground: 0 0% 98%;
     --border: 0 0% 14%;
     --input: 0 0% 14%;
-    --ring: 347 77% 50%;
+    --ring: 24 100% 50%;
     --radius: 0.75rem;
     --sidebar-background: 0 0% 4%;
     --sidebar-foreground: 0 0% 90%;
-    --sidebar-primary: 347 77% 50%;
+    --sidebar-primary: 24 100% 50%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 0 0% 10%;
     --sidebar-accent-foreground: 0 0% 90%;
     --sidebar-border: 0 0% 14%;
-    --sidebar-ring: 347 77% 50%;
+    --sidebar-ring: 24 100% 50%;
 
     /* Custom tokens */
-    --gradient-orange: linear-gradient(135deg, hsl(347 77% 50%), hsl(350 80% 60%));
-    --gradient-orange-dark: linear-gradient(135deg, hsl(347 77% 45%), hsl(340 80% 35%));
+    --gradient-orange: linear-gradient(135deg, hsl(24 100% 50%), hsl(30 100% 60%));
+    --gradient-orange-dark: linear-gradient(135deg, hsl(22 100% 45%), hsl(18 100% 35%));
     --glass-bg: rgba(255, 255, 255, 0.04);
     --glass-border: rgba(255, 255, 255, 0.08);
     --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
-    --glow-orange: 0 0 30px rgba(225, 29, 72, 0.3);
+    --glow-orange: 0 0 30px rgba(255, 98, 0, 0.3);
   }
 }
 
@@ -51,10 +51,11 @@
   }
   body {
     @apply bg-background text-foreground;
-    font-family: 'Inter', sans-serif;
+    font-family: 'Verdana', 'Geneva', sans-serif;
   }
   h1, h2, h3, h4, h5, h6 {
-    font-family: 'Space Grotesk', sans-serif;
+    font-family: 'Verdana', 'Geneva', sans-serif;
+    font-style: italic;
   }
 }
 
@@ -76,7 +77,7 @@
     transition: all 0.3s ease;
   }
   .glass-card-hover:hover {
-    border-color: rgba(225, 29, 72, 0.3);
+    border-color: rgba(255, 98, 0, 0.3);
     box-shadow: var(--glow-orange);
   }
 
@@ -85,10 +86,10 @@
     color: white;
     font-weight: 700;
     transition: all 0.3s ease;
-    box-shadow: 0 4px 15px rgba(225, 29, 72, 0.3);
+    box-shadow: 0 4px 15px rgba(255, 98, 0, 0.3);
   }
   .btn-orange-gradient:hover {
-    box-shadow: 0 6px 25px rgba(225, 29, 72, 0.5);
+    box-shadow: 0 6px 25px rgba(255, 98, 0, 0.5);
     transform: translateY(-1px);
   }
 
@@ -100,7 +101,7 @@
   }
 
   .glow-border {
-    border: 1px solid rgba(225, 29, 72, 0.3);
+    border: 1px solid rgba(255, 98, 0, 0.3);
     box-shadow: var(--glow-orange);
   }
 }
