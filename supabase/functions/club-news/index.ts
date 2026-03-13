@@ -6,6 +6,10 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+function normalize(s: string): string {
+  return s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+}
+
 function extractSource(title: string): { cleanTitle: string; source: string } {
   const match = title.match(/^(.*)\s-\s([^-]+)$/);
   if (match) return { cleanTitle: match[1].trim(), source: match[2].trim() };
@@ -13,26 +17,39 @@ function extractSource(title: string): { cleanTitle: string; source: string } {
 }
 
 function extractImage(block: string): string | null {
-  // Try enclosure
   const enclosure = block.match(/<enclosure[^>]+url="([^"]+)"/);
   if (enclosure) return enclosure[1];
-
-  // Try media:content
   const media = block.match(/<media:content[^>]+url="([^"]+)"/);
   if (media) return media[1];
-
-  // Try media:thumbnail
   const thumb = block.match(/<media:thumbnail[^>]+url="([^"]+)"/);
   if (thumb) return thumb[1];
-
-  // Try img inside description
   const descImg = block.match(/<description[^>]*>([\s\S]*?)<\/description>/);
   if (descImg) {
     const imgMatch = (descImg[1] || "").match(/src="([^"]+)"/);
     if (imgMatch) return imgMatch[1];
   }
-
   return null;
+}
+
+async function fetchOgImage(url: string): Promise<string | null> {
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 4000);
+    const res = await fetch(url, {
+      headers: { "User-Agent": "HeartClub/1.0" },
+      signal: controller.signal,
+      redirect: "follow",
+    });
+    clearTimeout(timeout);
+    if (!res.ok) return null;
+    const html = await res.text();
+    const ogMatch = html.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i)
+      || html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["']/i)
+      || html.match(/<meta[^>]+name=["']twitter:image["'][^>]+content=["']([^"']+)["']/i);
+    return ogMatch ? ogMatch[1] : null;
+  } catch {
+    return null;
+  }
 }
 
 serve(async (req) => {
@@ -50,7 +67,8 @@ serve(async (req) => {
       });
     }
 
-    const query = encodeURIComponent(`${clubName} futebol`);
+    // Use quoted search for specificity
+    const query = encodeURIComponent(`"${clubName}" futebol`);
     const rssUrl = `https://news.google.com/rss/search?q=${query}&hl=pt-BR&gl=BR&ceid=BR:pt-419`;
 
     const rssResponse = await fetch(rssUrl, {
@@ -58,8 +76,7 @@ serve(async (req) => {
     });
 
     if (!rssResponse.ok) {
-      const body = await rssResponse.text();
-      console.error("Google News RSS error:", rssResponse.status, body);
+      console.error("Google News RSS error:", rssResponse.status);
       return new Response(JSON.stringify([]), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -67,9 +84,14 @@ serve(async (req) => {
 
     const xml = await rssResponse.text();
 
+    // Strict filtering: club name tokens
+    const nameTokens = normalize(clubName).split(/\s+/).filter(t => t.length > 2);
+
     const items: any[] = [];
+    const seenTitles = new Set<string>();
     const itemRegex = /<item>([\s\S]*?)<\/item>/g;
     let match;
+
     while ((match = itemRegex.exec(xml)) !== null && items.length < 12) {
       const block = match[1];
       const get = (tag: string) => {
@@ -79,7 +101,25 @@ serve(async (req) => {
 
       const rawTitle = get("title");
       const { cleanTitle, source } = extractSource(rawTitle);
-      const imageUrl = extractImage(block);
+
+      // Strict relevance check
+      const titleNorm = normalize(cleanTitle);
+      const isRelevant = nameTokens.some(token => titleNorm.includes(token));
+      if (!isRelevant) continue;
+
+      // Dedup by title
+      if (seenTitles.has(titleNorm)) continue;
+      seenTitles.add(titleNorm);
+
+      let imageUrl = extractImage(block);
+
+      // If no image from RSS, try og:image
+      if (!imageUrl) {
+        const link = get("link");
+        if (link) {
+          imageUrl = await fetchOgImage(link);
+        }
+      }
 
       items.push({
         title: cleanTitle,
