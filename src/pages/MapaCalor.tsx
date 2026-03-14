@@ -104,8 +104,6 @@ const MapaCalor = () => {
   const [geoCity, setGeoCity] = useState<string | null>(null);
   const [geoConfirmed, setGeoConfirmed] = useState(false);
   const [showGeoModal, setShowGeoModal] = useState(false);
-  const geoAttempted = useRef(false);
-
   const geoAttemptedRef = useRef(false);
 
   // Request GPS on mount
