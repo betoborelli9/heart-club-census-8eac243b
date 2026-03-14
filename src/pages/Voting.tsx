@@ -11,6 +11,7 @@ import { searchClubsLocal } from "@/lib/search-clubs";
 import { ClubLogo } from "@/components/ClubLogo";
 import logo from "@/assets/logo.png";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import FingerprintJS from "@fingerprintjs/fingerprintjs";
 
 const Voting = () => {
   const navigate = useNavigate();
@@ -32,6 +33,33 @@ const Voting = () => {
 
   const [showConfirm, setShowConfirm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [fingerprint, setFingerprint] = useState<string | null>(null);
+
+  // Initialize FingerprintJS on mount
+  useEffect(() => {
+    const initFP = async () => {
+      try {
+        const fp = await FingerprintJS.load();
+        const result = await fp.get();
+        setFingerprint(result.visitorId);
+      } catch (err) {
+        console.warn("FingerprintJS failed:", err);
+        // Fallback: generate a simple hash from navigator data
+        const raw = [
+          navigator.userAgent,
+          navigator.language,
+          screen.width,
+          screen.height,
+          new Date().getTimezoneOffset(),
+        ].join("|");
+        const hash = Array.from(new TextEncoder().encode(raw))
+          .reduce((a, b) => ((a << 5) - a + b) | 0, 0)
+          .toString(36);
+        setFingerprint(`fallback-${hash}`);
+      }
+    };
+    initFP();
+  }, []);
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) navigate("/login", { replace: true });
@@ -68,24 +96,33 @@ const Voting = () => {
 
   const removeSympathy = (idx: number) => setSympathyClubs(prev => prev.filter((_, i) => i !== idx));
 
-  // FUNÇÃO QUE GRAVA NO BANCO (O que o botão "Juro Lealdade" faz)
   const handleConfirmVote = async () => {
     if (!heartClub || !user || !profile) return;
     setSubmitting(true);
     try {
-      // Grava o Clube do Coração
+      // Insert heart club vote with fingerprint
       const { error: mainError } = await supabase.from("votos").insert({
         user_id: user.id,
         clube_nome: heartClub.name,
         cidade: profile.cidade || "",
         estado: profile.estado || "",
         pais: profile.pais || "BR",
-        is_original_vote: true
+        is_original_vote: true,
+        fingerprint: fingerprint || null,
       });
 
-      if (mainError) throw mainError;
+      if (mainError) {
+        // Handle duplicate vote (PostgREST 23505)
+        if (mainError.code === "23505" || mainError.message?.includes("duplicate")) {
+          await refreshProfile();
+          toast({ title: "Você já votou! 🛡️", description: "Seu Voto Sagrado já está registrado." });
+          navigate("/dashboard", { replace: true });
+          return;
+        }
+        throw mainError;
+      }
 
-      // Grava as Simpatias
+      // Insert sympathy votes
       for (const sym of sympathyClubs) {
         await supabase.from("votos").insert({
           user_id: user.id,
@@ -93,7 +130,8 @@ const Voting = () => {
           cidade: profile.cidade || "",
           estado: profile.estado || "",
           pais: profile.pais || "BR",
-          is_original_vote: false
+          is_original_vote: false,
+          fingerprint: fingerprint || null,
         });
       }
 
@@ -131,7 +169,12 @@ const Voting = () => {
       <div className="w-full max-w-lg space-y-6 relative z-10">
         <div className="text-center space-y-3">
           <img src={logo} alt="Logo" className="mx-auto w-20 h-20" />
-          <h1 className="text-2xl font-bold italic font-display">Voto Sagrado</h1>
+          <h1 className="text-2xl font-bold italic">Voto Sagrado</h1>
+          {fingerprint && (
+            <p className="text-[9px] text-muted-foreground uppercase tracking-widest">
+              🛡️ Dispositivo verificado
+            </p>
+          )}
         </div>
 
         <div className="space-y-2 relative">
@@ -185,7 +228,7 @@ const Voting = () => {
       </div>
 
       <Dialog open={showConfirm} onOpenChange={setShowConfirm}>
-        <DialogContent className="max-w-sm glass-card border-white/10">
+        <DialogContent className="max-w-sm glass-card border-border/10">
           <DialogHeader>
             <DialogTitle className="italic text-xl">Confirmar Lealdade?</DialogTitle>
             <DialogDescription className="italic">

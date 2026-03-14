@@ -26,26 +26,16 @@ import {
 
 const GEO_URL = "https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json";
 
-// ===== BRASA COLOR SCALE (requested exact values) =====
+// ===== BRASA COLOR SCALE =====
 function getBrasaColor(votes: number, maxVotes: number): string {
-  if (!votes || votes === 0) return "#2a2a2a"; // Cinza Escuro
-  if (maxVotes <= 0) return "#2a2a2a";
-  // Relative scale
-  const ratio = votes / maxVotes;
-  if (ratio <= 0.1) return "#c87830";  // Laranja muito claro
-  if (ratio <= 0.3) return "#d98a20";  // Laranja claro
-  if (ratio <= 0.5) return "#e89910";  // Laranja médio
-  if (ratio <= 0.7) return "#f0a500";  // Laranja forte
-  if (ratio <= 0.9) return "#f58000";  // Laranja vibrante
-  return "#ff6200";                     // Cor máxima - Brasa
-}
-
-// Absolute thresholds as requested
-function getBrasaColorAbsolute(votes: number): string {
   if (!votes || votes === 0) return "#2a2a2a";
-  if (votes <= 10) return "#c87830";
-  if (votes <= 50) return "#d98a20";
-  if (votes <= 100) return "#e89910";
+  if (maxVotes <= 0) return "#2a2a2a";
+  const ratio = votes / maxVotes;
+  if (ratio <= 0.1) return "#c87830";
+  if (ratio <= 0.3) return "#d98a20";
+  if (ratio <= 0.5) return "#e89910";
+  if (ratio <= 0.7) return "#f0a500";
+  if (ratio <= 0.9) return "#f58000";
   return "#ff6200";
 }
 
@@ -109,6 +99,41 @@ const MapaCalor = () => {
 
   const [tooltip, setTooltip] = useState<{ x: number; y: number; name: string; votes: number; pct: string } | null>(null);
   const [curiosity, setCuriosity] = useState<string | null>(null);
+
+  // GPS Geolocation
+  const [geoCity, setGeoCity] = useState<string | null>(null);
+  const [geoConfirmed, setGeoConfirmed] = useState(false);
+  const [showGeoModal, setShowGeoModal] = useState(false);
+  const geoAttempted = useRef(false);
+
+  const geoAttemptedRef = useRef(false);
+
+  // Request GPS on mount
+  useEffect(() => {
+    if (geoAttemptedRef.current || !navigator.geolocation) return;
+    geoAttemptedRef.current = true;
+
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        try {
+          const { latitude, longitude } = pos.coords;
+          const res = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json&accept-language=pt-BR`,
+            { headers: { "User-Agent": "HeartClubApp/1.0" } }
+          );
+          const data = await res.json();
+          const addr = data.address || {};
+          const city = addr.city || addr.town || addr.municipality || addr.village || "";
+          if (city) {
+            setGeoCity(city);
+            setShowGeoModal(true);
+          }
+        } catch { /* silently fail */ }
+      },
+      () => { /* permission denied — ok */ },
+      { enableHighAccuracy: false, timeout: 8000 }
+    );
+  }, []);
 
   // Load heart club
   useEffect(() => {
@@ -175,6 +200,16 @@ const MapaCalor = () => {
     return [...heatData].sort((a, b) => Number(b.votes) - Number(a.votes)).slice(0, 10);
   }, [heatData]);
 
+  // Distribution percentages
+  const distribution = useMemo(() => {
+    if (totalVotes === 0) return [];
+    return top10.map(e => ({
+      region: e.region,
+      pct: ((Number(e.votes) / totalVotes) * 100).toFixed(1),
+      votes: Number(e.votes),
+    }));
+  }, [top10, totalVotes]);
+
   const navigateTo = useCallback((level: DrillLevel, label: string, value?: string) => {
     setDrillLevel(level);
     if (level === "world") {
@@ -237,6 +272,49 @@ const MapaCalor = () => {
 
   return (
     <div className="min-h-screen bg-background text-foreground" style={{ fontFamily: "Verdana, Geneva, sans-serif" }}>
+      {/* GPS Confirmation Modal */}
+      <AnimatePresence>
+        {showGeoModal && geoCity && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] bg-background/80 backdrop-blur-sm flex items-center justify-center p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="glass-card rounded-2xl p-6 max-w-sm w-full border border-primary/20 space-y-4"
+            >
+              <div className="text-center space-y-2">
+                <MapPin className="w-10 h-10 text-primary mx-auto" />
+                <h3 className="text-lg font-black italic uppercase">Confirmação de Território</h3>
+                <p className="text-sm text-muted-foreground">
+                  Detectamos que sua lealdade está em{" "}
+                  <span className="text-primary font-bold">{geoCity}</span>.
+                  Você confirma que mora aqui?
+                </p>
+              </div>
+              <div className="flex gap-3 justify-center">
+                <Button
+                  onClick={() => { setGeoConfirmed(true); setShowGeoModal(false); }}
+                  className="btn-orange-gradient font-bold"
+                >
+                  Sim, é aqui!
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => { setGeoCity(null); setShowGeoModal(false); }}
+                >
+                  Não, corrigir
+                </Button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* HEADER */}
       <header className="h-16 border-b border-border bg-background/80 backdrop-blur-xl sticky top-0 z-50">
         <div className="max-w-[1600px] mx-auto px-4 h-full flex items-center justify-between gap-4">
@@ -246,6 +324,11 @@ const MapaCalor = () => {
             <span className="font-black italic text-lg tracking-tighter hidden sm:block">MAPA DE CALOR</span>
           </div>
           <div className="flex items-center gap-3">
+            {geoConfirmed && geoCity && (
+              <span className="text-[9px] text-primary font-bold uppercase tracking-widest hidden md:flex items-center gap-1">
+                <MapPin className="w-3 h-3" /> {geoCity}
+              </span>
+            )}
             <Button variant={duelMode ? "default" : "outline"} size="sm" className="text-xs font-black uppercase" onClick={() => setDuelMode(!duelMode)}>
               <Swords className="w-4 h-4 mr-1" /> Duelo
             </Button>
@@ -357,7 +440,7 @@ const MapaCalor = () => {
                   <div key={entry.region} className="flex flex-col gap-1">
                     <div className="flex justify-between text-[10px]">
                       <span className="font-bold flex items-center gap-1.5">
-                        <span className="w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-black" style={{ backgroundColor: i < 3 ? "#ff6200" : "#3a3a3a", color: i < 3 ? "#000" : "#fff" }}>{i + 1}</span>
+                        <span className="w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-black" style={{ backgroundColor: i < 3 ? "#ff6200" : "hsl(var(--muted))", color: i < 3 ? "#000" : "hsl(var(--foreground))" }}>{i + 1}</span>
                         {entry.region}
                       </span>
                       <span className="font-black text-primary">{formatVotes(Number(entry.votes))}</span>
@@ -370,6 +453,23 @@ const MapaCalor = () => {
               </div>
             )}
           </div>
+
+          {/* Distribution */}
+          {distribution.length > 0 && (
+            <div className="mb-6">
+              <h3 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-3 italic">
+                📊 Distribuição
+              </h3>
+              <div className="space-y-1.5">
+                {distribution.slice(0, 5).map(d => (
+                  <div key={d.region} className="flex justify-between text-[10px]">
+                    <span className="text-muted-foreground truncate mr-2">{d.region}</span>
+                    <span className="font-bold text-primary shrink-0">{d.pct}%</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Curiosidade Sagrada */}
           <AnimatePresence>
