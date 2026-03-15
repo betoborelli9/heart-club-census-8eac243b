@@ -42,6 +42,15 @@
     --glass-border: rgba(255, 255, 255, 0.08);
     --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
     --glow-orange: 0 0 30px rgba(255, 98, 0, 0.3);
+
+    /* Heatmap scale tokens */
+    --heat-empty: 0 0% 16%;
+    --heat-low: 30 95% 80%;
+    --heat-mid: 28 95% 62%;
+    --heat-high: 24 100% 50%;
+    --duel-blue-low: 214 63% 42%;
+    --duel-blue-high: 206 93% 69%;
+    --duel-neutral: 0 0% 33%;
   }
 }
 
