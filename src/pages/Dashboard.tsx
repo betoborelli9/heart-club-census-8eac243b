@@ -9,6 +9,7 @@ import { CLUBS_DATA } from "@/clubes-data";
 import { ClubLogo } from "@/components/ClubLogo";
 import { ClubSearch } from "@/components/dashboard/ClubSearch";
 import NewsCarousel from "@/components/dashboard/NewsCarousel";
+import { getTeamTheme } from "@/data/teamColors";
 import logo from "@/assets/logo.png";
 
 const Dashboard = () => {
@@ -16,7 +17,7 @@ const Dashboard = () => {
     const { user, profile, isLoading, signOut } = useUser();
     const [heartTeam, setHeartTeam] = useState<any>(null);
     const [queriedTeam, setQueriedTeam] = useState<any>(null);
-    const [colors, setColors] = useState({ primary: "#ff6200", secondary: "#FFFFFF" });
+    const [colors, setColors] = useState({ primary: "#ff6200", secondary: "hsl(var(--foreground))" });
 
     useEffect(() => {
         const loadInitial = async () => {
@@ -25,13 +26,9 @@ const Dashboard = () => {
             const teamName = data?.clube_nome || "Vila Nova";
             const clubInfo = CLUBS_DATA.find(c => c.nome === teamName);
             setHeartTeam(clubInfo);
-            
-            if (teamName.includes("Vila Nova")) setColors({ primary: "#E21A21", secondary: "#FFFFFF" });
-            else if (teamName.includes("Flamengo")) setColors({ primary: "#E21A21", secondary: "#000000" });
-            else if (teamName.includes("Palmeiras")) setColors({ primary: "#006437", secondary: "#FFFFFF" });
-            else if (teamName.includes("Sampaio Corrêa")) setColors({ primary: "#ffc107", secondary: "#198754" });
-            else if (teamName.includes("São Paulo")) setColors({ primary: "#FFFFFF", secondary: "#E21A21" });
-            else setColors({ primary: "#ff6200", secondary: "#FFFFFF" });
+
+            const theme = getTeamTheme(teamName);
+            setColors({ primary: theme.primaryHex, secondary: "hsl(var(--foreground))" });
         };
         loadInitial();
     }, [user]);
