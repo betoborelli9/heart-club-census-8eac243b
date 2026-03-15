@@ -47,8 +47,8 @@ export const teamColors: Record<string, TeamTheme> = {
 // Default fallback — laranja Heart Club
 export const defaultTeamTheme: TeamTheme = {
   primary: "24 100% 50%",
-  primaryHex: "#FF6600",
-  glow: "rgba(255, 102, 0, 0.3)",
+  primaryHex: "#FF6200",
+  glow: "rgba(255, 98, 0, 0.3)",
 };
 
 export function getTeamTheme(clubName: string | null | undefined): TeamTheme {
