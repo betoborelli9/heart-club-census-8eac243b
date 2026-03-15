@@ -411,44 +411,30 @@ const MapaCalor = () => {
             <div className="mb-6">
               <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground mb-2"><Swords className="w-3 h-3 inline mr-1" /> Selecione o Rival</p>
               {duelClubName ? (
-                <div className="flex items-center gap-3 p-3 rounded-xl bg-blue-950/30 border border-blue-500/20">
-                  <div className="w-10 h-10 bg-white rounded-full p-1 flex items-center justify-center shrink-0"><ClubLogo src={duelClubInfo?.logoUrl} alt={duelClubName} size="sm" /></div>
+                <div className="flex items-center gap-3 p-3 rounded-xl bg-secondary/40 border border-border">
+                  <div className="w-10 h-10 bg-background rounded-full p-1 flex items-center justify-center shrink-0"><ClubLogo src={duelClubInfo?.logoUrl} alt={duelClubName} size="sm" /></div>
                   <div className="flex-1">
                     <h3 className="text-xs font-black italic uppercase">{duelClubName}</h3>
-                    <p className="text-[10px] text-blue-400 font-bold">{formatVotes(duelTotalB)} votos</p>
+                    <p className="text-[10px] font-bold" style={{ color: "hsl(var(--duel-blue-high))" }}>{formatVotes(duelTotalB)} votos</p>
                   </div>
                   <button onClick={() => { setDuelClubName(""); setDuelData([]); }}><X className="w-4 h-4 text-muted-foreground" /></button>
                 </div>
               ) : (
-                <div className="relative">
-                  <Input value={duelSearchQuery} placeholder="Buscar rival..." className="bg-secondary border-border text-sm" onChange={(e) => handleDuelSearch(e.target.value)} />
-                  {duelSearchResults.length > 0 && (
-                    <div className="absolute top-12 left-0 right-0 bg-card border border-border rounded-xl overflow-hidden z-50 shadow-2xl max-h-48 overflow-y-auto">
-                      {duelSearchResults.map(club => (
-                        <button key={club.id} onMouseDown={(e) => { e.preventDefault(); selectDuelClub(club); }} className="w-full flex items-center gap-3 p-3 hover:bg-secondary text-left">
-                          <div className="w-7 h-7 bg-white rounded-full p-1 flex items-center justify-center shrink-0"><ClubLogo src={club.logo} alt={club.name} size="sm" /></div>
-                          <span className="text-xs font-black italic uppercase">{club.name}</span>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-
+...
               {duelClubName && (
                 <div className="mt-4 p-4 rounded-xl bg-secondary/30 border border-border">
                   <div className="flex items-center justify-between mb-3">
                     <span className="text-[10px] font-black uppercase text-primary">{activeClubName}</span>
                     <span className="text-[10px] font-black uppercase text-muted-foreground">VS</span>
-                    <span className="text-[10px] font-black uppercase text-blue-400">{duelClubName}</span>
+                    <span className="text-[10px] font-black uppercase" style={{ color: "hsl(var(--duel-blue-high))" }}>{duelClubName}</span>
                   </div>
                   <div className="h-3 w-full bg-muted rounded-full overflow-hidden flex">
-                    <div className="h-full transition-all duration-700" style={{ width: `${duelTotalA + duelTotalB > 0 ? (duelTotalA / (duelTotalA + duelTotalB)) * 100 : 50}%`, background: "linear-gradient(90deg, #e07800, #ff6200)" }} />
-                    <div className="h-full transition-all duration-700" style={{ width: `${duelTotalA + duelTotalB > 0 ? (duelTotalB / (duelTotalA + duelTotalB)) * 100 : 50}%`, background: "linear-gradient(90deg, #3080d0, #60b0ff)" }} />
+                    <div className="h-full transition-all duration-700" style={{ width: `${duelTotalA + duelTotalB > 0 ? (duelTotalA / (duelTotalA + duelTotalB)) * 100 : 50}%`, background: "linear-gradient(90deg, hsl(var(--heat-mid)), hsl(var(--heat-high)))" }} />
+                    <div className="h-full transition-all duration-700" style={{ width: `${duelTotalA + duelTotalB > 0 ? (duelTotalB / (duelTotalA + duelTotalB)) * 100 : 50}%`, background: "linear-gradient(90deg, hsl(var(--duel-blue-low)), hsl(var(--duel-blue-high)))" }} />
                   </div>
                   <div className="flex justify-between mt-1.5">
                     <span className="text-[10px] font-bold text-primary">{formatVotes(duelTotalA)}</span>
-                    <span className="text-[10px] font-bold text-blue-400">{formatVotes(duelTotalB)}</span>
+                    <span className="text-[10px] font-bold" style={{ color: "hsl(var(--duel-blue-high))" }}>{formatVotes(duelTotalB)}</span>
                   </div>
                 </div>
               )}
