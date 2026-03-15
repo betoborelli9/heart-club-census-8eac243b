@@ -580,7 +580,7 @@ const MapaCalor = () => {
               {LEGEND_BRASA.map((c, i) => (<div key={i} className="w-4 h-3 rounded-sm" style={{ backgroundColor: c }} />))}
             </div>
             <div className="flex justify-between text-[7px] text-muted-foreground mt-1">
-              <span>0</span><span>10</span><span>100+</span>
+              <span>0</span><span>1-10</span><span>11-100</span><span>100+</span>
             </div>
             {duelMode && duelClubName && (
               <>
@@ -588,7 +588,7 @@ const MapaCalor = () => {
                   {LEGEND_BLUE.map((c, i) => (<div key={i} className="w-4 h-3 rounded-sm" style={{ backgroundColor: c }} />))}
                 </div>
                 <div className="flex justify-between text-[7px] text-muted-foreground mt-1">
-                  <span>0</span><span>{duelClubName}</span>
+                  <span>0</span><span style={{ color: "hsl(var(--duel-blue-high))" }}>{duelClubName}</span>
                 </div>
               </>
             )}
