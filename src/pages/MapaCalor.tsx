@@ -71,22 +71,32 @@ function getBrasaColor(votes: number): string {
 
 // Duel palettes
 function getDuelColorA(votes: number, maxVotes: number): string {
-  if (!votes) return "#2a2a2a";
+  if (!votes) return "hsl(var(--heat-empty))";
   const ratio = Math.min(votes / Math.max(maxVotes, 1), 1);
-  if (ratio <= 0.3) return "#b35a00";
-  if (ratio <= 0.6) return "#e07800";
-  return "#ff6200";
+  if (ratio <= 0.3) return "hsl(var(--heat-mid))";
+  if (ratio <= 0.6) return "hsl(var(--primary) / 0.85)";
+  return "hsl(var(--heat-high))";
 }
 function getDuelColorB(votes: number, maxVotes: number): string {
-  if (!votes) return "#2a2a2a";
+  if (!votes) return "hsl(var(--heat-empty))";
   const ratio = Math.min(votes / Math.max(maxVotes, 1), 1);
-  if (ratio <= 0.3) return "#1a4a8a";
-  if (ratio <= 0.6) return "#3080d0";
-  return "#60b0ff";
+  if (ratio <= 0.3) return "hsl(var(--duel-blue-low) / 0.75)";
+  if (ratio <= 0.6) return "hsl(var(--duel-blue-low))";
+  return "hsl(var(--duel-blue-high))";
 }
 
-const LEGEND_BRASA = ["#2a2a2a", "#c87830", "#d98a20", "#e89910", "#f0a500", "#f58000", "#ff6200"];
-const LEGEND_BLUE  = ["#2a2a2a", "#1a4a8a", "#2060b0", "#3080d0", "#50a0f0", "#60b0ff"];
+const LEGEND_BRASA = [
+  "hsl(var(--heat-empty))",
+  "hsl(var(--heat-low))",
+  "hsl(var(--heat-mid))",
+  "hsl(var(--heat-high))",
+];
+const LEGEND_BLUE = [
+  "hsl(var(--heat-empty))",
+  "hsl(var(--duel-blue-low) / 0.75)",
+  "hsl(var(--duel-blue-low))",
+  "hsl(var(--duel-blue-high))",
+];
 
 function formatVotes(n: number): string {
   if (n >= 1000000) return `${(n / 1000000).toFixed(1)}M`;
