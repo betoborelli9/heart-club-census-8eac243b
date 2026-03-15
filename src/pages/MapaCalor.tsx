@@ -464,13 +464,13 @@ const MapaCalor = () => {
                   <div key={entry.region} className="flex flex-col gap-1">
                     <div className="flex justify-between text-[10px]">
                       <span className="font-bold flex items-center gap-1.5">
-                        <span className="w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-black" style={{ backgroundColor: i < 3 ? "#ff6200" : "hsl(var(--muted))", color: i < 3 ? "#000" : "hsl(var(--foreground))" }}>{i + 1}</span>
+                        <span className="w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-black" style={{ backgroundColor: i < 3 ? "hsl(var(--heat-high))" : "hsl(var(--muted))", color: i < 3 ? "hsl(var(--background))" : "hsl(var(--foreground))" }}>{i + 1}</span>
                         {entry.region}
                       </span>
                       <span className="font-black text-primary">{formatVotes(Number(entry.votes))}</span>
                     </div>
                     <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
-                      <motion.div initial={{ width: 0 }} animate={{ width: `${(Number(entry.votes) / Number(top10[0].votes)) * 100}%` }} transition={{ duration: 0.8, delay: i * 0.1 }} className="h-full rounded-full" style={{ background: "linear-gradient(90deg, #b35a00, #ff6200)" }} />
+                      <motion.div initial={{ width: 0 }} animate={{ width: `${(Number(entry.votes) / Number(top10[0].votes)) * 100}%` }} transition={{ duration: 0.8, delay: i * 0.1 }} className="h-full rounded-full" style={{ background: "linear-gradient(90deg, hsl(var(--heat-mid)), hsl(var(--heat-high)))" }} />
                     </div>
                   </div>
                 ))}
