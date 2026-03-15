@@ -25,18 +25,48 @@ import {
 } from "@/data/mockDashboard";
 
 const GEO_URL = "https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json";
+const BRAZIL_STATES_GEO_URL = "https://raw.githubusercontent.com/codeforamerica/click_that_hood/master/public/data/brazil-states.geojson";
 
-// ===== BRASA COLOR SCALE =====
-function getBrasaColor(votes: number, maxVotes: number): string {
-  if (!votes || votes === 0) return "#2a2a2a";
-  if (maxVotes <= 0) return "#2a2a2a";
-  const ratio = votes / maxVotes;
-  if (ratio <= 0.1) return "#c87830";
-  if (ratio <= 0.3) return "#d98a20";
-  if (ratio <= 0.5) return "#e89910";
-  if (ratio <= 0.7) return "#f0a500";
-  if (ratio <= 0.9) return "#f58000";
-  return "#ff6200";
+const BR_STATE_ALIASES: Record<string, string[]> = {
+  "Acre": ["AC"],
+  "Alagoas": ["AL"],
+  "Amapá": ["AP"],
+  "Amazonas": ["AM"],
+  "Bahia": ["BA"],
+  "Ceará": ["CE"],
+  "Distrito Federal": ["DF", "Brasília"],
+  "Espírito Santo": ["ES"],
+  "Goiás": ["GO"],
+  "Maranhão": ["MA"],
+  "Mato Grosso": ["MT"],
+  "Mato Grosso do Sul": ["MS"],
+  "Minas Gerais": ["MG"],
+  "Pará": ["PA"],
+  "Paraíba": ["PB"],
+  "Paraná": ["PR"],
+  "Pernambuco": ["PE"],
+  "Piauí": ["PI"],
+  "Rio de Janeiro": ["RJ"],
+  "Rio Grande do Norte": ["RN"],
+  "Rio Grande do Sul": ["RS"],
+  "Rondônia": ["RO"],
+  "Roraima": ["RR"],
+  "Santa Catarina": ["SC"],
+  "São Paulo": ["SP"],
+  "Sergipe": ["SE"],
+  "Tocantins": ["TO"],
+};
+
+function normalize(value: string): string {
+  return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+}
+
+// ===== BRASA COLOR SCALE (ABSOLUTE) =====
+function getBrasaColor(votes: number): string {
+  if (!votes || votes === 0) return "hsl(var(--heat-empty))";
+  if (votes <= 10) return "hsl(var(--heat-low))";
+  if (votes <= 100) return "hsl(var(--heat-mid))";
+  return "hsl(var(--heat-high))";
 }
 
 // Duel palettes
