@@ -420,7 +420,21 @@ const MapaCalor = () => {
                   <button onClick={() => { setDuelClubName(""); setDuelData([]); }}><X className="w-4 h-4 text-muted-foreground" /></button>
                 </div>
               ) : (
-...
+                <div className="relative">
+                  <Input value={duelSearchQuery} placeholder="Buscar rival..." className="bg-secondary border-border text-sm" onChange={(e) => handleDuelSearch(e.target.value)} />
+                  {duelSearchResults.length > 0 && (
+                    <div className="absolute top-12 left-0 right-0 bg-card border border-border rounded-xl overflow-hidden z-50 shadow-2xl max-h-48 overflow-y-auto">
+                      {duelSearchResults.map(club => (
+                        <button key={club.id} onMouseDown={(e) => { e.preventDefault(); selectDuelClub(club); }} className="w-full flex items-center gap-3 p-3 hover:bg-secondary text-left">
+                          <div className="w-7 h-7 bg-background rounded-full p-1 flex items-center justify-center shrink-0"><ClubLogo src={club.logo} alt={club.name} size="sm" /></div>
+                          <span className="text-xs font-black italic uppercase">{club.name}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
               {duelClubName && (
                 <div className="mt-4 p-4 rounded-xl bg-secondary/30 border border-border">
                   <div className="flex items-center justify-between mb-3">
