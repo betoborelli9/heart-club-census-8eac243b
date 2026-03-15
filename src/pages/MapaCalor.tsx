@@ -529,7 +529,7 @@ const MapaCalor = () => {
           )}
 
           <div className="w-full h-full min-h-[50vh] lg:min-h-full">
-            <ComposableMap projection="geoMercator" projectionConfig={{ scale: 140, center: [0, 20] }} style={{ width: "100%", height: "100%", minHeight: "50vh", background: "#0a0a0a" }}>
+            <ComposableMap projection="geoMercator" projectionConfig={{ scale: 140, center: [0, 20] }} style={{ width: "100%", height: "100%", minHeight: "50vh", background: "hsl(var(--background))" }}>
               <ZoomableGroup center={center} zoom={zoom} onMoveEnd={({ coordinates, zoom: z }) => { setCenter(coordinates as [number, number]); setZoom(z); }}>
                 <Geographies geography={GEO_URL}>
                   {({ geographies }) =>
@@ -542,10 +542,10 @@ const MapaCalor = () => {
                       if (duelMode && duelClubName) {
                         if (votesA > votesB) fillColor = getDuelColorA(votesA, maxVotes);
                         else if (votesB > votesA) fillColor = getDuelColorB(votesB, duelMaxVotes);
-                        else if (votesA > 0) fillColor = "#555";
-                        else fillColor = "#1a1a1a";
+                        else if (votesA > 0) fillColor = "hsl(var(--duel-neutral))";
+                        else fillColor = "hsl(var(--heat-empty))";
                       } else {
-                        fillColor = getBrasaColor(votesA, maxVotes);
+                        fillColor = getBrasaColor(votesA);
                       }
 
                       return (
@@ -553,7 +553,7 @@ const MapaCalor = () => {
                           key={geo.rsmKey}
                           geography={geo}
                           fill={fillColor}
-                          stroke="#555"
+                          stroke="hsl(var(--border))"
                           strokeWidth={0.5}
                           onClick={() => handleGeoClick(geo)}
                           onMouseEnter={(e) => {
@@ -564,7 +564,7 @@ const MapaCalor = () => {
                           onMouseLeave={() => setTooltip(null)}
                           style={{
                             default: { outline: "none", cursor: "pointer", transition: "fill 0.3s" },
-                            hover: { outline: "none", fill: votesA > 0 ? "#ff6200" : "#333", cursor: "pointer" },
+                            hover: { outline: "none", fill: votesA > 0 ? "hsl(var(--heat-high))" : "hsl(var(--heat-empty))", cursor: "pointer" },
                             pressed: { outline: "none" },
                           }}
                         />
