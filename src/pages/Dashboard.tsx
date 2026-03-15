@@ -9,6 +9,7 @@ import { CLUBS_DATA } from "@/clubes-data";
 import { ClubLogo } from "@/components/ClubLogo";
 import { ClubSearch } from "@/components/dashboard/ClubSearch";
 import NewsCarousel from "@/components/dashboard/NewsCarousel";
+import { getTeamTheme } from "@/data/teamColors";
 import logo from "@/assets/logo.png";
 
 const Dashboard = () => {
@@ -16,7 +17,7 @@ const Dashboard = () => {
     const { user, profile, isLoading, signOut } = useUser();
     const [heartTeam, setHeartTeam] = useState<any>(null);
     const [queriedTeam, setQueriedTeam] = useState<any>(null);
-    const [colors, setColors] = useState({ primary: "#ff6200", secondary: "#FFFFFF" });
+    const [colors, setColors] = useState({ primary: "#ff6200", secondary: "hsl(var(--foreground))" });
 
     useEffect(() => {
         const loadInitial = async () => {
@@ -25,13 +26,9 @@ const Dashboard = () => {
             const teamName = data?.clube_nome || "Vila Nova";
             const clubInfo = CLUBS_DATA.find(c => c.nome === teamName);
             setHeartTeam(clubInfo);
-            
-            if (teamName.includes("Vila Nova")) setColors({ primary: "#E21A21", secondary: "#FFFFFF" });
-            else if (teamName.includes("Flamengo")) setColors({ primary: "#E21A21", secondary: "#000000" });
-            else if (teamName.includes("Palmeiras")) setColors({ primary: "#006437", secondary: "#FFFFFF" });
-            else if (teamName.includes("Sampaio Corrêa")) setColors({ primary: "#ffc107", secondary: "#198754" });
-            else if (teamName.includes("São Paulo")) setColors({ primary: "#FFFFFF", secondary: "#E21A21" });
-            else setColors({ primary: "#ff6200", secondary: "#FFFFFF" });
+
+            const theme = getTeamTheme(teamName);
+            setColors({ primary: theme.primaryHex, secondary: "hsl(var(--foreground))" });
         };
         loadInitial();
     }, [user]);
@@ -66,31 +63,33 @@ const Dashboard = () => {
                 {/* BANNER */}
                 <section className="relative overflow-hidden rounded-t-3xl border border-border h-[220px] sm:h-[240px] md:h-[300px] landscape:h-[200px]" style={{ backgroundColor: colors.primary }}>
                     <div className="absolute inset-0 pointer-events-none overflow-hidden">
-                        <div className="absolute top-[-50%] right-[8%] w-[60px] md:w-[120px] h-[200%] rotate-[25deg] opacity-20 transition-all duration-700" style={{ backgroundColor: colors.secondary }} />
-                        <div className="absolute top-[-50%] right-[18%] w-[10px] md:w-[20px] h-[200%] rotate-[25deg] opacity-40 transition-all duration-700" style={{ backgroundColor: colors.secondary }} />
+                        <div className="absolute top-[-50%] right-[8%] w-[60px] md:w-[120px] h-[200%] rotate-[25deg] opacity-25 transition-all duration-700" style={{ backgroundColor: colors.secondary }} />
+                        <div className="absolute top-[-50%] right-[18%] w-[10px] md:w-[20px] h-[200%] rotate-[25deg] opacity-50 transition-all duration-700" style={{ backgroundColor: colors.secondary }} />
+                        <div className="absolute top-[-50%] left-[12%] w-[8px] md:w-[16px] h-[200%] -rotate-[20deg] opacity-50 transition-all duration-700" style={{ backgroundColor: colors.secondary }} />
+                        <div className="absolute top-[-50%] left-[4%] w-[45px] md:w-[90px] h-[200%] -rotate-[20deg] opacity-20 transition-all duration-700" style={{ backgroundColor: colors.secondary }} />
                     </div>
 
                     <div className="relative z-10 h-full px-4 md:px-12 flex items-center justify-between">
                         <div className="flex items-center gap-5 md:gap-12 min-w-0 flex-1">
-                            <div className="w-32 h-32 sm:w-36 sm:h-36 md:w-56 md:h-56 landscape:w-28 landscape:h-28 rounded-full bg-white shadow-2xl border-4 border-black/10 overflow-hidden shrink-0 transition-all flex items-center justify-center">
+                            <div className="w-32 h-32 sm:w-36 sm:h-36 md:w-56 md:h-56 landscape:w-28 landscape:h-28 rounded-full bg-background shadow-2xl border-4 border-background/30 overflow-hidden shrink-0 transition-all flex items-center justify-center">
                                 <ClubLogo src={heartTeam?.logoUrl} alt={heartTeam?.nome || ""} size="lg" className="w-full h-full object-contain" />
                             </div>
-                            <div className="text-white min-w-0 flex-1">
+                            <div className="text-primary-foreground min-w-0 flex-1">
                                 <h1 className="font-black uppercase italic tracking-tighter leading-none mb-3 drop-shadow-xl text-wrap break-words max-w-full text-xl sm:text-2xl md:text-3xl lg:text-4xl truncate">
                                     <span className="block text-balance">{profile.nome_exibicao}</span>
                                 </h1>
-                                <div className="flex flex-col gap-1.5 font-medium uppercase text-[10px] sm:text-xs md:text-sm tracking-widest text-white/90">
+                                <div className="flex flex-col gap-1.5 font-medium uppercase text-[10px] sm:text-xs md:text-sm tracking-widest text-primary-foreground/90">
                                     <span className="flex items-center gap-1.5">
                                         <MapPin className="w-4 h-4" /> {profile.cidade || "GOIÂNIA"}, {profile.estado || "GO"} • {heartTeam?.mascote || "TIGRÃO"}
                                     </span>
-                                    <span className="flex items-center gap-1.5 text-yellow-300 font-bold">
+                                    <span className="flex items-center gap-1.5 text-primary-foreground font-bold">
                                         <Trophy className="w-4 h-4" /> EMBAIXADOR BRONZE
                                     </span>
                                 </div>
                             </div>
                         </div>
-                        <div className="text-right hidden lg:block pr-6 shrink-0">
-                            <p className="text-[12px] font-black uppercase tracking-[0.6em] text-white/60 mb-1">Clube do Coração</p>
+                        <div className="text-right hidden lg:block pr-6 shrink-0 text-primary-foreground">
+                            <p className="text-[12px] font-black uppercase tracking-[0.6em] text-primary-foreground/60 mb-1">Clube do Coração</p>
                             <h2 className="text-3xl md:text-5xl font-black italic uppercase leading-none drop-shadow-2xl">
                                 {heartTeam?.nome || "VILA NOVA"}
                             </h2>

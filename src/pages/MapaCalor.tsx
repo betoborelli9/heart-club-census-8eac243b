@@ -25,38 +25,78 @@ import {
 } from "@/data/mockDashboard";
 
 const GEO_URL = "https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json";
+const BRAZIL_STATES_GEO_URL = "https://raw.githubusercontent.com/codeforamerica/click_that_hood/master/public/data/brazil-states.geojson";
 
-// ===== BRASA COLOR SCALE =====
-function getBrasaColor(votes: number, maxVotes: number): string {
-  if (!votes || votes === 0) return "#2a2a2a";
-  if (maxVotes <= 0) return "#2a2a2a";
-  const ratio = votes / maxVotes;
-  if (ratio <= 0.1) return "#c87830";
-  if (ratio <= 0.3) return "#d98a20";
-  if (ratio <= 0.5) return "#e89910";
-  if (ratio <= 0.7) return "#f0a500";
-  if (ratio <= 0.9) return "#f58000";
-  return "#ff6200";
+const BR_STATE_ALIASES: Record<string, string[]> = {
+  "Acre": ["AC"],
+  "Alagoas": ["AL"],
+  "Amapá": ["AP"],
+  "Amazonas": ["AM"],
+  "Bahia": ["BA"],
+  "Ceará": ["CE"],
+  "Distrito Federal": ["DF", "Brasília"],
+  "Espírito Santo": ["ES"],
+  "Goiás": ["GO"],
+  "Maranhão": ["MA"],
+  "Mato Grosso": ["MT"],
+  "Mato Grosso do Sul": ["MS"],
+  "Minas Gerais": ["MG"],
+  "Pará": ["PA"],
+  "Paraíba": ["PB"],
+  "Paraná": ["PR"],
+  "Pernambuco": ["PE"],
+  "Piauí": ["PI"],
+  "Rio de Janeiro": ["RJ"],
+  "Rio Grande do Norte": ["RN"],
+  "Rio Grande do Sul": ["RS"],
+  "Rondônia": ["RO"],
+  "Roraima": ["RR"],
+  "Santa Catarina": ["SC"],
+  "São Paulo": ["SP"],
+  "Sergipe": ["SE"],
+  "Tocantins": ["TO"],
+};
+
+function normalize(value: string): string {
+  return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+}
+
+// ===== BRASA COLOR SCALE (ABSOLUTE) =====
+function getBrasaColor(votes: number): string {
+  if (!votes || votes === 0) return "hsl(var(--heat-empty))";
+  if (votes <= 10) return "hsl(var(--heat-low))";
+  if (votes <= 100) return "hsl(var(--heat-mid))";
+  return "hsl(var(--heat-high))";
 }
 
 // Duel palettes
 function getDuelColorA(votes: number, maxVotes: number): string {
-  if (!votes) return "#2a2a2a";
+  if (!votes) return "hsl(var(--heat-empty))";
   const ratio = Math.min(votes / Math.max(maxVotes, 1), 1);
-  if (ratio <= 0.3) return "#b35a00";
-  if (ratio <= 0.6) return "#e07800";
-  return "#ff6200";
+  if (ratio <= 0.3) return "hsl(var(--heat-mid))";
+  if (ratio <= 0.6) return "hsl(var(--primary) / 0.85)";
+  return "hsl(var(--heat-high))";
 }
 function getDuelColorB(votes: number, maxVotes: number): string {
-  if (!votes) return "#2a2a2a";
+  if (!votes) return "hsl(var(--heat-empty))";
   const ratio = Math.min(votes / Math.max(maxVotes, 1), 1);
-  if (ratio <= 0.3) return "#1a4a8a";
-  if (ratio <= 0.6) return "#3080d0";
-  return "#60b0ff";
+  if (ratio <= 0.3) return "hsl(var(--duel-blue-low) / 0.75)";
+  if (ratio <= 0.6) return "hsl(var(--duel-blue-low))";
+  return "hsl(var(--duel-blue-high))";
 }
 
-const LEGEND_BRASA = ["#2a2a2a", "#c87830", "#d98a20", "#e89910", "#f0a500", "#f58000", "#ff6200"];
-const LEGEND_BLUE  = ["#2a2a2a", "#1a4a8a", "#2060b0", "#3080d0", "#50a0f0", "#60b0ff"];
+const LEGEND_BRASA = [
+  "hsl(var(--heat-empty))",
+  "hsl(var(--heat-low))",
+  "hsl(var(--heat-mid))",
+  "hsl(var(--heat-high))",
+];
+const LEGEND_BLUE = [
+  "hsl(var(--heat-empty))",
+  "hsl(var(--duel-blue-low) / 0.75)",
+  "hsl(var(--duel-blue-low))",
+  "hsl(var(--duel-blue-high))",
+];
 
 function formatVotes(n: number): string {
   if (n >= 1000000) return `${(n / 1000000).toFixed(1)}M`;
@@ -371,11 +411,11 @@ const MapaCalor = () => {
             <div className="mb-6">
               <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground mb-2"><Swords className="w-3 h-3 inline mr-1" /> Selecione o Rival</p>
               {duelClubName ? (
-                <div className="flex items-center gap-3 p-3 rounded-xl bg-blue-950/30 border border-blue-500/20">
-                  <div className="w-10 h-10 bg-white rounded-full p-1 flex items-center justify-center shrink-0"><ClubLogo src={duelClubInfo?.logoUrl} alt={duelClubName} size="sm" /></div>
+                <div className="flex items-center gap-3 p-3 rounded-xl bg-secondary/40 border border-border">
+                  <div className="w-10 h-10 bg-background rounded-full p-1 flex items-center justify-center shrink-0"><ClubLogo src={duelClubInfo?.logoUrl} alt={duelClubName} size="sm" /></div>
                   <div className="flex-1">
                     <h3 className="text-xs font-black italic uppercase">{duelClubName}</h3>
-                    <p className="text-[10px] text-blue-400 font-bold">{formatVotes(duelTotalB)} votos</p>
+                    <p className="text-[10px] font-bold" style={{ color: "hsl(var(--duel-blue-high))" }}>{formatVotes(duelTotalB)} votos</p>
                   </div>
                   <button onClick={() => { setDuelClubName(""); setDuelData([]); }}><X className="w-4 h-4 text-muted-foreground" /></button>
                 </div>
@@ -386,7 +426,7 @@ const MapaCalor = () => {
                     <div className="absolute top-12 left-0 right-0 bg-card border border-border rounded-xl overflow-hidden z-50 shadow-2xl max-h-48 overflow-y-auto">
                       {duelSearchResults.map(club => (
                         <button key={club.id} onMouseDown={(e) => { e.preventDefault(); selectDuelClub(club); }} className="w-full flex items-center gap-3 p-3 hover:bg-secondary text-left">
-                          <div className="w-7 h-7 bg-white rounded-full p-1 flex items-center justify-center shrink-0"><ClubLogo src={club.logo} alt={club.name} size="sm" /></div>
+                          <div className="w-7 h-7 bg-background rounded-full p-1 flex items-center justify-center shrink-0"><ClubLogo src={club.logo} alt={club.name} size="sm" /></div>
                           <span className="text-xs font-black italic uppercase">{club.name}</span>
                         </button>
                       ))}
@@ -400,15 +440,15 @@ const MapaCalor = () => {
                   <div className="flex items-center justify-between mb-3">
                     <span className="text-[10px] font-black uppercase text-primary">{activeClubName}</span>
                     <span className="text-[10px] font-black uppercase text-muted-foreground">VS</span>
-                    <span className="text-[10px] font-black uppercase text-blue-400">{duelClubName}</span>
+                    <span className="text-[10px] font-black uppercase" style={{ color: "hsl(var(--duel-blue-high))" }}>{duelClubName}</span>
                   </div>
                   <div className="h-3 w-full bg-muted rounded-full overflow-hidden flex">
-                    <div className="h-full transition-all duration-700" style={{ width: `${duelTotalA + duelTotalB > 0 ? (duelTotalA / (duelTotalA + duelTotalB)) * 100 : 50}%`, background: "linear-gradient(90deg, #e07800, #ff6200)" }} />
-                    <div className="h-full transition-all duration-700" style={{ width: `${duelTotalA + duelTotalB > 0 ? (duelTotalB / (duelTotalA + duelTotalB)) * 100 : 50}%`, background: "linear-gradient(90deg, #3080d0, #60b0ff)" }} />
+                    <div className="h-full transition-all duration-700" style={{ width: `${duelTotalA + duelTotalB > 0 ? (duelTotalA / (duelTotalA + duelTotalB)) * 100 : 50}%`, background: "linear-gradient(90deg, hsl(var(--heat-mid)), hsl(var(--heat-high)))" }} />
+                    <div className="h-full transition-all duration-700" style={{ width: `${duelTotalA + duelTotalB > 0 ? (duelTotalB / (duelTotalA + duelTotalB)) * 100 : 50}%`, background: "linear-gradient(90deg, hsl(var(--duel-blue-low)), hsl(var(--duel-blue-high)))" }} />
                   </div>
                   <div className="flex justify-between mt-1.5">
                     <span className="text-[10px] font-bold text-primary">{formatVotes(duelTotalA)}</span>
-                    <span className="text-[10px] font-bold text-blue-400">{formatVotes(duelTotalB)}</span>
+                    <span className="text-[10px] font-bold" style={{ color: "hsl(var(--duel-blue-high))" }}>{formatVotes(duelTotalB)}</span>
                   </div>
                 </div>
               )}
@@ -438,13 +478,13 @@ const MapaCalor = () => {
                   <div key={entry.region} className="flex flex-col gap-1">
                     <div className="flex justify-between text-[10px]">
                       <span className="font-bold flex items-center gap-1.5">
-                        <span className="w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-black" style={{ backgroundColor: i < 3 ? "#ff6200" : "hsl(var(--muted))", color: i < 3 ? "#000" : "hsl(var(--foreground))" }}>{i + 1}</span>
+                        <span className="w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-black" style={{ backgroundColor: i < 3 ? "hsl(var(--heat-high))" : "hsl(var(--muted))", color: i < 3 ? "hsl(var(--background))" : "hsl(var(--foreground))" }}>{i + 1}</span>
                         {entry.region}
                       </span>
                       <span className="font-black text-primary">{formatVotes(Number(entry.votes))}</span>
                     </div>
                     <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
-                      <motion.div initial={{ width: 0 }} animate={{ width: `${(Number(entry.votes) / Number(top10[0].votes)) * 100}%` }} transition={{ duration: 0.8, delay: i * 0.1 }} className="h-full rounded-full" style={{ background: "linear-gradient(90deg, #b35a00, #ff6200)" }} />
+                      <motion.div initial={{ width: 0 }} animate={{ width: `${(Number(entry.votes) / Number(top10[0].votes)) * 100}%` }} transition={{ duration: 0.8, delay: i * 0.1 }} className="h-full rounded-full" style={{ background: "linear-gradient(90deg, hsl(var(--heat-mid)), hsl(var(--heat-high)))" }} />
                     </div>
                   </div>
                 ))}
@@ -489,7 +529,7 @@ const MapaCalor = () => {
           )}
 
           <div className="w-full h-full min-h-[50vh] lg:min-h-full">
-            <ComposableMap projection="geoMercator" projectionConfig={{ scale: 140, center: [0, 20] }} style={{ width: "100%", height: "100%", minHeight: "50vh", background: "#0a0a0a" }}>
+            <ComposableMap projection="geoMercator" projectionConfig={{ scale: 140, center: [0, 20] }} style={{ width: "100%", height: "100%", minHeight: "50vh", background: "hsl(var(--background))" }}>
               <ZoomableGroup center={center} zoom={zoom} onMoveEnd={({ coordinates, zoom: z }) => { setCenter(coordinates as [number, number]); setZoom(z); }}>
                 <Geographies geography={GEO_URL}>
                   {({ geographies }) =>
@@ -502,10 +542,10 @@ const MapaCalor = () => {
                       if (duelMode && duelClubName) {
                         if (votesA > votesB) fillColor = getDuelColorA(votesA, maxVotes);
                         else if (votesB > votesA) fillColor = getDuelColorB(votesB, duelMaxVotes);
-                        else if (votesA > 0) fillColor = "#555";
-                        else fillColor = "#1a1a1a";
+                        else if (votesA > 0) fillColor = "hsl(var(--duel-neutral))";
+                        else fillColor = "hsl(var(--heat-empty))";
                       } else {
-                        fillColor = getBrasaColor(votesA, maxVotes);
+                        fillColor = getBrasaColor(votesA);
                       }
 
                       return (
@@ -513,7 +553,7 @@ const MapaCalor = () => {
                           key={geo.rsmKey}
                           geography={geo}
                           fill={fillColor}
-                          stroke="#555"
+                          stroke="hsl(var(--border))"
                           strokeWidth={0.5}
                           onClick={() => handleGeoClick(geo)}
                           onMouseEnter={(e) => {
@@ -524,7 +564,7 @@ const MapaCalor = () => {
                           onMouseLeave={() => setTooltip(null)}
                           style={{
                             default: { outline: "none", cursor: "pointer", transition: "fill 0.3s" },
-                            hover: { outline: "none", fill: votesA > 0 ? "#ff6200" : "#333", cursor: "pointer" },
+                            hover: { outline: "none", fill: votesA > 0 ? "hsl(var(--heat-high))" : "hsl(var(--heat-empty))", cursor: "pointer" },
                             pressed: { outline: "none" },
                           }}
                         />
@@ -554,7 +594,7 @@ const MapaCalor = () => {
               {LEGEND_BRASA.map((c, i) => (<div key={i} className="w-4 h-3 rounded-sm" style={{ backgroundColor: c }} />))}
             </div>
             <div className="flex justify-between text-[7px] text-muted-foreground mt-1">
-              <span>0</span><span>10</span><span>100+</span>
+              <span>0</span><span>1-10</span><span>11-100</span><span>100+</span>
             </div>
             {duelMode && duelClubName && (
               <>
@@ -562,7 +602,7 @@ const MapaCalor = () => {
                   {LEGEND_BLUE.map((c, i) => (<div key={i} className="w-4 h-3 rounded-sm" style={{ backgroundColor: c }} />))}
                 </div>
                 <div className="flex justify-between text-[7px] text-muted-foreground mt-1">
-                  <span>0</span><span>{duelClubName}</span>
+                  <span>0</span><span style={{ color: "hsl(var(--duel-blue-high))" }}>{duelClubName}</span>
                 </div>
               </>
             )}
