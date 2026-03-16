@@ -1,5 +1,4 @@
-// Path: src/pages/Dashboard.tsx
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { LogOut, Loader2, MapPin, Trophy, Flame, BarChart3, Medal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate, Link } from "react-router-dom";
@@ -17,20 +16,53 @@ const Dashboard = () => {
     const { user, profile, isLoading, signOut } = useUser();
     const [heartTeam, setHeartTeam] = useState<any>(null);
     const [queriedTeam, setQueriedTeam] = useState<any>(null);
-    const [colors, setColors] = useState({ primary: "#ff6200", secondary: "hsl(var(--foreground))" });
+    const [clubeName, setClubeName] = useState<string | null>(null);
+    const [colors, setColors] = useState({ primary: "#ff6200", secondary: "#000000" });
 
     useEffect(() => {
-        const loadInitial = async () => {
+        const loadHeartClub = async () => {
             if (!user) return;
-            const { data } = await supabase.from("votos").select("clube_nome").eq("user_id", user.id).maybeSingle();
-            const teamName = data?.clube_nome || "Vila Nova";
-            const clubInfo = CLUBS_DATA.find(c => c.nome === teamName);
-            setHeartTeam(clubInfo);
 
-            const theme = getTeamTheme(teamName);
-            setColors({ primary: theme.primaryHex, secondary: "hsl(var(--foreground))" });
+            // 1. Get the user's voted club from Supabase
+            const { data: votoData } = await supabase
+                .from("votos")
+                .select("clube_nome")
+                .eq("user_id", user.id)
+                .eq("is_original_vote", true)
+                .maybeSingle();
+
+            const teamName = votoData?.clube_nome ?? null;
+            setClubeName(teamName);
+
+            if (!teamName) {
+                setHeartTeam(null);
+                setColors({ primary: "#ff6200", secondary: "#000000" });
+                return;
+            }
+
+            // 2. Find local club data for logo
+            const clubInfo = CLUBS_DATA.find(c => c.nome === teamName);
+            setHeartTeam(clubInfo ?? { nome: teamName });
+
+            // 3. Try to get colors from club_colors table first
+            const { data: dbColors } = await supabase
+                .from("club_colors")
+                .select("primary_color, secondary_color")
+                .eq("club_name", teamName)
+                .maybeSingle();
+
+            if (dbColors?.primary_color && dbColors?.secondary_color) {
+                setColors({
+                    primary: dbColors.primary_color,
+                    secondary: dbColors.secondary_color,
+                });
+            } else {
+                // 4. Fallback to local teamColors.ts
+                const theme = getTeamTheme(teamName);
+                setColors({ primary: theme.primaryHex, secondary: "#000000" });
+            }
         };
-        loadInitial();
+        loadHeartClub();
     }, [user]);
 
     if (isLoading || !profile) {
@@ -40,6 +72,8 @@ const Dashboard = () => {
             </div>
         );
     }
+
+    const displayClubName = clubeName || "Escolha seu clube";
 
     return (
         <div className="min-h-screen bg-background text-foreground" style={{ fontFamily: "Verdana, Geneva, sans-serif" }}>
@@ -60,9 +94,10 @@ const Dashboard = () => {
             </header>
 
             <main className="max-w-6xl mx-auto px-2 md:px-4 py-4">
-                {/* BANNER */}
+                {/* BANNER — cores dinâmicas do clube do coração */}
                 <section className="relative overflow-hidden rounded-t-3xl border border-border h-[220px] sm:h-[240px] md:h-[300px] landscape:h-[200px]" style={{ backgroundColor: colors.primary }}>
                     <div className="absolute inset-0 pointer-events-none overflow-hidden">
+                        {/* Faixas laterais com cor secundária do clube */}
                         <div className="absolute top-[-50%] right-[8%] w-[60px] md:w-[120px] h-[200%] rotate-[25deg] opacity-25 transition-all duration-700" style={{ backgroundColor: colors.secondary }} />
                         <div className="absolute top-[-50%] right-[18%] w-[10px] md:w-[20px] h-[200%] rotate-[25deg] opacity-50 transition-all duration-700" style={{ backgroundColor: colors.secondary }} />
                         <div className="absolute top-[-50%] left-[12%] w-[8px] md:w-[16px] h-[200%] -rotate-[20deg] opacity-50 transition-all duration-700" style={{ backgroundColor: colors.secondary }} />
@@ -76,11 +111,11 @@ const Dashboard = () => {
                             </div>
                             <div className="text-primary-foreground min-w-0 flex-1">
                                 <h1 className="font-black uppercase italic tracking-tighter leading-none mb-3 drop-shadow-xl text-wrap break-words max-w-full text-xl sm:text-2xl md:text-3xl lg:text-4xl truncate">
-                                    <span className="block text-balance">{profile.nome_exibicao}</span>
+                                    <span className="block text-balance">{profile.nome_exibicao || "Torcedor"}</span>
                                 </h1>
                                 <div className="flex flex-col gap-1.5 font-medium uppercase text-[10px] sm:text-xs md:text-sm tracking-widest text-primary-foreground/90">
                                     <span className="flex items-center gap-1.5">
-                                        <MapPin className="w-4 h-4" /> {profile.cidade || "GOIÂNIA"}, {profile.estado || "GO"} • {heartTeam?.mascote || "TIGRÃO"}
+                                        <MapPin className="w-4 h-4" /> {profile.cidade || "Cidade"}, {profile.estado || "UF"}
                                     </span>
                                     <span className="flex items-center gap-1.5 text-primary-foreground font-bold">
                                         <Trophy className="w-4 h-4" /> EMBAIXADOR BRONZE
@@ -91,7 +126,7 @@ const Dashboard = () => {
                         <div className="text-right hidden lg:block pr-6 shrink-0 text-primary-foreground">
                             <p className="text-[12px] font-black uppercase tracking-[0.6em] text-primary-foreground/60 mb-1">Clube do Coração</p>
                             <h2 className="text-3xl md:text-5xl font-black italic uppercase leading-none drop-shadow-2xl">
-                                {heartTeam?.nome || "VILA NOVA"}
+                                {displayClubName}
                             </h2>
                         </div>
                     </div>
@@ -130,9 +165,9 @@ const Dashboard = () => {
                     </div>
                 )}
 
-                {/* NEWS */}
+                {/* NEWS — dinâmico, sem hardcoding */}
                 <div className="mt-10">
-                    <NewsCarousel teamName={queriedTeam?.name || heartTeam?.nome || "Vila Nova"} />
+                    <NewsCarousel teamName={queriedTeam?.name || clubeName || null} />
                 </div>
             </main>
         </div>
