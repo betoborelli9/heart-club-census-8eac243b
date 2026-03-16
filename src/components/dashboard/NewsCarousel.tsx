@@ -22,6 +22,8 @@ const FALLBACK_GRADIENTS = [
 
 const STOPWORDS = new Set(["fc", "sc", "de", "do", "da", "dos", "das", "club", "clube", "esporte", "futebol", "sport"]);
 
+const FORTY_EIGHT_HOURS_MS = 48 * 60 * 60 * 1000;
+
 function timeAgo(dateStr: string): string {
   if (!dateStr) return "";
   const diff = Date.now() - new Date(dateStr).getTime();
@@ -46,30 +48,36 @@ function isTitleAboutClub(title: string, teamName: string): boolean {
   const titleNorm = normalize(title);
   const tokens = getClubTokens(teamName);
   if (tokens.length === 0) return false;
-
   const matches = tokens.filter((token) => titleNorm.includes(token));
   if (tokens.length === 1) return matches.length === 1;
-
   return matches.length >= Math.min(tokens.length, 2);
 }
 
 function isPortalLogoImage(url: string | null | undefined): boolean {
-  if (!url) return false;
+  if (!url) return true; // treat missing as "bad" image
   const value = normalize(url);
-
   return (
-    (value.includes("s.glbimg.com") && value.includes("ge") && (value.includes("logo") || value.includes("favicon"))) ||
+    (value.includes("s.glbimg.com") && (value.includes("logo") || value.includes("favicon") || value.includes("ge/"))) ||
     value.includes("logo-ge") ||
-    value.includes("ge.globo") && value.includes("favicon")
+    value.includes("ge.globo") ||
+    value.includes("favicon") ||
+    value.includes("sportv") && value.includes("logo")
   );
 }
 
-export default function NewsCarousel({ teamName }: { teamName: string }) {
+function isWithin48Hours(dateStr: string): boolean {
+  if (!dateStr) return false;
+  const pubTime = new Date(dateStr).getTime();
+  if (isNaN(pubTime)) return false;
+  return Date.now() - pubTime <= FORTY_EIGHT_HOURS_MS;
+}
+
+export default function NewsCarousel({ teamName }: { teamName: string | null }) {
   const [noticias, setNoticias] = useState<NewsItem[]>([]);
   const [loading, setLoading] = useState(true);
 
   const clubLogoUrl = useMemo(
-    () => CLUBS_DATA.find((club) => normalize(club.nome) === normalize(teamName))?.logoUrl ?? null,
+    () => (teamName ? CLUBS_DATA.find((club) => normalize(club.nome) === normalize(teamName))?.logoUrl ?? null : null),
     [teamName],
   );
 
@@ -77,7 +85,11 @@ export default function NewsCarousel({ teamName }: { teamName: string }) {
     let cancelled = false;
 
     async function getNews() {
-      if (!teamName) return;
+      if (!teamName) {
+        setNoticias([]);
+        setLoading(false);
+        return;
+      }
       setLoading(true);
 
       try {
@@ -90,12 +102,17 @@ export default function NewsCarousel({ teamName }: { teamName: string }) {
 
         const rawData = Array.isArray(data) ? (data as NewsItem[]) : [];
 
-        const filtered = rawData.filter((item) => isTitleAboutClub(item.title, teamName));
+        // 1. Filter by club relevance (token matching)
+        // 2. Filter to last 48 hours only
+        // 3. Strip portal logos
+        const filtered = rawData
+          .filter((item) => isTitleAboutClub(item.title, teamName))
+          .filter((item) => isWithin48Hours(item.pubDate));
 
+        // Sort: real images first
         const sorted = filtered.sort((a, b) => {
-          const aOk = a.imageUrl && !isPortalLogoImage(a.imageUrl);
-          const bOk = b.imageUrl && !isPortalLogoImage(b.imageUrl);
-
+          const aOk = !isPortalLogoImage(a.imageUrl);
+          const bOk = !isPortalLogoImage(b.imageUrl);
           if (aOk && !bOk) return -1;
           if (!aOk && bOk) return 1;
           return 0;
@@ -110,11 +127,10 @@ export default function NewsCarousel({ teamName }: { teamName: string }) {
     }
 
     getNews();
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, [teamName]);
 
+  // Clean portal logos → replace with null (will show club crest fallback)
   const cleanedNews = useMemo(
     () =>
       noticias.map((item) => ({
@@ -124,23 +140,32 @@ export default function NewsCarousel({ teamName }: { teamName: string }) {
     [noticias],
   );
 
+  // Deduplicate: cards never repeat in sidebar
   const { headlines, sidebar } = useMemo(() => {
     const seen = new Set<string>();
-
     const unique = cleanedNews.filter((item) => {
-      const key = `${normalize(item.guid || "")}-${normalize(item.title)}`;
+      const key = normalize(item.title).substring(0, 80);
       if (seen.has(key)) return false;
       seen.add(key);
       return true;
     });
 
     const cards = unique.slice(0, Math.min(4, unique.length));
-    const used = new Set(cards.map((c) => `${normalize(c.guid || "")}-${normalize(c.title)}`));
-
-    const rest = unique.filter((item) => !used.has(`${normalize(item.guid || "")}-${normalize(item.title)}`));
+    const cardKeys = new Set(cards.map((c) => normalize(c.title).substring(0, 80)));
+    const rest = unique.filter((item) => !cardKeys.has(normalize(item.title).substring(0, 80)));
 
     return { headlines: cards, sidebar: rest };
   }, [cleanedNews]);
+
+  if (!teamName) {
+    return (
+      <div className="py-20 text-center border border-dashed border-border rounded-3xl">
+        <p className="text-muted-foreground text-sm italic" style={{ fontFamily: "Verdana, Geneva, sans-serif" }}>
+          Vote em um clube para ativar o Radar de Notícias.
+        </p>
+      </div>
+    );
+  }
 
   if (loading) {
     return (
@@ -165,14 +190,14 @@ export default function NewsCarousel({ teamName }: { teamName: string }) {
       {cleanedNews.length === 0 ? (
         <div className="py-20 text-center border border-dashed border-border rounded-3xl">
           <p className="text-muted-foreground text-sm italic" style={{ fontFamily: "Verdana, Geneva, sans-serif" }}>
-            Radar em monitoramento: nenhuma atualização oficial recente encontrada para o {teamName}.
+            Nenhuma notícia exclusiva encontrada nas últimas 48 horas para o {teamName}.
           </p>
         </div>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
           <div
             className={`lg:col-span-2 grid gap-4 ${
-              headlines.length === 1 ? "grid-cols-1" : headlines.length === 2 ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1 sm:grid-cols-2"
+              headlines.length === 1 ? "grid-cols-1" : "grid-cols-1 sm:grid-cols-2"
             }`}
           >
             {headlines.map((item, i) => (
@@ -205,8 +230,9 @@ export default function NewsCarousel({ teamName }: { teamName: string }) {
                   }}
                 />
 
+                {/* Show club crest when no real image */}
                 {!item.imageUrl && clubLogoUrl && (
-                  <div className="absolute top-3 right-3 w-12 h-12 rounded-full bg-background/80 border border-border p-1.5 z-20">
+                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-20 h-20 rounded-full bg-background/20 border border-border/30 p-2 z-10 opacity-40">
                     <ClubLogo src={clubLogoUrl} alt={`Escudo ${teamName}`} size="sm" className="w-full h-full" />
                   </div>
                 )}
