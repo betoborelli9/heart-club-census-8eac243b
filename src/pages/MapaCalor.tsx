@@ -178,7 +178,7 @@ const MapaCalor = () => {
     const load = async () => {
       if (!user) return;
       const { data } = await supabase.from("votos").select("clube_nome").eq("user_id", user.id).maybeSingle();
-      const name = data?.clube_nome || "Vila Nova";
+      const name = data?.clube_nome || null;
       setHeartClubName(name);
       setActiveClubName(name);
       setActiveClubInfo(CLUBS_DATA.find(c => c.nome === name) || null);
