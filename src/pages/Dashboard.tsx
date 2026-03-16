@@ -1,5 +1,6 @@
-import { useEffect, useState, useMemo } from "react";
-import { LogOut, Loader2, MapPin, Trophy, Flame, BarChart3, Medal } from "lucide-react";
+// BUILD: 16/03/2026 - DASHBOARD PREMIUM MODULAR
+import { useEffect, useMemo, useState } from "react";
+import { LogOut, Loader2, MapPin, Trophy, Flame, BarChart3, Medal, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate, Link } from "react-router-dom";
 import { useUser } from "@/contexts/UserContext";
@@ -8,170 +9,137 @@ import { CLUBS_DATA } from "@/clubes-data";
 import { ClubLogo } from "@/components/ClubLogo";
 import { ClubSearch } from "@/components/dashboard/ClubSearch";
 import NewsCarousel from "@/components/dashboard/NewsCarousel";
-import { getTeamTheme } from "@/data/teamColors";
 import logo from "@/assets/logo.png";
 
+// --- MÓDULO 1: LÓGICA DE NORMALIZAÇÃO E ESTILO ---
+const normalize = (v: string) => v.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9\s]/g, " ").trim().toLowerCase();
+
 const Dashboard = () => {
-    const navigate = useNavigate();
-    const { user, profile, isLoading, signOut } = useUser();
-    const [heartTeam, setHeartTeam] = useState<any>(null);
-    const [queriedTeam, setQueriedTeam] = useState<any>(null);
-    const [clubeName, setClubeName] = useState<string | null>(null);
-    const [colors, setColors] = useState({ primary: "#ff6200", secondary: "#000000" });
+  const navigate = useNavigate();
+  const { user, profile, isLoading, signOut } = useUser();
+  const [activeClub, setActiveClub] = useState<any>(null);
+  const [clubeName, setClubeName] = useState<string | null>(null);
+  const [queriedTeam, setQueriedTeam] = useState<any>(null);
 
-    useEffect(() => {
-        const loadHeartClub = async () => {
-            if (!user) return;
+  // --- MÓDULO 2: CARREGAMENTO DE DADOS ---
+  useEffect(() => {
+    const loadData = async () => {
+      if (!user) return;
+      const { data } = await supabase.from("votos").select("clube_nome").eq("user_id", user.id).eq("is_original_vote", true).maybeSingle();
+      const teamName = data?.clube_nome || null;
+      setClubeName(teamName);
+      if (teamName) {
+        const clubInfo = CLUBS_DATA.find(c => normalize(c.nome) === normalize(teamName));
+        setActiveClub(clubInfo || { nome: teamName });
+      }
+    };
+    loadData();
+  }, [user]);
 
-            // 1. Get the user's voted club from Supabase
-            const { data: votoData } = await supabase
-                .from("votos")
-                .select("clube_nome")
-                .eq("user_id", user.id)
-                .eq("is_original_vote", true)
-                .maybeSingle();
+  // --- MÓDULO 3: CORES DINÂMICAS (SÃO PAULO, PALMEIRAS, FLAMENGO) ---
+  const teamStyle = useMemo(() => {
+    const name = normalize(clubeName || "");
+    if (name.includes("palmeiras")) return { 
+        bg: "bg-[#006437]", 
+        lines: "rgba(255, 255, 255, 0.15)", 
+        text: "text-white" 
+    };
+    if (name.includes("flamengo")) return { 
+        bg: "bg-[#C1272D]", 
+        lines: "rgba(0, 0, 0, 0.3)", 
+        text: "text-white" 
+    };
+    if (name.includes("sao paulo")) return { 
+        bg: "bg-white", 
+        lines: "repeating-linear-gradient(45deg, transparent, transparent 30px, rgba(0,0,0,0.05) 30px, rgba(0,0,0,0.05) 60px, rgba(193,39,45,0.05) 60px, rgba(193,39,45,0.05) 90px)", 
+        text: "text-black" 
+    };
+    return { bg: "bg-zinc-900", lines: "rgba(255, 255, 255, 0.05)", text: "text-white" };
+  }, [clubeName]);
 
-            const teamName = votoData?.clube_nome ?? null;
-            setClubeName(teamName);
+  if (isLoading || !profile) {
+    return <div className="h-screen flex items-center justify-center bg-black"><Loader2 className="animate-spin text-[#ff6200] w-10 h-10" /></div>;
+  }
 
-            if (!teamName) {
-                setHeartTeam(null);
-                setColors({ primary: "#ff6200", secondary: "#000000" });
-                return;
-            }
-
-            // 2. Find local club data for logo
-            const clubInfo = CLUBS_DATA.find(c => c.nome === teamName);
-            setHeartTeam(clubInfo ?? { nome: teamName });
-
-            // 3. Try to get colors from club_colors table first
-            const { data: dbColors } = await supabase
-                .from("club_colors")
-                .select("primary_color, secondary_color")
-                .eq("club_name", teamName)
-                .maybeSingle();
-
-            if (dbColors?.primary_color && dbColors?.secondary_color) {
-                setColors({
-                    primary: dbColors.primary_color,
-                    secondary: dbColors.secondary_color,
-                });
-            } else {
-                // 4. Fallback to local teamColors.ts
-                const theme = getTeamTheme(teamName);
-                setColors({ primary: theme.primaryHex, secondary: "#000000" });
-            }
-        };
-        loadHeartClub();
-    }, [user]);
-
-    if (isLoading || !profile) {
-        return (
-            <div className="h-screen flex items-center justify-center bg-background">
-                <Loader2 className="animate-spin text-primary w-10 h-10" />
-            </div>
-        );
-    }
-
-    const displayClubName = clubeName || "Escolha seu clube";
-
-    return (
-        <div className="min-h-screen bg-background text-foreground" style={{ fontFamily: "Verdana, Geneva, sans-serif" }}>
-            {/* HEADER */}
-            <header className="h-16 md:h-20 border-b border-border bg-background/80 backdrop-blur-xl sticky top-0 z-50">
-                <div className="max-w-6xl mx-auto px-4 h-full flex items-center justify-between gap-2 md:gap-6">
-                    <div className="flex items-center gap-2 md:gap-4 shrink-0 cursor-pointer h-full py-2" onClick={() => navigate("/")}>
-                        <img src={logo} alt="Heart Club" className="h-10 md:h-14 w-auto object-contain" />
-                        <span className="font-black italic text-sm md:text-2xl tracking-tighter hidden sm:block"> HEART CLUB </span>
-                    </div>
-                    <div className="flex-1 max-w-[200px] md:max-w-sm relative z-50">
-                        <ClubSearch onSelect={(club) => setQueriedTeam(club)} />
-                    </div>
-                    <Button variant="ghost" size="icon" onClick={() => signOut()} className="hover:text-primary shrink-0">
-                        <LogOut className="w-5 h-5 md:w-6 md:h-6" />
-                    </Button>
-                </div>
-            </header>
-
-            <main className="max-w-6xl mx-auto px-2 md:px-4 py-4">
-                {/* BANNER — cores dinâmicas do clube do coração */}
-                <section className="relative overflow-hidden rounded-t-3xl border border-border h-[220px] sm:h-[240px] md:h-[300px] landscape:h-[200px]" style={{ backgroundColor: colors.primary }}>
-                    <div className="absolute inset-0 pointer-events-none overflow-hidden">
-                        {/* Faixas laterais com cor secundária do clube */}
-                        <div className="absolute top-[-50%] right-[8%] w-[60px] md:w-[120px] h-[200%] rotate-[25deg] opacity-25 transition-all duration-700" style={{ backgroundColor: colors.secondary }} />
-                        <div className="absolute top-[-50%] right-[18%] w-[10px] md:w-[20px] h-[200%] rotate-[25deg] opacity-50 transition-all duration-700" style={{ backgroundColor: colors.secondary }} />
-                        <div className="absolute top-[-50%] left-[12%] w-[8px] md:w-[16px] h-[200%] -rotate-[20deg] opacity-50 transition-all duration-700" style={{ backgroundColor: colors.secondary }} />
-                        <div className="absolute top-[-50%] left-[4%] w-[45px] md:w-[90px] h-[200%] -rotate-[20deg] opacity-20 transition-all duration-700" style={{ backgroundColor: colors.secondary }} />
-                    </div>
-
-                    <div className="relative z-10 h-full px-4 md:px-12 flex items-center justify-between">
-                        <div className="flex items-center gap-5 md:gap-12 min-w-0 flex-1">
-                            <div className="w-32 h-32 sm:w-36 sm:h-36 md:w-56 md:h-56 landscape:w-28 landscape:h-28 rounded-full bg-background shadow-2xl border-4 border-background/30 overflow-hidden shrink-0 transition-all flex items-center justify-center">
-                                <ClubLogo src={heartTeam?.logoUrl} alt={heartTeam?.nome || ""} size="lg" className="w-full h-full object-contain" />
-                            </div>
-                            <div className="text-primary-foreground min-w-0 flex-1">
-                                <h1 className="font-black uppercase italic tracking-tighter leading-none mb-3 drop-shadow-xl text-wrap break-words max-w-full text-xl sm:text-2xl md:text-3xl lg:text-4xl truncate">
-                                    <span className="block text-balance">{profile.nome_exibicao || "Torcedor"}</span>
-                                </h1>
-                                <div className="flex flex-col gap-1.5 font-medium uppercase text-[10px] sm:text-xs md:text-sm tracking-widest text-primary-foreground/90">
-                                    <span className="flex items-center gap-1.5">
-                                        <MapPin className="w-4 h-4" /> {profile.cidade || "Cidade"}, {profile.estado || "UF"}
-                                    </span>
-                                    <span className="flex items-center gap-1.5 text-primary-foreground font-bold">
-                                        <Trophy className="w-4 h-4" /> EMBAIXADOR BRONZE
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
-                        <div className="text-right hidden lg:block pr-6 shrink-0 text-primary-foreground">
-                            <p className="text-[12px] font-black uppercase tracking-[0.6em] text-primary-foreground/60 mb-1">Clube do Coração</p>
-                            <h2 className="text-3xl md:text-5xl font-black italic uppercase leading-none drop-shadow-2xl">
-                                {displayClubName}
-                            </h2>
-                        </div>
-                    </div>
-                </section>
-
-                {/* LINKS */}
-                <section className="relative z-20 -mt-px border border-border rounded-b-3xl overflow-hidden shadow-2xl bg-card">
-                    <div className="relative px-4 md:px-12 py-4 md:py-6 flex items-center justify-around md:justify-start gap-4 md:gap-12 overflow-x-auto no-scrollbar">
-                        <Link to="/mapa-calor" className="flex flex-col md:flex-row items-center gap-1 md:gap-3 text-[10px] md:text-[14px] font-black uppercase tracking-widest text-muted-foreground hover:text-foreground transition-all min-w-max">
-                            <Flame className="w-6 h-6 text-primary" /> Mapa de Calor
-                        </Link>
-                        <Link to="#" className="flex flex-col md:flex-row items-center gap-1 md:gap-3 text-[10px] md:text-[14px] font-black uppercase tracking-widest text-muted-foreground hover:text-foreground transition-all min-w-max">
-                            <BarChart3 className="w-6 h-6 text-primary" /> ESTATÍSTICAS
-                        </Link>
-                        <Link to="#" className="flex flex-col md:flex-row items-center gap-1 md:gap-3 text-[10px] md:text-[14px] font-black uppercase tracking-widest text-muted-foreground hover:text-foreground transition-all min-w-max">
-                            <Medal className="w-6 h-6 text-primary" /> RANKING
-                        </Link>
-                    </div>
-                </section>
-
-                {/* CONSULTA */}
-                {queriedTeam && (
-                    <div className="mt-6 overflow-hidden rounded-2xl border border-border bg-card p-5 flex items-center justify-between shadow-2xl animate-in fade-in slide-in-from-top duration-500">
-                        <div className="flex items-center gap-5">
-                            <div className="w-16 h-16 bg-white rounded-full p-2 flex items-center justify-center">
-                                <ClubLogo src={queriedTeam.logo} alt={queriedTeam.name} size="sm" />
-                            </div>
-                            <div>
-                                <span className="text-[12px] font-black uppercase tracking-widest text-muted-foreground">Consultando:</span>
-                                <h3 className="text-2xl font-black italic uppercase leading-none">{queriedTeam.name}</h3>
-                            </div>
-                        </div>
-                        <button onClick={() => setQueriedTeam(null)} className="text-primary text-[12px] font-black uppercase hover:underline">
-                            Fechar X
-                        </button>
-                    </div>
-                )}
-
-                {/* NEWS — dinâmico, sem hardcoding */}
-                <div className="mt-10">
-                    <NewsCarousel teamName={queriedTeam?.name || clubeName || null} />
-                </div>
-            </main>
+  return (
+    <div className="min-h-screen bg-[#0a0a0a] text-white font-sans selection:bg-[#ff6200]">
+      
+      {/* --- MÓDULO 4: HEADER ESTRUTURADO --- */}
+      <header className="h-16 border-b border-white/5 bg-black/80 backdrop-blur-xl sticky top-0 z-50">
+        <div className="max-w-6xl mx-auto px-4 h-full flex items-center justify-between gap-4">
+          <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate("/")}>
+            <img src={logo} alt="Logo" className="h-8 md:h-10 w-auto" />
+            <span className="font-black italic text-lg tracking-tighter hidden sm:block">HEART CLUB</span>
+          </div>
+          <div className="flex-1 max-w-sm"><ClubSearch onSelect={(club) => setQueriedTeam(club)} /></div>
+          <Button variant="ghost" size="icon" onClick={() => signOut()} className="text-white/50 hover:text-white"><LogOut className="w-5 h-5" /></Button>
         </div>
-    );
+      </header>
+
+      <main className="max-w-6xl mx-auto px-2 md:px-4 py-4 space-y-4">
+        
+        {/* --- MÓDULO 5: BANNER DINÂMICO (ESCUDO 98%) --- */}
+        <section className={`relative overflow-hidden rounded-3xl border border-white/5 h-[280px] md:h-[320px] ${teamStyle.bg}`}>
+          {/* Linhas Diagonais Inteligentes */}
+          <div className="absolute inset-0 opacity-100" style={{ 
+              backgroundImage: teamStyle.lines.includes('gradient') ? teamStyle.lines : `repeating-linear-gradient(45deg, transparent, transparent 35px, ${teamStyle.lines} 35px, ${teamStyle.lines} 70px)` 
+          }} />
+
+          <div className="relative z-10 h-full px-6 md:px-12 flex items-center gap-6 md:gap-10">
+            {/* O Círculo do Escudo 98% */}
+            <div className="w-32 h-32 md:w-48 md:h-48 rounded-full bg-white shadow-2xl border-4 border-white/20 overflow-hidden shrink-0 flex items-center justify-center p-[1%]">
+              <ClubLogo src={activeClub?.logoUrl || activeClub?.logo} alt={clubeName || ""} className="w-full h-full object-contain scale-110" />
+            </div>
+
+            <div className={`${teamStyle.text} flex-1`}>
+              <h1 className="font-black uppercase italic tracking-tighter leading-none text-3xl md:text-5xl drop-shadow-2xl mb-2">
+                {profile.nome_exibicao || "Torcedor"}
+              </h1>
+              <div className="flex flex-col gap-1 font-bold uppercase text-[10px] md:text-xs tracking-widest opacity-80">
+                <span className="flex items-center gap-2"><MapPin className="w-3 h-3" /> {profile.cidade}, {profile.estado}</span>
+                <span className="flex items-center gap-2 text-[#ff6200]"><Trophy className="w-3 h-3" /> EMBAIXADOR BRONZE</span>
+              </div>
+            </div>
+
+            <div className={`hidden lg:block text-right ${teamStyle.text} opacity-20`}>
+                <h2 className="text-6xl font-black italic uppercase leading-none">{clubeName || "CENSO"}</h2>
+            </div>
+          </div>
+        </section>
+
+        {/* --- MÓDULO 6: NAVEGAÇÃO RÁPIDA --- */}
+        <div className="grid grid-cols-3 gap-2">
+          <Link to="/mapa-calor" className="bg-zinc-900/50 border border-white/5 p-4 rounded-2xl flex flex-col items-center gap-2 hover:bg-zinc-800 transition-all group">
+            <Flame className="w-6 h-6 text-[#ff6200] group-hover:scale-110 transition-transform" />
+            <span className="text-[10px] font-black uppercase italic">Mapa</span>
+          </Link>
+          <Link to="#" className="bg-zinc-900/50 border border-white/5 p-4 rounded-2xl flex flex-col items-center gap-2 hover:bg-zinc-800 transition-all group">
+            <BarChart3 className="w-6 h-6 text-[#ff6200] group-hover:scale-110 transition-transform" />
+            <span className="text-[10px] font-black uppercase italic">Stats</span>
+          </Link>
+          <Link to="#" className="bg-zinc-900/50 border border-white/5 p-4 rounded-2xl flex flex-col items-center gap-2 hover:bg-zinc-800 transition-all group">
+            <Medal className="w-6 h-6 text-[#ff6200] group-hover:scale-110 transition-transform" />
+            <span className="text-[10px] font-black uppercase italic">Ranking</span>
+          </Link>
+        </div>
+
+        {/* --- MÓDULO 7: RADAR DE NOTÍCIAS (7 DIAS / FOTO OU LOGO) --- */}
+        <div className="mt-6">
+            <div className="flex items-center justify-between mb-4 px-2">
+                <h3 className="font-black italic uppercase text-sm flex items-center gap-2">
+                    <div className="w-1 h-4 bg-[#ff6200]" /> RADAR {queriedTeam?.name || clubeName}
+                </h3>
+                <span className="text-[10px] text-zinc-500 font-bold uppercase"><Clock className="w-3 h-3 inline mr-1" /> Últimos 7 dias</span>
+            </div>
+            <NewsCarousel 
+                clubName={queriedTeam?.name || clubeName || null} 
+                clubLogo={activeClub?.logoUrl || activeClub?.logo}
+            />
+        </div>
+
+      </main>
+    </div>
+  );
 };
 
 export default Dashboard;
