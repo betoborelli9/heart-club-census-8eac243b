@@ -1,8 +1,12 @@
 /**
  * ARQUIVO: src/components/dashboard/NewsCarousel.tsx
- * LÓGICA: Bloqueio de logos de portais e substituição por cards estilizados do clube.
+ * LÓGICA: Cards principais com imagens da notícia ou emblema do clube.
+ * Barra lateral elegante com mais notícias sem repetição.
  */
 
+//////////////////////////////
+// MÓDULO 1 — Imports e Setup
+//////////////////////////////
 import { useEffect, useMemo, useState } from "react";
 import { Clock, Loader2, Zap, Newspaper } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -45,6 +49,9 @@ function isDuplicate(a: NewsItem, b: NewsItem): boolean {
   return titleA === titleB;
 }
 
+//////////////////////////////
+// MÓDULO 2 — Componente Principal
+//////////////////////////////
 export default function NewsCarousel({
   teamName,
   clubLogo,
@@ -73,6 +80,9 @@ export default function NewsCarousel({
     fetchNews();
   }, [teamName]);
 
+//////////////////////////////
+// MÓDULO 3 — Processamento de Notícias
+//////////////////////////////
   const news = useMemo(() => {
     const unique: NewsItem[] = [];
     for (const item of noticias) {
@@ -95,8 +105,12 @@ export default function NewsCarousel({
   const mainNews = news.slice(0, 4);
   const sideNews = news.slice(4);
 
+//////////////////////////////
+// MÓDULO 4 — Renderização
+//////////////////////////////
   return (
     <div className="space-y-6">
+      {/* Título da seção */}
       <div className="flex items-center gap-2 opacity-50">
         <Zap className="w-4 h-4 text-[#ff6200]" />
         <h2 className="text-[11px] font-black uppercase italic tracking-widest">
@@ -104,6 +118,7 @@ export default function NewsCarousel({
         </h2>
       </div>
 
+      {/* Cards principais */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {mainNews.map((item, i) => (
           <a
@@ -143,14 +158,15 @@ export default function NewsCarousel({
         ))}
       </div>
 
+      {/* Barra lateral elegante */}
       {sideNews.length > 0 && (
-        <aside className="mt-6 space-y-2 border-t border-white/10 pt-4">
+        <aside className="mt-6 space-y-3 border-t border-white/10 pt-4">
           {sideNews.map((item, i) => (
             <a
               key={i}
               href={item.link}
               target="_blank"
-              className="flex items-center gap-3 text-xs text-white/80 hover:text-[#ff6200] transition-colors"
+              className="flex items-center gap-3 text-sm text-white/80 hover:text-[#ff6200] transition-colors"
             >
               <Newspaper className="w-4 h-4 text-[#ff6200]" />
               <span className="line-clamp-1">{item.title}</span>

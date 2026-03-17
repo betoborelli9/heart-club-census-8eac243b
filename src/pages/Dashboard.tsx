@@ -66,15 +66,15 @@ const Dashboard = () => {
     let config = { bg: "#1a1a1a", colors: ["#ffffff", "#333333"], text: "text-white" };
 
     if (name.includes("palmeiras"))
-      config = { bg: "#006437", colors: ["#ffffff", "#ffffff"], text: "text-white" };
+      config = { bg: "#006437", colors: ["#ffffff", "#006437"], text: "text-white" };
     else if (name.includes("sao paulo"))
       config = { bg: "#ffffff", colors: ["#C1272D", "#000000"], text: "text-black" };
     else if (name.includes("flamengo"))
-      config = { bg: "#C1272D", colors: ["#000000", "#000000"], text: "text-white" };
+      config = { bg: "#C1272D", colors: ["#000000", "#C1272D"], text: "text-white" };
     else if (name.includes("internacional"))
-      config = { bg: "#E20E0E", colors: ["#ffffff", "#ffffff"], text: "text-white" };
+      config = { bg: "#E20E0E", colors: ["#ffffff", "#E20E0E"], text: "text-white" };
     else if (name.includes("sampaio correa"))
-      config = { bg: "#FFD700", colors: ["#C1272D", "#006400"], text: "text-black" }; // amarelo + vermelho + verde
+      config = { bg: "#FFD700", colors: ["#C1272D", "#006400"], text: "text-black" };
 
     return config;
   }, [clubeName]);
@@ -125,26 +125,22 @@ const Dashboard = () => {
           className="relative overflow-hidden rounded-[2.5rem] h-[200px] md:h-[240px] shadow-2xl flex items-center"
           style={{ backgroundColor: teamStyle.bg }}
         >
-          {/* Linhas diagonais dinâmicas */}
+          {/* Três faixas diagonais elegantes */}
           <div className="absolute inset-0 pointer-events-none">
-            <div
-              className="absolute top-0 left-0 w-full h-full opacity-20"
-              style={{
-                backgroundImage: `linear-gradient(135deg, ${teamStyle.colors[0]} 25%, transparent 25%, transparent 50%, ${teamStyle.colors[1]} 50%, ${teamStyle.colors[1]} 75%, transparent 75%, transparent)`,
-                backgroundSize: "40px 40px",
-              }}
-            />
+            <div className="absolute top-[-20%] left-[10%] w-[6px] h-[140%] rotate-[22deg] bg-current opacity-40" style={{ color: teamStyle.colors[0] }} />
+            <div className="absolute top-[-20%] left-[18%] w-[14px] h-[140%] rotate-[22deg] bg-current opacity-25" style={{ color: teamStyle.colors[1] }} />
+            <div className="absolute top-[-20%] left-[26%] w-[28px] h-[140%] rotate-[22deg] bg-current opacity-15" style={{ color: teamStyle.colors[0] }} />
           </div>
 
           {/* Conteúdo da faixa */}
           <div className="relative z-10 flex items-center justify-between w-full px-6 md:px-12">
             {/* Emblema + nome do clube */}
             <div className="flex items-center gap-4">
-              <div className="w-24 h-24 md:w-32 md:h-32 rounded-full bg-white shadow-lg flex items-center justify-center p-2">
+              <div className="w-24 h-24 md:w-32 md:h-32 rounded-full bg-white shadow-lg flex items-center justify-center p-1">
                 <ClubLogo
                   src={activeClub?.logoUrl || activeClub?.logo}
                   alt={clubeName || ""}
-                  className="w-[90%] h-[90%] object-contain"
+                  className="w-[98%] h-[98%] object-contain"
                 />
               </div>
               <div className="flex flex-col">
