@@ -1,11 +1,10 @@
 /**
  * ARQUIVO: src/pages/Dashboard.tsx
- * DESIGN: Banner Premium com tipografia flutuante e linhas dinâmicas.
+ * DESIGN: Banner Premium com cores dinâmicas do clube do coração.
+ * Layout baseado na referência: Escudo à esquerda, nome do torcedor ao centro,
+ * clube do coração à direita com faixas diagonais.
  */
 
-//////////////////////////////
-// MÓDULO 1 — Imports e Setup
-//////////////////////////////
 import { useEffect, useMemo, useState } from "react";
 import { LogOut, Loader2, MapPin, Trophy } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -16,19 +15,12 @@ import { CLUBS_DATA } from "@/clubes-data";
 import { ClubLogo } from "@/components/ClubLogo";
 import { ClubSearch } from "@/components/dashboard/ClubSearch";
 import NewsCarousel from "@/components/dashboard/NewsCarousel";
+import { getTeamTheme } from "@/data/teamColors";
 import logo from "@/assets/logo.png";
 
 const normalize = (v: string) =>
-  v
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-zA-Z0-9\s]/g, " ")
-    .trim()
-    .toLowerCase();
+  v.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9\s]/g, " ").trim().toLowerCase();
 
-//////////////////////////////
-// MÓDULO 2 — Componente Principal
-//////////////////////////////
 const Dashboard = () => {
   const navigate = useNavigate();
   const { user, profile, isLoading, signOut } = useUser();
@@ -36,6 +28,7 @@ const Dashboard = () => {
   const [clubeName, setClubeName] = useState<string | null>(null);
   const [queriedTeam, setQueriedTeam] = useState<any>(null);
 
+  // Busca o clube do coração do usuário logado
   useEffect(() => {
     const loadData = async () => {
       if (!user) return;
@@ -58,30 +51,9 @@ const Dashboard = () => {
     loadData();
   }, [user]);
 
-//////////////////////////////
-// MÓDULO 3 — Estilo Dinâmico por Clube
-//////////////////////////////
-  const teamStyle = useMemo(() => {
-    const name = normalize(clubeName || "");
-    let config = { bg: "#1a1a1a", colors: ["#ffffff", "#333333"], text: "text-white" };
+  // Tema dinâmico baseado no clube do usuário
+  const theme = useMemo(() => getTeamTheme(clubeName), [clubeName]);
 
-    if (name.includes("palmeiras"))
-      config = { bg: "#006437", colors: ["#ffffff", "#006437"], text: "text-white" };
-    else if (name.includes("sao paulo"))
-      config = { bg: "#ffffff", colors: ["#C1272D", "#000000"], text: "text-black" };
-    else if (name.includes("flamengo"))
-      config = { bg: "#C1272D", colors: ["#000000", "#C1272D"], text: "text-white" };
-    else if (name.includes("internacional"))
-      config = { bg: "#E20E0E", colors: ["#ffffff", "#E20E0E"], text: "text-white" };
-    else if (name.includes("sampaio correa"))
-      config = { bg: "#FFD700", colors: ["#C1272D", "#006400"], text: "text-black" };
-
-    return config;
-  }, [clubeName]);
-
-//////////////////////////////
-// MÓDULO 4 — Renderização
-//////////////////////////////
   if (isLoading || !profile)
     return (
       <div className="h-screen flex items-center justify-center bg-black">
@@ -94,89 +66,115 @@ const Dashboard = () => {
       {/* Header */}
       <header className="h-16 border-b border-white/5 bg-black/80 backdrop-blur-xl sticky top-0 z-50">
         <div className="max-w-6xl mx-auto px-4 h-full flex items-center justify-between gap-4">
-          <div
-            className="flex items-center gap-2 cursor-pointer"
-            onClick={() => navigate("/")}
-          >
+          <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate("/")}>
             <img src={logo} alt="Logo" className="h-8 md:h-10 w-auto" />
-            <span className="font-black italic text-lg tracking-tighter">
-              HEART CLUB
-            </span>
+            <span className="font-black italic text-lg tracking-tighter">HEART CLUB</span>
           </div>
           <div className="flex-1 max-w-sm">
             <ClubSearch onSelect={(club) => setQueriedTeam(club)} />
           </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => signOut()}
-            className="text-white/50"
-          >
+          <Button variant="ghost" size="icon" onClick={() => signOut()} className="text-white/50">
             <LogOut className="w-5 h-5" />
           </Button>
         </div>
       </header>
 
-//////////////////////////////
-// MÓDULO 5 — Banner Premium Corrigido
-//////////////////////////////
       <main className="max-w-6xl mx-auto px-2 md:px-4 py-4 space-y-4">
+        {/* ══════════════════════════════════════════════ */}
+        {/* BANNER PREMIUM — Clube do Coração             */}
+        {/* ══════════════════════════════════════════════ */}
         <section
           className="relative overflow-hidden rounded-[2.5rem] h-[200px] md:h-[240px] shadow-2xl flex items-center"
-          style={{ backgroundColor: teamStyle.bg }}
+          style={{ backgroundColor: theme.primaryHex }}
         >
-          {/* Três faixas diagonais elegantes */}
+          {/* Faixas diagonais — posicionadas no lado DIREITO (sob o nome do clube) */}
           <div className="absolute inset-0 pointer-events-none">
-            <div className="absolute top-[-20%] left-[10%] w-[6px] h-[140%] rotate-[22deg] bg-current opacity-40" style={{ color: teamStyle.colors[0] }} />
-            <div className="absolute top-[-20%] left-[18%] w-[14px] h-[140%] rotate-[22deg] bg-current opacity-25" style={{ color: teamStyle.colors[1] }} />
-            <div className="absolute top-[-20%] left-[26%] w-[28px] h-[140%] rotate-[22deg] bg-current opacity-15" style={{ color: teamStyle.colors[0] }} />
+            {theme.stripeColors.map((color, i) => (
+              <div key={i}>
+                <div
+                  className="absolute top-[-20%] h-[140%] rotate-[22deg] opacity-30"
+                  style={{
+                    backgroundColor: color,
+                    left: `${55 + i * 10}%`,
+                    width: "6px",
+                  }}
+                />
+                <div
+                  className="absolute top-[-20%] h-[140%] rotate-[22deg] opacity-20"
+                  style={{
+                    backgroundColor: color,
+                    left: `${60 + i * 10}%`,
+                    width: "14px",
+                  }}
+                />
+                <div
+                  className="absolute top-[-20%] h-[140%] rotate-[22deg] opacity-10"
+                  style={{
+                    backgroundColor: color,
+                    left: `${66 + i * 10}%`,
+                    width: "28px",
+                  }}
+                />
+              </div>
+            ))}
           </div>
 
-          {/* Conteúdo da faixa */}
+          {/* Conteúdo do banner */}
           <div className="relative z-10 flex items-center justify-between w-full px-6 md:px-12">
-            {/* Emblema + nome do clube */}
-            <div className="flex items-center gap-4">
-              <div className="w-24 h-24 md:w-32 md:h-32 rounded-full bg-white shadow-lg flex items-center justify-center p-1">
+            {/* ESQUERDA: Escudo + Nome do torcedor */}
+            <div className="flex items-center gap-4 md:gap-6">
+              {/* Círculo do escudo — cor secundária do clube */}
+              <div
+                className="w-20 h-20 md:w-28 md:h-28 rounded-full shadow-lg flex items-center justify-center p-1 shrink-0"
+                style={{
+                  backgroundColor: theme.secondaryHex,
+                  boxShadow: `0 0 20px ${theme.glow}`,
+                }}
+              >
                 <ClubLogo
                   src={activeClub?.logoUrl || activeClub?.logo}
                   alt={clubeName || ""}
-                  className="w-[98%] h-[98%] object-contain"
+                  className="w-[90%] h-[90%] object-contain"
                 />
               </div>
-              <div className="flex flex-col">
-                <span className="text-xs md:text-sm font-bold uppercase opacity-70">
-                  Clube do Coração
-                </span>
-                <h1
-                  className={`font-black italic uppercase tracking-tight text-2xl md:text-4xl ${teamStyle.text}`}
-                >
-                  {clubeName}
-                </h1>
-              </div>
-            </div>
 
-            {/* Nome do usuário e status */}
-            <div className="text-right">
-              <h2
-                className={`font-black uppercase italic tracking-tight text-xl md:text-3xl ${teamStyle.text}`}
-              >
-                {profile.nome_exibicao}
-              </h2>
-              <div className="flex flex-col items-end text-[10px] md:text-xs font-bold uppercase tracking-widest opacity-70 italic">
-                <span className="flex items-center gap-1">
-                  <MapPin className="w-3 h-3" /> {profile.cidade}, {profile.estado}
-                </span>
-                <span className="flex items-center gap-1 text-[#ff6200]">
+              {/* Info do torcedor */}
+              <div className="flex flex-col gap-1">
+                <h2 className={`font-semibold uppercase italic tracking-tight text-base md:text-xl ${theme.textClass}`}>
+                  {profile.nome_exibicao}
+                </h2>
+                <div className={`flex flex-col text-[10px] md:text-xs font-medium uppercase tracking-wider opacity-70 ${theme.textClass}`}>
+                  <span className="flex items-center gap-1">
+                    <MapPin className="w-3 h-3" />
+                    {activeClub?.cidade || profile.cidade}, {activeClub?.pais || profile.pais || "Brasil"}
+                  </span>
+                  {activeClub?.mascote && (
+                    <span className="mt-0.5 opacity-80">
+                      {activeClub.mascote}
+                    </span>
+                  )}
+                </div>
+                <span className="flex items-center gap-1 text-[10px] md:text-xs font-bold text-[#ff6200] uppercase italic">
                   <Trophy className="w-3 h-3" /> Embaixador Bronze
                 </span>
               </div>
             </div>
+
+            {/* DIREITA: Clube do Coração */}
+            <div className="text-right flex flex-col items-end">
+              <span className={`text-[9px] md:text-[11px] font-bold uppercase tracking-[0.3em] opacity-60 ${theme.textClass}`}>
+                Clube do Coração
+              </span>
+              <h1 className={`font-black italic uppercase tracking-tight text-2xl md:text-5xl leading-none mt-1 ${theme.textClass}`}>
+                {clubeName}
+              </h1>
+            </div>
           </div>
         </section>
 
-//////////////////////////////
-// MÓDULO 6 — Notícias
-//////////////////////////////
+        {/* ══════════════════════════════════════════════ */}
+        {/* RADAR DE NOTÍCIAS                             */}
+        {/* ══════════════════════════════════════════════ */}
         <div className="mt-8">
           <NewsCarousel
             teamName={queriedTeam?.name || clubeName || null}
