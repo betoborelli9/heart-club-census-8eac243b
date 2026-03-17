@@ -87,36 +87,30 @@ const Dashboard = () => {
           className="relative overflow-hidden rounded-[2.5rem] h-[200px] md:h-[240px] shadow-2xl flex items-center"
           style={{ backgroundColor: theme.primaryHex }}
         >
-          {/* Faixas diagonais — posicionadas no lado DIREITO (sob o nome do clube) */}
+          {/* Faixas diagonais graduadas — fina / média / grossa — cores do clube */}
           <div className="absolute inset-0 pointer-events-none">
-            {theme.stripeColors.map((color, i) => (
-              <div key={i}>
-                <div
-                  className="absolute top-[-20%] h-[140%] rotate-[22deg] opacity-30"
-                  style={{
-                    backgroundColor: color,
-                    left: `${55 + i * 10}%`,
-                    width: "6px",
-                  }}
-                />
-                <div
-                  className="absolute top-[-20%] h-[140%] rotate-[22deg] opacity-20"
-                  style={{
-                    backgroundColor: color,
-                    left: `${60 + i * 10}%`,
-                    width: "14px",
-                  }}
-                />
-                <div
-                  className="absolute top-[-20%] h-[140%] rotate-[22deg] opacity-10"
-                  style={{
-                    backgroundColor: color,
-                    left: `${66 + i * 10}%`,
-                    width: "28px",
-                  }}
-                />
-              </div>
-            ))}
+            {theme.stripeColors.map((color, ci) => {
+              const baseLeft = 52 + ci * 18;
+              return (
+                <div key={ci}>
+                  {/* Faixa fina */}
+                  <div
+                    className="absolute top-[-30%] h-[160%] rotate-[20deg]"
+                    style={{ backgroundColor: color, opacity: 0.35, left: `${baseLeft}%`, width: "4px" }}
+                  />
+                  {/* Faixa média */}
+                  <div
+                    className="absolute top-[-30%] h-[160%] rotate-[20deg]"
+                    style={{ backgroundColor: color, opacity: 0.22, left: `${baseLeft + 3}%`, width: "12px" }}
+                  />
+                  {/* Faixa grossa */}
+                  <div
+                    className="absolute top-[-30%] h-[160%] rotate-[20deg]"
+                    style={{ backgroundColor: color, opacity: 0.12, left: `${baseLeft + 7}%`, width: "26px" }}
+                  />
+                </div>
+              );
+            })}
           </div>
 
           {/* Conteúdo do banner */}
