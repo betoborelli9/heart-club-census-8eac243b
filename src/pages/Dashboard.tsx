@@ -137,16 +137,12 @@ const Dashboard = () => {
                 <h2 className={`font-semibold uppercase italic tracking-tight text-base md:text-xl ${theme.textClass}`}>
                   {profile.nome_exibicao}
                 </h2>
-                <div className={`flex flex-col text-[10px] md:text-xs font-medium uppercase tracking-wider opacity-70 ${theme.textClass}`}>
-                  <span className="flex items-center gap-1">
-                    <MapPin className="w-3 h-3" />
-                    {activeClub?.cidade || profile.cidade}, {activeClub?.pais || profile.pais || "Brasil"}
+                <div className={`flex items-center gap-1 text-[10px] md:text-xs font-medium uppercase tracking-wider opacity-80 ${theme.textClass}`}>
+                  <MapPin className="w-3 h-3 shrink-0" />
+                  <span>
+                    {profile.cidade || activeClub?.cidade}{profile.estado ? `, ${profile.estado}` : ""}
+                    {activeClub?.mascote ? ` • Mascote: ${activeClub.mascote.replace(/[^\w\sÀ-ÿ]/g, "").trim()}` : ""}
                   </span>
-                  {activeClub?.mascote && (
-                    <span className="mt-0.5 opacity-80">
-                      {activeClub.mascote}
-                    </span>
-                  )}
                 </div>
                 <span className="flex items-center gap-1 text-[10px] md:text-xs font-bold text-[#ff6200] uppercase italic">
                   <Trophy className="w-3 h-3" /> Embaixador Bronze
