@@ -6,7 +6,7 @@
  */
 
 import { useEffect, useMemo, useState } from "react";
-import { LogOut, Loader2, MapPin, Trophy } from "lucide-react";
+import { LogOut, Loader2, MapPin, Trophy, Flame, BarChart3, Crown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { useUser } from "@/contexts/UserContext";
@@ -163,9 +163,29 @@ const Dashboard = () => {
         </section>
 
         {/* ══════════════════════════════════════════════ */}
+        {/* BARRA DE NAVEGAÇÃO DE MÓDULOS                 */}
+        {/* ══════════════════════════════════════════════ */}
+        <nav className="flex items-center justify-center gap-1 sm:gap-2 bg-[#1a1a1a] border border-white/5 rounded-2xl px-2 sm:px-6 py-2.5 shadow-lg">
+          {[
+            { label: "MAPA DE CALOR", icon: <Flame className="w-4 h-4" />, path: "/mapa-calor" },
+            { label: "ESTATÍSTICAS", icon: <BarChart3 className="w-4 h-4" />, path: "/stats" },
+            { label: "RANKING", icon: <Crown className="w-4 h-4" />, path: "/stats" },
+          ].map((item, i) => (
+            <button
+              key={item.label}
+              onClick={() => navigate(item.path)}
+              className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-5 py-2 rounded-xl text-[10px] sm:text-xs font-bold uppercase tracking-wider text-white/70 hover:text-white hover:bg-white/5 transition-all duration-200"
+            >
+              <span className="text-white/50">{item.icon}</span>
+              {item.label}
+            </button>
+          ))}
+        </nav>
+
+        {/* ══════════════════════════════════════════════ */}
         {/* RADAR DE NOTÍCIAS                             */}
         {/* ══════════════════════════════════════════════ */}
-        <div className="mt-8">
+        <div className="mt-4">
           <NewsCarousel
             teamName={queriedTeam?.name || clubeName || null}
             clubLogo={activeClub?.logoUrl || activeClub?.logo}
