@@ -6,7 +6,7 @@
  */
 
 import { useEffect, useMemo, useState } from "react";
-import { LogOut, Loader2, MapPin, Trophy } from "lucide-react";
+import { LogOut, Loader2, MapPin, Trophy, Flame, BarChart3, Crown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { useUser } from "@/contexts/UserContext";
