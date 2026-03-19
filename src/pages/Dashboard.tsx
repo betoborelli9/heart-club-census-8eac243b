@@ -81,10 +81,11 @@ const Dashboard = () => {
 
       <main className="max-w-6xl mx-auto px-2 md:px-4 py-4 space-y-4">
         {/* ══════════════════════════════════════════════ */}
-        {/* BANNER PREMIUM — Clube do Coração             */}
+        {/* BANNER + NAVBAR — Bloco visual único           */}
         {/* ══════════════════════════════════════════════ */}
+        <div>
         <section
-          className="relative overflow-hidden rounded-[2.5rem] h-[180px] sm:h-[200px] md:h-[240px] shadow-2xl flex items-center"
+          className="relative overflow-hidden rounded-t-[2.5rem] rounded-b-none h-[180px] sm:h-[200px] md:h-[240px] shadow-2xl flex items-center"
           style={{ backgroundColor: theme.primaryHex }}
         >
           {/* Faixas diagonais — atrás do nome do clube do coração (lado direito) */}
@@ -117,9 +118,9 @@ const Dashboard = () => {
           <div className="relative z-10 flex items-center justify-between w-full px-4 sm:px-6 md:px-12">
             {/* ESQUERDA: Escudo + Nome do torcedor */}
             <div className="flex items-center gap-3 sm:gap-4 md:gap-6">
-              {/* Círculo do escudo — cor secundária do clube — emblema 98% */}
+              {/* Círculo do escudo — tamanhos fixos: Mobile 102px, Tablet 134px, Desktop 166px */}
               <div
-                className="w-[72px] h-[72px] sm:w-24 sm:h-24 md:w-32 md:h-32 lg:w-36 lg:h-36 rounded-full shadow-lg flex items-center justify-center shrink-0"
+                className="w-[102px] h-[102px] sm:w-[134px] sm:h-[134px] md:w-[166px] md:h-[166px] rounded-full shadow-lg flex items-center justify-center shrink-0"
                 style={{
                   backgroundColor: theme.secondaryHex,
                   boxShadow: `0 0 24px ${theme.glow}`,
@@ -163,14 +164,14 @@ const Dashboard = () => {
         </section>
 
         {/* ══════════════════════════════════════════════ */}
-        {/* BARRA DE NAVEGAÇÃO DE MÓDULOS                 */}
+        {/* BARRA DE NAVEGAÇÃO DE MÓDULOS — colada ao banner */}
         {/* ══════════════════════════════════════════════ */}
-        <nav className="flex items-center justify-center gap-1 sm:gap-2 bg-[#1a1a1a] border border-white/5 rounded-2xl px-2 sm:px-6 py-2.5 shadow-lg">
+        <nav className="flex items-center justify-center gap-1 sm:gap-2 bg-[#1a1a1a] border border-white/5 border-t-0 rounded-t-none rounded-b-2xl px-2 sm:px-6 py-2.5 shadow-lg backdrop-blur-md">
           {[
             { label: "MAPA DE CALOR", icon: <Flame className="w-4 h-4" />, path: "/mapa-calor" },
             { label: "ESTATÍSTICAS", icon: <BarChart3 className="w-4 h-4" />, path: "/estatisticas" },
             { label: "RANKING", icon: <Crown className="w-4 h-4" />, path: "/estatisticas#ranking" },
-          ].map((item, i) => (
+          ].map((item) => (
             <button
               key={item.label}
               onClick={() => navigate(item.path)}
@@ -181,6 +182,7 @@ const Dashboard = () => {
             </button>
           ))}
         </nav>
+        </div>
 
         {/* ══════════════════════════════════════════════ */}
         {/* RADAR DE NOTÍCIAS                             */}
