@@ -168,8 +168,8 @@ const Dashboard = () => {
         <nav className="flex items-center justify-center gap-1 sm:gap-2 bg-[#1a1a1a] border border-white/5 rounded-2xl px-2 sm:px-6 py-2.5 shadow-lg">
           {[
             { label: "MAPA DE CALOR", icon: <Flame className="w-4 h-4" />, path: "/mapa-calor" },
-            { label: "ESTATÍSTICAS", icon: <BarChart3 className="w-4 h-4" />, path: "/stats" },
-            { label: "RANKING", icon: <Crown className="w-4 h-4" />, path: "/stats" },
+            { label: "ESTATÍSTICAS", icon: <BarChart3 className="w-4 h-4" />, path: "/estatisticas" },
+            { label: "RANKING", icon: <Crown className="w-4 h-4" />, path: "/estatisticas#ranking" },
           ].map((item, i) => (
             <button
               key={item.label}
