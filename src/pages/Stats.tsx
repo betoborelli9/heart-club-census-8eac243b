@@ -378,10 +378,11 @@ const Stats = () => {
 
       <main className="mx-auto max-w-6xl space-y-5 px-3 py-4 md:px-4">
         {/* =========================
-         * Banner
+         * Banner + NavBar — Bloco visual único
          * ========================= */}
+        <div>
         <section
-          className="relative overflow-hidden rounded-[2.25rem] border border-border/50 p-4 sm:p-6 md:p-8 shadow-2xl"
+          className="relative overflow-hidden rounded-t-[2.25rem] rounded-b-none border border-border/50 border-b-0 p-4 sm:p-6 md:p-8 shadow-2xl"
           style={{ backgroundColor: `hsl(${theme.primary})` }}
         >
           <div className="absolute inset-y-0 right-[10%] w-[4px] rotate-[22deg]" style={{ backgroundColor: "hsl(0 0% 100% / 0.72)" }} />
@@ -389,8 +390,9 @@ const Stats = () => {
 
           <div className="relative z-10 flex items-center justify-between gap-4 sm:gap-6">
             <div className="flex items-center gap-3 sm:gap-4">
+              {/* Emblema — Mobile 102px, Tablet 134px, Desktop 166px */}
               <div
-                className="flex h-[74px] w-[74px] shrink-0 items-center justify-center rounded-full sm:h-[92px] sm:w-[92px] md:h-[110px] md:w-[110px]"
+                className="flex h-[102px] w-[102px] shrink-0 items-center justify-center rounded-full sm:h-[134px] sm:w-[134px] md:h-[166px] md:w-[166px]"
                 style={{ backgroundColor: "hsl(0 0% 100%)" }}
               >
                 <ClubLogo
@@ -415,7 +417,7 @@ const Stats = () => {
           </div>
         </section>
 
-        <nav className="flex items-center justify-center gap-2 rounded-2xl border border-border bg-card/70 px-2 py-2 shadow-lg">
+        <nav className="flex items-center justify-center gap-2 rounded-t-none rounded-b-2xl border border-border border-t-0 bg-card/70 px-2 py-2 shadow-lg backdrop-blur-md">
           {[
             { label: "MAPAS", icon: Flame, path: "/mapa-calor", active: location.pathname === "/mapa-calor" },
             { label: "ESTATÍSTICAS", icon: BarChart3, path: "/estatisticas", active: isStatsActive },
@@ -435,6 +437,7 @@ const Stats = () => {
             </button>
           ))}
         </nav>
+        </div>
 
         {/* =========================
          * Content
