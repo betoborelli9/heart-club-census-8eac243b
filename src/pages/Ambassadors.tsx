@@ -175,8 +175,8 @@ const Ambassadors = () => {
         .in("user_id", topIds)
         .eq("is_original_vote", true);
 
-      const votosMap: Map<string, string> = new Map();
-      votos?.forEach((v) => votosMap.set(v.user_id, v.clube_nome));
+      const votosMap: Record<string, string> = {};
+      votos?.forEach((v) => { votosMap[v.user_id] = v.clube_nome; });
 
       const rankingData: RankingEntry[] = topIds.map((id) => {
         const p = profiles?.find((pr) => pr.id === id);
