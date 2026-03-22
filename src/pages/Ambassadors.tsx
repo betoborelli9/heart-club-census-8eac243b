@@ -145,7 +145,7 @@ const Ambassadors = () => {
       if (!indicacoes) return;
 
       // Agrupa por embaixador
-      const pointsMap = new Map<string, number>();
+      const pointsMap: Map<string, number> = new Map();
       indicacoes.forEach((ind) => {
         if (ind.embaixador_id) {
           pointsMap.set(ind.embaixador_id, (pointsMap.get(ind.embaixador_id) || 0) + 1);
