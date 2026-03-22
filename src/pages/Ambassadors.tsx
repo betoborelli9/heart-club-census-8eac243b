@@ -153,7 +153,7 @@ const Ambassadors = () => {
       });
 
       // Busca perfis dos top embaixadores
-      const topIds = Array.from(pointsMap.entries())
+      const topIds = Object.entries(pointsMap)
         .sort((a, b) => b[1] - a[1])
         .slice(0, 20)
         .map(([id]) => id);
