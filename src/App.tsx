@@ -13,6 +13,7 @@ import Dashboard from "./pages/Dashboard";
 import Admin from "./pages/Admin";
 import MapaCalor from "./pages/MapaCalor";
 import Stats from "./pages/Stats";
+import Ambassadors from "./pages/Ambassadors";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
