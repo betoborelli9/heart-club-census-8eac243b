@@ -183,9 +183,9 @@ const Ambassadors = () => {
         return {
           user_id: id,
           nome: p?.nome_exibicao ?? "Anônimo",
-          clube_nome: votosMap.get(id) ?? null,
+          clube_nome: votosMap[id] ?? null,
           cidade: p?.cidade ?? null,
-          points: pointsMap.get(id) || 0,
+          points: pointsMap[id] || 0,
         };
       }).sort((a, b) => b.points - a.points);
 
