@@ -16,6 +16,9 @@ interface Profile {
   classe_social: string | null;
   device_hardware: string | null;
   role: string | null;
+  telefone: string | null;
+  codigo_indicacao: string | null;
+  nivel_embaixador: string | null;
 }
 
 interface UserContextType {

@@ -13,6 +13,7 @@ import Dashboard from "./pages/Dashboard";
 import Admin from "./pages/Admin";
 import MapaCalor from "./pages/MapaCalor";
 import Stats from "./pages/Stats";
+import Ambassadors from "./pages/Ambassadors";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -35,6 +36,7 @@ const App = () => (
             <Route path="/mapa-calor" element={<MapaCalor />} />
             <Route path="/stats" element={<Stats />} />
             <Route path="/estatisticas" element={<Stats />} />
+            <Route path="/embaixadores" element={<Ambassadors />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

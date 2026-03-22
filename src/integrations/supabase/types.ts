@@ -158,50 +158,98 @@ export type Database = {
         }
         Relationships: []
       }
+      indicacoes: {
+        Row: {
+          codigo_usado: string | null
+          created_at: string | null
+          embaixador_id: string | null
+          id: string
+          indicado_id: string | null
+        }
+        Insert: {
+          codigo_usado?: string | null
+          created_at?: string | null
+          embaixador_id?: string | null
+          id?: string
+          indicado_id?: string | null
+        }
+        Update: {
+          codigo_usado?: string | null
+          created_at?: string | null
+          embaixador_id?: string | null
+          id?: string
+          indicado_id?: string | null
+        }
+        Relationships: []
+      }
+      lista_profissoes: {
+        Row: {
+          id: number
+          nome: string
+        }
+        Insert: {
+          id?: number
+          nome: string
+        }
+        Update: {
+          id?: number
+          nome?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           cidade: string | null
           classe_social: string | null
+          codigo_indicacao: string | null
           data_nascimento: string | null
           device_hardware: string | null
           estado: string | null
           faixa_etaria: string | null
           genero: string | null
           id: string
+          nivel_embaixador: string | null
           nome_exibicao: string | null
           pais: string | null
           profissao: string | null
           role: string | null
+          telefone: string | null
           username: string | null
         }
         Insert: {
           cidade?: string | null
           classe_social?: string | null
+          codigo_indicacao?: string | null
           data_nascimento?: string | null
           device_hardware?: string | null
           estado?: string | null
           faixa_etaria?: string | null
           genero?: string | null
           id: string
+          nivel_embaixador?: string | null
           nome_exibicao?: string | null
           pais?: string | null
           profissao?: string | null
           role?: string | null
+          telefone?: string | null
           username?: string | null
         }
         Update: {
           cidade?: string | null
           classe_social?: string | null
+          codigo_indicacao?: string | null
           data_nascimento?: string | null
           device_hardware?: string | null
           estado?: string | null
           faixa_etaria?: string | null
           genero?: string | null
           id?: string
+          nivel_embaixador?: string | null
           nome_exibicao?: string | null
           pais?: string | null
           profissao?: string | null
           role?: string | null
+          telefone?: string | null
           username?: string | null
         }
         Relationships: []
