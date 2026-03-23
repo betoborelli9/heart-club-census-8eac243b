@@ -41,6 +41,7 @@ const BUILD_SYNC_TAG = "2026-03-23-clubbanner-sync-01";
 const ClubBanner = ({
   clubName,
   clubData,
+  theme: themeProp,
   profileName,
   profileCity,
   profileState,
