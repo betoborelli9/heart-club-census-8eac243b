@@ -16,13 +16,13 @@ import type { ClubData } from "@/clubes-data";
 interface ClubBannerProps {
   clubName: string | null;
   clubData: ClubData | null;
+  /** Tema dinâmico vindo do hook useClubTheme */
+  theme?: TeamTheme;
   profileName?: string | null;
   profileCity?: string | null;
   profileState?: string | null;
   ambassadorLevel?: string | null;
-  /** Título exibido no canto direito acima do nome (ex: "ESTATÍSTICAS") */
   pageLabel?: string;
-  /** Se true, mostra info do torcedor à esquerda (modo Dashboard) */
   showProfileInfo?: boolean;
 }
 
