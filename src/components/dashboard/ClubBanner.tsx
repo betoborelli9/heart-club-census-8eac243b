@@ -53,7 +53,7 @@ const ClubBanner = ({
   const location = useLocation();
 
   /* [MÓDULO: ESTILIZAÇÃO DINÂMICA] */
-  const theme = useMemo(() => getTeamTheme(clubName), [clubName]);
+  const theme = themeProp || defaultTeamTheme;
   const bannerTextColor = theme.textClass === "text-black" ? "#1a1a1a" : "#ffffff";
 
   const isActive = (path: string) => {
