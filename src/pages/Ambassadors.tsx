@@ -37,7 +37,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { CLUBS_DATA, type ClubData } from "@/clubes-data";
 import { ClubLogo } from "@/components/ClubLogo";
 import ClubBanner from "@/components/dashboard/ClubBanner";
-import { getTeamTheme } from "@/data/teamColors";
+import { useClubTheme } from "@/hooks/useClubTheme";
 import { toast } from "@/hooks/use-toast";
 import logo from "@/assets/logo.png";
 
