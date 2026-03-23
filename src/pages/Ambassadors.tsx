@@ -324,6 +324,7 @@ const Ambassadors = () => {
         <ClubBanner
           clubName={clubName}
           clubData={clubData}
+          theme={theme}
           pageLabel="EMBAIXADORES"
           ambassadorLevel={profile?.nivel_embaixador || "Bronze"}
         />
