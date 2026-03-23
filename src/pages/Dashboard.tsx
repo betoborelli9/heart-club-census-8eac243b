@@ -52,7 +52,7 @@ const Dashboard = () => {
   }, [user]);
 
   // Tema dinâmico baseado no clube do usuário
-  const theme = useMemo(() => getTeamTheme(clubeName), [clubeName]);
+  const theme = useClubTheme(clubeName);
 
   if (isLoading || !profile)
     return (
