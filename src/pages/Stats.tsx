@@ -180,7 +180,7 @@ const Stats = () => {
   const [ufmgData, setUfmgData] = useState<UFMGData>(DEFAULT_UFMG);
   const [isStatsLoading, setIsStatsLoading] = useState(true);
 
-  const theme = useMemo(() => getTeamTheme(clubName), [clubName]);
+  const theme = useClubTheme(clubName);
   const isLightText = theme.textClass === "text-black";
   const bannerTextColor = isLightText ? "hsl(0 0% 8%)" : "hsl(0 0% 100%)";
 

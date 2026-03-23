@@ -277,7 +277,7 @@ const Ambassadors = () => {
     window.open(`https://wa.me/?text=${msg}`, "_blank");
   };
 
-  const theme = useMemo(() => getTeamTheme(clubName), [clubName]);
+  const theme = useClubTheme(clubName);
 
   /* [MÓDULO: LOADING / AUTH GUARD] */
   if (isLoading) {
