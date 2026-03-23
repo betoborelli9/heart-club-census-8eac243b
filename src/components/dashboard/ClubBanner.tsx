@@ -9,20 +9,20 @@ import { useMemo } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Flame, BarChart3, Crown, Users, MapPin, Trophy } from "lucide-react";
 import { ClubLogo } from "@/components/ClubLogo";
-import { getTeamTheme } from "@/data/teamColors";
+import { type TeamTheme, defaultTeamTheme } from "@/data/teamColors";
 import type { ClubData } from "@/clubes-data";
 
 /* [MÓDULO: TIPOS] */
 interface ClubBannerProps {
   clubName: string | null;
   clubData: ClubData | null;
+  /** Tema dinâmico vindo do hook useClubTheme */
+  theme?: TeamTheme;
   profileName?: string | null;
   profileCity?: string | null;
   profileState?: string | null;
   ambassadorLevel?: string | null;
-  /** Título exibido no canto direito acima do nome (ex: "ESTATÍSTICAS") */
   pageLabel?: string;
-  /** Se true, mostra info do torcedor à esquerda (modo Dashboard) */
   showProfileInfo?: boolean;
 }
 
@@ -41,6 +41,7 @@ const BUILD_SYNC_TAG = "2026-03-23-clubbanner-sync-01";
 const ClubBanner = ({
   clubName,
   clubData,
+  theme: themeProp,
   profileName,
   profileCity,
   profileState,
@@ -52,7 +53,7 @@ const ClubBanner = ({
   const location = useLocation();
 
   /* [MÓDULO: ESTILIZAÇÃO DINÂMICA] */
-  const theme = useMemo(() => getTeamTheme(clubName), [clubName]);
+  const theme = themeProp || defaultTeamTheme;
   const bannerTextColor = theme.textClass === "text-black" ? "#1a1a1a" : "#ffffff";
 
   const isActive = (path: string) => {

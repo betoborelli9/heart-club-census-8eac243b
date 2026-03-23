@@ -15,7 +15,7 @@ import { CLUBS_DATA } from "@/clubes-data";
 import { ClubLogo } from "@/components/ClubLogo";
 import { ClubSearch } from "@/components/dashboard/ClubSearch";
 import NewsCarousel from "@/components/dashboard/NewsCarousel";
-import { getTeamTheme } from "@/data/teamColors";
+import { useClubTheme } from "@/hooks/useClubTheme";
 import logo from "@/assets/logo.png";
 
 const normalize = (v: string) =>
@@ -52,7 +52,7 @@ const Dashboard = () => {
   }, [user]);
 
   // Tema dinâmico baseado no clube do usuário
-  const theme = useMemo(() => getTeamTheme(clubeName), [clubeName]);
+  const theme = useClubTheme(clubeName);
 
   if (isLoading || !profile)
     return (

@@ -26,7 +26,7 @@ import { ClubLogo } from "@/components/ClubLogo";
 import { useUser } from "@/contexts/UserContext";
 import { supabase } from "@/integrations/supabase/client";
 import { CLUBS_DATA, type ClubData } from "@/clubes-data";
-import { getTeamTheme } from "@/data/teamColors";
+import { useClubTheme } from "@/hooks/useClubTheme";
 import logo from "@/assets/logo.png";
 
 /* =========================
@@ -180,7 +180,7 @@ const Stats = () => {
   const [ufmgData, setUfmgData] = useState<UFMGData>(DEFAULT_UFMG);
   const [isStatsLoading, setIsStatsLoading] = useState(true);
 
-  const theme = useMemo(() => getTeamTheme(clubName), [clubName]);
+  const theme = useClubTheme(clubName);
   const isLightText = theme.textClass === "text-black";
   const bannerTextColor = isLightText ? "hsl(0 0% 8%)" : "hsl(0 0% 100%)";
 
