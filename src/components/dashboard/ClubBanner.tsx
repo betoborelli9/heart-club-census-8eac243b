@@ -34,6 +34,9 @@ const NAV_ITEMS = [
   { label: "EMBAIXADORES", icon: Users, path: "/embaixadores" },
 ];
 
+/* [MÓDULO: BUILD MARKER] */
+const BUILD_SYNC_TAG = "2026-03-23-clubbanner-sync-01";
+
 /* [MÓDULO: COMPONENTE PRINCIPAL] */
 const ClubBanner = ({
   clubName,
@@ -60,7 +63,7 @@ const ClubBanner = ({
   };
 
   return (
-    <div>
+    <div data-build={BUILD_SYNC_TAG}>
       {/* [MÓDULO: UI DO BANNER] */}
       <section
         className="relative overflow-hidden rounded-t-[2.5rem] rounded-b-none h-[180px] sm:h-[200px] md:h-[240px] shadow-2xl flex items-center"
