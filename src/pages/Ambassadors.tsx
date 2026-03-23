@@ -77,6 +77,9 @@ interface ActivityEntry {
   created_at: string;
 }
 
+/* [MÓDULO: BUILD MARKER] */
+const BUILD_SYNC_TAG = "2026-03-23-ambassadors-sync-01";
+
 /* ============================================== */
 /* COMPONENTE PRINCIPAL                           */
 /* ============================================== */
@@ -302,7 +305,7 @@ const Ambassadors = () => {
   const rivalClubData = (name: string | null) => resolveClub(name);
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-white font-sans">
+    <div data-build={BUILD_SYNC_TAG} className="min-h-screen bg-[#0a0a0a] text-white font-sans">
       {/* [MÓDULO: HEADER] */}
       <header className="h-16 border-b border-white/5 bg-black/80 backdrop-blur-xl sticky top-0 z-50">
         <div className="max-w-6xl mx-auto px-4 h-full flex items-center justify-between gap-4">
