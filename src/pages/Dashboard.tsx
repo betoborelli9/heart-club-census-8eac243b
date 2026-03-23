@@ -54,6 +54,11 @@ const Dashboard = () => {
   // Tema dinâmico baseado no clube do usuário
   const theme = useClubTheme(clubeName);
 
+  // Redireciona se não autenticado
+  useEffect(() => {
+    if (!isLoading && !user) navigate("/login");
+  }, [isLoading, user, navigate]);
+
   if (isLoading || !profile)
     return (
       <div className="h-screen flex items-center justify-center bg-black">
