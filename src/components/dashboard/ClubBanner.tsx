@@ -9,7 +9,7 @@ import { useMemo } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Flame, BarChart3, Crown, Users, MapPin, Trophy } from "lucide-react";
 import { ClubLogo } from "@/components/ClubLogo";
-import { getTeamTheme } from "@/data/teamColors";
+import { type TeamTheme, defaultTeamTheme } from "@/data/teamColors";
 import type { ClubData } from "@/clubes-data";
 
 /* [MÓDULO: TIPOS] */
