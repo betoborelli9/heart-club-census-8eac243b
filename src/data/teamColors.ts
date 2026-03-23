@@ -1,6 +1,12 @@
-// Mapeamento de cores dos principais clubes brasileiros
-// Usado para tematização dinâmica do Dashboard
+/**
+ * [CAMINHO/ARQUIVO]: src/data/teamColors.ts
+ * [MÓDULO: PROCESSADOR PASSIVO DE HEX → TEMA UI]
+ * Este arquivo NÃO é mais a fonte primária de cores.
+ * Cores vêm do Supabase (club_colors / clubes_cache).
+ * A lista estática serve apenas como fallback rápido.
+ */
 
+/* [MÓDULO: TIPOS] */
 export interface TeamTheme {
   primary: string;       // HSL values for CSS variable
   primaryHex: string;    // Hex — cor principal da barra
@@ -10,6 +16,61 @@ export interface TeamTheme {
   textClass: string;     // Tailwind text class
 }
 
+/* [MÓDULO: UTILIDADES DE CONVERSÃO HEX] */
+function hexToRgb(hex: string): { r: number; g: number; b: number } {
+  const clean = hex.replace("#", "");
+  const r = parseInt(clean.substring(0, 2), 16) || 0;
+  const g = parseInt(clean.substring(2, 4), 16) || 0;
+  const b = parseInt(clean.substring(4, 6), 16) || 0;
+  return { r, g, b };
+}
+
+function rgbToHsl(r: number, g: number, b: number): string {
+  r /= 255; g /= 255; b /= 255;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b);
+  let h = 0, s = 0;
+  const l = (max + min) / 2;
+
+  if (max !== min) {
+    const d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    switch (max) {
+      case r: h = ((g - b) / d + (g < b ? 6 : 0)) / 6; break;
+      case g: h = ((b - r) / d + 2) / 6; break;
+      case b: h = ((r - g) / d + 4) / 6; break;
+    }
+  }
+
+  return `${Math.round(h * 360)} ${Math.round(s * 100)}% ${Math.round(l * 100)}%`;
+}
+
+function isLightColor(hex: string): boolean {
+  const { r, g, b } = hexToRgb(hex);
+  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  return luminance > 0.6;
+}
+
+/**
+ * [MÓDULO: GERADOR DINÂMICO DE TEMA A PARTIR DE HEX]
+ * Converte qualquer par de hex (primária + secundária) em um TeamTheme completo.
+ * Usado pelo hook useClubTheme para cores vindas do banco.
+ */
+export function hexToTeamTheme(primaryHex: string, secondaryHex: string = "#ffffff"): TeamTheme {
+  const { r, g, b } = hexToRgb(primaryHex);
+  const hsl = rgbToHsl(r, g, b);
+  const light = isLightColor(primaryHex);
+
+  return {
+    primary: hsl,
+    primaryHex,
+    secondaryHex,
+    stripeColors: [secondaryHex],
+    glow: `rgba(${r}, ${g}, ${b}, 0.35)`,
+    textClass: light ? "text-black" : "text-white",
+  };
+}
+
+/* [MÓDULO: LISTA ESTÁTICA DE FALLBACK] */
 export const teamColors: Record<string, TeamTheme> = {
   "Palmeiras":       { primary: "145 100% 20%", primaryHex: "#006437", secondaryHex: "#ffffff", stripeColors: ["#ffffff"],                  glow: "rgba(0, 100, 55, 0.35)",   textClass: "text-white" },
   "Flamengo":        { primary: "0 100% 39%",   primaryHex: "#C40000", secondaryHex: "#000000", stripeColors: ["#000000"],                  glow: "rgba(196, 0, 0, 0.35)",    textClass: "text-white" },
@@ -49,7 +110,7 @@ export const teamColors: Record<string, TeamTheme> = {
   "Sampaio Corrêa":  { primary: "50 100% 50%",  primaryHex: "#FFD700", secondaryHex: "#C1272D", stripeColors: ["#C1272D", "#006400"],       glow: "rgba(255, 215, 0, 0.35)",  textClass: "text-black" },
 };
 
-// Default fallback — laranja Heart Club
+/* [MÓDULO: FALLBACK PADRÃO — LARANJA HEART CLUB] */
 export const defaultTeamTheme: TeamTheme = {
   primary: "24 100% 50%",
   primaryHex: "#FF6200",
@@ -59,6 +120,12 @@ export const defaultTeamTheme: TeamTheme = {
   textClass: "text-white",
 };
 
+/**
+ * [MÓDULO: GETTER SÍNCRONO DE FALLBACK]
+ * ⚠️ DEPRECATED para uso direto em componentes.
+ * Prefira o hook useClubTheme() que busca do banco.
+ * Mantido para compatibilidade e como fallback interno.
+ */
 export function getTeamTheme(clubName: string | null | undefined): TeamTheme {
   if (!clubName) return defaultTeamTheme;
   return teamColors[clubName] ?? defaultTeamTheme;
