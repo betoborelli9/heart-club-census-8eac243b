@@ -167,6 +167,7 @@ const RAW_CLUBS: Omit<ClubData, 'logoUrl'>[] = [
   { nome: 'Social Sol', nome_curto: 'SOC', serie: 'INT', cidade: 'Olanchito', estado: 'Honduras', pais: 'Honduras', mascote: 'Sol' },
   { nome: 'Southern Soccer Academy', nome_curto: 'SSA', serie: 'INT', cidade: 'Marietta', estado: 'USA', pais: 'Estados Unidos', mascote: 'Southern' },
   { nome: 'St Gallen', nome_curto: 'STG', serie: 'INT', cidade: 'St Gallen', estado: 'Switzerland', pais: 'Suica', mascote: 'Urso' },
+  { nome: 'Sampaio Corrêa', nome_curto: 'SAM', serie: 'B', cidade: 'São Luís', estado: 'MA', pais: 'Brasil', mascote: 'Bolívia' },
   { nome: 'Stade Rennais', nome_curto: 'REN', serie: 'INT', cidade: 'Rennes', estado: 'Franca', pais: 'Franca', mascote: 'Ermine' },
   { nome: 'Talleres', nome_curto: 'TAL', serie: 'INT', cidade: 'Cordoba', estado: 'Argentina', pais: 'Argentina', mascote: 'Matador' },
   { nome: 'Tampa Bay Rowdies', nome_curto: 'TAM', serie: 'INT', cidade: 'Tampa', estado: 'USA', pais: 'Estados Unidos', mascote: 'Rowdie' },

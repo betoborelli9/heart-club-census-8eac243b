@@ -176,6 +176,8 @@ const Voting = () => {
     );
   };
 
+  const isAdmin = profile?.role === "admin";
+
   return (
     <div className="min-h-screen bg-background flex flex-col items-center px-4 py-6 relative">
       <div className="w-full max-w-lg space-y-6 relative z-10">
@@ -186,6 +188,14 @@ const Voting = () => {
             <p className="text-[9px] text-muted-foreground uppercase tracking-widest">
               🛡️ Dispositivo verificado
             </p>
+          )}
+          {isAdmin && (
+            <button
+              onClick={() => navigate("/admin")}
+              className="text-[10px] text-primary/70 hover:text-primary uppercase tracking-widest font-bold transition-colors cursor-pointer"
+            >
+              🔒 Painel Master
+            </button>
           )}
         </div>
 
