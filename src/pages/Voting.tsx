@@ -67,11 +67,23 @@ const Voting = () => {
     else if (!isLoading && isAuthenticated && hasVoted) navigate("/dashboard", { replace: true });
   }, [isLoading, isAuthenticated, isProfileComplete, hasVoted, navigate]);
 
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
+
   const doSearch = useCallback((query: string, setter: (r: any[]) => void, setOpen: (b: boolean) => void) => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
     if (query.length < 2) { setter([]); setOpen(false); return; }
-    const results = searchClubsLocal(query, 10);
-    setter(results);
-    setOpen(true);
+    const local = searchClubsLocal(query, 10);
+    if (local.length > 0) {
+      setter(local);
+      setOpen(true);
+      return;
+    }
+    // API fallback with debounce
+    debounceRef.current = setTimeout(async () => {
+      const apiResults = await searchClubsWithFallback(query, 10);
+      setter(apiResults);
+      setOpen(apiResults.length > 0);
+    }, 400);
   }, []);
 
   useEffect(() => { doSearch(heartSearch, setHeartResults, setHeartOpen); }, [heartSearch, doSearch]);
