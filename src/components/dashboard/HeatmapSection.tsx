@@ -52,8 +52,11 @@ const HeatmapSection = () => {
       if (!user) return;
       const { data } = await supabase.from("votos").select("clube_nome").eq("user_id", user.id).maybeSingle();
       if (!data?.clube_nome) return;
-      const club = clubs.find((c) => c.name === data.clube_nome);
-      if (club) setSelectedClubId(club.id);
+      const club = CLUBS_DATA.find((c) => c.nome === data.clube_nome);
+      if (club) {
+        const slug = club.nome.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+        setSelectedClubId(slug);
+      }
     };
     loadUserVote();
   }, [user]);
