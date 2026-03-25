@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ComposableMap, Geographies, Geography, ZoomableGroup } from "react-simple-maps";
 import { clubMapData } from "@/data/mockDashboard";
-import { clubs } from "@/data/clubs";
+import { CLUBS_DATA } from "@/clubes-data";
 import { useUser } from "@/contexts/UserContext";
 import { supabase } from "@/integrations/supabase/client";
 

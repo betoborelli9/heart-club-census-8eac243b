@@ -1,14 +1,16 @@
 // Path: src/components/dashboard/ClubSearch.tsx
-import { useState, useRef, useEffect } from "react";
-import { Search } from "lucide-react";
+import { useState, useRef, useEffect, useCallback } from "react";
+import { Search, Loader2, Globe } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { ClubLogo } from "@/components/ClubLogo";
-import { searchClubsLocal, ClubSearchResult } from "@/lib/search-clubs";
+import { searchClubsLocal, searchClubsWithFallback, ClubSearchResult } from "@/lib/search-clubs";
 
 export const ClubSearch = ({ onSelect }: { onSelect: (club: ClubSearchResult) => void }) => {
   const [results, setResults] = useState<ClubSearchResult[]>([]);
   const [query, setQuery] = useState("");
+  const [loading, setLoading] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -20,14 +22,32 @@ export const ClubSearch = ({ onSelect }: { onSelect: (club: ClubSearchResult) =>
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const handleSearch = (val: string) => {
+  const handleSearch = useCallback((val: string) => {
     setQuery(val);
-    if (val.length > 1) {
-      setResults(searchClubsLocal(val, 10));
-    } else {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+
+    if (val.length < 2) {
       setResults([]);
+      setLoading(false);
+      return;
     }
-  };
+
+    // Immediate local results
+    const local = searchClubsLocal(val, 10);
+    if (local.length > 0) {
+      setResults(local);
+      setLoading(false);
+      return;
+    }
+
+    // Debounced API fallback
+    setLoading(true);
+    debounceRef.current = setTimeout(async () => {
+      const apiResults = await searchClubsWithFallback(val, 10);
+      setResults(apiResults);
+      setLoading(false);
+    }, 400);
+  }, []);
 
   return (
     <div className="relative w-full max-w-md mx-auto" ref={searchRef}>
@@ -39,14 +59,16 @@ export const ClubSearch = ({ onSelect }: { onSelect: (club: ClubSearchResult) =>
           className="bg-card/90 border-border pl-11 rounded-full h-12 text-foreground focus:ring-2 focus:ring-primary"
           onChange={(e) => handleSearch(e.target.value)}
         />
+        {loading && (
+          <Loader2 className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-primary animate-spin" />
+        )}
       </div>
 
       {results.length > 0 && (
         <div className="absolute top-14 left-0 right-0 bg-card border border-border rounded-2xl overflow-hidden z-[1200] shadow-[0_20px_50px_hsl(0_0%_0%_/_0.7)] max-h-[400px] overflow-y-auto">
           {results.map((club) => (
             <button
-              key={`${club.id}-${club.shortName}`}
-              // Usando button + onMouseDown para capturar clique antes do input perder foco
+              key={`${club.id}-${club.shortName}-${club.source}`}
               onMouseDown={(e) => {
                 e.preventDefault();
                 onSelect(club);
@@ -63,9 +85,13 @@ export const ClubSearch = ({ onSelect }: { onSelect: (club: ClubSearchResult) =>
                   {club.name}
                 </span>
                 <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">
-                  {club.location} • 🐾 {club.mascote}
+                  {club.location}
+                  {club.mascote && ` • 🐾 ${club.mascote}`}
                 </span>
               </div>
+              {club.source === "api" && (
+                <Globe className="w-3.5 h-3.5 text-primary/60 shrink-0" />
+              )}
             </button>
           ))}
         </div>
