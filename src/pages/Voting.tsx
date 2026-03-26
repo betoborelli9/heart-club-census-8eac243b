@@ -13,7 +13,7 @@ import { useNavigate } from "react-router-dom";
 import { useUser } from "@/contexts/UserContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { searchClubsSupabase } from "@/lib/search-clubs";
+import { searchClubsLocal } from "@/lib/search-clubs";
 import { ClubLogo } from "@/components/ClubLogo";
 import logo from "@/assets/logo.png";
 import {
