@@ -1,7 +1,7 @@
 /**
  * [CAMINHO/ARQUIVO]: src/components/dashboard/ClubBanner.tsx
  * [MÓDULO]: COMPONENTE GLOBAL DE BRANDING (BANNER + NAVBAR)
- * [STATUS]: ATUALIZADO COM LINK DE VOTAÇÃO (ADMIN EXCLUSIVE)
+ * [STATUS]: CORREÇÃO DE ROTA: /landing -> /voting
  */
 
 /* [MÓDULO: IMPORTS] */
@@ -62,7 +62,6 @@ const ClubBanner = ({
         className="relative overflow-hidden rounded-t-[2.5rem] h-[180px] md:h-[240px] flex items-center shadow-2xl transition-colors duration-500"
         style={{ backgroundColor: theme.primaryHex }}
       >
-        {/* CAMADA DE FAIXAS DIAGONAIS (OFICIAL) */}
         <div className="absolute inset-0 pointer-events-none opacity-30">
           <div
             className="absolute inset-0"
@@ -73,10 +72,8 @@ const ClubBanner = ({
           />
         </div>
 
-        {/* [MÓDULO: CONTEÚDO DINÂMICO DO BANNER] */}
         <div className="relative z-10 flex items-center justify-between w-full px-6 md:px-12">
           <div className="flex items-center gap-6">
-            {/* ESCUDO PADRONIZADO */}
             <div
               className="w-[102px] h-[102px] md:w-[166px] md:h-[166px] rounded-full bg-white flex items-center justify-center shadow-2xl border-4 border-white/10"
               style={{ boxShadow: `0 0 30px ${theme.primaryHex}66` }}
@@ -88,7 +85,6 @@ const ClubBanner = ({
               />
             </div>
 
-            {/* INFO DO USUÁRIO OU RÓTULO DA PÁGINA */}
             {showProfileInfo ? (
               <div className="flex flex-col">
                 <h2
@@ -126,7 +122,6 @@ const ClubBanner = ({
             )}
           </div>
 
-          {/* INDICADOR CLUBE DO CORAÇÃO (APENAS DASHBOARD) */}
           {showProfileInfo && (
             <div className="hidden md:flex flex-col items-end text-right">
               <span
@@ -143,7 +138,7 @@ const ClubBanner = ({
         </div>
       </section>
 
-      {/* [MÓDULO: NAVBAR INTEGRADA (BLOCO ÚNICO)] */}
+      {/* [MÓDULO: NAVBAR INTEGRADA] */}
       <nav className="flex items-center justify-center gap-1 bg-[#1a1a1a] border border-white/5 border-t-0 rounded-b-[1.5rem] px-2 py-3 shadow-xl">
         {NAV_ITEMS.map((item) => (
           <button
@@ -156,10 +151,10 @@ const ClubBanner = ({
           </button>
         ))}
 
-        {/* LINK DE VOTAÇÃO - EXCLUSIVO BETO BORELLI */}
+        {/* LINK DE VOTAÇÃO - ROTA CORRIGIDA PARA /voting */}
         {IS_MASTER && (
           <button
-            onClick={() => navigate("/landing")}
+            onClick={() => navigate("/voting")}
             className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-[10px] font-black uppercase text-[#ff6200] hover:bg-[#ff6200]/10 transition-all border border-[#ff6200]/20"
           >
             <Vote size={14} />
@@ -186,6 +181,5 @@ export default ClubBanner;
 /**
  * [RODAPÉ TÉCNICO]
  * ARQUIVO: src/components/dashboard/ClubBanner.tsx
- * ALTERAÇÃO: Injeção do link de VOTAÇÃO exclusivo para betoborelli9@gmail.com.
- * STATUS: AGUARDANDO VALIDAÇÃO.
+ * CORREÇÃO: Rota do botão VOTAÇÃO alterada para /voting.
  */
