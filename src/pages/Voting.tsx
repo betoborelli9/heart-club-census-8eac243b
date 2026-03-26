@@ -164,7 +164,7 @@ const Voting = () => {
         // CAMADA 1: Busca no Supabase (251 clubes)
         const localResults = searchClubsLocal(query, 10);
 
-        let allResults = localResults.map((club) => ({ ...club, source: "supabase" as const }));
+        let allResults: ClubResult[] = localResults.map((club) => ({ ...club, source: "supabase" as const }));
 
         // CAMADA 2: Se poucos resultados, busca na API-Football
         if (localResults.length < 5) {
