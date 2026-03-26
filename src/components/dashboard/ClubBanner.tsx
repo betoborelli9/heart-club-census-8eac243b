@@ -1,12 +1,12 @@
 /**
  * [CAMINHO/ARQUIVO]: src/components/dashboard/ClubBanner.tsx
  * [MÓDULO]: COMPONENTE GLOBAL DE BRANDING (BANNER + NAVBAR)
- * [STATUS]: PADRÃO VISUAL UNIFICADO (DASHBOARD/MAPA/STATS)
+ * [STATUS]: ATUALIZADO COM LINK DE VOTAÇÃO (ADMIN EXCLUSIVE)
  */
 
 /* [MÓDULO: IMPORTS] */
 import { useNavigate, useLocation } from "react-router-dom";
-import { Flame, BarChart3, Crown, Users, MapPin, Trophy, ShieldAlert } from "lucide-react";
+import { Flame, BarChart3, Crown, Users, MapPin, Trophy, ShieldAlert, Vote } from "lucide-react";
 import { ClubLogo } from "@/components/ClubLogo";
 import { useUser } from "@/contexts/UserContext";
 import { type TeamTheme, defaultTeamTheme } from "@/data/teamColors";
@@ -155,6 +155,18 @@ const ClubBanner = ({
             <span className="hidden md:inline">{item.label}</span>
           </button>
         ))}
+
+        {/* LINK DE VOTAÇÃO - EXCLUSIVO BETO BORELLI */}
+        {IS_MASTER && (
+          <button
+            onClick={() => navigate("/landing")}
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-[10px] font-black uppercase text-[#ff6200] hover:bg-[#ff6200]/10 transition-all border border-[#ff6200]/20"
+          >
+            <Vote size={14} />
+            <span className="hidden md:inline">VOTAÇÃO</span>
+          </button>
+        )}
+
         {IS_MASTER && (
           <button
             onClick={() => navigate("/admin")}
@@ -174,5 +186,6 @@ export default ClubBanner;
 /**
  * [RODAPÉ TÉCNICO]
  * ARQUIVO: src/components/dashboard/ClubBanner.tsx
- * STATUS: VERSÃO FINAL UNIFICADA.
+ * ALTERAÇÃO: Injeção do link de VOTAÇÃO exclusivo para betoborelli9@gmail.com.
+ * STATUS: AGUARDANDO VALIDAÇÃO.
  */
