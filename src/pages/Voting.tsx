@@ -162,7 +162,7 @@ const Voting = () => {
 
       try {
         // CAMADA 1: Busca no Supabase (251 clubes)
-        const localResults = await searchClubsSupabase(query, 10);
+        const localResults = searchClubsLocal(query, 10);
 
         let allResults = localResults.map((club) => ({ ...club, source: "supabase" as const }));
 
