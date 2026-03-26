@@ -1,132 +1,83 @@
 /**
- * [CAMINHO/ARQUIVO]: src/data/teamColors.ts
- * [MÓDULO: PROCESSADOR PASSIVO DE HEX → TEMA UI]
- * Este arquivo NÃO é mais a fonte primária de cores.
- * Cores vêm do Supabase (club_colors / clubes_cache).
- * A lista estática serve apenas como fallback rápido.
+ * ARQUIVO: src/data/teamColors.ts
+ * MÓDULO: MOTOR DE CONVERSÃO DE CORES (HEX -> THEME)
+ * STATUS: SUPORTE A 3 CORES + FAIXAS DINÂMICAS
  */
 
-/* [MÓDULO: TIPOS] */
 export interface TeamTheme {
-  primary: string;       // HSL values for CSS variable
-  primaryHex: string;    // Hex — cor principal da barra
-  secondaryHex: string;  // Hex — cor do círculo do escudo
-  stripeColors: string[];// Hex[] — cores das faixas diagonais
-  glow: string;          // RGBA for glow effects
-  textClass: string;     // Tailwind text class
+  name: string;
+  primaryHex: string;
+  secondaryHex: string;
+  accentHex?: string;
+  textClass: "text-white" | "text-black";
+  glow: string;
+  stripeColors: string[];
 }
 
-/* [MÓDULO: UTILIDADES DE CONVERSÃO HEX] */
-function hexToRgb(hex: string): { r: number; g: number; b: number } {
-  const clean = hex.replace("#", "");
-  const r = parseInt(clean.substring(0, 2), 16) || 0;
-  const g = parseInt(clean.substring(2, 4), 16) || 0;
-  const b = parseInt(clean.substring(4, 6), 16) || 0;
-  return { r, g, b };
-}
-
-function rgbToHsl(r: number, g: number, b: number): string {
-  r /= 255; g /= 255; b /= 255;
-  const max = Math.max(r, g, b), min = Math.min(r, g, b);
-  let h = 0, s = 0;
-  const l = (max + min) / 2;
-
-  if (max !== min) {
-    const d = max - min;
-    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
-    switch (max) {
-      case r: h = ((g - b) / d + (g < b ? 6 : 0)) / 6; break;
-      case g: h = ((b - r) / d + 2) / 6; break;
-      case b: h = ((r - g) / d + 4) / 6; break;
-    }
-  }
-
-  return `${Math.round(h * 360)} ${Math.round(s * 100)}% ${Math.round(l * 100)}%`;
-}
-
-function isLightColor(hex: string): boolean {
-  const { r, g, b } = hexToRgb(hex);
-  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-  return luminance > 0.6;
-}
+// Configuração padrão (Caso tudo falhe)
+export const defaultTeamTheme: TeamTheme = {
+  name: "Heart Club",
+  primaryHex: "#ff6200",
+  secondaryHex: "#ffffff",
+  textClass: "text-white",
+  glow: "rgba(255, 98, 0, 0.5)",
+  stripeColors: ["#ff6200", "#ffffff"],
+};
 
 /**
- * [MÓDULO: GERADOR DINÂMICO DE TEMA A PARTIR DE HEX]
- * Converte qualquer par de hex (primária + secundária) em um TeamTheme completo.
- * Usado pelo hook useClubTheme para cores vindas do banco.
+ * MÓDULO: GERADOR DE TEMA DINÂMICO
+ * Transforma cores HEX do Supabase em um objeto de tema completo.
  */
-export function hexToTeamTheme(primaryHex: string, secondaryHex: string = "#ffffff"): TeamTheme {
-  const { r, g, b } = hexToRgb(primaryHex);
-  const hsl = rgbToHsl(r, g, b);
-  const light = isLightColor(primaryHex);
+export const hexToTeamTheme = (primary: string, secondary: string, accent?: string): TeamTheme => {
+  const p = primary || "#1a1a1a";
+  const s = secondary || "#ffffff";
+  const a = accent || p;
+
+  // Lógica simples para decidir se o texto sobre a cor primária deve ser branco ou preto
+  const isLight = (hex: string) => {
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+    return brightness > 155;
+  };
 
   return {
-    primary: hsl,
-    primaryHex,
-    secondaryHex,
-    stripeColors: [secondaryHex],
-    glow: `rgba(${r}, ${g}, ${b}, 0.35)`,
-    textClass: light ? "text-black" : "text-white",
+    name: "Dynamic",
+    primaryHex: p,
+    secondaryHex: s,
+    accentHex: a,
+    textClass: isLight(p) ? "text-black" : "text-white",
+    glow: `${p}80`,
+    // Aqui geramos as faixas que aparecerão no banner
+    stripeColors: [p, s, a],
   };
-}
-
-/* [MÓDULO: LISTA ESTÁTICA DE FALLBACK] */
-export const teamColors: Record<string, TeamTheme> = {
-  "Palmeiras":       { primary: "145 100% 20%", primaryHex: "#006437", secondaryHex: "#ffffff", stripeColors: ["#ffffff"],                  glow: "rgba(0, 100, 55, 0.35)",   textClass: "text-white" },
-  "Flamengo":        { primary: "0 100% 39%",   primaryHex: "#C40000", secondaryHex: "#000000", stripeColors: ["#000000"],                  glow: "rgba(196, 0, 0, 0.35)",    textClass: "text-white" },
-  "Corinthians":     { primary: "0 0% 10%",     primaryHex: "#1A1A1A", secondaryHex: "#ffffff", stripeColors: ["#ffffff"],                  glow: "rgba(26, 26, 26, 0.5)",    textClass: "text-white" },
-  "São Paulo":       { primary: "0 0% 95%",     primaryHex: "#ffffff", secondaryHex: "#000000", stripeColors: ["#C1272D", "#000000"],       glow: "rgba(178, 0, 0, 0.35)",    textClass: "text-black" },
-  "Santos":          { primary: "0 0% 15%",     primaryHex: "#262626", secondaryHex: "#ffffff", stripeColors: ["#ffffff"],                  glow: "rgba(38, 38, 38, 0.5)",    textClass: "text-white" },
-  "Fluminense":      { primary: "340 70% 35%",  primaryHex: "#970045", secondaryHex: "#006437", stripeColors: ["#ffffff", "#006437"],       glow: "rgba(151, 0, 69, 0.35)",   textClass: "text-white" },
-  "Vasco":           { primary: "0 0% 8%",      primaryHex: "#141414", secondaryHex: "#ffffff", stripeColors: ["#ffffff"],                  glow: "rgba(20, 20, 20, 0.5)",    textClass: "text-white" },
-  "Botafogo":        { primary: "0 0% 7%",      primaryHex: "#121212", secondaryHex: "#ffffff", stripeColors: ["#ffffff"],                  glow: "rgba(18, 18, 18, 0.5)",    textClass: "text-white" },
-  "Grêmio":          { primary: "210 80% 35%",  primaryHex: "#0F52BA", secondaryHex: "#ffffff", stripeColors: ["#ffffff", "#000000"],       glow: "rgba(15, 82, 186, 0.35)",  textClass: "text-white" },
-  "Internacional":   { primary: "0 85% 42%",    primaryHex: "#C4161C", secondaryHex: "#ffffff", stripeColors: ["#ffffff"],                  glow: "rgba(196, 22, 28, 0.35)",  textClass: "text-white" },
-  "Atlético-MG":     { primary: "0 0% 10%",     primaryHex: "#1A1A1A", secondaryHex: "#ffffff", stripeColors: ["#ffffff"],                  glow: "rgba(26, 26, 26, 0.5)",    textClass: "text-white" },
-  "Cruzeiro":        { primary: "220 85% 40%",  primaryHex: "#003DA5", secondaryHex: "#ffffff", stripeColors: ["#ffffff"],                  glow: "rgba(0, 61, 165, 0.35)",   textClass: "text-white" },
-  "Athletico-PR":    { primary: "0 80% 35%",    primaryHex: "#A30000", secondaryHex: "#000000", stripeColors: ["#000000"],                  glow: "rgba(163, 0, 0, 0.35)",    textClass: "text-white" },
-  "Bahia":           { primary: "215 80% 45%",  primaryHex: "#1758A6", secondaryHex: "#ffffff", stripeColors: ["#ffffff", "#C1272D"],       glow: "rgba(23, 88, 166, 0.35)",  textClass: "text-white" },
-  "Fortaleza":       { primary: "0 75% 40%",    primaryHex: "#B30000", secondaryHex: "#003DA5", stripeColors: ["#003DA5", "#ffffff"],       glow: "rgba(179, 0, 0, 0.35)",    textClass: "text-white" },
-  "Ceará":           { primary: "0 0% 10%",     primaryHex: "#1A1A1A", secondaryHex: "#ffffff", stripeColors: ["#ffffff"],                  glow: "rgba(26, 26, 26, 0.5)",    textClass: "text-white" },
-  "Sport":           { primary: "0 100% 30%",   primaryHex: "#990000", secondaryHex: "#000000", stripeColors: ["#000000", "#FFD700"],       glow: "rgba(153, 0, 0, 0.35)",    textClass: "text-white" },
-  "Vitória":         { primary: "0 100% 35%",   primaryHex: "#B20000", secondaryHex: "#000000", stripeColors: ["#000000"],                  glow: "rgba(178, 0, 0, 0.35)",    textClass: "text-white" },
-  "Coritiba":        { primary: "130 90% 25%",  primaryHex: "#066B06", secondaryHex: "#ffffff", stripeColors: ["#ffffff"],                  glow: "rgba(6, 107, 6, 0.35)",    textClass: "text-white" },
-  "Ponte Preta":     { primary: "0 0% 10%",     primaryHex: "#1A1A1A", secondaryHex: "#ffffff", stripeColors: ["#ffffff"],                  glow: "rgba(26, 26, 26, 0.5)",    textClass: "text-white" },
-  "Guarani":         { primary: "140 80% 30%",  primaryHex: "#0F7D0F", secondaryHex: "#ffffff", stripeColors: ["#ffffff"],                  glow: "rgba(15, 125, 15, 0.35)",  textClass: "text-white" },
-  "Chapecoense":     { primary: "130 85% 28%",  primaryHex: "#0A6E0A", secondaryHex: "#ffffff", stripeColors: ["#ffffff"],                  glow: "rgba(10, 110, 10, 0.35)",  textClass: "text-white" },
-  "Goiás":           { primary: "130 80% 30%",  primaryHex: "#0F7D0F", secondaryHex: "#ffffff", stripeColors: ["#ffffff"],                  glow: "rgba(15, 125, 15, 0.35)",  textClass: "text-white" },
-  "Bragantino":      { primary: "0 80% 35%",    primaryHex: "#A30000", secondaryHex: "#ffffff", stripeColors: ["#ffffff"],                  glow: "rgba(163, 0, 0, 0.35)",    textClass: "text-white" },
-  "Cuiabá":          { primary: "45 90% 45%",   primaryHex: "#DAA520", secondaryHex: "#006437", stripeColors: ["#006437"],                  glow: "rgba(218, 165, 32, 0.35)", textClass: "text-black" },
-  "Juventude":       { primary: "130 80% 28%",  primaryHex: "#0A7D0A", secondaryHex: "#ffffff", stripeColors: ["#ffffff"],                  glow: "rgba(10, 125, 10, 0.35)",  textClass: "text-white" },
-  "América-MG":      { primary: "130 80% 30%",  primaryHex: "#0F7D0F", secondaryHex: "#ffffff", stripeColors: ["#ffffff"],                  glow: "rgba(15, 125, 15, 0.35)",  textClass: "text-white" },
-  "Náutico":         { primary: "0 90% 35%",    primaryHex: "#AA0000", secondaryHex: "#ffffff", stripeColors: ["#ffffff"],                  glow: "rgba(170, 0, 0, 0.35)",    textClass: "text-white" },
-  "Santa Cruz":      { primary: "0 85% 35%",    primaryHex: "#A30000", secondaryHex: "#000000", stripeColors: ["#000000", "#ffffff"],       glow: "rgba(163, 0, 0, 0.35)",    textClass: "text-white" },
-  "ABC":             { primary: "0 0% 12%",     primaryHex: "#1F1F1F", secondaryHex: "#ffffff", stripeColors: ["#ffffff"],                  glow: "rgba(31, 31, 31, 0.5)",    textClass: "text-white" },
-  "CSA":             { primary: "215 80% 40%",  primaryHex: "#0D4FA3", secondaryHex: "#ffffff", stripeColors: ["#ffffff"],                  glow: "rgba(13, 79, 163, 0.35)",  textClass: "text-white" },
-  "CRB":             { primary: "0 85% 38%",    primaryHex: "#B40000", secondaryHex: "#ffffff", stripeColors: ["#ffffff"],                  glow: "rgba(180, 0, 0, 0.35)",    textClass: "text-white" },
-  "Remo":            { primary: "215 75% 35%",  primaryHex: "#163F8C", secondaryHex: "#ffffff", stripeColors: ["#ffffff"],                  glow: "rgba(22, 63, 140, 0.35)",  textClass: "text-white" },
-  "Paysandu":        { primary: "210 70% 40%",  primaryHex: "#1F5CB0", secondaryHex: "#ffffff", stripeColors: ["#ffffff"],                  glow: "rgba(31, 92, 176, 0.35)",  textClass: "text-white" },
-  "Vila Nova":       { primary: "0 85% 38%",    primaryHex: "#B40000", secondaryHex: "#ffffff", stripeColors: ["#ffffff"],                  glow: "rgba(180, 0, 0, 0.35)",    textClass: "text-white" },
-  "Sampaio Corrêa":  { primary: "50 100% 50%",  primaryHex: "#FFD700", secondaryHex: "#C1272D", stripeColors: ["#C1272D", "#006400"],       glow: "rgba(255, 215, 0, 0.35)",  textClass: "text-black" },
 };
 
-/* [MÓDULO: FALLBACK PADRÃO — LARANJA HEART CLUB] */
-export const defaultTeamTheme: TeamTheme = {
-  primary: "24 100% 50%",
-  primaryHex: "#FF6200",
-  secondaryHex: "#ffffff",
-  stripeColors: ["#ffffff"],
-  glow: "rgba(255, 98, 0, 0.3)",
-  textClass: "text-white",
+// Mapeamento Estático (Opcional - Cache Local para os Gigantes)
+export const teamColors: Record<string, TeamTheme> = {
+  "Sao Paulo": {
+    name: "São Paulo",
+    primaryHex: "#FFFFFF",
+    secondaryHex: "#FF0000",
+    accentHex: "#000000",
+    textClass: "text-black",
+    glow: "rgba(255, 0, 0, 0.3)",
+    stripeColors: ["#FF0000", "#000000", "#FFFFFF"],
+  },
+  "Vila Nova": {
+    name: "Vila Nova",
+    primaryHex: "#FF0000",
+    secondaryHex: "#FFFFFF",
+    textClass: "text-white",
+    glow: "rgba(255, 255, 255, 0.3)",
+    stripeColors: ["#FFFFFF", "#FF0000"],
+  },
 };
 
 /**
- * [MÓDULO: GETTER SÍNCRONO DE FALLBACK]
- * ⚠️ DEPRECATED para uso direto em componentes.
- * Prefira o hook useClubTheme() que busca do banco.
- * Mantido para compatibilidade e como fallback interno.
+ * [RODAPÉ TÉCNICO]
+ * ARQUIVO: src/data/teamColors.ts
+ * MÓDULO: MOTOR DE CONVERSÃO DE CORES
+ * VERIFICAÇÃO: SE VOCÊ ESTÁ VENDO ISSO, O ARQUIVO ESTÁ COMPLETO.
  */
-export function getTeamTheme(clubName: string | null | undefined): TeamTheme {
-  if (!clubName) return defaultTeamTheme;
-  return teamColors[clubName] ?? defaultTeamTheme;
-}
