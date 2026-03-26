@@ -109,6 +109,7 @@ export type Database = {
           cor_secundaria: string | null
           escudo_url: string | null
           estadio: string | null
+          estado: string | null
           fundacao: string | null
           historia: string | null
           id: string
@@ -118,6 +119,7 @@ export type Database = {
           pais: string | null
           pais_codigo: string | null
           rivais: string | null
+          serie: string | null
           updated_at: string | null
         }
         Insert: {
@@ -127,6 +129,7 @@ export type Database = {
           cor_secundaria?: string | null
           escudo_url?: string | null
           estadio?: string | null
+          estado?: string | null
           fundacao?: string | null
           historia?: string | null
           id?: string
@@ -136,6 +139,7 @@ export type Database = {
           pais?: string | null
           pais_codigo?: string | null
           rivais?: string | null
+          serie?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -145,6 +149,7 @@ export type Database = {
           cor_secundaria?: string | null
           escudo_url?: string | null
           estadio?: string | null
+          estado?: string | null
           fundacao?: string | null
           historia?: string | null
           id?: string
@@ -154,6 +159,7 @@ export type Database = {
           pais?: string | null
           pais_codigo?: string | null
           rivais?: string | null
+          serie?: string | null
           updated_at?: string | null
         }
         Relationships: []
@@ -378,6 +384,7 @@ export type Database = {
           cor_secundaria: string | null
           escudo_url: string | null
           estadio: string | null
+          estado: string | null
           fundacao: string | null
           historia: string | null
           id: string
@@ -387,6 +394,7 @@ export type Database = {
           pais: string | null
           pais_codigo: string | null
           rivais: string | null
+          serie: string | null
           updated_at: string | null
         }[]
         SetofOptions: {

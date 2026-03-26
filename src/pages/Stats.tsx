@@ -383,7 +383,7 @@ const Stats = () => {
         <div>
         <section
           className="relative overflow-hidden rounded-t-[2.25rem] rounded-b-none border border-border/50 border-b-0 p-4 sm:p-6 md:p-8 shadow-2xl"
-          style={{ backgroundColor: `hsl(${theme.primary})` }}
+          style={{ backgroundColor: theme.primaryHex }}
         >
           <div className="absolute inset-y-0 right-[10%] w-[4px] rotate-[22deg]" style={{ backgroundColor: "hsl(0 0% 100% / 0.72)" }} />
           <div className="absolute inset-y-[-20%] right-[4%] w-[14px] rotate-[22deg]" style={{ backgroundColor: "hsl(0 0% 100% / 0.5)" }} />

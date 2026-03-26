@@ -13,7 +13,7 @@ import { useNavigate } from "react-router-dom";
 import { useUser } from "@/contexts/UserContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { searchClubsSupabase } from "@/lib/search-clubs";
+import { searchClubsLocal } from "@/lib/search-clubs";
 import { ClubLogo } from "@/components/ClubLogo";
 import logo from "@/assets/logo.png";
 import {
@@ -162,9 +162,9 @@ const Voting = () => {
 
       try {
         // CAMADA 1: Busca no Supabase (251 clubes)
-        const localResults = await searchClubsSupabase(query, 10);
+        const localResults = searchClubsLocal(query, 10);
 
-        let allResults = localResults.map((club) => ({ ...club, source: "supabase" as const }));
+        let allResults: ClubResult[] = localResults.map((club) => ({ ...club, source: "supabase" as const }));
 
         // CAMADA 2: Se poucos resultados, busca na API-Football
         if (localResults.length < 5) {

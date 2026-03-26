@@ -84,9 +84,9 @@ const Dashboard = () => {
           clubName={clubeName || "SELECIONE SEU CLUBE"}
           clubData={activeClub}
           theme={theme}
-          profileName={profile.full_name || profile.nome_exibicao || "TORCEDOR"}
-          profileCity={profile.city || profile.cidade || "BRASIL"}
-          profileState={profile.state || profile.estado || ""}
+          profileName={profile.nome_exibicao || "TORCEDOR"}
+          profileCity={profile.cidade || "BRASIL"}
+          profileState={profile.estado || ""}
           ambassadorLevel={profile.nivel_embaixador || "BRONZE"}
           showProfileInfo={true} // ATIVA O LAYOUT PROFISSIONAL COM FAIXAS E INFO
         />
