@@ -1,6 +1,8 @@
-/* src/lib/search-clubs.ts
-   Busca Local-First com fallback para API-Football via Edge Function.
-   Logos vêm exclusivamente do campo logoUrl de cada clube local. */
+/**
+ * ARQUIVO: src/lib/search-clubs.ts
+ * [CAMINHO]: src/lib/search-clubs.ts
+ * CONTEXTO: Ajuste de Fallback para chamar a Edge Function correta.
+ */
 
 import { CLUBS_DATA } from "@/clubes-data";
 import { supabase } from "@/integrations/supabase/client";
@@ -54,28 +56,36 @@ export async function searchClubsWithFallback(
   const localResults = searchClubsLocal(query, limit);
   if (localResults.length > 0) return localResults;
 
-  // Fallback: chamar Edge Function que consulta API-Football
+  // Fallback: Chamar a Edge Function correta que configuramos com a API Key
   try {
-    const { data, error } = await supabase.functions.invoke("search-clubs", {
-      body: { query },
+    const { data, error } = await supabase.functions.invoke("enrich-club-colors", {
+      body: { club_name: query },
     });
 
-    if (error || !Array.isArray(data)) return [];
+    // Se a API encontrar, ela retorna { success: true, club: "Nome", data: [...] }
+    if (error || !data || !data.success) return [];
 
-    return data.slice(0, limit).map((item: any) => ({
-      id: item.id || String(item.api_id || ""),
-      name: item.name,
-      shortName: item.shortName || item.name,
-      location: [item.city, item.country].filter(Boolean).join(", "),
-      logo: item.logo || "",
-      city: item.city || "",
+    // O retorno da nossa Edge Function vem simplificado, ajustamos para o Front
+    return [{
+      id: String(data.data?.[0]?.api_id || Date.now()),
+      name: data.club,
+      shortName: data.club.substring(0, 3).toUpperCase(),
+      location: "Internacional",
+      logo: data.data?.[0]?.escudo_url || "",
+      city: data.data?.[0]?.cidade || "",
       state: "",
-      country: item.country || "",
+      country: data.data?.[0]?.pais || "",
       mascote: "",
       source: "api" as const,
-    }));
+    }];
   } catch (err) {
     console.error("API-Football fallback failed:", err);
     return [];
   }
 }
+
+/**
+ * [RODAPÉ TÉCNICO]
+ * Sincronização: Chamada alterada de 'search-clubs' para 'enrich-club-colors'.
+ * Próximo passo: git push e teste do Íbis.
+ */
