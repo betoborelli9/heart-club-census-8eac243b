@@ -1,89 +1,57 @@
 /**
  * ARQUIVO: src/lib/search-clubs.ts
  * [CAMINHO]: src/lib/search-clubs.ts
- * CONTEXTO: Ajuste de Fallback para chamar a Edge Function 'enrich-club-colors'.
+ * CONTEXTO: Conexão Front-end -> Edge Function (API-Football)
+ * STATUS: Motor de Busca Híbrida Ativado
  */
 
-import { CLUBS_DATA } from "@/clubes-data";
 import { supabase } from "@/integrations/supabase/client";
+import { CLUBS_DATA } from "@/clubes-data";
 
-const removeAccents = (str: string) => str.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+export async function searchClubsWithFallback(query: string) {
+  if (!query || query.length < 3) return [];
 
-export interface ClubSearchResult {
-  id: string;
-  name: string;
-  shortName: string;
-  location: string;
-  logo: string;
-  city: string;
-  state: string;
-  country: string;
-  mascote: string;
-  source: "local" | "api";
-}
-
-/** Busca 100% local no dataset mestre */
-export function searchClubsLocal(query: string, limit = 10): ClubSearchResult[] {
-  if (!query || query.length < 2) return [];
-
-  const normalizedQuery = removeAccents(query.toLowerCase().trim());
-
-  const matches = CLUBS_DATA.filter(
-    (c) =>
-      removeAccents(c.nome.toLowerCase()).includes(normalizedQuery) ||
-      removeAccents(c.cidade.toLowerCase()).includes(normalizedQuery),
-  );
-
-  return matches.slice(0, limit).map((c, i) => ({
-    id: String(i),
+  // 1. Busca na lista local (Rápida)
+  const normalizedQuery = query.toLowerCase().trim();
+  const localMatches = CLUBS_DATA.filter((c) => c.nome.toLowerCase().includes(normalizedQuery)).map((c) => ({
     name: c.nome,
-    shortName: c.nome_curto,
-    location: `${c.cidade}, ${c.estado}, ${c.pais}`,
     logo: c.logoUrl,
-    city: c.cidade,
-    state: c.estado,
-    country: c.pais,
-    mascote: c.mascote,
     source: "local" as const,
   }));
-}
 
-/** Busca com fallback: local primeiro, API-Football se local retornar vazio */
-export async function searchClubsWithFallback(query: string, limit = 10): Promise<ClubSearchResult[]> {
-  const localResults = searchClubsLocal(query, limit);
-  if (localResults.length > 0) return localResults;
+  if (localMatches.length > 0) return localMatches;
 
-  // Fallback: Chamar a Edge Function correta (enrich-club-colors)
+  // 2. Fallback para API-Football (O que fará o gráfico subir)
   try {
+    console.log("Acionando API-Football para:", query);
+
     const { data, error } = await supabase.functions.invoke("enrich-club-colors", {
       body: { club_name: query },
     });
 
-    if (error || !data || !data.success) return [];
+    if (error || !data?.success) {
+      console.error("Erro na Edge Function:", error);
+      return [];
+    }
 
-    // Mapeia o retorno da API para o formato que o seu componente espera
+    // Retorna o clube injetado pela API
     return [
       {
-        id: String(Date.now()),
         name: data.club,
-        shortName: data.club.substring(0, 3).toUpperCase(),
-        location: "Internacional",
-        logo: data.data?.[0]?.escudo_url || "",
-        city: data.data?.[0]?.cidade || "",
-        state: "",
-        country: data.data?.[0]?.pais || "",
-        mascote: "",
+        logo: data.data?.[0]?.logo || data.data?.[0]?.escudo_url || "",
         source: "api" as const,
       },
     ];
   } catch (err) {
-    console.error("API-Football fallback failed:", err);
+    console.error("Falha crítica na busca externa:", err);
     return [];
   }
 }
 
 /**
  * [RODAPÉ TÉCNICO]
- * Sincronização: Chamada corrigida para 'enrich-club-colors'.
- * Próximo passo: git push e teste do Íbis.
+ * ARQUIVO: src/lib/search-clubs.ts
+ * PROJETO: Heart Club (C:\Users\betob\Desktop\GitHub\heart-club)
+ * DECISÃO: Substituição da busca estática por invoke direto da Edge Function.
+ * PRÓXIMO PASSO: git push origin main --force e teste do Ibis.
  */
