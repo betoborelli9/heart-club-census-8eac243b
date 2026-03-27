@@ -1,7 +1,7 @@
 /**
  * ARQUIVO: src/lib/search-clubs.ts
  * [CAMINHO]: src/lib/search-clubs.ts
- * CONTEXTO: Ajuste de Fallback para chamar a Edge Function correta.
+ * CONTEXTO: Ajuste de Fallback para chamar a Edge Function 'enrich-club-colors'.
  */
 
 import { CLUBS_DATA } from "@/clubes-data";
@@ -53,19 +53,18 @@ export async function searchClubsWithFallback(query: string, limit = 10): Promis
   const localResults = searchClubsLocal(query, limit);
   if (localResults.length > 0) return localResults;
 
-  // Fallback: Chamar a Edge Function correta que configuramos com a API Key
+  // Fallback: Chamar a Edge Function correta (enrich-club-colors)
   try {
     const { data, error } = await supabase.functions.invoke("enrich-club-colors", {
       body: { club_name: query },
     });
 
-    // Se a API encontrar, ela retorna { success: true, club: "Nome", data: [...] }
     if (error || !data || !data.success) return [];
 
-    // O retorno da nossa Edge Function vem simplificado, ajustamos para o Front
+    // Mapeia o retorno da API para o formato que o seu componente espera
     return [
       {
-        id: String(data.data?.[0]?.api_id || Date.now()),
+        id: String(Date.now()),
         name: data.club,
         shortName: data.club.substring(0, 3).toUpperCase(),
         location: "Internacional",
@@ -85,6 +84,6 @@ export async function searchClubsWithFallback(query: string, limit = 10): Promis
 
 /**
  * [RODAPÉ TÉCNICO]
- * Sincronização: Chamada alterada de 'search-clubs' para 'enrich-club-colors'.
+ * Sincronização: Chamada corrigida para 'enrich-club-colors'.
  * Próximo passo: git push e teste do Íbis.
  */
