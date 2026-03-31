@@ -20,7 +20,7 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
     // [CHAVE MESTRA]: Injetada para garantir que a API-Football responda
-    const apiKey = "054ae6ad4bc0ae8e8c89986326194b61";
+    const apiKey = "3b4a0ec2c5f513b9aa1e43c4adbae7aa";
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     const body = await req.json().catch(() => ({}));
