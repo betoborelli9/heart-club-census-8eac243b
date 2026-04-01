@@ -1,7 +1,7 @@
 /**
  * [CAMINHO/ARQUIVO]: supabase/functions/enrich-club-colors/index.ts
  * [MÓDULO]: MOTOR DE BUSCA ATIVA HEART CLUB
- * [STATUS]: UNIFICADO - BUSCA, CRIA E ENRIQUECE
+ * [STATUS]: CACHE + API FALLBACK
  */
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
@@ -18,17 +18,30 @@ serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const apiKey = Deno.env.get("API_FOOTBALL_KEY")!;
 
-    // [CHAVE MESTRA]: Injetada para garantir que a API-Football responda
-    const apiKey = "3b4a0ec2c5f513b9aa1e43c4adbae7aa";
     const supabase = createClient(supabaseUrl, supabaseKey);
-
     const body = await req.json().catch(() => ({}));
     const club_name = body.club_name;
 
     if (!club_name) throw new Error("Nome do clube vazio");
 
-    // 1. BUSCA NA API-FOOTBALL (O pulo do gato)
+    // 1. Primeiro tenta buscar no Supabase
+    const { data: cachedClub, error: cacheError } = await supabase
+      .from("clubes_cache")
+      .select("*")
+      .eq("nome", club_name)
+      .maybeSingle();
+
+    if (cacheError) throw cacheError;
+
+    if (cachedClub) {
+      return new Response(JSON.stringify({ success: true, club: cachedClub }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // 2. Se não existe, busca na API-Football
     const res = await fetch(`https://v3.football.api-sports.io/teams?search=${encodeURIComponent(club_name)}`, {
       headers: { "x-apisports-key": apiKey },
     });
@@ -42,7 +55,7 @@ serve(async (req) => {
       });
     }
 
-    // 2. GRAVAÇÃO ATIVA NO SUPABASE (Sincroniza os dois projetos)
+    // 3. Grava no Supabase todos os dados relevantes
     const { data, error } = await supabase
       .from("clubes_cache")
       .upsert(
@@ -53,8 +66,13 @@ serve(async (req) => {
           pais: teamData.team.country,
           escudo_url: teamData.team.logo,
           api_id: teamData.team.id,
-          cor_primaria: "#ff6200",
-          cor_secundaria: "#1a1a1a",
+          // Aqui você pode enriquecer com mais campos conforme precisar
+          estadio: teamData.venue?.name || null,
+          capacidade: teamData.venue?.capacity || null,
+          endereco: teamData.venue?.address || null,
+          cor_primaria: "#ff6200",   // placeholder
+          cor_secundaria: "#1a1a1a", // placeholder
+          cor_terciaria: "#ffffff",  // placeholder
         },
         { onConflict: "nome" },
       )
@@ -62,7 +80,7 @@ serve(async (req) => {
 
     if (error) throw error;
 
-    return new Response(JSON.stringify({ success: true, club: teamData.team.name }), {
+    return new Response(JSON.stringify({ success: true, club: teamData.team }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {
@@ -75,6 +93,6 @@ serve(async (req) => {
 
 /**
  * [RODAPÉ TÉCNICO]
- * Sincronização Localhost/Lovable via API-Football.
- * Próximo passo: Deploy para o Supabase.
+ * Consulta primeiro o Supabase, se não encontrar busca na API-Football,
+ * grava todos os dados no Supabase e retorna para o site.
  */
