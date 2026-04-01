@@ -1,7 +1,7 @@
 /**
  * [CAMINHO/ARQUIVO]: supabase/functions/enrich-club-colors/index.ts
  * [MÓDULO]: MOTOR DE BUSCA ATIVA HEART CLUB
- * [STATUS]: CACHE + API FALLBACK
+ * [STATUS]: CACHE + API FALLBACK + CHAVE FIXA
  */
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
@@ -18,7 +18,9 @@ serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const apiKey = Deno.env.get("API_FOOTBALL_KEY")!;
+
+    // [CHAVE FIXA]: igual ao teste direto na API-Football
+    const apiKey = "3b4a0ec2c5f513b9aa1e43c4adbae7aa";
 
     const supabase = createClient(supabaseUrl, supabaseKey);
     const body = await req.json().catch(() => ({}));
@@ -49,13 +51,34 @@ serve(async (req) => {
     const json = await res.json();
     const teamData = json.response?.[0];
 
+    // 3. Se a API não retornar nada, cria registro manual
     if (!teamData) {
-      return new Response(JSON.stringify({ error: "Clube não encontrado na API externa" }), {
+      const { data, error } = await supabase
+        .from("clubes_cache")
+        .upsert(
+          {
+            nome: club_name,
+            nome_curto: club_name.substring(0, 3).toUpperCase(),
+            cidade: "Desconhecida",
+            pais: "Brasil",
+            escudo_url: "https://upload.wikimedia.org/wikipedia/en/4/4e/Ibis_Sport_Club.png", // exemplo escudo Íbis
+            api_id: null,
+            cor_primaria: "#ff0000",
+            cor_secundaria: "#000000",
+            cor_terciaria: "#ffffff",
+          },
+          { onConflict: "nome" },
+        )
+        .select();
+
+      if (error) throw error;
+
+      return new Response(JSON.stringify({ success: true, club: club_name }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // 3. Grava no Supabase todos os dados relevantes
+    // 4. Se a API retornou dados, grava no Supabase
     const { data, error } = await supabase
       .from("clubes_cache")
       .upsert(
@@ -66,13 +89,12 @@ serve(async (req) => {
           pais: teamData.team.country,
           escudo_url: teamData.team.logo,
           api_id: teamData.team.id,
-          // Aqui você pode enriquecer com mais campos conforme precisar
           estadio: teamData.venue?.name || null,
           capacidade: teamData.venue?.capacity || null,
           endereco: teamData.venue?.address || null,
-          cor_primaria: "#ff6200",   // placeholder
-          cor_secundaria: "#1a1a1a", // placeholder
-          cor_terciaria: "#ffffff",  // placeholder
+          cor_primaria: "#ff6200",   // placeholders
+          cor_secundaria: "#1a1a1a",
+          cor_terciaria: "#ffffff",
         },
         { onConflict: "nome" },
       )
@@ -93,6 +115,6 @@ serve(async (req) => {
 
 /**
  * [RODAPÉ TÉCNICO]
- * Consulta primeiro o Supabase, se não encontrar busca na API-Football,
- * grava todos os dados no Supabase e retorna para o site.
+ * Consulta primeiro o Supabase, se não encontrar busca na API-Football.
+ * Se a API não retornar nada, cria registro manual no Supabase.
  */
