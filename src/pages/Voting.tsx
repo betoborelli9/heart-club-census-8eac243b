@@ -107,43 +107,86 @@ const Voting = () => {
     }
   }, [isLoading, isAuthenticated, isProfileComplete, hasVoted, navigate, IS_MASTER_ADMIN]);
 
-  /* ═══════════════════════════════════════════════════════════
+ /* ═══════════════════════════════════════════════════════════
      MÓDULO: BUSCA HÍBRIDA (SUPABASE + API-FOOTBALL)
      ═══════════════════════════════════════════════════════════ */
 
   /**
-   * [SUBMÓDULO: BUSCA NA API-FOOTBALL VIA EDGE FUNCTION]
-   * Função: Consulta a API-Football quando não acha no Supabase
+   * [SUBMÓDULO: BUSCA NA API-FOOTBALL DIRETA + CACHE SUPABASE]
+   * Função: Primeiro busca no Supabase, se não achar consulta direto a API-Football e salva no Supabase
    */
   const searchApiFootball = useCallback(async (term: string): Promise<ClubResult[]> => {
     try {
-      const { data, error } = await supabase.functions.invoke("enrich-club-colors", {
-        body: { club_name: term, action: "search" },
-      });
+      // 1. Busca no Supabase (cache local)
+      const { data: cached } = await supabase
+        .from("clubes_cache")
+        .select("*")
+        .ilike("nome", `%${term}%`)
+        .limit(10);
 
-      if (error || !data) return [];
+      if (cached && cached.length > 0) {
+        return cached.map((c: any) => ({
+          id: c.id,
+          name: c.nome,
+          shortName: c.nome_curto || c.nome,
+          location: c.pais,
+          logo: c.escudo_url,
+          city: c.cidade,
+          state: "",
+          country: c.pais,
+          mascote: "",
+          source: "supabase" as const,
+        }));
+      }
 
-      return data.map((club: any) => ({
-        id: `api-${club.id}`,
-        name: club.name,
-        shortName: club.name.substring(0, 3).toUpperCase(),
-        location: club.country,
-        logo: club.logo,
-        city: "",
+      // 2. Se não achou, consulta direto a API-Football
+      const res = await fetch(
+        `https://v3.football.api-sports.io/teams?search=${encodeURIComponent(term)}`,
+        { headers: { "x-apisports-key": "3b4a0ec2c5f513b9aa1e43c4adbae7aa" } }
+      );
+
+      if (!res.ok) {
+        console.error("Erro na API-Football:", res.status);
+        return [];
+      }
+
+      const apiData = await res.json();
+      const teams = apiData.response || [];
+
+      const results = teams.map((item: any) => ({
+        id: null,
+        name: item.team.name,
+        shortName: item.team.code || item.team.name,
+        location: item.team.country,
+        logo: item.team.logo,
+        city: item.venue?.city || "",
         state: "",
-        country: club.country,
+        country: item.team.country,
         mascote: "",
         source: "api-football" as const,
       }));
+
+      // 3. Grava no Supabase para uso futuro
+      for (const r of results) {
+        await supabase.from("clubes_cache").upsert({
+          nome: r.name,
+          nome_curto: r.shortName,
+          cidade: r.city,
+          pais: r.country,
+          escudo_url: r.logo,
+        }, { onConflict: "nome" });
+      }
+
+      return results;
     } catch (err) {
-      console.error("Erro na API-Football:", err);
+      console.error("Erro na busca:", err);
       return [];
     }
   }, []);
 
   /**
    * [SUBMÓDULO: BUSCA UNIFICADA - DUAS CAMADAS]
-   * Função: Primeiro Supabase, depois API-Football se necessário
+   * Função: Primeiro Supabase local, depois API-Football se necessário
    */
   const performSearch = useCallback(
     async (
@@ -188,8 +231,8 @@ const Voting = () => {
     },
     [searchApiFootball],
   );
-
-  /* [SUBMÓDULO: DEBOUNCE PARA BUSCAS] */
+  
+            /* [SUBMÓDULO: DEBOUNCE PARA BUSCAS] */
   useEffect(() => {
     const timer = setTimeout(() => {
       performSearch(heartSearch, setHeartResults, setHeartOpen, setHeartLoading);
