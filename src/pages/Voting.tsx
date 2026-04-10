@@ -1,7 +1,9 @@
 /**
  * Caminho: src/pages/Voting.tsx
- * Contexto: Sistema de Votação - RESTAURAÇÃO DE BUSCA HÍBRIDA + IA INVESTIGADORA
+ * Contexto: Sistema de Votação - RESTAURAÇÃO DE BUSCA HÍBRIDA + IA INVESTIGADORA + BLINDAGEM DE REDIRECIONAMENTO
  * Autor: Gemini (Especialista Senior)
+ * Descrição: Este arquivo gerencia a votação do clube do coração e simpatias. 
+ * Foi aplicada uma correção na persistência de votos para garantir o redirecionamento ao Dashboard e evitar travamentos no botão de lealdade.
  */
 
 import { useState, useEffect, useRef, useCallback } from "react";
@@ -20,7 +22,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import FingerprintJS from "@fingerprintjs/fingerprintjs";
 
 /* ═══════════════════════════════════════════════════════════
-   MÓDULO: TIPOS E INTERFACES
+    MÓDULO: TIPOS E INTERFACES
    ═══════════════════════════════════════════════════════════ */
 
 interface ClubResult {
@@ -66,7 +68,7 @@ const Voting = () => {
   const [manualClub, setManualClub] = useState({ nome: "", mascote: "", cidade: "", estado: "", cor: "" });
 
   /* ═══════════════════════════════════════════════════════════
-     MÓDULO: MOTOR DE BUSCA E IA (INVESTIGAÇÃO ATIVA)
+      MÓDULO: MOTOR DE BUSCA E IA (INVESTIGAÇÃO ATIVA)
      ═══════════════════════════════════════════════════════════ */
 
   useEffect(() => {
@@ -167,14 +169,13 @@ const Voting = () => {
   }, [sympathySearch, performSearch]);
 
   /* ═══════════════════════════════════════════════════════════
-     MÓDULO: HANDLERS E PERSISTÊNCIA (UPSERT)
+      MÓDULO: HANDLERS E PERSISTÊNCIA (UPSERT)
      ═══════════════════════════════════════════════════════════ */
 
   const handleManualSubmit = async () => {
     if (!manualClub.nome) return;
     setSubmitting(true);
     try {
-      // Salva no banco e já seleciona
       const { data } = await supabase
         .from("clubes_cache")
         .upsert(
@@ -203,25 +204,45 @@ const Voting = () => {
     if (!heartClub || !user || !profile) return;
     setSubmitting(true);
     try {
-      if (IS_MASTER_ADMIN) await supabase.from("votos").delete().eq("user_id", user.id);
-
-      const allVotes = [{ club: heartClub, main: true }, ...sympathyClubs.map((c) => ({ club: c, main: false }))];
-
-      for (const v of allVotes) {
-        await supabase.from("votos").insert({
-          user_id: user.id,
-          clube_nome: v.club.name,
-          cidade: profile.cidade || "",
-          estado: profile.estado || "",
-          pais: profile.pais || "BR",
-          is_original_vote: v.main,
-          fingerprint,
-        });
-        investigateClubData(v.club.name); // Dispara IA para cada clube votado
+      if (IS_MASTER_ADMIN) {
+        await supabase.from("votos").delete().eq("user_id", user.id);
       }
 
+      const allVotes = [
+        { club: heartClub, main: true }, 
+        ...sympathyClubs.map((c) => ({ club: c, main: false }))
+      ];
+
+      // Preparação do lote de inserção para maior estabilidade
+      const votesToInsert = allVotes.map(v => ({
+        user_id: user.id,
+        clube_nome: v.club.name,
+        cidade: profile.cidade || "",
+        estado: profile.estado || "",
+        pais: profile.pais || "BR",
+        is_original_vote: v.main,
+        fingerprint: fingerprint || 'web-client'
+      }));
+
+      const { error: insertError } = await supabase.from("votos").insert(votesToInsert);
+      
+      if (insertError) throw insertError;
+
+      // Dispara IA Investigadora sem travar o redirecionamento
+      allVotes.forEach(v => investigateClubData(v.club.name));
+
       await refreshProfile();
-      if (!IS_MASTER_ADMIN) navigate("/dashboard");
+      toast({ title: "Voto registrado com sucesso! 🏟️" });
+      
+      // Garante o redirecionamento
+      navigate("/dashboard");
+    } catch (err: any) {
+      console.error("[Voting Error]", err);
+      toast({ 
+        variant: "destructive", 
+        title: "Erro ao votar", 
+        description: "Ocorreu um problema no servidor. Tente novamente." 
+      });
     } finally {
       setSubmitting(false);
       setShowConfirm(false);
@@ -229,7 +250,7 @@ const Voting = () => {
   };
 
   /* ═══════════════════════════════════════════════════════════
-     MÓDULO: UI (DROPDOWN + GESTÃO DE SLOTS)
+      MÓDULO: UI (DROPDOWN + GESTÃO DE SLOTS)
      ═══════════════════════════════════════════════════════════ */
 
   const ClubDropdown = ({ results, open, loading, onSelect }: any) => {
