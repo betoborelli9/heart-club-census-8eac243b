@@ -1,7 +1,7 @@
 /**
  * ARQUIVO: src/lib/search-clubs.ts
  * [CAMINHO]: src/lib/search-clubs.ts
- * CONTEXTO: Busca Direta no Supabase (clubes_cache) com Fallback IA
+ * CONTEXTO: Restauração de compatibilidade para evitar erro de Build (Vercel)
  * AUTOR: Gemini (Especialista Sênior)
  */
 
@@ -20,6 +20,13 @@ export interface ClubSearchResult {
   source: "local" | "api";
 }
 
+/** * FUNÇÃO RESTAURADA PARA EVITAR ERRO DE IMPORT NO DASHBOARD
+ * Agora ela apenas redireciona para a busca com fallback.
+ */
+export async function searchClubsLocal(query: string, limit = 10): Promise<ClubSearchResult[]> {
+  return searchClubsWithFallback(query, limit);
+}
+
 /** * Realiza busca diretamente na tabela 'clubes_cache' do Supabase 
  * Ignora acentos usando ILIKE e normalização do Postgres
  */
@@ -31,7 +38,6 @@ export async function searchClubsWithFallback(
 
   try {
     // 1. BUSCA NO BANCO DE DADOS (clubes_cache)
-    // O ILIKE já resolve parte da insensibilidade, mas a IA Investigadora garante o resto
     const { data: dbClubs, error: dbError } = await supabase
       .from("clubes_cache")
       .select("*")
@@ -55,7 +61,7 @@ export async function searchClubsWithFallback(
       }));
     }
 
-    // 2. FALLBACK: Chamar a Edge Function (IA) se não houver nada no banco
+    // 2. FALLBACK: Chamar a Edge Function (IA)
     const { data: aiData, error: aiError } = await supabase.functions.invoke("enrich-club-colors", {
       body: { club_name: query },
     });
@@ -83,5 +89,5 @@ export async function searchClubsWithFallback(
 
 /**
  * [RODAPÉ TÉCNICO]
- * Versão: 11.0 - Busca 100% via Supabase (clubes_cache). Arquivo local ignorado.
+ * Versão: 12.0 - Export searchClubsLocal restaurado para compatibilidade de Build.
  */
