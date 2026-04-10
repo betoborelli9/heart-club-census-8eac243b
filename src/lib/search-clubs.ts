@@ -1,10 +1,9 @@
 /**
  * ARQUIVO: src/lib/search-clubs.ts
  * [CAMINHO]: src/lib/search-clubs.ts
- * CONTEXTO: Sistema de Busca Híbrida - Local (Mestre) + Fallback IA (enrich-club-colors)
+ * CONTEXTO: Sistema de Busca Híbrida - BLINDAGEM CONTRA ACENTOS (VITÓRIA/VITORIA)
  * AUTOR: Gemini (Especialista Sênior)
- * DESCRIÇÃO: Este motor gerencia a busca de clubes priorizando o dataset local. 
- * Caso não encontre resultados, aciona a Edge Function investigadora para buscar dados na rede.
+ * DESCRIÇÃO: Motor de busca com normalização NFD para ignorar acentos e case-sensitivity.
  */
 
 import { CLUBS_DATA } from "@/clubes-data";
@@ -14,9 +13,12 @@ import { supabase } from "@/integrations/supabase/client";
     MÓDULO: UTILITÁRIOS DE TRATAMENTO DE TEXTO
    ═══════════════════════════════════════════════════════════ */
 
-/** Normaliza strings removendo acentos para busca insensível */
-const removeAccents = (str: string) =>
-  str.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+/** Normaliza strings: remove acentos e converte para minúsculas */
+const normalizeString = (str: string) =>
+  str.normalize("NFD")
+     .replace(/[\u0300-\u036f]/g, "")
+     .toLowerCase()
+     .trim();
 
 export interface ClubSearchResult {
   id: string;
@@ -35,16 +37,17 @@ export interface ClubSearchResult {
     MÓDULO: BUSCA LOCAL (DATASET MASTER)
    ═══════════════════════════════════════════════════════════ */
 
-/** Realiza busca síncrona no arquivo clubes-data.ts */
+/** Realiza busca síncrona ignorando acentos (Ex: Vitoria = Vitória) */
 export function searchClubsLocal(query: string, limit = 10): ClubSearchResult[] {
   if (!query || query.length < 2) return [];
 
-  const normalizedQuery = removeAccents(query.toLowerCase().trim());
+  const searchTarget = normalizeString(query);
 
-  const matches = CLUBS_DATA.filter((c) =>
-    removeAccents(c.nome.toLowerCase()).includes(normalizedQuery) ||
-    removeAccents(c.cidade.toLowerCase()).includes(normalizedQuery)
-  );
+  const matches = CLUBS_DATA.filter((c) => {
+    const nameMatch = normalizeString(c.nome).includes(searchTarget);
+    const cityMatch = normalizeString(c.cidade).includes(searchTarget);
+    return nameMatch || cityMatch;
+  });
 
   return matches.slice(0, limit).map((c, i) => ({
     id: String(i),
@@ -64,8 +67,7 @@ export function searchClubsLocal(query: string, limit = 10): ClubSearchResult[] 
     MÓDULO: BUSCA COM FALLBACK (IA / EDGE FUNCTION)
    ═══════════════════════════════════════════════════════════ */
 
-/** * Tenta busca local; se falhar, invoca a Edge Function 'enrich-club-colors' 
- * para investigar dados externos (IA Investigadora).
+/** * Tenta busca local normalizada; se falhar, invoca a Edge Function 'enrich-club-colors' 
  */
 export async function searchClubsWithFallback(
   query: string,
@@ -73,10 +75,8 @@ export async function searchClubsWithFallback(
 ): Promise<ClubSearchResult[]> {
   const localResults = searchClubsLocal(query, limit);
   
-  // Se encontrou localmente, retorna imediatamente para evitar latência de rede
   if (localResults.length > 0) return localResults;
 
-  // Fallback: Chamar a Edge Function investigadora
   try {
     const { data, error } = await supabase.functions.invoke("enrich-club-colors", {
       body: { club_name: query },
@@ -87,8 +87,6 @@ export async function searchClubsWithFallback(
       return [];
     }
 
-    // Mapeia o retorno da Edge Function para o formato ClubSearchResult
-    // Garante que o ID seja único e os campos não venham nulos para não travar a UI
     return [{
       id: String(data.data?.[0]?.api_id || Date.now()),
       name: data.club || query,
@@ -109,6 +107,6 @@ export async function searchClubsWithFallback(
 
 /* ═══════════════════════════════════════════════════════════
     [RODAPÉ TÉCNICO]
-    Sincronização: Chamada para 'enrich-club-colors' restaurada.
-    Versão: 7.0 - Blindagem contra retornos nulos da IA.
+    Sincronização: Normalização NFD aplicada na busca local.
+    Versão: 8.0 - Correção definitiva de acentuação (Vitória/Vitoria).
    ═══════════════════════════════════════════════════════════ */
