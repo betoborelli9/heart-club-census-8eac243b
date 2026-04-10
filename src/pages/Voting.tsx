@@ -1,9 +1,9 @@
 /**
  * Caminho: src/pages/Voting.tsx
- * Contexto: Sistema de Votação - RESTAURAÇÃO DE BUSCA HÍBRIDA + IA INVESTIGADORA + BLINDAGEM DE REDIRECIONAMENTO
+ * Contexto: Sistema de Votação - UNIFICAÇÃO DE BUSCA (SEM ACENTOS) + IA INVESTIGADORA
  * Autor: Gemini (Especialista Senior)
- * Descrição: Este arquivo gerencia a votação do clube do coração e simpatias. 
- * Foi aplicada uma correção na persistência de votos para garantir o redirecionamento ao Dashboard e evitar travamentos no botão de lealdade.
+ * Descrição: Este arquivo gerencia a votação. Foi corrigido o filtro de busca para utilizar 
+ * a normalização NFD, permitindo encontrar clubes como "Vitória" digitando "vitoria".
  */
 
 import { useState, useEffect, useRef, useCallback } from "react";
@@ -15,7 +15,7 @@ import { useNavigate } from "react-router-dom";
 import { useUser } from "@/contexts/UserContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { searchClubsLocal } from "@/lib/search-clubs"; // O motor de busca local
+import { searchClubsWithFallback, ClubSearchResult } from "@/lib/search-clubs"; 
 import { ClubLogo } from "@/components/ClubLogo";
 import logo from "@/assets/logo.png";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -25,17 +25,8 @@ import FingerprintJS from "@fingerprintjs/fingerprintjs";
     MÓDULO: TIPOS E INTERFACES
    ═══════════════════════════════════════════════════════════ */
 
-interface ClubResult {
-  id: string | null;
-  name: string;
-  shortName: string;
-  location: string;
-  logo: string;
-  city: string;
-  state: string;
-  country: string;
+interface ClubResult extends ClubSearchResult {
   mascote?: string;
-  source: "supabase" | "api-football" | "manual";
 }
 
 const MAX_SYMPATHY_CLUBS = 4;
@@ -80,52 +71,17 @@ const Voting = () => {
     initFP();
   }, []);
 
-  // IA Investigadora: Busca o que a API Football ignora (Feminino, Cores, Wikipedia)
+  // IA Investigadora: Dispara enriquecimento de dados via Edge Function
   const investigateClubData = async (clubName: string) => {
     console.log(`[Heart Club IA] Investigando dados oficiais de: ${clubName}`);
-    // Futura integração via Edge Function
-  };
-
-  const searchApiFootball = useCallback(async (term: string): Promise<ClubResult[]> => {
     try {
-      // Prioridade 1: Buscar no Cache do Supabase (Onde a IA já salvou)
-      const { data: cached } = await supabase.from("clubes_cache").select("*").ilike("nome", `%${term}%`).limit(5);
-
-      if (cached && cached.length > 0) {
-        return cached.map((c) => ({
-          id: c.id,
-          name: c.nome,
-          shortName: c.nome_curto || c.nome,
-          location: `${c.cidade || ""}, ${c.pais || ""}`,
-          logo: c.escudo_url,
-          city: c.cidade,
-          state: "",
-          country: c.pais,
-          mascote: c.mascote,
-          source: "supabase",
-        }));
-      }
-
-      // Prioridade 2: Buscar na API Football externa
-      const res = await fetch(`https://v3.football.api-sports.io/teams?search=${encodeURIComponent(term)}`, {
-        headers: { "x-apisports-key": "3b4a0ec2c5f513b9aa1e43c4adbae7aa" },
+      await supabase.functions.invoke("enrich-club-colors", {
+        body: { club_name: clubName },
       });
-      const apiData = await res.json();
-      return (apiData.response || []).map((item: any) => ({
-        id: item.team.id.toString(),
-        name: item.team.name,
-        shortName: item.team.code || item.team.name,
-        location: item.team.country,
-        logo: item.team.logo,
-        city: item.venue?.city || "",
-        state: "",
-        country: item.team.country,
-        source: "api-football",
-      }));
     } catch (err) {
-      return [];
+      console.error("[IA Investigadora Error]", err);
     }
-  }, []);
+  };
 
   const performSearch = useCallback(
     async (query: string, setterResults: any, setterOpen: any, setterLoading: any) => {
@@ -136,23 +92,18 @@ const Voting = () => {
       }
       setterLoading(true);
       try {
-        // CAMADA LOCAL (Seus 251 clubes corrigidos)
-        const localResults: ClubResult[] = searchClubsLocal(query, 10).map((c) => ({ ...c, source: "supabase" as const }));
-        let allResults: ClubResult[] = [...localResults];
-
-        // CAMADA GLOBAL (API)
-        if (localResults.length < 5) {
-          const apiResults = await searchApiFootball(query);
-          const existingNames = new Set(localResults.map((c) => c.name.toLowerCase()));
-          allResults = [...allResults, ...apiResults.filter((c) => !existingNames.has(c.name.toLowerCase()))];
-        }
-        setterResults(allResults);
+        // UNIFICAÇÃO: Usamos o Fallback Híbrido que já trata acentos (NFD)
+        const results = await searchClubsWithFallback(query);
+        setterResults(results);
         setterOpen(true);
+      } catch (err) {
+        console.error("[Search Error]", err);
+        setterResults([]);
       } finally {
         setterLoading(false);
       }
     },
-    [searchApiFootball],
+    [],
   );
 
   useEffect(() => {
@@ -202,7 +153,7 @@ const Voting = () => {
         state: manualClub.estado || "",
         country: data.pais || "Brasil",
         mascote: data.mascote || manualClub.mascote,
-        source: "manual",
+        source: "local",
       });
       setShowManualDialog(false);
       toast({ title: "Clube adicionado ao Censo! ✍️" });
@@ -224,7 +175,6 @@ const Voting = () => {
         ...sympathyClubs.map((c) => ({ club: c, main: false }))
       ];
 
-      // Preparação do lote de inserção para maior estabilidade
       const votesToInsert = allVotes.map(v => ({
         user_id: user.id,
         clube_nome: v.club.name,
@@ -236,7 +186,6 @@ const Voting = () => {
       }));
 
       const { error: insertError } = await supabase.from("votos").insert(votesToInsert);
-      
       if (insertError) throw insertError;
 
       // Dispara IA Investigadora sem travar o redirecionamento
@@ -244,16 +193,10 @@ const Voting = () => {
 
       await refreshProfile();
       toast({ title: "Voto registrado com sucesso! 🏟️" });
-      
-      // Garante o redirecionamento
       navigate("/dashboard");
     } catch (err: any) {
       console.error("[Voting Error]", err);
-      toast({ 
-        variant: "destructive", 
-        title: "Erro ao votar", 
-        description: "Ocorreu um problema no servidor. Tente novamente." 
-      });
+      toast({ variant: "destructive", title: "Erro ao votar" });
     } finally {
       setSubmitting(false);
       setShowConfirm(false);
@@ -316,7 +259,6 @@ const Voting = () => {
           )}
         </div>
 
-        {/* CORAÇÃO */}
         <div className="space-y-2 relative">
           <label className="text-xs font-black uppercase opacity-60 italic flex items-center gap-2 tracking-tighter">
             <Heart size={14} className="text-primary" /> Clube do Coração
@@ -328,10 +270,7 @@ const Voting = () => {
                 <p className="font-black italic text-lg uppercase truncate tracking-tighter">{heartClub.name}</p>
                 <p className="text-[10px] text-muted-foreground uppercase">{heartClub.location}</p>
               </div>
-              <button
-                onClick={() => setHeartClub(null)}
-                className="p-2 opacity-40 hover:opacity-100 transition-opacity"
-              >
+              <button onClick={() => setHeartClub(null)} className="p-2 opacity-40 hover:opacity-100 transition-opacity">
                 <X size={20} />
               </button>
             </div>
@@ -352,7 +291,6 @@ const Voting = () => {
           )}
         </div>
 
-        {/* SIMPATIAS */}
         <div className="space-y-3">
           <label className="text-xs font-black uppercase italic flex items-center gap-2 opacity-60 tracking-tighter">
             <Sparkles size={14} className="text-primary" /> Simpatias ({sympathyClubs.length}/{MAX_SYMPATHY_CLUBS})
@@ -378,15 +316,10 @@ const Voting = () => {
                   onFocus={() => setSympathyOpen(true)}
                   onBlur={() => setTimeout(() => setSympathyOpen(false), 200)}
                 />
-                <ClubDropdown
-                  results={sympathyResults}
-                  open={sympathyOpen}
-                  loading={sympathyLoading}
-                  onSelect={(c: any) => {
-                    if (!sympathyClubs.find((x) => x.name === c.name)) setSympathyClubs((p) => [...p, c]);
-                    setSympathySearch("");
-                  }}
-                />
+                <ClubDropdown results={sympathyResults} open={sympathyOpen} loading={sympathyLoading} onSelect={(c: any) => {
+                  if (!sympathyClubs.find((x) => x.name === c.name)) setSympathyClubs((p) => [...p, c]);
+                  setSympathySearch("");
+                }} />
               </div>
             )}
           </div>
@@ -401,63 +334,31 @@ const Voting = () => {
         </Button>
       </div>
 
-      {/* DIALOGS */}
       <Dialog open={showConfirm} onOpenChange={setShowConfirm}>
         <DialogContent className="max-w-sm glass-card border-white/10 text-center">
-          <DialogHeader>
-            <DialogTitle className="italic text-2xl font-black uppercase tracking-tighter">CONFIRMAR VOTO?</DialogTitle>
-          </DialogHeader>
-          <p className="text-sm italic opacity-70">
-            Você confirma lealdade ao <strong className="text-primary">{heartClub?.name}</strong>?
-          </p>
+          <DialogHeader><DialogTitle className="italic text-2xl font-black uppercase tracking-tighter">CONFIRMAR VOTO?</DialogTitle></DialogHeader>
+          <p className="text-sm italic opacity-70">Você confirma lealdade ao <strong className="text-primary">{heartClub?.name}</strong>?</p>
           <DialogFooter className="flex-col gap-2 mt-4">
-            <Button
-              className="w-full btn-orange-gradient h-12 font-black italic"
-              onClick={handleConfirmVote}
-              disabled={submitting}
-            >
-              EU JURO!
-            </Button>
-            <Button
-              variant="ghost"
-              className="w-full text-xs opacity-50 font-bold italic"
-              onClick={() => setShowConfirm(false)}
-            >
-              VOLTAR
-            </Button>
+            <Button className="w-full btn-orange-gradient h-12 font-black italic" onClick={handleConfirmVote} disabled={submitting}>EU JURO!</Button>
+            <Button variant="ghost" className="w-full text-xs opacity-50 font-bold italic" onClick={() => setShowConfirm(false)}>VOLTAR</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       <Dialog open={showManualDialog} onOpenChange={setShowManualDialog}>
         <DialogContent className="max-w-xs glass-card border-white/10">
-          <DialogHeader>
-            <DialogTitle className="italic font-black uppercase tracking-tighter">Novo Clube</DialogTitle>
-          </DialogHeader>
+          <DialogHeader><DialogTitle className="italic font-black uppercase tracking-tighter">Novo Clube</DialogTitle></DialogHeader>
           <div className="space-y-3 py-4">
-            <Input
-              placeholder="Nome do Clube"
-              onChange={(e) => setManualClub((p) => ({ ...p, nome: e.target.value }))}
-            />
+            <Input placeholder="Nome do Clube" onChange={(e) => setManualClub((p) => ({ ...p, nome: e.target.value }))} />
             <Input placeholder="Mascote" onChange={(e) => setManualClub((p) => ({ ...p, mascote: e.target.value }))} />
             <div className="flex gap-2">
               <Input placeholder="Cidade" onChange={(e) => setManualClub((p) => ({ ...p, cidade: e.target.value }))} />
-              <Input
-                placeholder="UF"
-                className="w-20"
-                maxLength={2}
-                onChange={(e) => setManualClub((p) => ({ ...p, estado: e.target.value }))}
-              />
+              <Input placeholder="UF" className="w-20" maxLength={2} onChange={(e) => setManualClub((p) => ({ ...p, estado: e.target.value }))} />
             </div>
-            <Input
-              placeholder="Cor Principal (ex: Verde)"
-              onChange={(e) => setManualClub((p) => ({ ...p, cor: e.target.value }))}
-            />
+            <Input placeholder="Cor Principal (ex: Verde)" onChange={(e) => setManualClub((p) => ({ ...p, cor: e.target.value }))} />
           </div>
           <DialogFooter>
-            <Button className="w-full btn-orange-gradient font-black italic" onClick={handleManualSubmit}>
-              SALVAR E SELECIONAR
-            </Button>
+            <Button className="w-full btn-orange-gradient font-black italic" onClick={handleManualSubmit}>SALVAR E SELECIONAR</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -470,5 +371,5 @@ export default Voting;
 /**
  * [RODAPÉ TÉCNICO]
  * Arquivo: src/pages/Voting.tsx
- * Versão: 6.0 (Restauração do Motor Híbrido + IA Investigadora)
+ * Versão: 7.0 (Sincronização com Fallback NFD e IA Investigadora)
  */
