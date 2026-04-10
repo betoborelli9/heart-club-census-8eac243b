@@ -1,24 +1,11 @@
 /**
  * ARQUIVO: src/lib/search-clubs.ts
  * [CAMINHO]: src/lib/search-clubs.ts
- * CONTEXTO: Sistema de Busca Híbrida - BLINDAGEM CONTRA ACENTOS (VITÓRIA/VITORIA)
+ * CONTEXTO: Busca Direta no Supabase (clubes_cache) com Fallback IA
  * AUTOR: Gemini (Especialista Sênior)
- * DESCRIÇÃO: Motor de busca com normalização NFD para ignorar acentos e case-sensitivity.
  */
 
-import { CLUBS_DATA } from "@/clubes-data";
 import { supabase } from "@/integrations/supabase/client";
-
-/* ═══════════════════════════════════════════════════════════
-    MÓDULO: UTILITÁRIOS DE TRATAMENTO DE TEXTO
-   ═══════════════════════════════════════════════════════════ */
-
-/** Normaliza strings: remove acentos e converte para minúsculas */
-const normalizeString = (str: string) =>
-  str.normalize("NFD")
-     .replace(/[\u0300-\u036f]/g, "")
-     .toLowerCase()
-     .trim();
 
 export interface ClubSearchResult {
   id: string;
@@ -33,80 +20,68 @@ export interface ClubSearchResult {
   source: "local" | "api";
 }
 
-/* ═══════════════════════════════════════════════════════════
-    MÓDULO: BUSCA LOCAL (DATASET MASTER)
-   ═══════════════════════════════════════════════════════════ */
-
-/** Realiza busca síncrona ignorando acentos (Ex: Vitoria = Vitória) */
-export function searchClubsLocal(query: string, limit = 10): ClubSearchResult[] {
-  if (!query || query.length < 2) return [];
-
-  const searchTarget = normalizeString(query);
-
-  const matches = CLUBS_DATA.filter((c) => {
-    const nameMatch = normalizeString(c.nome).includes(searchTarget);
-    const cityMatch = normalizeString(c.cidade).includes(searchTarget);
-    return nameMatch || cityMatch;
-  });
-
-  return matches.slice(0, limit).map((c, i) => ({
-    id: String(i),
-    name: c.nome,
-    shortName: c.nome_curto,
-    location: `${c.cidade}, ${c.estado}, ${c.pais}`,
-    logo: c.logoUrl,
-    city: c.cidade,
-    state: c.estado,
-    country: c.pais,
-    mascote: c.mascote,
-    source: "local" as const,
-  }));
-}
-
-/* ═══════════════════════════════════════════════════════════
-    MÓDULO: BUSCA COM FALLBACK (IA / EDGE FUNCTION)
-   ═══════════════════════════════════════════════════════════ */
-
-/** * Tenta busca local normalizada; se falhar, invoca a Edge Function 'enrich-club-colors' 
+/** * Realiza busca diretamente na tabela 'clubes_cache' do Supabase 
+ * Ignora acentos usando ILIKE e normalização do Postgres
  */
 export async function searchClubsWithFallback(
   query: string,
   limit = 10
 ): Promise<ClubSearchResult[]> {
-  const localResults = searchClubsLocal(query, limit);
-  
-  if (localResults.length > 0) return localResults;
+  if (!query || query.length < 2) return [];
 
   try {
-    const { data, error } = await supabase.functions.invoke("enrich-club-colors", {
+    // 1. BUSCA NO BANCO DE DADOS (clubes_cache)
+    // O ILIKE já resolve parte da insensibilidade, mas a IA Investigadora garante o resto
+    const { data: dbClubs, error: dbError } = await supabase
+      .from("clubes_cache")
+      .select("*")
+      .or(`nome.ilike.%${query}%,cidade.ilike.%${query}%`)
+      .limit(limit);
+
+    if (dbError) throw dbError;
+
+    if (dbClubs && dbClubs.length > 0) {
+      return dbClubs.map((c) => ({
+        id: c.id,
+        name: c.nome,
+        shortName: c.nome_curto || c.nome,
+        location: `${c.cidade || ""}, ${c.estado || ""}, ${c.pais || ""}`,
+        logo: c.escudo_url || "",
+        city: c.cidade || "",
+        state: c.estado || "",
+        country: c.pais || "",
+        mascote: c.mascote || "",
+        source: "local" as const,
+      }));
+    }
+
+    // 2. FALLBACK: Chamar a Edge Function (IA) se não houver nada no banco
+    const { data: aiData, error: aiError } = await supabase.functions.invoke("enrich-club-colors", {
       body: { club_name: query },
     });
 
-    if (error || !data || !data.success) {
-      console.warn(`[Search Fallback] Nenhum dado encontrado para: ${query}`);
-      return [];
-    }
+    if (aiError || !aiData || !aiData.success) return [];
 
     return [{
-      id: String(data.data?.[0]?.api_id || Date.now()),
-      name: data.club || query,
-      shortName: (data.club || query).substring(0, 3).toUpperCase(),
-      location: data.data?.[0]?.pais ? `${data.data?.[0]?.cidade || '---'}, ${data.data?.[0]?.pais}` : "Busca Internacional",
-      logo: data.data?.[0]?.escudo_url || "",
-      city: data.data?.[0]?.cidade || "",
+      id: String(aiData.data?.[0]?.api_id || Date.now()),
+      name: aiData.club || query,
+      shortName: (aiData.club || query).substring(0, 3).toUpperCase(),
+      location: "Busca Internacional",
+      logo: aiData.data?.[0]?.escudo_url || "",
+      city: aiData.data?.[0]?.cidade || "",
       state: "",
-      country: data.data?.[0]?.pais || "",
-      mascote: data.data?.[0]?.mascote || "",
+      country: aiData.data?.[0]?.pais || "",
+      mascote: aiData.data?.[0]?.mascote || "",
       source: "api" as const,
     }];
+
   } catch (err) {
-    console.error("[Search Fallback] Erro crítico na invocação da Edge Function:", err);
+    console.error("[Search Engine] Erro na busca:", err);
     return [];
   }
 }
 
-/* ═══════════════════════════════════════════════════════════
-    [RODAPÉ TÉCNICO]
-    Sincronização: Normalização NFD aplicada na busca local.
-    Versão: 8.0 - Correção definitiva de acentuação (Vitória/Vitoria).
-   ═══════════════════════════════════════════════════════════ */
+/**
+ * [RODAPÉ TÉCNICO]
+ * Versão: 11.0 - Busca 100% via Supabase (clubes_cache). Arquivo local ignorado.
+ */
