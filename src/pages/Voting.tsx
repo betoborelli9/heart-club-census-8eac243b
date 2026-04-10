@@ -137,8 +137,8 @@ const Voting = () => {
       setterLoading(true);
       try {
         // CAMADA LOCAL (Seus 251 clubes corrigidos)
-        const localResults = searchClubsLocal(query, 10).map((c) => ({ ...c, source: "supabase" as const }));
-        let allResults = [...localResults];
+        const localResults: ClubResult[] = searchClubsLocal(query, 10).map((c) => ({ ...c, source: "supabase" as const }));
+        let allResults: ClubResult[] = [...localResults];
 
         // CAMADA GLOBAL (API)
         if (localResults.length < 5) {
@@ -192,7 +192,18 @@ const Voting = () => {
         .select()
         .single();
 
-      if (data) setHeartClub({ ...data, source: "manual" });
+      if (data) setHeartClub({
+        id: data.id,
+        name: data.nome || manualClub.nome,
+        shortName: (data.nome_curto || manualClub.nome).substring(0, 3).toUpperCase(),
+        location: `${data.cidade || manualClub.cidade}, Brasil`,
+        logo: data.escudo_url || "https://placehold.co/100x100?text=?",
+        city: data.cidade || manualClub.cidade,
+        state: manualClub.estado || "",
+        country: data.pais || "Brasil",
+        mascote: data.mascote || manualClub.mascote,
+        source: "manual",
+      });
       setShowManualDialog(false);
       toast({ title: "Clube adicionado ao Censo! ✍️" });
     } finally {
