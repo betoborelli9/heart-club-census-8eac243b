@@ -107,59 +107,104 @@ export type Database = {
           cidade: string | null
           cor_primaria: string | null
           cor_secundaria: string | null
+          cor_terciaria: string | null
+          division: string | null
           escudo_url: string | null
-          estadio: string | null
-          estado: string | null
-          fundacao: string | null
-          historia: string | null
+          estadio_capacidade: number | null
+          estadio_cidade: string | null
+          estadio_endereco: string | null
+          estadio_imagem: string | null
+          estadio_nome: string | null
+          fundado: number | null
+          has_feminino: boolean | null
           id: string
+          is_feminino: boolean | null
+          manual_entry: boolean | null
           mascote: string | null
-          nome: string
+          nome: string | null
           nome_curto: string | null
           pais: string | null
-          pais_codigo: string | null
-          rivais: string | null
-          serie: string | null
-          updated_at: string | null
+          tem_feminino: boolean | null
         }
         Insert: {
           api_id?: number | null
           cidade?: string | null
           cor_primaria?: string | null
           cor_secundaria?: string | null
+          cor_terciaria?: string | null
+          division?: string | null
           escudo_url?: string | null
-          estadio?: string | null
-          estado?: string | null
-          fundacao?: string | null
-          historia?: string | null
+          estadio_capacidade?: number | null
+          estadio_cidade?: string | null
+          estadio_endereco?: string | null
+          estadio_imagem?: string | null
+          estadio_nome?: string | null
+          fundado?: number | null
+          has_feminino?: boolean | null
           id?: string
+          is_feminino?: boolean | null
+          manual_entry?: boolean | null
           mascote?: string | null
-          nome: string
+          nome?: string | null
           nome_curto?: string | null
           pais?: string | null
-          pais_codigo?: string | null
-          rivais?: string | null
-          serie?: string | null
-          updated_at?: string | null
+          tem_feminino?: boolean | null
         }
         Update: {
           api_id?: number | null
           cidade?: string | null
           cor_primaria?: string | null
           cor_secundaria?: string | null
+          cor_terciaria?: string | null
+          division?: string | null
           escudo_url?: string | null
-          estadio?: string | null
-          estado?: string | null
-          fundacao?: string | null
-          historia?: string | null
+          estadio_capacidade?: number | null
+          estadio_cidade?: string | null
+          estadio_endereco?: string | null
+          estadio_imagem?: string | null
+          estadio_nome?: string | null
+          fundado?: number | null
+          has_feminino?: boolean | null
           id?: string
+          is_feminino?: boolean | null
+          manual_entry?: boolean | null
           mascote?: string | null
-          nome?: string
+          nome?: string | null
           nome_curto?: string | null
           pais?: string | null
-          pais_codigo?: string | null
-          rivais?: string | null
-          serie?: string | null
+          tem_feminino?: boolean | null
+        }
+        Relationships: []
+      }
+      clubes_override: {
+        Row: {
+          cor_primaria: string | null
+          cor_secundaria: string | null
+          cor_terciaria: string | null
+          has_feminino: boolean | null
+          id: number
+          mascote: string | null
+          nome: string
+          updated_at: string | null
+        }
+        Insert: {
+          cor_primaria?: string | null
+          cor_secundaria?: string | null
+          cor_terciaria?: string | null
+          has_feminino?: boolean | null
+          id?: never
+          mascote?: string | null
+          nome: string
+          updated_at?: string | null
+        }
+        Update: {
+          cor_primaria?: string | null
+          cor_secundaria?: string | null
+          cor_terciaria?: string | null
+          has_feminino?: boolean | null
+          id?: never
+          mascote?: string | null
+          nome?: string
           updated_at?: string | null
         }
         Relationships: []
@@ -374,35 +419,6 @@ export type Database = {
           user_profissao: string
           voto_id: string
         }[]
-      }
-      buscar_clube_v2: {
-        Args: { termo_busca: string }
-        Returns: {
-          api_id: number | null
-          cidade: string | null
-          cor_primaria: string | null
-          cor_secundaria: string | null
-          escudo_url: string | null
-          estadio: string | null
-          estado: string | null
-          fundacao: string | null
-          historia: string | null
-          id: string
-          mascote: string | null
-          nome: string
-          nome_curto: string | null
-          pais: string | null
-          pais_codigo: string | null
-          rivais: string | null
-          serie: string | null
-          updated_at: string | null
-        }[]
-        SetofOptions: {
-          from: "*"
-          to: "clubes_cache"
-          isOneToOne: false
-          isSetofReturn: true
-        }
       }
       get_heatmap_data: {
         Args: { p_club_name: string; p_filter_value?: string; p_level?: string }
