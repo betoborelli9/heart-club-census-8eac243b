@@ -32,8 +32,9 @@ export async function searchClubsLocal(query: string, limit = 10): Promise<ClubS
   return searchClubsWithFallback(query, limit);
 }
 
-/** * Realiza busca diretamente na tabela 'clubes_cache' do Supabase 
- * Ignora acentos usando ILIKE e normalização do Postgres
+/** * Realiza busca na tabela 'clubes_cache' do Supabase 
+ * Busca todos os registros e filtra client-side com normalização NFD
+ * para garantir insensibilidade a acentos (ex: "vitoria" encontra "Vitória")
  */
 export async function searchClubsWithFallback(
   query: string,
@@ -42,22 +43,21 @@ export async function searchClubsWithFallback(
   if (!query || query.length < 2) return [];
 
   try {
-    // 1. BUSCA NO BANCO DE DADOS (clubes_cache)
+    // 1. BUSCA NO BANCO DE DADOS (clubes_cache) — busca ampla, filtra client-side
     const { data: dbClubs, error: dbError } = await supabase
       .from("clubes_cache")
-      .select("*")
-      .or(`nome.ilike.%${query}%,cidade.ilike.%${query}%`)
-      .limit(limit);
+      .select("*");
 
     if (dbError) throw dbError;
 
     if (dbClubs && dbClubs.length > 0) {
-      // Filtro client-side com normalização NFD para acentos
       const normalizedQuery = normalize(query);
-      const filtered = dbClubs.filter((c) =>
-        normalize(c.nome).includes(normalizedQuery) ||
-        normalize(c.cidade).includes(normalizedQuery)
-      );
+      const filtered = dbClubs
+        .filter((c) =>
+          normalize(c.nome).includes(normalizedQuery) ||
+          normalize(c.cidade).includes(normalizedQuery)
+        )
+        .slice(0, limit);
 
       if (filtered.length > 0) {
         return filtered.map((c) => ({
