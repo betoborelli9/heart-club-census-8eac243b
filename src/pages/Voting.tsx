@@ -142,7 +142,7 @@ const Voting = () => {
         .single();
 
       if (data) setHeartClub({
-        id: data.id,
+        id: String(data.id),
         name: data.nome || manualClub.nome,
         shortName: (data.nome_curto || manualClub.nome).substring(0, 3).toUpperCase(),
         location: `${data.cidade || manualClub.cidade}, Brasil`,
