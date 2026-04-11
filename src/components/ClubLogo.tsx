@@ -1,6 +1,6 @@
 /* src/components/ClubLogo.tsx
    Componente único para renderizar escudos de clubes.
-   Fonte: exclusivamente clube.logoUrl de clubes-data.ts.
+   Fonte: exclusivamente clube.logoUrl de clubes-data.ts ou escudo_url do Supabase.
    Fallback: placeholder neutro, nunca outro escudo. */
 
 import { useState } from "react";
@@ -11,10 +11,10 @@ type LogoSize = "xs" | "sm" | "md" | "lg" | "xl";
 
 const sizeClasses: Record<LogoSize, string> = {
   xs: "w-6 h-6 sm:w-7 sm:h-7",
-  sm: "w-8 h-8 sm:w-10 sm:h-10",       // dropdown / lista
-  md: "w-10 h-10 sm:w-12 sm:h-12",     // voto
-  lg: "w-14 h-14 sm:w-16 sm:h-16",     // dashboard profile
-  xl: "w-20 h-20 sm:w-24 sm:h-24",     // destaque
+  sm: "w-8 h-8 sm:w-10 sm:h-10", // dropdown / lista
+  md: "w-10 h-10 sm:w-12 sm:h-12", // voto
+  lg: "w-14 h-14 sm:w-16 sm:h-16", // dashboard profile
+  xl: "w-20 h-20 sm:w-24 sm:h-24", // destaque
 };
 
 const fallbackIconSize: Record<LogoSize, string> = {
@@ -35,13 +35,17 @@ interface ClubLogoProps {
 export const ClubLogo = ({ src, alt, size = "md", className }: ClubLogoProps) => {
   const [error, setError] = useState(false);
 
+  /* ═══════════════════════════════════════════════════════════
+      MÓDULO: RENDERIZAÇÃO DE FALLBACK (ERRO OU AUSÊNCIA)
+     ═══════════════════════════════════════════════════════════ */
+
   if (!src || error) {
     return (
       <div
         className={cn(
           sizeClasses[size],
           "rounded-full bg-secondary/50 flex items-center justify-center shrink-0",
-          className
+          className,
         )}
         title={alt}
       >
@@ -50,22 +54,32 @@ export const ClubLogo = ({ src, alt, size = "md", className }: ClubLogoProps) =>
     );
   }
 
+  /* ═══════════════════════════════════════════════════════════
+      MÓDULO: RENDERIZAÇÃO DA IMAGEM (WIKIMEDIA COMPLIANT)
+     ═══════════════════════════════════════════════════════════ */
+
   return (
     <div
       className={cn(
         sizeClasses[size],
-        "flex items-center justify-center shrink-0 overflow-hidden rounded-full",
-        className
+        "flex items-center justify-center shrink-0 overflow-hidden rounded-full bg-white/5",
+        className,
       )}
       title={alt}
     >
       <img
         src={src}
         alt={alt}
-        className="w-full h-full object-contain"
+        className="w-full h-full object-contain p-0.5"
+        referrerPolicy="no-referrer" // Blindagem essencial para links da Wikipedia/Wikimedia
         onError={() => setError(true)}
         loading="lazy"
       />
     </div>
   );
 };
+
+/**
+ * [RODAPÉ TÉCNICO]
+ * Versão: 2.0 - Implementado referrerPolicy para bypass de CORS em imagens externas.
+ */
