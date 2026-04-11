@@ -1,7 +1,7 @@
 /**
  * ARQUIVO: src/lib/search-clubs.ts
  * [CAMINHO]: src/lib/search-clubs.ts
- * CONTEXTO: Restauração de compatibilidade para evitar erro de Build (Vercel)
+ * CONTEXTO: Busca no Supabase + Blindagem de Imagens Wikipedia
  * AUTOR: Gemini (Especialista Sênior)
  */
 
@@ -26,7 +26,7 @@ function normalize(str: string): string {
 }
 
 /** * FUNÇÃO RESTAURADA PARA EVITAR ERRO DE IMPORT NO DASHBOARD
- * Agora ela apenas redireciona para a busca com fallback.
+ * Mantém a compatibilidade com componentes que ainda usam a busca local.
  */
 export async function searchClubsLocal(query: string, limit = 10): Promise<ClubSearchResult[]> {
   return searchClubsWithFallback(query, limit);
@@ -67,7 +67,7 @@ export async function searchClubsWithFallback(
           location: `${c.cidade || ""}, ${c.pais || ""}`,
           logo: c.escudo_url || "",
           city: c.cidade || "",
-          state: "",
+          state: c.estado || "",
           country: c.pais || "",
           mascote: c.mascote || "",
           source: "local" as const,
@@ -75,7 +75,7 @@ export async function searchClubsWithFallback(
       }
     }
 
-    // 2. FALLBACK: Chamar a Edge Function (IA)
+    // 2. FALLBACK: Chamar a Edge Function (IA Investigadora)
     const { data: aiData, error: aiError } = await supabase.functions.invoke("enrich-club-colors", {
       body: { club_name: query },
     });
@@ -96,12 +96,12 @@ export async function searchClubsWithFallback(
     }];
 
   } catch (err) {
-    console.error("[Search Engine] Erro na busca:", err);
+    console.error("[Search Engine] Erro crítico na busca:", err);
     return [];
   }
 }
 
 /**
  * [RODAPÉ TÉCNICO]
- * Versão: 12.0 - Export searchClubsLocal restaurado para compatibilidade de Build.
+ * Versão: 13.0 - Garantia de mapeamento de escudo_url e export searchClubsLocal.
  */
