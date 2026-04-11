@@ -284,9 +284,14 @@ const MapaCalor = () => {
     } else { setCuriosity(null); }
   }, [heatData, activeClubName, profile]);
 
-  const handleSearch = (val: string) => {
+  const handleSearch = async (val: string) => {
     setSearchQuery(val);
-    setSearchResults(val.length > 1 ? searchClubsLocal(val, 6) : []);
+    if (val.length > 1) {
+      const results = await searchClubsLocal(val, 6);
+      setSearchResults(results);
+    } else {
+      setSearchResults([]);
+    }
   };
   const selectClub = (club: ClubSearchResult) => {
     setActiveClubName(club.name); setActiveClubInfo(CLUBS_DATA.find(c => c.nome === club.name) || null);
@@ -294,9 +299,14 @@ const MapaCalor = () => {
     setDrillLevel("world"); setCenter([0, 20]); setZoom(1); setFilterValue(null);
     setBreadcrumbs([{ label: "Mundo", level: "world" }]);
   };
-  const handleDuelSearch = (val: string) => {
+  const handleDuelSearch = async (val: string) => {
     setDuelSearchQuery(val);
-    setDuelSearchResults(val.length > 1 ? searchClubsLocal(val, 6) : []);
+    if (val.length > 1) {
+      const results = await searchClubsLocal(val, 6);
+      setDuelSearchResults(results);
+    } else {
+      setDuelSearchResults([]);
+    }
   };
   const selectDuelClub = (club: ClubSearchResult) => {
     setDuelClubName(club.name); setDuelClubInfo(CLUBS_DATA.find(c => c.nome === club.name) || null);

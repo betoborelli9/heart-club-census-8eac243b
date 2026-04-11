@@ -25,9 +25,7 @@ import FingerprintJS from "@fingerprintjs/fingerprintjs";
     MÓDULO: TIPOS E INTERFACES
    ═══════════════════════════════════════════════════════════ */
 
-interface ClubResult extends ClubSearchResult {
-  mascote?: string;
-}
+type ClubResult = ClubSearchResult;
 
 const MAX_SYMPATHY_CLUBS = 4;
 

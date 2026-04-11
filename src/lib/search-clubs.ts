@@ -16,8 +16,13 @@ export interface ClubSearchResult {
   city: string;
   state: string;
   country: string;
-  mascote: string;
+  mascote?: string;
   source: "local" | "api";
+}
+
+/** Normaliza string removendo acentos para comparação fuzzy */
+function normalize(str: string): string {
+  return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 }
 
 /** * FUNÇÃO RESTAURADA PARA EVITAR ERRO DE IMPORT NO DASHBOARD
@@ -47,18 +52,27 @@ export async function searchClubsWithFallback(
     if (dbError) throw dbError;
 
     if (dbClubs && dbClubs.length > 0) {
-      return dbClubs.map((c) => ({
-        id: c.id,
-        name: c.nome,
-        shortName: c.nome_curto || c.nome,
-        location: `${c.cidade || ""}, ${c.estado || ""}, ${c.pais || ""}`,
-        logo: c.escudo_url || "",
-        city: c.cidade || "",
-        state: c.estado || "",
-        country: c.pais || "",
-        mascote: c.mascote || "",
-        source: "local" as const,
-      }));
+      // Filtro client-side com normalização NFD para acentos
+      const normalizedQuery = normalize(query);
+      const filtered = dbClubs.filter((c) =>
+        normalize(c.nome).includes(normalizedQuery) ||
+        normalize(c.cidade).includes(normalizedQuery)
+      );
+
+      if (filtered.length > 0) {
+        return filtered.map((c) => ({
+          id: String(c.id),
+          name: c.nome,
+          shortName: c.nome_curto || c.nome,
+          location: `${c.cidade || ""}, ${c.pais || ""}`,
+          logo: c.escudo_url || "",
+          city: c.cidade || "",
+          state: "",
+          country: c.pais || "",
+          mascote: c.mascote || "",
+          source: "local" as const,
+        }));
+      }
     }
 
     // 2. FALLBACK: Chamar a Edge Function (IA)

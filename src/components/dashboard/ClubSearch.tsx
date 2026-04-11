@@ -32,21 +32,13 @@ export const ClubSearch = ({ onSelect }: { onSelect: (club: ClubSearchResult) =>
       return;
     }
 
-    // Immediate local results
-    const local = searchClubsLocal(val, 10);
-    if (local.length > 0) {
-      setResults(local);
-      setLoading(false);
-      return;
-    }
-
-    // Debounced API fallback
+    // Debounced search with fallback
     setLoading(true);
     debounceRef.current = setTimeout(async () => {
-      const apiResults = await searchClubsWithFallback(val, 10);
-      setResults(apiResults);
+      const results = await searchClubsWithFallback(val, 10);
+      setResults(results);
       setLoading(false);
-    }, 400);
+    }, 300);
   }, []);
 
   return (
