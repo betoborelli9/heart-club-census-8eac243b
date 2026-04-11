@@ -3,7 +3,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { Search, Loader2, Globe } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { ClubLogo } from "@/components/ClubLogo";
-import { searchClubsLocal, searchClubsWithFallback, ClubSearchResult } from "@/lib/search-clubs";
+import { searchClubsWithFallback, ClubSearchResult } from "@/lib/search-clubs";
 
 export const ClubSearch = ({ onSelect }: { onSelect: (club: ClubSearchResult) => void }) => {
   const [results, setResults] = useState<ClubSearchResult[]>([]);
