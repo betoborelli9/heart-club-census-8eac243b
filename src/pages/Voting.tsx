@@ -25,9 +25,7 @@ import FingerprintJS from "@fingerprintjs/fingerprintjs";
     MÓDULO: TIPOS E INTERFACES
    ═══════════════════════════════════════════════════════════ */
 
-interface ClubResult extends ClubSearchResult {
-  mascote?: string;
-}
+type ClubResult = ClubSearchResult;
 
 const MAX_SYMPATHY_CLUBS = 4;
 
@@ -144,7 +142,7 @@ const Voting = () => {
         .single();
 
       if (data) setHeartClub({
-        id: data.id,
+        id: String(data.id),
         name: data.nome || manualClub.nome,
         shortName: (data.nome_curto || manualClub.nome).substring(0, 3).toUpperCase(),
         location: `${data.cidade || manualClub.cidade}, Brasil`,

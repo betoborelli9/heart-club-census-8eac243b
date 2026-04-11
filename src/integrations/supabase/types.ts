@@ -103,8 +103,7 @@ export type Database = {
       }
       clubes_cache: {
         Row: {
-          api_id: number | null
-          cidade: string | null
+          cidade: string
           cor_primaria: string | null
           cor_secundaria: string | null
           cor_terciaria: string | null
@@ -112,23 +111,17 @@ export type Database = {
           escudo_url: string | null
           estadio_capacidade: number | null
           estadio_cidade: string | null
-          estadio_endereco: string | null
-          estadio_imagem: string | null
           estadio_nome: string | null
+          feminino: boolean | null
           fundado: number | null
-          has_feminino: boolean | null
-          id: string
-          is_feminino: boolean | null
-          manual_entry: boolean | null
+          id: number
           mascote: string | null
-          nome: string | null
+          nome: string
           nome_curto: string | null
-          pais: string | null
-          tem_feminino: boolean | null
+          pais: string
         }
         Insert: {
-          api_id?: number | null
-          cidade?: string | null
+          cidade: string
           cor_primaria?: string | null
           cor_secundaria?: string | null
           cor_terciaria?: string | null
@@ -136,23 +129,17 @@ export type Database = {
           escudo_url?: string | null
           estadio_capacidade?: number | null
           estadio_cidade?: string | null
-          estadio_endereco?: string | null
-          estadio_imagem?: string | null
           estadio_nome?: string | null
+          feminino?: boolean | null
           fundado?: number | null
-          has_feminino?: boolean | null
-          id?: string
-          is_feminino?: boolean | null
-          manual_entry?: boolean | null
+          id?: number
           mascote?: string | null
-          nome?: string | null
+          nome: string
           nome_curto?: string | null
-          pais?: string | null
-          tem_feminino?: boolean | null
+          pais: string
         }
         Update: {
-          api_id?: number | null
-          cidade?: string | null
+          cidade?: string
           cor_primaria?: string | null
           cor_secundaria?: string | null
           cor_terciaria?: string | null
@@ -160,19 +147,14 @@ export type Database = {
           escudo_url?: string | null
           estadio_capacidade?: number | null
           estadio_cidade?: string | null
-          estadio_endereco?: string | null
-          estadio_imagem?: string | null
           estadio_nome?: string | null
+          feminino?: boolean | null
           fundado?: number | null
-          has_feminino?: boolean | null
-          id?: string
-          is_feminino?: boolean | null
-          manual_entry?: boolean | null
+          id?: number
           mascote?: string | null
-          nome?: string | null
+          nome?: string
           nome_curto?: string | null
-          pais?: string | null
-          tem_feminino?: boolean | null
+          pais?: string
         }
         Relationships: []
       }

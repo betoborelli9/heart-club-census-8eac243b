@@ -3,7 +3,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { Search, Loader2, Globe } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { ClubLogo } from "@/components/ClubLogo";
-import { searchClubsLocal, searchClubsWithFallback, ClubSearchResult } from "@/lib/search-clubs";
+import { searchClubsWithFallback, ClubSearchResult } from "@/lib/search-clubs";
 
 export const ClubSearch = ({ onSelect }: { onSelect: (club: ClubSearchResult) => void }) => {
   const [results, setResults] = useState<ClubSearchResult[]>([]);
@@ -32,21 +32,13 @@ export const ClubSearch = ({ onSelect }: { onSelect: (club: ClubSearchResult) =>
       return;
     }
 
-    // Immediate local results
-    const local = searchClubsLocal(val, 10);
-    if (local.length > 0) {
-      setResults(local);
-      setLoading(false);
-      return;
-    }
-
-    // Debounced API fallback
+    // Debounced search with fallback
     setLoading(true);
     debounceRef.current = setTimeout(async () => {
-      const apiResults = await searchClubsWithFallback(val, 10);
-      setResults(apiResults);
+      const results = await searchClubsWithFallback(val, 10);
+      setResults(results);
       setLoading(false);
-    }, 400);
+    }, 300);
   }, []);
 
   return (
