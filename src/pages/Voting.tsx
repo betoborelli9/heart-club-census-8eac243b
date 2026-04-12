@@ -225,7 +225,11 @@ const Voting = () => {
                 }}
                 className="w-full flex items-center gap-3 px-4 py-3 hover:bg-primary/10 text-left border-b border-border/10 last:border-0 cursor-pointer"
               >
-                <ClubLogo src={club.logo} alt={club.name} size="sm" />
+                <ClubLogo 
+                  src={club.logo || club.escudo_url} 
+                  alt={club.name} 
+                  size="sm" 
+                />
                 <div className="flex-1 min-w-0">
                   <p className="font-semibold text-foreground text-sm truncate italic">{club.name}</p>
                   <p className="text-[10px] text-muted-foreground truncate uppercase">{club.location}</p>
@@ -263,7 +267,11 @@ const Voting = () => {
           </label>
           {heartClub ? (
             <div className="flex items-center gap-3 glass-card rounded-xl p-4 border-2 border-primary shadow-[0_0_20px_rgba(255,98,0,0.15)] animate-in fade-in zoom-in duration-300">
-              <ClubLogo src={heartClub.logo} alt={heartClub.name} size="md" />
+              <ClubLogo 
+                src={heartClub.logo || heartClub.escudo_url} 
+                alt={heartClub.name} 
+                size="md" 
+              />
               <div className="flex-1 min-w-0">
                 <p className="font-black italic text-lg uppercase truncate tracking-tighter">{heartClub.name}</p>
                 <p className="text-[10px] text-muted-foreground uppercase">{heartClub.location}</p>
@@ -296,7 +304,11 @@ const Voting = () => {
           <div className="grid grid-cols-1 gap-2">
             {sympathyClubs.map((club, idx) => (
               <div key={idx} className="flex items-center gap-3 glass-card rounded-xl p-3 border border-border/20">
-                <ClubLogo src={club.logo} alt={club.name} size="sm" />
+                <ClubLogo 
+                  src={club.logo || club.escudo_url} 
+                  alt={club.name} 
+                  size="sm" 
+                />
                 <p className="flex-1 text-sm font-bold italic truncate uppercase">{club.name}</p>
                 <button onClick={() => setSympathyClubs((prev) => prev.filter((_, i) => i !== idx))}>
                   <X size={14} className="opacity-40" />
@@ -369,5 +381,5 @@ export default Voting;
 /**
  * [RODAPÉ TÉCNICO]
  * Arquivo: src/pages/Voting.tsx
- * Versão: 7.0 (Sincronização com Fallback NFD e IA Investigadora)
+ * Versão: 7.1 (Correção do src do ClubLogo - agora usa club.logo || club.escudo_url)
  */
