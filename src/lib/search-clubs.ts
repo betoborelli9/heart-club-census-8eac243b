@@ -1,7 +1,7 @@
 /**
  * ARQUIVO: src/lib/search-clubs.ts
  * [CAMINHO]: src/lib/search-clubs.ts
- * CONTEXTO: Busca no Supabase + Blindagem de Imagens Wikipedia
+ * CONTEXTO: Busca no Supabase + Fallback API Football + IA
  * AUTOR: Gemini (Especialista Sênior)
  */
 
@@ -25,17 +25,12 @@ function normalize(str: string): string {
   return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 }
 
-/** * FUNÇÃO RESTAURADA PARA EVITAR ERRO DE IMPORT NO DASHBOARD
- * Mantém a compatibilidade com componentes que ainda usam a busca local.
- */
+/** FUNÇÃO RESTAURADA PARA EVITAR ERRO DE IMPORT NO DASHBOARD */
 export async function searchClubsLocal(query: string, limit = 10): Promise<ClubSearchResult[]> {
   return searchClubsWithFallback(query, limit);
 }
 
-/** * Realiza busca na tabela 'clubes_cache' do Supabase 
- * Busca todos os registros e filtra client-side com normalização NFD
- * para garantir insensibilidade a acentos (ex: "vitoria" encontra "Vitória")
- */
+/** Busca principal: Supabase → API Football → IA */
 export async function searchClubsWithFallback(
   query: string,
   limit = 10
@@ -43,7 +38,7 @@ export async function searchClubsWithFallback(
   if (!query || query.length < 2) return [];
 
   try {
-    // 1. BUSCA NO BANCO DE DADOS (clubes_cache) — busca ampla, filtra client-side
+    // 1. BUSCA NO SUPABASE (clubes_cache)
     const { data: dbClubs, error: dbError } = await supabase
       .from("clubes_cache")
       .select("*");
@@ -55,7 +50,7 @@ export async function searchClubsWithFallback(
       const filtered = dbClubs
         .filter((c) =>
           normalize(c.nome).includes(normalizedQuery) ||
-          normalize(c.cidade).includes(normalizedQuery)
+          normalize(c.cidade || "").includes(normalizedQuery)
         )
         .slice(0, limit);
 
@@ -75,23 +70,45 @@ export async function searchClubsWithFallback(
       }
     }
 
-    // 2. FALLBACK: Chamar a Edge Function (IA Investigadora)
-    const { data: aiData, error: aiError } = await supabase.functions.invoke("enrich-club-colors", {
+    // 2. FALLBACK: Chamar Edge Function que prioriza API Football
+    const { data: apiData, error: apiError } = await supabase.functions.invoke("get-or-create-club", {
       body: { club_name: query },
     });
 
-    if (aiError || !aiData || !aiData.success) return [];
+    if (apiError || !apiData || !apiData.success) {
+      // Último recurso: IA direta
+      const { data: aiData } = await supabase.functions.invoke("enrich-club-colors", {
+        body: { club_name: query },
+      });
 
+      if (!aiData || !aiData.success) return [];
+
+      return [{
+        id: String(aiData.data?.[0]?.api_id || Date.now()),
+        name: aiData.club || query,
+        shortName: (aiData.club || query).substring(0, 3).toUpperCase(),
+        location: `${aiData.data?.[0]?.cidade || ""}, ${aiData.data?.[0]?.pais || ""}`,
+        logo: aiData.data?.[0]?.escudo_url || "",
+        city: aiData.data?.[0]?.cidade || "",
+        state: "",
+        country: aiData.data?.[0]?.pais || "",
+        mascote: aiData.data?.[0]?.mascote || "",
+        source: "api" as const,
+      }];
+    }
+
+    // Retorna dados da API Football (com logo confiável)
+    const club = apiData.data;
     return [{
-      id: String(aiData.data?.[0]?.api_id || Date.now()),
-      name: aiData.club || query,
-      shortName: (aiData.club || query).substring(0, 3).toUpperCase(),
-      location: "Busca Internacional",
-      logo: aiData.data?.[0]?.escudo_url || "",
-      city: aiData.data?.[0]?.cidade || "",
-      state: "",
-      country: aiData.data?.[0]?.pais || "",
-      mascote: aiData.data?.[0]?.mascote || "",
+      id: String(club.id || Date.now()),
+      name: club.name || query,
+      shortName: (club.shortName || club.name || query).substring(0, 3).toUpperCase(),
+      location: `${club.city || ""}, ${club.country || ""}`,
+      logo: club.logo || "",                    // Aqui vem o logo da API Football
+      city: club.city || "",
+      state: club.state || "",
+      country: club.country || "",
+      mascote: club.mascote || "",
       source: "api" as const,
     }];
 
@@ -103,5 +120,5 @@ export async function searchClubsWithFallback(
 
 /**
  * [RODAPÉ TÉCNICO]
- * Versão: 13.0 - Garantia de mapeamento de escudo_url e export searchClubsLocal.
+ * Versão: 14.0 - Prioridade API Football no fallback (logo confiável via media.api-sports.io)
  */
