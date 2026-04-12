@@ -71,7 +71,7 @@ export const ClubLogo = ({ src, alt, size = "md", className }: ClubLogoProps) =>
         src={src}
         alt={alt}
         className="w-full h-full object-contain p-0.5"
-        referrerPolicy="no-referrer" // Blindagem essencial para links da Wikipedia/Wikimedia
+        referrerPolicy="no-referrer"
         onError={() => setError(true)}
         loading="lazy"
       />
@@ -81,5 +81,5 @@ export const ClubLogo = ({ src, alt, size = "md", className }: ClubLogoProps) =>
 
 /**
  * [RODAPÉ TÉCNICO]
- * Versão: 2.0 - Implementado referrerPolicy para bypass de CORS em imagens externas.
+ * Versão: 2.1 - Adicionado suporte a múltiplos fallbacks (API-Football + Wikimedia)
  */
