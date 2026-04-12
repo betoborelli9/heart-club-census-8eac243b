@@ -69,7 +69,6 @@ const Voting = () => {
     initFP();
   }, []);
 
-  // IA Investigadora: Dispara enriquecimento de dados via Edge Function
   const investigateClubData = async (clubName: string) => {
     console.log(`[Heart Club IA] Investigando dados oficiais de: ${clubName}`);
     try {
@@ -90,7 +89,6 @@ const Voting = () => {
       }
       setterLoading(true);
       try {
-        // UNIFICAÇÃO: Usamos o Fallback Híbrido que já trata acentos (NFD)
         const results = await searchClubsWithFallback(query);
         setterResults(results);
         setterOpen(true);
@@ -186,7 +184,6 @@ const Voting = () => {
       const { error: insertError } = await supabase.from("votos").insert(votesToInsert);
       if (insertError) throw insertError;
 
-      // Dispara IA Investigadora sem travar o redirecionamento
       allVotes.forEach(v => investigateClubData(v.club.name));
 
       await refreshProfile();
@@ -226,7 +223,7 @@ const Voting = () => {
                 className="w-full flex items-center gap-3 px-4 py-3 hover:bg-primary/10 text-left border-b border-border/10 last:border-0 cursor-pointer"
               >
                 <ClubLogo 
-                  src={club.logo || club.escudo_url} 
+                  src={club.escudo_url} 
                   alt={club.name} 
                   size="sm" 
                 />
@@ -268,7 +265,7 @@ const Voting = () => {
           {heartClub ? (
             <div className="flex items-center gap-3 glass-card rounded-xl p-4 border-2 border-primary shadow-[0_0_20px_rgba(255,98,0,0.15)] animate-in fade-in zoom-in duration-300">
               <ClubLogo 
-                src={heartClub.logo || heartClub.escudo_url} 
+                src={heartClub.escudo_url} 
                 alt={heartClub.name} 
                 size="md" 
               />
@@ -305,7 +302,7 @@ const Voting = () => {
             {sympathyClubs.map((club, idx) => (
               <div key={idx} className="flex items-center gap-3 glass-card rounded-xl p-3 border border-border/20">
                 <ClubLogo 
-                  src={club.logo || club.escudo_url} 
+                  src={club.escudo_url} 
                   alt={club.name} 
                   size="sm" 
                 />
@@ -381,5 +378,5 @@ export default Voting;
 /**
  * [RODAPÉ TÉCNICO]
  * Arquivo: src/pages/Voting.tsx
- * Versão: 7.1 (Correção do src do ClubLogo - agora usa club.logo || club.escudo_url)
+ * Versão: 7.2 (Correção definitiva: src={club.escudo_url} para compatibilidade com Supabase)
  */
