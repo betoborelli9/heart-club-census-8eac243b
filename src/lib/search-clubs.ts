@@ -75,33 +75,42 @@ export async function searchClubsWithFallback(query: string, limit = 10): Promis
     // ── CAMADA 2: EDGE FUNCTION search-clubs (API Football no backend) ──
     console.log("[Search] Cache vazio, chamando Edge Function search-clubs:", query);
     const { data: efData, error: efError } = await supabase.functions.invoke("search-clubs", {
-      body: { query },
+      body: { query: query.trim() },
     });
 
     if (efError) {
-      console.error("[Search] Edge Function error:", efError);
-      return [];
-    }
-
-    const results = Array.isArray(efData) ? efData : [];
-
-    if (results.length > 0) {
-      return results.slice(0, limit).map((item: any) => {
-        const logo = item.logo || "";
-        return {
-          id: String(item.api_id || item.id || Date.now()),
-          name: item.name,
-          shortName: item.shortName || item.name.substring(0, 3).toUpperCase(),
-          location: `${item.city || ""}, ${item.country || ""}`,
-          logo,
-          escudo_url: logo,
-          city: item.city || "",
-          state: "",
-          country: item.country || "",
-          mascote: "",
-          source: (item.source as "local" | "api") || "api",
-        };
+      console.error("[Search] Edge Function error:", {
+        message: efError.message,
+        name: efError.name,
+        context: efError.context,
       });
+    } else {
+      const results = Array.isArray(efData)
+        ? efData
+        : Array.isArray((efData as any)?.data)
+          ? (efData as any).data
+          : [];
+
+      if (results.length > 0) {
+        return results.slice(0, limit).map((item: any, index: number) => {
+          const logo = item.logo || item.escudo_url || "";
+          const clubName = item.name || item.nome || query;
+          const shortName = item.shortName || item.nome_curto || clubName.substring(0, 3).toUpperCase();
+          return {
+            id: String(item.api_id || item.id || `${clubName}-${index}`),
+            name: clubName,
+            shortName,
+            location: `${item.city || item.cidade || ""}, ${item.country || item.pais || ""}`,
+            logo,
+            escudo_url: logo,
+            city: item.city || item.cidade || "",
+            state: item.state || item.estado || "",
+            country: item.country || item.pais || "",
+            mascote: item.mascote || "",
+            source: (item.source as "local" | "api") || "api",
+          };
+        });
+      }
     }
 
     // ── CAMADA 3: FALLBACK IA (enrich-club-colors) ──
