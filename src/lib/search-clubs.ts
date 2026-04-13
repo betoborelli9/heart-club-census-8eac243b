@@ -1,7 +1,7 @@
 /**
  * ARQUIVO: src/lib/search-clubs.ts
  * [CAMINHO]: src/lib/search-clubs.ts
- * CONTEXTO: Busca no Supabase + Fallback API Football + IA
+ * CONTEXTO: Busca Direta na API Football (v3) + Cache Supabase
  * AUTOR: Gemini (Especialista Sênior)
  */
 
@@ -20,9 +20,15 @@ export interface ClubSearchResult {
   source: "local" | "api";
 }
 
+const API_FOOTBALL_KEY = "3b4a0ec2c5f513b9aa1e43c4adbae7aa";
+const API_FOOTBALL_HOST = "v3.football.api-sports.io";
+
 /** Normaliza string removendo acentos para comparação fuzzy */
 function normalize(str: string): string {
-  return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  return str
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
 }
 
 /** FUNÇÃO RESTAURADA PARA EVITAR ERRO DE IMPORT NO DASHBOARD */
@@ -30,33 +36,25 @@ export async function searchClubsLocal(query: string, limit = 10): Promise<ClubS
   return searchClubsWithFallback(query, limit);
 }
 
-/** Busca principal: Supabase → API Football → IA */
-export async function searchClubsWithFallback(
-  query: string,
-  limit = 10
-): Promise<ClubSearchResult[]> {
-  if (!query || query.length < 2) return [];
+/** Busca principal: Supabase → Direto API Football → IA */
+export async function searchClubsWithFallback(query: string, limit = 10): Promise<ClubSearchResult[]> {
+  if (!query || query.length < 3) return []; // API Football exige min 3 caracteres
 
   try {
     // 1. BUSCA NO SUPABASE (clubes_cache)
-    const { data: dbClubs, error: dbError } = await supabase
-      .from("clubes_cache")
-      .select("*");
+    const { data: dbClubs, error: dbError } = await supabase.from("clubes_cache").select("*");
 
-    if (dbError) throw dbError;
-
-    if (dbClubs && dbClubs.length > 0) {
+    if (!dbError && dbClubs && dbClubs.length > 0) {
       const normalizedQuery = normalize(query);
       const filtered = dbClubs
-        .filter((c) =>
-          normalize(c.nome).includes(normalizedQuery) ||
-          normalize(c.cidade || "").includes(normalizedQuery)
+        .filter(
+          (c) => normalize(c.nome).includes(normalizedQuery) || normalize(c.cidade || "").includes(normalizedQuery),
         )
         .slice(0, limit);
 
       if (filtered.length > 0) {
         return filtered.map((c) => ({
-          id: String(c.id),
+          id: String(c.api_id || c.id),
           name: c.nome,
           shortName: c.nome_curto || c.nome,
           location: `${c.cidade || ""}, ${c.pais || ""}`,
@@ -70,55 +68,62 @@ export async function searchClubsWithFallback(
       }
     }
 
-    // 2. FALLBACK: Chamar Edge Function que prioriza API Football
-    const { data: apiData, error: apiError } = await supabase.functions.invoke("get-or-create-club", {
+    // 2. BUSCA DIRETA NA API FOOTBALL (Contornando erro de Secrets do Supabase)
+    const response = await fetch(`https://${API_FOOTBALL_HOST}/teams?search=${encodeURIComponent(query)}`, {
+      method: "GET",
+      headers: {
+        "x-rapidapi-key": API_FOOTBALL_KEY,
+        "x-rapidapi-host": API_FOOTBALL_HOST,
+      },
+    });
+
+    const apiResult = await response.json();
+
+    if (apiResult.response && apiResult.response.length > 0) {
+      return apiResult.response.slice(0, limit).map((item: any) => ({
+        id: String(item.team.id),
+        name: item.team.name,
+        shortName: item.team.code || item.team.name.substring(0, 3).toUpperCase(),
+        location: `${item.venue?.city || ""}, ${item.team.country}`,
+        logo: item.team.logo,
+        city: item.venue?.city || "",
+        state: "",
+        country: item.team.country,
+        mascote: "",
+        source: "api" as const,
+      }));
+    }
+
+    // 3. ÚLTIMO RECURSO: IA para enriquecimento se a API falhar ou não achar
+    const { data: aiData } = await supabase.functions.invoke("enrich-club-colors", {
       body: { club_name: query },
     });
 
-    if (apiError || !apiData || !apiData.success) {
-      // Último recurso: IA direta
-      const { data: aiData } = await supabase.functions.invoke("enrich-club-colors", {
-        body: { club_name: query },
-      });
-
-      if (!aiData || !aiData.success) return [];
-
-      return [{
-        id: String(aiData.data?.[0]?.api_id || Date.now()),
-        name: aiData.club || query,
-        shortName: (aiData.club || query).substring(0, 3).toUpperCase(),
-        location: `${aiData.data?.[0]?.cidade || ""}, ${aiData.data?.[0]?.pais || ""}`,
-        logo: aiData.data?.[0]?.escudo_url || "",
-        city: aiData.data?.[0]?.cidade || "",
-        state: "",
-        country: aiData.data?.[0]?.pais || "",
-        mascote: aiData.data?.[0]?.mascote || "",
-        source: "api" as const,
-      }];
+    if (aiData && aiData.success) {
+      return [
+        {
+          id: String(aiData.data?.[0]?.api_id || Date.now()),
+          name: aiData.club || query,
+          shortName: (aiData.club || query).substring(0, 3).toUpperCase(),
+          location: `${aiData.data?.[0]?.cidade || ""}, ${aiData.data?.[0]?.pais || ""}`,
+          logo: aiData.data?.[0]?.escudo_url || "",
+          city: aiData.data?.[0]?.cidade || "",
+          state: "",
+          country: aiData.data?.[0]?.pais || "",
+          mascote: aiData.data?.[0]?.mascote || "",
+          source: "api" as const,
+        },
+      ];
     }
 
-    // Retorna dados da API Football (com logo confiável)
-    const club = apiData.data;
-    return [{
-      id: String(club.id || Date.now()),
-      name: club.name || query,
-      shortName: (club.shortName || club.name || query).substring(0, 3).toUpperCase(),
-      location: `${club.city || ""}, ${club.country || ""}`,
-      logo: club.logo || "",                    // Aqui vem o logo da API Football
-      city: club.city || "",
-      state: club.state || "",
-      country: club.country || "",
-      mascote: club.mascote || "",
-      source: "api" as const,
-    }];
-
+    return [];
   } catch (err) {
-    console.error("[Search Engine] Erro crítico na busca:", err);
+    console.error("[Search Engine] Erro crítico na busca direta:", err);
     return [];
   }
 }
 
 /**
  * [RODAPÉ TÉCNICO]
- * Versão: 14.0 - Prioridade API Football no fallback (logo confiável via media.api-sports.io)
+ * Versão: 15.0 - Bypass de Edge Functions: Busca direta na API-Football v3 via Client-Side.
  */
