@@ -139,18 +139,22 @@ const Voting = () => {
         .select()
         .single();
 
-      if (data) setHeartClub({
-        id: String(data.id),
-        name: data.nome || manualClub.nome,
-        shortName: (data.nome_curto || manualClub.nome).substring(0, 3).toUpperCase(),
-        location: `${data.cidade || manualClub.cidade}, Brasil`,
-        logo: data.escudo_url || "https://placehold.co/100x100?text=?",
-        city: data.cidade || manualClub.cidade,
-        state: manualClub.estado || "",
-        country: data.pais || "Brasil",
-        mascote: data.mascote || manualClub.mascote,
-        source: "local",
-      });
+      if (data) {
+        const logoUrl = data.escudo_url || "https://placehold.co/100x100?text=?";
+        setHeartClub({
+          id: String(data.id),
+          name: data.nome || manualClub.nome,
+          shortName: (data.nome_curto || manualClub.nome).substring(0, 3).toUpperCase(),
+          location: `${data.cidade || manualClub.cidade}, Brasil`,
+          logo: logoUrl,
+          escudo_url: logoUrl,
+          city: data.cidade || manualClub.cidade,
+          state: manualClub.estado || "",
+          country: data.pais || "Brasil",
+          mascote: data.mascote || manualClub.mascote,
+          source: "local",
+        });
+      }
       setShowManualDialog(false);
       toast({ title: "Clube adicionado ao Censo! ✍️" });
     } finally {
