@@ -1,7 +1,7 @@
 /**
  * ARQUIVO: src/lib/search-clubs.ts
  * [CAMINHO]: src/lib/search-clubs.ts
- * CONTEXTO: Busca Direta na API Football (v3) + Debug Logs
+ * CONTEXTO: Busca Híbrida — Cache Local + Edge Function (search-clubs)
  * AUTOR: Gemini (Especialista Sênior)
  */
 
@@ -13,15 +13,13 @@ export interface ClubSearchResult {
   shortName: string;
   location: string;
   logo: string;
+  escudo_url: string;
   city: string;
   state: string;
   country: string;
   mascote?: string;
   source: "local" | "api";
 }
-
-const API_FOOTBALL_KEY = "3b4a0ec2c5f513b9aa1e43c4adbae7aa";
-const API_FOOTBALL_HOST = "v3.football.api-sports.io";
 
 /** Normaliza string removendo acentos para comparação fuzzy */
 function normalize(str: string): string {
@@ -36,79 +34,91 @@ export async function searchClubsLocal(query: string, limit = 10): Promise<ClubS
   return searchClubsWithFallback(query, limit);
 }
 
-/** Busca principal: Supabase → Direto API Football → IA */
+/** Busca principal: 1) clubes_cache local → 2) Edge Function search-clubs */
 export async function searchClubsWithFallback(query: string, limit = 10): Promise<ClubSearchResult[]> {
   if (!query || query.length < 3) return [];
 
   try {
-    // 1. BUSCA NO SUPABASE (clubes_cache)
+    // ── CAMADA 1: BUSCA LOCAL (clubes_cache) com normalização NFD ──
     const { data: dbClubs, error: dbError } = await supabase.from("clubes_cache").select("*");
 
     if (!dbError && dbClubs && dbClubs.length > 0) {
       const normalizedQuery = normalize(query);
       const filtered = dbClubs
         .filter(
-          (c) => normalize(c.nome).includes(normalizedQuery) || normalize(c.cidade || "").includes(normalizedQuery),
+          (c) =>
+            normalize(c.nome).includes(normalizedQuery) ||
+            normalize(c.cidade || "").includes(normalizedQuery),
         )
         .slice(0, limit);
 
       if (filtered.length > 0) {
-        return filtered.map((c) => ({
-          id: String(c.api_id || c.id),
-          name: c.nome,
-          shortName: c.nome_curto || c.nome,
-          location: `${c.cidade || ""}, ${c.pais || ""}`,
-          logo: c.escudo_url || "",
-          city: c.cidade || "",
-          state: c.estado || "",
-          country: c.pais || "",
-          mascote: c.mascote || "",
-          source: "local" as const,
-        }));
+        return filtered.map((c) => {
+          const logo = c.escudo_url || "";
+          return {
+            id: String(c.id),
+            name: c.nome,
+            shortName: c.nome_curto || c.nome,
+            location: `${c.cidade || ""}, ${c.pais || ""}`,
+            logo,
+            escudo_url: logo,
+            city: c.cidade || "",
+            state: "",
+            country: c.pais || "",
+            mascote: c.mascote || "",
+            source: "local" as const,
+          };
+        });
       }
     }
 
-    // 2. BUSCA DIRETA NA API FOOTBALL
-    console.log("[DEBUG] Buscando na API:", query);
-    const response = await fetch(`https://${API_FOOTBALL_HOST}/teams?search=${encodeURIComponent(query)}`, {
-      method: "GET",
-      headers: {
-        "x-rapidapi-key": API_FOOTBALL_KEY,
-        "x-rapidapi-host": API_FOOTBALL_HOST,
-      },
+    // ── CAMADA 2: EDGE FUNCTION search-clubs (API Football no backend) ──
+    console.log("[Search] Cache vazio, chamando Edge Function search-clubs:", query);
+    const { data: efData, error: efError } = await supabase.functions.invoke("search-clubs", {
+      body: { query },
     });
 
-    const apiResult = await response.json();
-    console.log("[DEBUG] Resultado API:", apiResult);
-
-    if (apiResult.response && apiResult.response.length > 0) {
-      return apiResult.response.slice(0, limit).map((item: any) => ({
-        id: String(item.team.id),
-        name: item.team.name,
-        shortName: item.team.code || item.team.name.substring(0, 3).toUpperCase(),
-        location: `${item.venue?.city || ""}, ${item.team.country}`,
-        logo: item.team.logo,
-        city: item.venue?.city || "",
-        state: "",
-        country: item.team.country,
-        mascote: "",
-        source: "api" as const,
-      }));
+    if (efError) {
+      console.error("[Search] Edge Function error:", efError);
+      return [];
     }
 
-    // 3. FALLBACK IA
+    const results = Array.isArray(efData) ? efData : [];
+
+    if (results.length > 0) {
+      return results.slice(0, limit).map((item: any) => {
+        const logo = item.logo || "";
+        return {
+          id: String(item.api_id || item.id || Date.now()),
+          name: item.name,
+          shortName: item.shortName || item.name.substring(0, 3).toUpperCase(),
+          location: `${item.city || ""}, ${item.country || ""}`,
+          logo,
+          escudo_url: logo,
+          city: item.city || "",
+          state: "",
+          country: item.country || "",
+          mascote: "",
+          source: (item.source as "local" | "api") || "api",
+        };
+      });
+    }
+
+    // ── CAMADA 3: FALLBACK IA (enrich-club-colors) ──
     const { data: aiData } = await supabase.functions.invoke("enrich-club-colors", {
       body: { club_name: query },
     });
 
     if (aiData && aiData.success) {
+      const logo = aiData.data?.[0]?.escudo_url || "";
       return [
         {
           id: String(aiData.data?.[0]?.api_id || Date.now()),
           name: aiData.club || query,
           shortName: (aiData.club || query).substring(0, 3).toUpperCase(),
           location: `${aiData.data?.[0]?.cidade || ""}, ${aiData.data?.[0]?.pais || ""}`,
-          logo: aiData.data?.[0]?.escudo_url || "",
+          logo,
+          escudo_url: logo,
           city: aiData.data?.[0]?.cidade || "",
           state: "",
           country: aiData.data?.[0]?.pais || "",
@@ -127,5 +137,6 @@ export async function searchClubsWithFallback(query: string, limit = 10): Promis
 
 /**
  * [RODAPÉ TÉCNICO]
- * Versão: 15.1 - Fix Syntax Error + API-Football Direct Access
+ * Versão: 16.0 - Hierarquia: Cache Local → Edge Function → IA
+ * Normalização NFD client-side. Sem chamada direta à API Football no front.
  */
