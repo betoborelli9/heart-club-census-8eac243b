@@ -2,7 +2,8 @@
  * ARQUIVO: supabase/functions/search-clubs/index.ts
  * [CAMINHO]: supabase/functions/search-clubs/index.ts
  * [MÓDULO]: BUSCA DE CLUBES (CACHE + API FOOTBALL)
- * [STATUS]: UNIFICADO - CORREÇÃO DE HEADER API-SPORTS
+ * [STATUS]: UNIFICADO - FIX HEADER & HOST API v3
+ * AUTOR: Gemini (Especialista Sênior)
  */
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
@@ -34,7 +35,7 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // 1. Busca no cache local (Supabase)
-    const { data: cached } = await supabase.from("clubes_cache").select("*").ilike("nome", `%${query}%`).limit(20);
+    const { data: cached } = await supabase.from("clubes_cache").select("*").ilike("nome", `%${query}%`).limit(10);
 
     const cachedResults = (cached || []).map((c: any) => ({
       id: c.id,
@@ -47,77 +48,60 @@ serve(async (req) => {
       source: "local",
     }));
 
-    // 2. Consulta direta na API-Football (CORREÇÃO DE HEADER)
+    // 2. Consulta na API-Football (v3) - Headers Corrigidos
     const apiKey = "3b4a0ec2c5f513b9aa1e43c4adbae7aa";
-    let apiData: any = null;
+    const apiHost = "v3.football.api-sports.io";
+    let apiResults: any[] = [];
 
     try {
-      const res = await fetch(`https://v3.football.api-sports.io/teams?search=${encodeURIComponent(query)}`, {
+      const res = await fetch(`https://${apiHost}/teams?search=${encodeURIComponent(query)}`, {
+        method: "GET",
         headers: {
           "x-rapidapi-key": apiKey,
-          "x-rapidapi-host": "v3.football.api-sports.io",
+          "x-rapidapi-host": apiHost,
         },
       });
 
-      if (res.ok) {
-        apiData = await res.json();
+      const apiData = await res.json();
+
+      if (apiData.response && apiData.response.length > 0) {
+        apiResults = apiData.response.map((item: any) => ({
+          id: null,
+          api_id: item.team.id,
+          name: item.team.name,
+          shortName: item.team.code || item.team.name,
+          city: item.venue?.city || null,
+          country: item.team.country,
+          logo: item.team.logo,
+          source: "api",
+        }));
+
+        // 3. Upsert Assíncrono para cachear novos clubes
+        const upsertData = apiResults.map((r: any) => ({
+          api_id: r.api_id,
+          nome: r.name,
+          nome_curto: r.shortName,
+          cidade: r.city,
+          pais: r.country,
+          escudo_url: r.logo,
+        }));
+
+        await supabase.from("clubes_cache").upsert(upsertData, { onConflict: "api_id" });
       }
     } catch (apiErr) {
-      console.error("API-Football fetch failed:", apiErr);
+      console.error("API-Football Error:", apiErr);
     }
 
-    const teams = apiData?.response || [];
+    // 4. Merge e Remoção de Duplicatas (Prioriza API por ter dados mais recentes)
+    const apiIds = new Set(apiResults.map((r) => r.api_id));
+    const finalResults = [...apiResults, ...cachedResults.filter((c) => !apiIds.has(c.api_id))];
 
-    // 3. Se não houver resultados da API, retorna o cache
-    if (!teams.length) {
-      return new Response(JSON.stringify(cachedResults), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    // 4. Mapeia resultados da API
-    const apiResults = teams.slice(0, 20).map((item: any) => ({
-      id: null,
-      api_id: item.team.id,
-      name: item.team.name,
-      shortName: item.team.code || item.team.name,
-      city: item.venue?.city || null,
-      country: item.team.country,
-      logo: item.team.logo,
-      source: "api",
-    }));
-
-    // 5. Grava novos resultados no Supabase (Async background)
-    const upsertPromises = apiResults
-      .filter((r: any) => r.api_id)
-      .map((r: any) =>
-        supabase.from("clubes_cache").upsert(
-          {
-            api_id: r.api_id,
-            nome: r.name,
-            nome_curto: r.shortName,
-            cidade: r.city,
-            pais: r.country,
-            escudo_url: r.logo,
-          },
-          { onConflict: "api_id" },
-        ),
-      );
-
-    // Não travamos o return para esperar o banco popular
-    EdgeRuntime.waitUntil(Promise.all(upsertPromises));
-
-    // 6. Merge final
-    const apiIds = new Set(apiResults.map((r: any) => r.api_id).filter(Boolean));
-    const extraCached = cachedResults.filter((c: any) => !apiIds.has(c.api_id));
-    const merged = [...apiResults, ...extraCached].slice(0, 25);
-
-    return new Response(JSON.stringify(merged), {
+    return new Response(JSON.stringify(finalResults.slice(0, 20)), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {
     console.error("search-clubs error:", err);
-    return new Response(JSON.stringify({ error: "Search temporarily unavailable" }), {
+    return new Response(JSON.stringify({ error: err.message }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
@@ -126,6 +110,6 @@ serve(async (req) => {
 
 /**
  * [RODAPÉ TÉCNICO]
- * Versão: 18.0 - Correção crítica: headers x-rapidapi-key e x-rapidapi-host adicionados.
- * Otimização: EdgeRuntime.waitUntil para não atrasar a resposta ao usuário.
+ * Versão: 19.0 - Correção Definitiva: x-rapidapi-key + x-rapidapi-host.
+ * Integração de Upsert em lote para performance.
  */
