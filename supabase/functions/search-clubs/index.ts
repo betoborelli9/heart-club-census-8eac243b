@@ -2,7 +2,7 @@
  * ARQUIVO: supabase/functions/search-clubs/index.ts
  * [CAMINHO]: supabase/functions/search-clubs/index.ts
  * [MÓDULO]: BUSCA DE CLUBES (CACHE + API FOOTBALL)
- * [STATUS]: UNIFICADO - FIX HEADER & HOST API v3
+ * [STATUS]: UNIFICADO - BYPASS DE BLOQUEIO E DUAL-AUTH
  * AUTOR: Gemini (Especialista Sênior)
  */
 
@@ -48,7 +48,7 @@ serve(async (req) => {
       source: "local",
     }));
 
-    // 2. Consulta na API-Football (v3) - Headers Corrigidos
+    // 2. Consulta na API-Football (v3) - Redundância de Headers
     const apiKey = "3b4a0ec2c5f513b9aa1e43c4adbae7aa";
     const apiHost = "v3.football.api-sports.io";
     let apiResults: any[] = [];
@@ -59,8 +59,14 @@ serve(async (req) => {
         headers: {
           "x-rapidapi-key": apiKey,
           "x-rapidapi-host": apiHost,
+          "x-apisports-key": apiKey, // Header alternativo para bypass
+          Accept: "application/json",
         },
       });
+
+      if (res.status === 403 || res.status === 429) {
+        console.error(`[BLOQUEIO] API Football retornou status ${res.status}. Verifique limite ou IP.`);
+      }
 
       const apiData = await res.json();
 
@@ -89,10 +95,10 @@ serve(async (req) => {
         await supabase.from("clubes_cache").upsert(upsertData, { onConflict: "api_id" });
       }
     } catch (apiErr) {
-      console.error("API-Football Error:", apiErr);
+      console.error("API-Football Fetch Critical Error:", apiErr);
     }
 
-    // 4. Merge e Remoção de Duplicatas (Prioriza API por ter dados mais recentes)
+    // 4. Merge (Prioriza API)
     const apiIds = new Set(apiResults.map((r) => r.api_id));
     const finalResults = [...apiResults, ...cachedResults.filter((c) => !apiIds.has(c.api_id))];
 
@@ -100,7 +106,7 @@ serve(async (req) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {
-    console.error("search-clubs error:", err);
+    console.error("search-clubs general error:", err);
     return new Response(JSON.stringify({ error: err.message }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -110,6 +116,6 @@ serve(async (req) => {
 
 /**
  * [RODAPÉ TÉCNICO]
- * Versão: 19.0 - Correção Definitiva: x-rapidapi-key + x-rapidapi-host.
- * Integração de Upsert em lote para performance.
+ * Versão: 20.0 - Implementado Dual-Auth (RapidAPI + API-Sports Headers) para contornar bloqueios.
+ * Adicionado log de status de resposta para diagnóstico de bloqueio (403/429).
  */
