@@ -2,7 +2,7 @@
  * ARQUIVO: supabase/functions/search-clubs/index.ts
  * [CAMINHO]: supabase/functions/search-clubs/index.ts
  * [MÓDULO]: BUSCA DE CLUBES (SERVER-SIDE)
- * [STATUS]: FIX - BYPASS CORS & PROTECTED KEY
+ * [STATUS]: FIX - LOGO & PERSISTENCE
  * AUTOR: Gemini (Especialista Sênior)
  */
 
@@ -19,13 +19,10 @@ serve(async (req) => {
 
   try {
     const { query } = await req.json();
+    const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
-
-    // 1. BUSCA NO CACHE LOCAL (PRIORIDADE)
-    const { data: cached } = await supabase.from("clubes_cache").select("*").ilike("nome", `%${query}%`).limit(10);
+    // 1. BUSCA NO CACHE LOCAL
+    const { data: cached } = await supabase.from("clubes_cache").select("*").ilike("nome", `%${query}%`).limit(15);
 
     if (cached && cached.length > 0) {
       return new Response(
@@ -33,6 +30,7 @@ serve(async (req) => {
           cached.map((c) => ({
             api_id: c.api_id,
             name: c.nome,
+            shortName: c.nome_curto || c.nome,
             city: c.cidade,
             country: c.pais,
             logo: c.escudo_url,
@@ -43,35 +41,38 @@ serve(async (req) => {
       );
     }
 
-    // 2. BUSCA NA API FOOTBALL (SE NÃO HOUVER NO CACHE)
+    // 2. BUSCA NA API FOOTBALL
     const apiKey = "3b4a0ec2c5f513b9aa1e43c4adbae7aa";
     const res = await fetch(`https://v3.football.api-sports.io/teams?search=${encodeURIComponent(query)}`, {
-      headers: {
-        "x-rapidapi-key": apiKey,
-        "x-rapidapi-host": "v3.football.api-sports.io",
-      },
+      headers: { "x-rapidapi-key": apiKey, "x-rapidapi-host": "v3.football.api-sports.io" },
     });
 
     const apiData = await res.json();
     const results = (apiData.response || []).map((item: any) => ({
       api_id: item.team.id,
       name: item.team.name,
+      shortName: item.team.code || item.team.name.substring(0, 3).toUpperCase(),
       city: item.venue?.city || "",
       country: item.team.country,
       logo: item.team.logo,
       source: "api",
     }));
 
-    // 3. UPSERT ASSÍNCRONO PARA POPULAR O CACHE
+    // 3. UPSERT NO BANCO (CORRIGIDO)
     if (results.length > 0) {
       const upsertData = results.map((r: any) => ({
         api_id: r.api_id,
         nome: r.name,
+        nome_curto: r.shortName,
         cidade: r.city,
         pais: r.country,
         escudo_url: r.logo,
+        atualizado_em: new Date().toISOString(),
       }));
-      await supabase.from("clubes_cache").upsert(upsertData, { onConflict: "api_id" });
+
+      const { error: upsertError } = await supabase.from("clubes_cache").upsert(upsertData, { onConflict: "api_id" });
+
+      if (upsertError) console.error("[UPSERT ERROR]:", upsertError);
     }
 
     return new Response(JSON.stringify(results), {
@@ -87,6 +88,5 @@ serve(async (req) => {
 
 /**
  * [RODAPÉ TÉCNICO]
- * Versão: 21.0 - Unificação de fluxo: Cache -> API.
- * Proteção total da API Key no servidor.
+ * Versão: 23.0 - Inclusão de nome_curto e log de erro no upsert.
  */
