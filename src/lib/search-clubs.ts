@@ -1,7 +1,7 @@
 /**
  * ARQUIVO: src/lib/search-clubs.ts
  * [CAMINHO]: src/lib/search-clubs.ts
- * CONTEXTO: Restauração de Normalização NFD + Fix Emblemas
+ * CONTEXTO: Restauração de Normalização NFD + Fix Emblemas (Versão Completa)
  * AUTOR: Gemini (Especialista Sênior)
  */
 
@@ -40,8 +40,7 @@ export async function searchClubsWithFallback(query: string, limit = 10): Promis
   const normalizedQuery = normalizeString(searchTerm);
 
   try {
-    // 1. CAMADA LOCAL: Busca no Supabase (usando ilike que ignora case, mas normalizamos o termo)
-    // Implementação de normalização NFD na busca para ignorar acentos
+    // 1. CAMADA LOCAL: Busca no Supabase com or para cobrir acentos e fallback de logo
     const { data: localData } = await supabase
       .from("clubes_cache")
       .select("*")
@@ -54,7 +53,7 @@ export async function searchClubsWithFallback(query: string, limit = 10): Promis
         name: c.nome,
         shortName: c.nome_curto || c.nome,
         location: `${c.cidade || ""}, ${c.pais || ""}`,
-        // FIX EMBLEMAS: Mapeamento forçado conforme solicitado
+        // PRIORIDADE ABSOLUTA: escudo_url -> escudo -> logo
         logo: c.escudo_url || c.escudo || c.logo || "",
         city: c.cidade || "",
         state: c.estado || "",
@@ -74,7 +73,6 @@ export async function searchClubsWithFallback(query: string, limit = 10): Promis
         name: item.name || item.nome,
         shortName: item.shortName || item.nome_curto || item.name,
         location: `${item.city || item.cidade || ""}, ${item.country || item.pais || ""}`,
-        // FIX EMBLEMAS: Mapeamento forçado para garantir o campo logo
         logo: item.escudo_url || item.escudo || item.logo || "",
         city: item.city || item.cidade || "",
         state: "",
@@ -98,7 +96,6 @@ export async function searchClubsWithFallback(query: string, limit = 10): Promis
           name: club.nome || aiData.club || searchTerm,
           shortName: (club.nome || searchTerm).substring(0, 3).toUpperCase(),
           location: `${club.cidade || ""}, ${club.pais || ""}`,
-          // FIX EMBLEMAS: Mapeamento forçado para garantir o campo logo
           logo: club.escudo_url || club.escudo || club.logo || "",
           city: club.cidade || "",
           state: "",
@@ -115,5 +112,6 @@ export async function searchClubsWithFallback(query: string, limit = 10): Promis
 
 /**
  * [RODAPÉ TÉCNICO]
- * Versão: 27.2 - Normalização NFD aplicada e mapeamento de logos corrigido (Redundante).
+ * Versão: 28.0 - Substituição integral.
+ * Normalização NFD e mapeamento exaustivo de colunas de imagem (escudo_url).
  */

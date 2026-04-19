@@ -2,8 +2,7 @@
  * Caminho: src/pages/Voting.tsx
  * Contexto: Sistema de Votação - UNIFICAÇÃO DE BUSCA (SEM ACENTOS) + IA INVESTIGADORA
  * Autor: Gemini (Especialista Senior)
- * Descrição: Este arquivo gerencia a votação. Foi corrigido o filtro de busca para utilizar 
- * a normalização NFD, permitindo encontrar clubes como "Vitória" digitando "vitoria".
+ * Descrição: Correção de mapeamento de imagem (logo vs escudo_url) para consistência com lib/search-clubs.
  */
 
 import { useState, useEffect, useRef, useCallback } from "react";
@@ -15,7 +14,7 @@ import { useNavigate } from "react-router-dom";
 import { useUser } from "@/contexts/UserContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { searchClubsWithFallback, ClubSearchResult } from "@/lib/search-clubs"; 
+import { searchClubsWithFallback, ClubSearchResult } from "@/lib/search-clubs";
 import { ClubLogo } from "@/components/ClubLogo";
 import logo from "@/assets/logo.png";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -80,27 +79,24 @@ const Voting = () => {
     }
   };
 
-  const performSearch = useCallback(
-    async (query: string, setterResults: any, setterOpen: any, setterLoading: any) => {
-      if (query.length < 2) {
-        setterResults([]);
-        setterOpen(false);
-        return;
-      }
-      setterLoading(true);
-      try {
-        const results = await searchClubsWithFallback(query);
-        setterResults(results);
-        setterOpen(true);
-      } catch (err) {
-        console.error("[Search Error]", err);
-        setterResults([]);
-      } finally {
-        setterLoading(false);
-      }
-    },
-    [],
-  );
+  const performSearch = useCallback(async (query: string, setterResults: any, setterOpen: any, setterLoading: any) => {
+    if (query.length < 2) {
+      setterResults([]);
+      setterOpen(false);
+      return;
+    }
+    setterLoading(true);
+    try {
+      const results = await searchClubsWithFallback(query);
+      setterResults(results);
+      setterOpen(true);
+    } catch (err) {
+      console.error("[Search Error]", err);
+      setterResults([]);
+    } finally {
+      setterLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     const timer = setTimeout(() => performSearch(heartSearch, setHeartResults, setHeartOpen, setHeartLoading), 400);
@@ -139,22 +135,18 @@ const Voting = () => {
         .select()
         .single();
 
-      if (data) {
-        const logoUrl = data.escudo_url || "https://placehold.co/100x100?text=?";
+      if (data)
         setHeartClub({
           id: String(data.id),
           name: data.nome || manualClub.nome,
           shortName: (data.nome_curto || manualClub.nome).substring(0, 3).toUpperCase(),
           location: `${data.cidade || manualClub.cidade}, Brasil`,
-          logo: logoUrl,
-          escudo_url: logoUrl,
+          logo: data.escudo_url || "https://placehold.co/100x100?text=?", // Ajustado para 'logo'
           city: data.cidade || manualClub.cidade,
           state: manualClub.estado || "",
           country: data.pais || "Brasil",
-          mascote: data.mascote || manualClub.mascote,
           source: "local",
         });
-      }
       setShowManualDialog(false);
       toast({ title: "Clube adicionado ao Censo! ✍️" });
     } finally {
@@ -170,25 +162,22 @@ const Voting = () => {
         await supabase.from("votos").delete().eq("user_id", user.id);
       }
 
-      const allVotes = [
-        { club: heartClub, main: true }, 
-        ...sympathyClubs.map((c) => ({ club: c, main: false }))
-      ];
+      const allVotes = [{ club: heartClub, main: true }, ...sympathyClubs.map((c) => ({ club: c, main: false }))];
 
-      const votesToInsert = allVotes.map(v => ({
+      const votesToInsert = allVotes.map((v) => ({
         user_id: user.id,
         clube_nome: v.club.name,
         cidade: profile.cidade || "",
         estado: profile.estado || "",
         pais: profile.pais || "BR",
         is_original_vote: v.main,
-        fingerprint: fingerprint || 'web-client'
+        fingerprint: fingerprint || "web-client",
       }));
 
       const { error: insertError } = await supabase.from("votos").insert(votesToInsert);
       if (insertError) throw insertError;
 
-      allVotes.forEach(v => investigateClubData(v.club.name));
+      allVotes.forEach((v) => investigateClubData(v.club.name));
 
       await refreshProfile();
       toast({ title: "Voto registrado com sucesso! 🏟️" });
@@ -226,10 +215,10 @@ const Voting = () => {
                 }}
                 className="w-full flex items-center gap-3 px-4 py-3 hover:bg-primary/10 text-left border-b border-border/10 last:border-0 cursor-pointer"
               >
-                <ClubLogo 
-                  src={club.escudo_url} 
-                  alt={club.name} 
-                  size="sm" 
+                <ClubLogo
+                  src={club.logo} // Corrigido: search-clubs.ts devolve 'logo'
+                  alt={club.name}
+                  size="sm"
                 />
                 <div className="flex-1 min-w-0">
                   <p className="font-semibold text-foreground text-sm truncate italic">{club.name}</p>
@@ -268,16 +257,19 @@ const Voting = () => {
           </label>
           {heartClub ? (
             <div className="flex items-center gap-3 glass-card rounded-xl p-4 border-2 border-primary shadow-[0_0_20px_rgba(255,98,0,0.15)] animate-in fade-in zoom-in duration-300">
-              <ClubLogo 
-                src={heartClub.escudo_url} 
-                alt={heartClub.name} 
-                size="md" 
+              <ClubLogo
+                src={heartClub.logo} // Corrigido
+                alt={heartClub.name}
+                size="md"
               />
               <div className="flex-1 min-w-0">
                 <p className="font-black italic text-lg uppercase truncate tracking-tighter">{heartClub.name}</p>
                 <p className="text-[10px] text-muted-foreground uppercase">{heartClub.location}</p>
               </div>
-              <button onClick={() => setHeartClub(null)} className="p-2 opacity-40 hover:opacity-100 transition-opacity">
+              <button
+                onClick={() => setHeartClub(null)}
+                className="p-2 opacity-40 hover:opacity-100 transition-opacity"
+              >
                 <X size={20} />
               </button>
             </div>
@@ -305,10 +297,10 @@ const Voting = () => {
           <div className="grid grid-cols-1 gap-2">
             {sympathyClubs.map((club, idx) => (
               <div key={idx} className="flex items-center gap-3 glass-card rounded-xl p-3 border border-border/20">
-                <ClubLogo 
-                  src={club.escudo_url} 
-                  alt={club.name} 
-                  size="sm" 
+                <ClubLogo
+                  src={club.logo} // Corrigido
+                  alt={club.name}
+                  size="sm"
                 />
                 <p className="flex-1 text-sm font-bold italic truncate uppercase">{club.name}</p>
                 <button onClick={() => setSympathyClubs((prev) => prev.filter((_, i) => i !== idx))}>
@@ -327,10 +319,15 @@ const Voting = () => {
                   onFocus={() => setSympathyOpen(true)}
                   onBlur={() => setTimeout(() => setSympathyOpen(false), 200)}
                 />
-                <ClubDropdown results={sympathyResults} open={sympathyOpen} loading={sympathyLoading} onSelect={(c: any) => {
-                  if (!sympathyClubs.find((x) => x.name === c.name)) setSympathyClubs((p) => [...p, c]);
-                  setSympathySearch("");
-                }} />
+                <ClubDropdown
+                  results={sympathyResults}
+                  open={sympathyOpen}
+                  loading={sympathyLoading}
+                  onSelect={(c: any) => {
+                    if (!sympathyClubs.find((x) => x.name === c.name)) setSympathyClubs((p) => [...p, c]);
+                    setSympathySearch("");
+                  }}
+                />
               </div>
             )}
           </div>
@@ -347,29 +344,60 @@ const Voting = () => {
 
       <Dialog open={showConfirm} onOpenChange={setShowConfirm}>
         <DialogContent className="max-w-sm glass-card border-white/10 text-center">
-          <DialogHeader><DialogTitle className="italic text-2xl font-black uppercase tracking-tighter">CONFIRMAR VOTO?</DialogTitle></DialogHeader>
-          <p className="text-sm italic opacity-70">Você confirma lealdade ao <strong className="text-primary">{heartClub?.name}</strong>?</p>
+          <DialogHeader>
+            <DialogTitle className="italic text-2xl font-black uppercase tracking-tighter">CONFIRMAR VOTO?</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm italic opacity-70">
+            Você confirma lealdade ao <strong className="text-primary">{heartClub?.name}</strong>?
+          </p>
           <DialogFooter className="flex-col gap-2 mt-4">
-            <Button className="w-full btn-orange-gradient h-12 font-black italic" onClick={handleConfirmVote} disabled={submitting}>EU JURO!</Button>
-            <Button variant="ghost" className="w-full text-xs opacity-50 font-bold italic" onClick={() => setShowConfirm(false)}>VOLTAR</Button>
+            <Button
+              className="w-full btn-orange-gradient h-12 font-black italic"
+              onClick={handleConfirmVote}
+              disabled={submitting}
+            >
+              EU JURO!
+            </Button>
+            <Button
+              variant="ghost"
+              className="w-full text-xs opacity-50 font-bold italic"
+              onClick={() => setShowConfirm(false)}
+            >
+              VOLTAR
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       <Dialog open={showManualDialog} onOpenChange={setShowManualDialog}>
         <DialogContent className="max-w-xs glass-card border-white/10">
-          <DialogHeader><DialogTitle className="italic font-black uppercase tracking-tighter">Novo Clube</DialogTitle></DialogHeader>
+          <DialogHeader>
+            <DialogTitle className="italic font-black uppercase tracking-tighter">Novo Clube</DialogTitle>
+          </DialogHeader>
           <div className="space-y-3 py-4">
-            <Input placeholder="Nome do Clube" onChange={(e) => setManualClub((p) => ({ ...p, nome: e.target.value }))} />
+            <Input
+              placeholder="Nome do Clube"
+              onChange={(e) => setManualClub((p) => ({ ...p, nome: e.target.value }))}
+            />
             <Input placeholder="Mascote" onChange={(e) => setManualClub((p) => ({ ...p, mascote: e.target.value }))} />
             <div className="flex gap-2">
               <Input placeholder="Cidade" onChange={(e) => setManualClub((p) => ({ ...p, cidade: e.target.value }))} />
-              <Input placeholder="UF" className="w-20" maxLength={2} onChange={(e) => setManualClub((p) => ({ ...p, estado: e.target.value }))} />
+              <Input
+                placeholder="UF"
+                className="w-20"
+                maxLength={2}
+                onChange={(e) => setManualClub((p) => ({ ...p, estado: e.target.value }))}
+              />
             </div>
-            <Input placeholder="Cor Principal (ex: Verde)" onChange={(e) => setManualClub((p) => ({ ...p, cor: e.target.value }))} />
+            <Input
+              placeholder="Cor Principal (ex: Verde)"
+              onChange={(e) => setManualClub((p) => ({ ...p, cor: e.target.value }))}
+            />
           </div>
           <DialogFooter>
-            <Button className="w-full btn-orange-gradient font-black italic" onClick={handleManualSubmit}>SALVAR E SELECIONAR</Button>
+            <Button className="w-full btn-orange-gradient font-black italic" onClick={handleManualSubmit}>
+              SALVAR E SELECIONAR
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -382,5 +410,5 @@ export default Voting;
 /**
  * [RODAPÉ TÉCNICO]
  * Arquivo: src/pages/Voting.tsx
- * Versão: 7.2 (Correção definitiva: src={club.escudo_url} para compatibilidade com Supabase)
+ * Versão: 8.0 (Unificação de campos: src={club.logo} para alinhar com search-clubs.ts)
  */
