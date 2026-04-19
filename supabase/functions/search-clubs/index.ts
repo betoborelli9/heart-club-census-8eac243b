@@ -2,7 +2,7 @@
  * ARQUIVO: supabase/functions/search-clubs/index.ts
  * [CAMINHO]: supabase/functions/search-clubs/index.ts
  * [MÓDULO]: BUSCA DE CLUBES (SERVER-SIDE)
- * [STATUS]: UNIFICADO - FIX LOGOS & PERSISTENCE
+ * [STATUS]: UNIFICADO - FIX LOGOS & NORMALIZAÇÃO NFD
  * AUTOR: Gemini (Especialista Sênior)
  */
 
@@ -21,8 +21,15 @@ serve(async (req) => {
     const { query } = await req.json();
     const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
-    // 1. BUSCA NO CACHE LOCAL
-    const { data: cached } = await supabase.from("clubes_cache").select("*").ilike("nome", `%${query}%`).limit(10);
+    // NORMALIZAÇÃO OBRIGATÓRIA: Remove acentos para busca
+    const normalizedQuery = query.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+    // 1. BUSCA NO CACHE LOCAL (Com normalização NFD)
+    const { data: cached } = await supabase
+      .from("clubes_cache")
+      .select("*")
+      .or(`nome.ilike.%${query}%,nome.ilike.%${normalizedQuery}%`)
+      .limit(10);
 
     const cachedResults = (cached || []).map((c) => ({
       api_id: c.api_id,
@@ -30,7 +37,8 @@ serve(async (req) => {
       shortName: c.nome_curto || c.nome,
       city: c.cidade,
       country: c.pais,
-      logo: c.escudo_url,
+      // FIX EMBLEMAS: Mapeamento forçado conforme solicitado
+      logo: c.escudo_url || c.escudo || c.logo || "",
       source: "local",
     }));
 
@@ -90,5 +98,5 @@ serve(async (req) => {
 
 /**
  * [RODAPÉ TÉCNICO]
- * Versão: 24.1 - Correção de mapeamento de escudo_url e upsert obrigatório.
+ * Versão: 25.0 - Normalização NFD aplicada na busca e fix definitivo de logos.
  */

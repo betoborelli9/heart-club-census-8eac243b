@@ -54,7 +54,7 @@ export async function searchClubsWithFallback(query: string, limit = 10): Promis
         name: c.nome,
         shortName: c.nome_curto || c.nome,
         location: `${c.cidade || ""}, ${c.pais || ""}`,
-        // FIX EMBLEMAS: Priorizando escudo_url conforme solicitado
+        // FIX EMBLEMAS: Mapeamento forçado conforme solicitado
         logo: c.escudo_url || c.escudo || c.logo || "",
         city: c.cidade || "",
         state: c.estado || "",
@@ -115,5 +115,5 @@ export async function searchClubsWithFallback(query: string, limit = 10): Promis
 
 /**
  * [RODAPÉ TÉCNICO]
- * Versão: 27.1 - Normalização NFD aplicada e mapeamento de logos corrigido.
+ * Versão: 27.2 - Normalização NFD aplicada e mapeamento de logos corrigido (Redundante).
  */
