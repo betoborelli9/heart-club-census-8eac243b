@@ -1,7 +1,7 @@
 /**
  * ARQUIVO: src/lib/search-clubs.ts
  * [CAMINHO]: src/lib/search-clubs.ts
- * CONTEXTO: Fix de Emblemas (Mapeamento Unificado de Imagem)
+ * CONTEXTO: Fix de Emblemas (Mapeamento da coluna 'escudo')
  * AUTOR: Gemini (Especialista Sênior)
  */
 
@@ -12,7 +12,7 @@ export interface ClubSearchResult {
   name: string;
   shortName: string;
   location: string;
-  logo: string; // O frontend consome este campo
+  logo: string;
   city: string;
   state: string;
   country: string;
@@ -25,7 +25,7 @@ export async function searchClubsLocal(query: string, limit = 10): Promise<ClubS
 }
 
 /** * Busca principal com tripla camada de redundância.
- * CORREÇÃO: Mapeia explicitamente escudo_url para logo.
+ * CORREÇÃO CRÍTICA: Mapeia a coluna 'escudo' do banco para o campo 'logo'.
  */
 export async function searchClubsWithFallback(query: string, limit = 10): Promise<ClubSearchResult[]> {
   const searchTerm = query?.trim();
@@ -45,7 +45,7 @@ export async function searchClubsWithFallback(query: string, limit = 10): Promis
         name: c.nome,
         shortName: c.nome_curto || c.nome,
         location: `${c.cidade || ""}, ${c.pais || ""}`,
-        logo: c.escudo_url || "", // CORREÇÃO: Traduz escudo_url para logo
+        logo: c.escudo || c.escudo_url || "", // MAPEIA COLUNA 'escudo' DO PRINT
         city: c.cidade || "",
         state: c.estado || "",
         country: c.pais || "",
@@ -53,7 +53,7 @@ export async function searchClubsWithFallback(query: string, limit = 10): Promis
       }));
     }
 
-    // 2. CAMADA EXTERNA: Edge Function (API Football)
+    // 2. CAMADA EXTERNA: Chamada à Edge Function (API Football)
     const { data, error } = await supabase.functions.invoke("search-clubs", {
       body: { query: searchTerm, limit },
     });
@@ -64,7 +64,7 @@ export async function searchClubsWithFallback(query: string, limit = 10): Promis
         name: item.name || item.nome,
         shortName: item.shortName || item.nome_curto || item.name,
         location: `${item.city || item.cidade || ""}, ${item.country || item.pais || ""}`,
-        logo: item.logo || item.escudo_url || "", // CORREÇÃO: Aceita ambos os formatos
+        logo: item.logo || item.escudo || item.escudo_url || "", // MAPEIA POSSÍVEIS RETORNOS
         city: item.city || item.cidade || "",
         state: "",
         country: item.country || item.pais || "",
@@ -72,7 +72,7 @@ export async function searchClubsWithFallback(query: string, limit = 10): Promis
       }));
     }
 
-    throw new Error("API_UNAVAILABLE_OR_EMPTY");
+    throw new Error("API_UNAVAILABLE");
   } catch (err) {
     // 3. CAMADA DE IA: Fallback final via enrich-club-colors
     try {
@@ -81,15 +81,13 @@ export async function searchClubsWithFallback(query: string, limit = 10): Promis
       });
 
       if (aiData?.success && aiData.data) {
-        // Garante que aiData.data seja tratado como array
         const clubs = Array.isArray(aiData.data) ? aiData.data : [aiData.data];
-
         return clubs.map((club: any) => ({
           id: String(club.api_id || Date.now()),
           name: club.nome || aiData.club || searchTerm,
           shortName: (club.nome || searchTerm).substring(0, 3).toUpperCase(),
           location: `${club.cidade || ""}, ${club.pais || ""}`,
-          logo: club.escudo_url || club.logo || "", // CORREÇÃO: IA costuma usar escudo_url
+          logo: club.escudo || club.escudo_url || club.logo || "",
           city: club.cidade || "",
           state: "",
           country: club.pais || "",
@@ -106,5 +104,5 @@ export async function searchClubsWithFallback(query: string, limit = 10): Promis
 
 /**
  * [RODAPÉ TÉCNICO]
- * Versão: 24.0 - Normalização de emblemas garantida: escudo_url -> logo em todas as camadas.
+ * Versão: 25.0 - Ajustado para ler coluna 'escudo' conforme estrutura do banco.
  */
