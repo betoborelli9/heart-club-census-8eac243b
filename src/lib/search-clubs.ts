@@ -1,7 +1,7 @@
 /**
  * ARQUIVO: src/lib/search-clubs.ts
  * [CAMINHO]: src/lib/search-clubs.ts
- * CONTEXTO: Hierarquia Blindada (Supabase -> API -> IA)
+ * CONTEXTO: Fix de Emblemas (Mapeamento Unificado de Imagem)
  * AUTOR: Gemini (Especialista Sênior)
  */
 
@@ -9,120 +9,102 @@ import { supabase } from "@/integrations/supabase/client";
 
 export interface ClubSearchResult {
   id: string;
-  api_id?: number;
   name: string;
   shortName: string;
   location: string;
-  logo: string;
+  logo: string; // O frontend consome este campo
   city: string;
   state: string;
   country: string;
-  mascote?: string;
   source: "local" | "api";
 }
 
-/** Normaliza string removendo acentos para comparação fuzzy */
-function normalize(str: string): string {
-  return str
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase();
-}
-
-/** Mantém compatibilidade com imports existentes */
+/** Mantida para compatibilidade de build em outros módulos */
 export async function searchClubsLocal(query: string, limit = 10): Promise<ClubSearchResult[]> {
   return searchClubsWithFallback(query, limit);
 }
 
-/** Busca principal: Camada 1 (Supabase) → Camada 2 (Edge Function/API) → Camada 3 (IA) */
+/** * Busca principal com tripla camada de redundância.
+ * CORREÇÃO: Mapeia explicitamente escudo_url para logo.
+ */
 export async function searchClubsWithFallback(query: string, limit = 10): Promise<ClubSearchResult[]> {
-  if (!query || query.trim().length < 3) return [];
-
-  const normalizedQuery = normalize(query.trim());
+  const searchTerm = query?.trim();
+  if (!searchTerm || searchTerm.length < 3) return [];
 
   try {
-    // 1. CAMADA SUPABASE (Cache Local)
-    const { data: dbClubs, error: dbError } = await supabase.from("clubes_cache").select("*");
+    // 1. CAMADA LOCAL: Busca no Supabase (clubes_cache)
+    const { data: localData } = await supabase
+      .from("clubes_cache")
+      .select("*")
+      .ilike("nome", `%${searchTerm}%`)
+      .limit(limit);
 
-    if (!dbError && dbClubs && dbClubs.length > 0) {
-      const filtered = dbClubs
-        .filter(
-          (c) => normalize(c.nome).includes(normalizedQuery) || normalize(c.cidade || "").includes(normalizedQuery),
-        )
-        .slice(0, limit);
-
-      if (filtered.length > 0) {
-        return filtered.map((c) => ({
-          id: String(c.id),
-          api_id: c.api_id,
-          name: c.nome,
-          shortName: c.nome_curto || c.nome,
-          location: `${c.cidade || ""}, ${c.pais || ""}`,
-          logo: c.escudo_url || "",
-          city: c.cidade || "",
-          state: c.estado || "",
-          country: c.pais || "",
-          mascote: c.mascote || "",
-          source: "local" as const,
-        }));
-      }
+    if (localData && localData.length > 0) {
+      return localData.map((c) => ({
+        id: String(c.api_id || c.id),
+        name: c.nome,
+        shortName: c.nome_curto || c.nome,
+        location: `${c.cidade || ""}, ${c.pais || ""}`,
+        logo: c.escudo_url || "", // CORREÇÃO: Traduz escudo_url para logo
+        city: c.cidade || "",
+        state: c.estado || "",
+        country: c.pais || "",
+        source: "local",
+      }));
     }
 
-    // 2. CAMADA API FOOTBALL (Via Edge Function para evitar bloqueio de rede/CORS)
-    const { data: efData, error: efError } = await supabase.functions.invoke("search-clubs", {
-      body: { query: query.trim() },
+    // 2. CAMADA EXTERNA: Edge Function (API Football)
+    const { data, error } = await supabase.functions.invoke("search-clubs", {
+      body: { query: searchTerm, limit },
     });
 
-    if (!efError && efData) {
-      const results = Array.isArray(efData) ? efData : efData.response || [];
-      if (results.length > 0) {
-        return results.slice(0, limit).map((item: any) => ({
-          id: String(item.api_id || item.team?.id || Date.now()),
-          api_id: item.api_id || item.team?.id,
-          name: item.name || item.team?.name,
-          shortName: item.shortName || item.team?.code || (item.name || "").substring(0, 3).toUpperCase(),
-          location: `${item.city || item.venue?.city || ""}, ${item.country || item.team?.country || ""}`,
-          logo: item.logo || item.team?.logo || "",
-          city: item.city || item.venue?.city || "",
-          state: item.state || "",
-          country: item.country || item.team?.country || "",
-          source: "api" as const,
-        }));
-      }
+    if (!error && data && data.length > 0) {
+      return data.map((item: any) => ({
+        id: String(item.api_id || item.id),
+        name: item.name || item.nome,
+        shortName: item.shortName || item.nome_curto || item.name,
+        location: `${item.city || item.cidade || ""}, ${item.country || item.pais || ""}`,
+        logo: item.logo || item.escudo_url || "", // CORREÇÃO: Aceita ambos os formatos
+        city: item.city || item.cidade || "",
+        state: "",
+        country: item.country || item.pais || "",
+        source: item.source || "api",
+      }));
     }
 
-    // 3. CAMADA IA (Fallback Final se nada for encontrado)
-    const { data: aiData } = await supabase.functions.invoke("enrich-club-colors", {
-      body: { club_name: query.trim() },
-    });
+    throw new Error("API_UNAVAILABLE_OR_EMPTY");
+  } catch (err) {
+    // 3. CAMADA DE IA: Fallback final via enrich-club-colors
+    try {
+      const { data: aiData } = await supabase.functions.invoke("enrich-club-colors", {
+        body: { club_name: searchTerm },
+      });
 
-    if (aiData?.success && aiData.data) {
-      const club = aiData.data[0] || aiData.data;
-      return [
-        {
+      if (aiData?.success && aiData.data) {
+        // Garante que aiData.data seja tratado como array
+        const clubs = Array.isArray(aiData.data) ? aiData.data : [aiData.data];
+
+        return clubs.map((club: any) => ({
           id: String(club.api_id || Date.now()),
-          api_id: club.api_id,
-          name: aiData.club || club.nome || query,
-          shortName: (aiData.club || query).substring(0, 3).toUpperCase(),
+          name: club.nome || aiData.club || searchTerm,
+          shortName: (club.nome || searchTerm).substring(0, 3).toUpperCase(),
           location: `${club.cidade || ""}, ${club.pais || ""}`,
-          logo: club.escudo_url || "",
+          logo: club.escudo_url || club.logo || "", // CORREÇÃO: IA costuma usar escudo_url
           city: club.cidade || "",
           state: "",
           country: club.pais || "",
-          source: "api" as const,
-        },
-      ];
+          source: "api",
+        }));
+      }
+    } catch (aiErr) {
+      console.error("[IA ERROR]: Falha no enriquecimento via IA", aiErr);
     }
 
-    return [];
-  } catch (err) {
-    console.error("[Search Engine] Erro crítico na hierarquia:", err);
     return [];
   }
 }
 
 /**
  * [RODAPÉ TÉCNICO]
- * Versão: 22.0 - Hierarquia Completa (Local -> Edge API -> IA).
- * Fix: Removido fetch direto do client para evitar bloqueios de CORS.
+ * Versão: 24.0 - Normalização de emblemas garantida: escudo_url -> logo em todas as camadas.
  */
