@@ -29,6 +29,18 @@ function normalizeString(str: string): string {
     .toLowerCase();
 }
 
+function resolveLogoUrl(url?: string | null): string {
+  const sanitizedUrl = url?.trim() || "";
+  if (!sanitizedUrl) return "";
+
+  if (/^https?:\/\/upload\.wikimedia\.org\//i.test(sanitizedUrl)) {
+    const proxySafeUrl = sanitizedUrl.replace(/^https?:\/\//i, "");
+    return `https://wsrv.nl/?url=${encodeURIComponent(proxySafeUrl)}&w=128&output=png`;
+  }
+
+  return sanitizedUrl;
+}
+
 export async function searchClubsLocal(query: string, limit = 10): Promise<ClubSearchResult[]> {
   return searchClubsWithFallback(query, limit);
 }
@@ -57,7 +69,7 @@ export async function searchClubsWithFallback(query: string, limit = 10): Promis
         name: c.nome,
         shortName: c.nome_curto || c.nome,
         location: `${c.cidade || ""}, ${c.pais || ""}`,
-        logo: c.escudo_url || "",
+        logo: resolveLogoUrl(c.escudo_url),
         city: c.cidade || "",
         state: "",
         country: c.pais || "",
@@ -79,7 +91,7 @@ export async function searchClubsWithFallback(query: string, limit = 10): Promis
         name: item.name || item.nome,
         shortName: item.shortName || item.nome_curto || item.name,
         location: `${item.city || item.cidade || ""}, ${item.country || item.pais || ""}`,
-        logo: item.escudo_url || item.escudo || item.logo || "",
+        logo: resolveLogoUrl(item.escudo_url || item.escudo || item.logo || ""),
         city: item.city || item.cidade || "",
         state: "",
         country: item.country || item.pais || "",
@@ -103,7 +115,7 @@ export async function searchClubsWithFallback(query: string, limit = 10): Promis
           name: club.nome || aiData.club || searchTerm,
           shortName: (club.nome || searchTerm).substring(0, 3).toUpperCase(),
           location: `${club.cidade || ""}, ${club.pais || ""}`,
-          logo: club.escudo_url || club.escudo || club.logo || "",
+          logo: resolveLogoUrl(club.escudo_url || club.escudo || club.logo || ""),
           city: club.cidade || "",
           state: "",
           country: club.pais || "",
