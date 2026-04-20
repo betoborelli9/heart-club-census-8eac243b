@@ -35,10 +35,11 @@ function resolveLogoUrl(url?: string | null): string {
 
   if (/^https?:\/\/(upload|commons)\.wikimedia\.org\//i.test(sanitizedUrl)) {
     const decodedUrl = decodeURIComponent(sanitizedUrl);
-    const filenameMatch = decodedUrl.match(/\/([^/?#]+\.(?:svg|png|jpg|jpeg|webp))(?:\?.*)?$/i);
+    const thumbMatch = decodedUrl.match(/\/thumb\/[^/]+\/([^/]+\.(?:svg|png|jpg|jpeg|webp))\/\d+px-[^/?#]+(?:\?.*)?$/i);
+    const directMatch = decodedUrl.match(/\/([^/?#]+\.(?:svg|png|jpg|jpeg|webp))(?:\?.*)?$/i);
+    const rawFilename = thumbMatch?.[1] || directMatch?.[1]?.replace(/^\d+px-/, "");
 
-    if (filenameMatch?.[1]) {
-      const rawFilename = filenameMatch[1].replace(/^\d+px-/, "");
+    if (rawFilename) {
       return `https://commons.wikimedia.org/wiki/Special:FilePath/${encodeURIComponent(rawFilename)}`;
     }
   }
