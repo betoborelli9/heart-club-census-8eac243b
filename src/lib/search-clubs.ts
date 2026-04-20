@@ -16,6 +16,7 @@ export interface ClubSearchResult {
   city: string;
   state: string;
   country: string;
+  mascote?: string;
   source: "local" | "api";
 }
 
@@ -36,28 +37,31 @@ export async function searchClubsWithFallback(query: string, limit = 10): Promis
   const searchTerm = query?.trim();
   if (!searchTerm || searchTerm.length < 3) return [];
 
-  // Prepara a query normalizada para o Supabase
   const normalizedQuery = normalizeString(searchTerm);
 
   try {
-    // 1. CAMADA LOCAL: Busca no Supabase com or para cobrir acentos e fallback de logo
-    const { data: localData } = await supabase
+    // 1. CAMADA LOCAL: busca TUDO em clubes_cache e filtra client-side (insensível a acentos)
+    const { data: allLocal } = await supabase
       .from("clubes_cache")
-      .select("*")
-      .or(`nome.ilike.%${searchTerm}%,nome.ilike.%${normalizedQuery}%`)
-      .limit(limit);
+      .select("id, nome, nome_curto, cidade, pais, escudo_url, mascote")
+      .limit(2000);
 
-    if (localData && localData.length > 0) {
-      return localData.map((c) => ({
-        id: String(c.api_id || c.id),
+    const filteredLocal = (allLocal || []).filter((c) =>
+      normalizeString(c.nome || "").includes(normalizedQuery) ||
+      normalizeString(c.nome_curto || "").includes(normalizedQuery),
+    );
+
+    if (filteredLocal.length > 0) {
+      return filteredLocal.slice(0, limit).map((c) => ({
+        id: String(c.id),
         name: c.nome,
         shortName: c.nome_curto || c.nome,
         location: `${c.cidade || ""}, ${c.pais || ""}`,
-        // PRIORIDADE ABSOLUTA: escudo_url -> escudo -> logo
-        logo: c.escudo_url || c.escudo || c.logo || "",
+        logo: c.escudo_url || "",
         city: c.cidade || "",
-        state: c.estado || "",
+        state: "",
         country: c.pais || "",
+        mascote: c.mascote || undefined,
         source: "local",
       }));
     }
@@ -67,8 +71,10 @@ export async function searchClubsWithFallback(query: string, limit = 10): Promis
       body: { query: searchTerm, limit },
     });
 
-    if (!error && data && data.length > 0) {
-      return data.map((item: any) => ({
+    const efResults = Array.isArray(data) ? data : (data as any)?.data || [];
+
+    if (!error && efResults.length > 0) {
+      return efResults.map((item: any) => ({
         id: String(item.api_id || item.id),
         name: item.name || item.nome,
         shortName: item.shortName || item.nome_curto || item.name,
@@ -77,6 +83,7 @@ export async function searchClubsWithFallback(query: string, limit = 10): Promis
         city: item.city || item.cidade || "",
         state: "",
         country: item.country || item.pais || "",
+        mascote: item.mascote || undefined,
         source: item.source || "api",
       }));
     }
@@ -100,6 +107,7 @@ export async function searchClubsWithFallback(query: string, limit = 10): Promis
           city: club.cidade || "",
           state: "",
           country: club.pais || "",
+          mascote: club.mascote || undefined,
           source: "api",
         }));
       }
