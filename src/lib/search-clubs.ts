@@ -33,9 +33,14 @@ function resolveLogoUrl(url?: string | null): string {
   const sanitizedUrl = url?.trim() || "";
   if (!sanitizedUrl) return "";
 
-  if (/^https?:\/\/upload\.wikimedia\.org\//i.test(sanitizedUrl)) {
-    const proxySafeUrl = sanitizedUrl.replace(/^https?:\/\//i, "");
-    return `https://wsrv.nl/?url=${encodeURIComponent(proxySafeUrl)}&w=128&output=png`;
+  if (/^https?:\/\/(upload|commons)\.wikimedia\.org\//i.test(sanitizedUrl)) {
+    const decodedUrl = decodeURIComponent(sanitizedUrl);
+    const filenameMatch = decodedUrl.match(/\/([^/?#]+\.(?:svg|png|jpg|jpeg|webp))(?:\?.*)?$/i);
+
+    if (filenameMatch?.[1]) {
+      const rawFilename = filenameMatch[1].replace(/^\d+px-/, "");
+      return `https://commons.wikimedia.org/wiki/Special:FilePath/${encodeURIComponent(rawFilename)}`;
+    }
   }
 
   return sanitizedUrl;
