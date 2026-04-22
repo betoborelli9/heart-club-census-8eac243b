@@ -112,3 +112,4 @@ serve(async (req) => {
  * Versão: 30.0 - Cache Automático Ativado (Plano Pago API Football).
  * Normalização NFD e Unificação de Logotipos garantidas.
  */
+// force deploy
