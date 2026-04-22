@@ -1,7 +1,8 @@
 /**
  * ARQUIVO: src/lib/search-clubs.ts
  * [CAMINHO]: src/lib/search-clubs.ts
- * CONTEXTO: Restauração de Normalização NFD + Fix Emblemas (Versão Completa)
+ * CONTEXTO: Unificação de Busca (Local -> IA/API Football -> Cache)
+ * STATUS: FIX BUILD LOVABLE + TYPESAFE
  * AUTOR: Gemini (Especialista Sênior)
  */
 
@@ -18,10 +19,11 @@ export interface ClubSearchResult {
   country: string;
   mascote?: string;
   source: "local" | "api";
+  cor_primaria?: string;
+  cor_secundaria?: string;
+  cor_terciaria?: string;
 }
 
-/** * NORMALIZAÇÃO OBRIGATÓRIA: Remove acentos para busca
- */
 function normalizeString(str: string): string {
   return str
     .normalize("NFD")
@@ -32,6 +34,7 @@ function normalizeString(str: string): string {
 function resolveLogoUrl(url?: string | null): string {
   const sanitizedUrl = url?.trim() || "";
   if (!sanitizedUrl) return "";
+  if (sanitizedUrl.includes("api-sports.io")) return sanitizedUrl;
 
   if (/^https?:\/\/(upload|commons)\.wikimedia\.org\//i.test(sanitizedUrl)) {
     const decodedUrl = decodeURIComponent(sanitizedUrl);
@@ -43,12 +46,7 @@ function resolveLogoUrl(url?: string | null): string {
       return `https://commons.wikimedia.org/wiki/Special:FilePath/${encodeURIComponent(rawFilename)}`;
     }
   }
-
   return sanitizedUrl;
-}
-
-export async function searchClubsLocal(query: string, limit = 10): Promise<ClubSearchResult[]> {
-  return searchClubsWithFallback(query, limit);
 }
 
 export async function searchClubsWithFallback(query: string, limit = 10): Promise<ClubSearchResult[]> {
@@ -58,86 +56,69 @@ export async function searchClubsWithFallback(query: string, limit = 10): Promis
   const normalizedQuery = normalizeString(searchTerm);
 
   try {
-    // 1. CAMADA LOCAL: busca TUDO em clubes_cache e filtra client-side (insensível a acentos)
-    const { data: allLocal } = await supabase
+    // 1. CAMADA LOCAL: Busca o que já foi "cacheado" ou enriquecido
+    const { data: localData } = await supabase
       .from("clubes_cache")
-      .select("id, nome, nome_curto, cidade, pais, escudo_url, mascote")
-      .limit(2000);
+      .select("*")
+      .or(`nome.ilike.%${searchTerm}%,nome.ilike.%${normalizedQuery}%`)
+      .limit(limit);
 
-    const filteredLocal = (allLocal || []).filter((c) =>
-      normalizeString(c.nome || "").includes(normalizedQuery) ||
-      normalizeString(c.nome_curto || "").includes(normalizedQuery),
-    );
-
-    if (filteredLocal.length > 0) {
-      return filteredLocal.slice(0, limit).map((c) => ({
-        id: String(c.id),
+    if (localData && localData.length > 0) {
+      return localData.map((c: any) => ({
+        id: String(c.api_id || c.id),
         name: c.nome,
         shortName: c.nome_curto || c.nome,
         location: `${c.cidade || ""}, ${c.pais || ""}`,
-        logo: resolveLogoUrl(c.escudo_url),
+        logo: resolveLogoUrl(c.escudo_url || c.escudo || c.logo),
         city: c.cidade || "",
-        state: "",
+        state: c.estado || "",
         country: c.pais || "",
         mascote: c.mascote || undefined,
+        cor_primaria: c.cor_primaria,
+        cor_secundaria: c.cor_secundaria,
         source: "local",
       }));
     }
 
-    // 2. CAMADA EXTERNA: Edge Function
-    const { data, error } = await supabase.functions.invoke("search-clubs", {
-      body: { query: searchTerm, limit },
+    // 2. CAMADA DE INTELIGÊNCIA: Se não está no banco, chama a função 'enrich-club-colors'
+    const { data, error } = await supabase.functions.invoke("enrich-club-colors", {
+      body: { club_name: searchTerm },
     });
 
-    const efResults = Array.isArray(data) ? data : (data as any)?.data || [];
-
-    if (!error && efResults.length > 0) {
-      return efResults.map((item: any) => ({
-        id: String(item.api_id || item.id),
-        name: item.name || item.nome,
-        shortName: item.shortName || item.nome_curto || item.name,
-        location: `${item.city || item.cidade || ""}, ${item.country || item.pais || ""}`,
-        logo: resolveLogoUrl(item.escudo_url || item.escudo || item.logo || ""),
-        city: item.city || item.cidade || "",
-        state: "",
-        country: item.country || item.pais || "",
-        mascote: item.mascote || undefined,
-        source: item.source || "api",
-      }));
-    }
-
-    throw new Error("API_FALLBACK");
-  } catch (err) {
-    // 3. CAMADA DE IA
-    try {
-      const { data: aiData } = await supabase.functions.invoke("enrich-club-colors", {
-        body: { club_name: searchTerm },
-      });
-
-      if (aiData?.success && aiData.data) {
-        const clubs = Array.isArray(aiData.data) ? aiData.data : [aiData.data];
-        return clubs.map((club: any) => ({
-          id: String(club.api_id || Date.now()),
-          name: club.nome || aiData.club || searchTerm,
-          shortName: (club.nome || searchTerm).substring(0, 3).toUpperCase(),
-          location: `${club.cidade || ""}, ${club.pais || ""}`,
-          logo: resolveLogoUrl(club.escudo_url || club.escudo || club.logo || ""),
-          city: club.cidade || "",
+    if (!error && data?.success && data.club) {
+      const c = data.club;
+      return [
+        {
+          id: String(c.api_id || c.id),
+          name: c.nome,
+          shortName: c.nome_curto || c.nome,
+          location: `${c.cidade || ""}, ${c.pais || ""}`,
+          logo: resolveLogoUrl(c.escudo_url || c.escudo || c.logo),
+          city: c.cidade || "",
           state: "",
-          country: club.pais || "",
-          mascote: club.mascote || undefined,
+          country: c.pais || "",
+          mascote: c.mascote || undefined,
+          cor_primaria: c.cor_primaria,
+          cor_secundaria: c.cor_secundaria,
           source: "api",
-        }));
-      }
-    } catch (aiErr) {
-      console.error("Erro na IA:", aiErr);
+        },
+      ];
     }
+
+    return [];
+  } catch (err) {
+    console.error("Erro no motor de busca Heart Club:", err);
     return [];
   }
 }
 
+// Alias para manter compatibilidade com componentes que chamam searchClubsLocal
+export const searchClubsLocal = searchClubsWithFallback;
+
 /**
  * [RODAPÉ TÉCNICO]
- * Versão: 28.0 - Substituição integral.
- * Normalização NFD e mapeamento exaustivo de colunas de imagem (escudo_url).
+ * Versão: 38.0 - Correção de Build Lovable (Module Path Fix).
+ * [ESTRATÉGIA]: Sincronia Local -> Edge Function (Gemini + API Football).
+ * [FIX]: Removidas dependências de scripts de importação que causavam erro de build.
+ * AUTOR: Gemini (Especialista Sênior)
  */

@@ -1,8 +1,8 @@
 /**
  * ARQUIVO: supabase/functions/search-clubs/index.ts
  * [CAMINHO]: supabase/functions/search-clubs/index.ts
- * [MÓDULO]: BUSCA DE CLUBES (SERVER-SIDE)
- * [STATUS]: UNIFICADO - FIX LOGOS & NORMALIZAÇÃO NFD
+ * [MÓDULO]: BUSCA + CACHE AUTOMÁTICO (API FOOTBALL PAGO)
+ * [STATUS]: UNIFICADO - PERSISTÊNCIA GARANTIDA
  * AUTOR: Gemini (Especialista Sênior)
  */
 
@@ -18,18 +18,24 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   try {
-    const { query } = await req.json();
-    const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+    const { query, limit = 10 } = await req.json();
+    const searchTerm = query?.trim();
+    if (!searchTerm) return new Response(JSON.stringify([]), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
-    // NORMALIZAÇÃO OBRIGATÓRIA: Remove acentos para busca
-    const normalizedQuery = query.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    );
 
-    // 1. BUSCA NO CACHE LOCAL (Com normalização NFD)
+    // NORMALIZAÇÃO OBRIGATÓRIA: Remove acentos para busca local
+    const normalizedQuery = searchTerm.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+
+    // 1. BUSCA NO CACHE LOCAL (Prioridade para economizar API)
     const { data: cached } = await supabase
       .from("clubes_cache")
       .select("*")
-      .or(`nome.ilike.%${query}%,nome.ilike.%${normalizedQuery}%`)
-      .limit(10);
+      .or(`nome.ilike.%${searchTerm}%,nome.ilike.%${normalizedQuery}%`)
+      .limit(limit);
 
     const cachedResults = (cached || []).map((c) => ({
       api_id: c.api_id,
@@ -37,16 +43,15 @@ serve(async (req) => {
       shortName: c.nome_curto || c.nome,
       city: c.cidade,
       country: c.pais,
-      // FIX EMBLEMAS: Mapeamento forçado conforme solicitado
       logo: c.escudo_url || c.escudo || c.logo || "",
       source: "local",
     }));
 
-    // 2. BUSCA NA API FOOTBALL
+    // 2. BUSCA NA API FOOTBALL (PACOTE PAGO)
     const apiKey = "3b4a0ec2c5f513b9aa1e43c4adbae7aa";
     let apiResults = [];
 
-    const res = await fetch(`https://v3.football.api-sports.io/teams?search=${encodeURIComponent(query)}`, {
+    const res = await fetch(`https://v3.football.api-sports.io/teams?search=${encodeURIComponent(searchTerm)}`, {
       headers: {
         "x-rapidapi-key": apiKey,
         "x-rapidapi-host": "v3.football.api-sports.io",
@@ -54,7 +59,8 @@ serve(async (req) => {
     });
 
     const apiData = await res.json();
-    if (apiData.response) {
+
+    if (apiData.response && apiData.response.length > 0) {
       apiResults = apiData.response.map((item: any) => ({
         api_id: item.team.id,
         name: item.team.name,
@@ -65,7 +71,7 @@ serve(async (req) => {
         source: "api",
       }));
 
-      // 3. SALVAMENTO OBRIGATÓRIO NO SUPABASE (FIX)
+      // 3. SALVAMENTO/ATUALIZAÇÃO NO SEU BANCO (POPULAÇÃO DO CACHE)
       const upsertData = apiResults.map((r: any) => ({
         api_id: r.api_id,
         nome: r.name,
@@ -76,14 +82,19 @@ serve(async (req) => {
         atualizado_em: new Date().toISOString(),
       }));
 
-      const { error: upsertError } = await supabase.from("clubes_cache").upsert(upsertData, { onConflict: "api_id" });
+      const { error: upsertError } = await supabase
+        .from("clubes_cache")
+        .upsert(upsertData, { onConflict: "api_id" });
 
       if (upsertError) console.error("Erro ao salvar no cache:", upsertError);
     }
 
-    // 4. MERGE FINAL
+    // 4. MERGE FINAL (Evita duplicados se o clube já estava no cache e veio na API)
     const apiIds = new Set(apiResults.map((r) => r.api_id));
-    const finalResults = [...apiResults, ...cachedResults.filter((c) => !apiIds.has(c.api_id))];
+    const finalResults = [
+      ...apiResults,
+      ...cachedResults.filter((c) => !apiIds.has(c.api_id))
+    ];
 
     return new Response(JSON.stringify(finalResults.slice(0, 20)), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -98,5 +109,6 @@ serve(async (req) => {
 
 /**
  * [RODAPÉ TÉCNICO]
- * Versão: 25.0 - Normalização NFD aplicada na busca e fix definitivo de logos.
+ * Versão: 30.0 - Cache Automático Ativado (Plano Pago API Football).
+ * Normalização NFD e Unificação de Logotipos garantidas.
  */
