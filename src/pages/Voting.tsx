@@ -14,7 +14,7 @@ import { useNavigate } from "react-router-dom";
 import { useUser } from "@/contexts/UserContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { searchClubsWithFallback, ClubSearchResult } from "@/lib/search-clubs";
+import { searchClubsWithFallback, persistClubsIfMissing, ClubSearchResult } from "@/lib/search-clubs";
 import { ClubLogo } from "@/components/ClubLogo";
 import logo from "@/assets/logo.png";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -108,6 +108,9 @@ const Voting = () => {
 
       const { error } = await supabase.from("votos").insert(votesToInsert);
       if (error) throw error;
+
+      // Persiste no clubes_cache APENAS clubes vindos da API que ainda não existem (anti-duplicidade)
+      await persistClubsIfMissing([heartClub, ...sympathyClubs]);
 
       await refreshProfile();
       toast({ title: "Voto registrado com sucesso! 🏟️" });
