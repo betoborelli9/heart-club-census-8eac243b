@@ -1,9 +1,7 @@
 /**
- * ARQUIVO: src/lib/search-clubs.ts
  * [CAMINHO]: src/lib/search-clubs.ts
- * CONTEXTO: Unificação de Busca (Local -> IA/API Football -> Cache)
- * STATUS: FIX BUILD LOVABLE + TYPESAFE
- * AUTOR: Gemini (Especialista Sênior)
+ * [CONTEXTO]: Busca de Clubes — Cache Supabase (acento-insensível) → API Football (somente leitura)
+ * [REGRA]: NÃO persiste nada aqui. Persistência ocorre APENAS ao confirmar voto (Voting.tsx).
  */
 
 import { supabase } from "@/integrations/supabase/client";
@@ -19,106 +17,121 @@ export interface ClubSearchResult {
   country: string;
   mascote?: string;
   source: "local" | "api";
+  api_id?: number | null;
   cor_primaria?: string;
   cor_secundaria?: string;
   cor_terciaria?: string;
 }
 
-function normalizeString(str: string): string {
-  return str
+/** Remove acentos e normaliza para comparação. */
+export function stripAccents(str: string): string {
+  return (str || "")
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase();
+    .toLowerCase()
+    .trim();
 }
 
-function resolveLogoUrl(url?: string | null): string {
-  const sanitizedUrl = url?.trim() || "";
-  if (!sanitizedUrl) return "";
-  if (sanitizedUrl.includes("api-sports.io")) return sanitizedUrl;
-
-  if (/^https?:\/\/(upload|commons)\.wikimedia\.org\//i.test(sanitizedUrl)) {
-    const decodedUrl = decodeURIComponent(sanitizedUrl);
-    const thumbMatch = decodedUrl.match(/\/thumb\/[^/]+\/([^/]+\.(?:svg|png|jpg|jpeg|webp))\/\d+px-[^/?#]+(?:\?.*)?$/i);
-    const directMatch = decodedUrl.match(/\/([^/?#]+\.(?:svg|png|jpg|jpeg|webp))(?:\?.*)?$/i);
-    const rawFilename = thumbMatch?.[1] || directMatch?.[1]?.replace(/^\d+px-/, "");
-
-    if (rawFilename) {
-      return `https://commons.wikimedia.org/wiki/Special:FilePath/${encodeURIComponent(rawFilename)}`;
-    }
-  }
-  return sanitizedUrl;
+function mapCacheRow(c: any): ClubSearchResult {
+  return {
+    id: String(c.id),
+    name: c.nome,
+    shortName: c.nome_curto || c.nome,
+    location: [c.cidade, c.pais].filter(Boolean).join(", "),
+    logo: (c.escudo_url || "").trim(),
+    city: c.cidade || "",
+    state: "",
+    country: c.pais || "",
+    mascote: c.mascote || undefined,
+    api_id: c.api_id ? Number(c.api_id) : null,
+    cor_primaria: c.cor_primaria || undefined,
+    cor_secundaria: c.cor_secundaria || undefined,
+    cor_terciaria: c.cor_terciaria || undefined,
+    source: "local",
+  };
 }
 
-export async function searchClubsWithFallback(query: string, limit = 10): Promise<ClubSearchResult[]> {
-  const searchTerm = query?.trim();
-  if (!searchTerm || searchTerm.length < 3) return [];
+/**
+ * Busca em duas camadas:
+ * 1) clubes_cache (Supabase) com filtro client-side acento-insensível
+ * 2) API-Football via edge function search-clubs (sem persistir)
+ */
+export async function searchClubsWithFallback(query: string, limit = 15): Promise<ClubSearchResult[]> {
+  const term = (query || "").trim();
+  if (term.length < 2) return [];
 
-  const normalizedQuery = normalizeString(searchTerm);
+  const normalized = stripAccents(term);
 
   try {
-    // 1. CAMADA LOCAL: Busca o que já foi "cacheado" ou enriquecido
-    const { data: localData } = await supabase
+    // 1) CACHE LOCAL — pega um conjunto razoável e filtra no cliente sem acento.
+    const { data: cacheData } = await supabase
       .from("clubes_cache")
       .select("*")
-      .or(`nome.ilike.%${searchTerm}%,nome.ilike.%${normalizedQuery}%`)
-      .limit(limit);
+      .limit(500);
 
-    if (localData && localData.length > 0) {
-      return localData.map((c: any) => ({
-        id: String(c.api_id || c.id),
-        name: c.nome,
-        shortName: c.nome_curto || c.nome,
-        location: `${c.cidade || ""}, ${c.pais || ""}`,
-        logo: resolveLogoUrl(c.escudo_url || c.escudo || c.logo),
-        city: c.cidade || "",
-        state: c.estado || "",
-        country: c.pais || "",
-        mascote: c.mascote || undefined,
-        cor_primaria: c.cor_primaria,
-        cor_secundaria: c.cor_secundaria,
-        source: "local",
-      }));
-    }
+    const localMatches = (cacheData || [])
+      .filter((c: any) => stripAccents(c.nome).includes(normalized))
+      .slice(0, limit)
+      .map(mapCacheRow);
 
-    // 2. CAMADA DE INTELIGÊNCIA: Se não está no banco, chama a função 'enrich-club-colors'
-    const { data, error } = await supabase.functions.invoke("enrich-club-colors", {
-      body: { club_name: searchTerm },
+    if (localMatches.length > 0) return localMatches;
+
+    // 2) FALLBACK API-FOOTBALL (apenas leitura — sem gravar no cache)
+    const { data, error } = await supabase.functions.invoke("search-clubs", {
+      body: { query: normalized },
     });
 
-    if (!error && data?.success && data.club) {
-      const c = data.club;
-      return [
-        {
-          id: String(c.api_id || c.id),
-          name: c.nome,
-          shortName: c.nome_curto || c.nome,
-          location: `${c.cidade || ""}, ${c.pais || ""}`,
-          logo: resolveLogoUrl(c.escudo_url || c.escudo || c.logo),
-          city: c.cidade || "",
-          state: "",
-          country: c.pais || "",
-          mascote: c.mascote || undefined,
-          cor_primaria: c.cor_primaria,
-          cor_secundaria: c.cor_secundaria,
-          source: "api",
-        },
-      ];
-    }
+    if (error || !Array.isArray(data)) return [];
 
-    return [];
+    return (data as any[]).slice(0, limit).map((t: any) => ({
+      id: `api-${t.api_id}`,
+      name: t.name,
+      shortName: t.name,
+      location: [t.city, t.country].filter(Boolean).join(", "),
+      logo: (t.logo || "").trim(),
+      city: t.city || "",
+      state: "",
+      country: t.country || "",
+      api_id: t.api_id ?? null,
+      source: "api",
+    }));
   } catch (err) {
-    console.error("Erro no motor de busca Heart Club:", err);
+    console.error("[searchClubsWithFallback]", err);
     return [];
   }
 }
 
-// Alias para manter compatibilidade com componentes que chamam searchClubsLocal
+// Alias retro-compatível
 export const searchClubsLocal = searchClubsWithFallback;
 
 /**
+ * Persiste no clubes_cache APENAS clubes que vieram da API e ainda não existem.
+ * Anti-duplicidade: onConflict: 'nome'. Chamada após o voto ser confirmado.
+ */
+export async function persistClubsIfMissing(clubs: ClubSearchResult[]): Promise<void> {
+  const fromApi = clubs.filter((c) => c.source === "api");
+  if (fromApi.length === 0) return;
+
+  const rows = fromApi.map((c) => ({
+    nome: c.name,
+    nome_curto: c.shortName || c.name,
+    cidade: c.city || "Desconhecida",
+    pais: c.country || "Brasil",
+    escudo_url: c.logo || null,
+    api_id: c.api_id ? String(c.api_id) : null,
+  }));
+
+  const { error } = await supabase
+    .from("clubes_cache")
+    .upsert(rows, { onConflict: "nome", ignoreDuplicates: true });
+
+  if (error) console.error("[persistClubsIfMissing]", error);
+}
+
+/**
  * [RODAPÉ TÉCNICO]
- * Versão: 38.0 - Correção de Build Lovable (Module Path Fix).
- * [ESTRATÉGIA]: Sincronia Local -> Edge Function (Gemini + API Football).
- * [FIX]: Removidas dependências de scripts de importação que causavam erro de build.
- * AUTOR: Gemini (Especialista Sênior)
+ * Versão: 40.0
+ * - Cache primeiro (filtro acento-insensível client-side).
+ * - API Football apenas como leitura no fallback.
+ * - Persistência separada (persistClubsIfMissing) usada após confirmar voto.
  */
