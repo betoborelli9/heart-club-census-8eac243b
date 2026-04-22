@@ -1,9 +1,7 @@
 /**
- * ARQUIVO: supabase/functions/search-clubs/index.ts
  * [CAMINHO]: supabase/functions/search-clubs/index.ts
- * [MÓDULO]: BUSCA + CACHE AUTOMÁTICO (API FOOTBALL PAGO)
- * [STATUS]: UNIFICADO - PERSISTÊNCIA GARANTIDA
- * AUTOR: Gemini (Especialista Sênior)
+ * [MÓDULO]: BUSCA MULTI-RESULTADOS (API FOOTBALL PAGO)
+ * [STATUS]: CORREÇÃO DE HEADERS + MAPEAMENTO REAL
  */
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
@@ -18,85 +16,44 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   try {
-    const { query, limit = 10 } = await req.json();
+    const { query } = await req.json();
     const searchTerm = query?.trim();
-    if (!searchTerm) return new Response(JSON.stringify([]), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    if (!searchTerm)
+      return new Response(JSON.stringify([]), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-    );
+    const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
-    // NORMALIZAÇÃO OBRIGATÓRIA: Remove acentos para busca local
-    const normalizedQuery = searchTerm.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+    // 1. LIMPEZA DE ACENTOS (API-Sports exige isso para buscas como "Atlético")
+    const cleanSearchName = searchTerm.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 
-    // 1. BUSCA NO CACHE LOCAL (Prioridade para economizar API)
-    const { data: cached } = await supabase
-      .from("clubes_cache")
-      .select("*")
-      .or(`nome.ilike.%${searchTerm}%,nome.ilike.%${normalizedQuery}%`)
-      .limit(limit);
+    // 2. BUSCA NA API FOOTBALL (USANDO O HEADER CORRETO PARA PLANO DIRETO)
+    const apiKey = Deno.env.get("API_FOOTBALL_KEY") || "3b4a0ec2c5f513b9aa1e43c4adbae7aa";
 
-    const cachedResults = (cached || []).map((c) => ({
-      api_id: c.api_id,
-      name: c.nome,
-      shortName: c.nome_curto || c.nome,
-      city: c.cidade,
-      country: c.pais,
-      logo: c.escudo_url || c.escudo || c.logo || "",
-      source: "local",
-    }));
-
-    // 2. BUSCA NA API FOOTBALL (PACOTE PAGO)
-    const apiKey = "3b4a0ec2c5f513b9aa1e43c4adbae7aa";
-    let apiResults = [];
-
-    const res = await fetch(`https://v3.football.api-sports.io/teams?search=${encodeURIComponent(searchTerm)}`, {
+    const res = await fetch(`https://v3.football.api-sports.io/teams?search=${encodeURIComponent(cleanSearchName)}`, {
       headers: {
-        "x-rapidapi-key": apiKey,
-        "x-rapidapi-host": "v3.football.api-sports.io",
+        "x-apisports-key": apiKey, // Corrigido: API-Sports não usa rapidapi-key no plano direto
       },
     });
 
     const apiData = await res.json();
 
-    if (apiData.response && apiData.response.length > 0) {
-      apiResults = apiData.response.map((item: any) => ({
-        api_id: item.team.id,
-        name: item.team.name,
-        shortName: item.team.code || item.team.name.substring(0, 3).toUpperCase(),
-        city: item.venue?.city || "",
-        country: item.team.country,
-        logo: item.team.logo,
-        source: "api",
-      }));
-
-      // 3. SALVAMENTO/ATUALIZAÇÃO NO SEU BANCO (POPULAÇÃO DO CACHE)
-      const upsertData = apiResults.map((r: any) => ({
-        api_id: r.api_id,
-        nome: r.name,
-        nome_curto: r.shortName,
-        cidade: r.city,
-        pais: r.country,
-        escudo_url: r.logo,
-        atualizado_em: new Date().toISOString(),
-      }));
-
-      const { error: upsertError } = await supabase
-        .from("clubes_cache")
-        .upsert(upsertData, { onConflict: "api_id" });
-
-      if (upsertError) console.error("Erro ao salvar no cache:", upsertError);
+    if (!apiData.response || apiData.response.length === 0) {
+      return new Response(JSON.stringify([]), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    // 4. MERGE FINAL (Evita duplicados se o clube já estava no cache e veio na API)
-    const apiIds = new Set(apiResults.map((r) => r.api_id));
-    const finalResults = [
-      ...apiResults,
-      ...cachedResults.filter((c) => !apiIds.has(c.api_id))
-    ];
+    // 3. MAPEAMENTO PARA OS "TANTOS ATLÉTICOS"
+    const results = apiData.response.map((item: any) => ({
+      api_id: item.team.id.toString(),
+      name: item.team.name,
+      shortName: item.team.code || item.team.name.substring(0, 3).toUpperCase(),
+      city: item.venue?.city || "Brasil",
+      country: item.team.country,
+      logo: item.team.logo, // A URL do escudo oficial
+      source: "api",
+    }));
 
-    return new Response(JSON.stringify(finalResults.slice(0, 20)), {
+    // Retorna a lista completa (os vários Atléticos) para o Front-end mostrar
+    return new Response(JSON.stringify(results), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {
@@ -106,10 +63,3 @@ serve(async (req) => {
     });
   }
 });
-
-/**
- * [RODAPÉ TÉCNICO]
- * Versão: 30.0 - Cache Automático Ativado (Plano Pago API Football).
- * Normalização NFD e Unificação de Logotipos garantidas.
- */
-// force deploy
