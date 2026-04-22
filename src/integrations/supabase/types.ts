@@ -103,6 +103,8 @@ export type Database = {
       }
       clubes_cache: {
         Row: {
+          api_id: string | null
+          atualizado_em: string | null
           cidade: string
           cor_primaria: string | null
           cor_secundaria: string | null
@@ -119,8 +121,11 @@ export type Database = {
           nome: string
           nome_curto: string | null
           pais: string
+          tem_feminino: boolean | null
         }
         Insert: {
+          api_id?: string | null
+          atualizado_em?: string | null
           cidade: string
           cor_primaria?: string | null
           cor_secundaria?: string | null
@@ -137,8 +142,11 @@ export type Database = {
           nome: string
           nome_curto?: string | null
           pais: string
+          tem_feminino?: boolean | null
         }
         Update: {
+          api_id?: string | null
+          atualizado_em?: string | null
           cidade?: string
           cor_primaria?: string | null
           cor_secundaria?: string | null
@@ -155,6 +163,7 @@ export type Database = {
           nome?: string
           nome_curto?: string | null
           pais?: string
+          tem_feminino?: boolean | null
         }
         Relationships: []
       }
