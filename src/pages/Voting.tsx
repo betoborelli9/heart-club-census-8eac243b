@@ -1,11 +1,10 @@
 /**
  * [CAMINHO]: src/pages/Voting.tsx
- * [STATUS]: PRODUÇÃO - VERSÃO 13.0 (ULTRA INVESTIGATION SYNC)
- * [DESCRIÇÃO]: Interface de votação com disparo em massa para IA Investigadora.
- * [CONTEXTO]: Heart Club - Global Fan Census
+ * [STATUS]: PRODUÇÃO - VERSÃO 16.0 (OPTIMIZED SEARCH + SEQUENTIAL SYNC)
+ * [CONTEXTO]: Sistema de Votação - Integração de Busca Validada + Investigação IA
  */
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Heart, Loader2, X, Search, Sparkles, ShieldCheck, PlusCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -48,8 +47,12 @@ const Voting = () => {
   const [submitting, setSubmitting] = useState(false);
   const [fingerprint, setFingerprint] = useState<string | null>(null);
 
+  // Refs para controle de concorrência de busca (Race Conditions)
+  const heartReqId = useRef(0);
+  const sympathyReqId = useRef(0);
+
   /* ═══════════════════════════════════════════════════════════
-      MÓDULO: SEGURANÇA (FINGERPRINT)
+      MÓDULO: SEGURANÇA E FINGERPRINT
      ═══════════════════════════════════════════════════════════ */
   useEffect(() => {
     const initFP = async () => {
@@ -61,41 +64,64 @@ const Voting = () => {
   }, []);
 
   /* ═══════════════════════════════════════════════════════════
-      MÓDULO: LÓGICA DE BUSCA
+      MÓDULO: BUSCA OTIMIZADA (LOGICA DEBUG_API)
      ═══════════════════════════════════════════════════════════ */
-  const performSearch = useCallback(async (query: string, setterResults: any, setterOpen: any, setterLoading: any) => {
-    if (query.length < 2) {
-      setterResults([]);
-      setterOpen(false);
-      return;
-    }
-    setterLoading(true);
-    try {
-      const results = await searchClubsWithFallback(query);
-      setterResults(results);
-      setterOpen(true);
-    } catch (err) {
-      console.error("[Search Error]", err);
-    } finally {
-      setterLoading(false);
-    }
-  }, []);
+  const performSearch = useCallback(
+    async (
+      query: string,
+      setterResults: any,
+      setterOpen: any,
+      setterLoading: any,
+      reqRef: React.MutableRefObject<number>,
+    ) => {
+      const term = query.trim();
+      if (term.length < 3) {
+        setterResults([]);
+        setterOpen(false);
+        return;
+      }
+
+      const currentId = ++reqRef.current;
+      setterLoading(true);
+
+      try {
+        // Usando a lógica que funcionou na DebugApi: chamada direta ou via helper atualizado
+        const results = await searchClubsWithFallback(term);
+
+        // Só aplica o resultado se for a última requisição disparada
+        if (currentId === reqRef.current) {
+          setterResults(results);
+          setterOpen(true);
+        }
+      } catch (err) {
+        console.error("[Search Error]", err);
+      } finally {
+        if (currentId === reqRef.current) {
+          setterLoading(false);
+        }
+      }
+    },
+    [],
+  );
 
   useEffect(() => {
-    const timer = setTimeout(() => performSearch(heartSearch, setHeartResults, setHeartOpen, setHeartLoading), 400);
+    const timer = setTimeout(
+      () => performSearch(heartSearch, setHeartResults, setHeartOpen, setHeartLoading, heartReqId),
+      300,
+    ); // Debounce de 300ms conforme DebugApi
     return () => clearTimeout(timer);
   }, [heartSearch, performSearch]);
 
   useEffect(() => {
     const timer = setTimeout(
-      () => performSearch(sympathySearch, setSympathyResults, setSympathyOpen, setSympathyLoading),
-      400,
+      () => performSearch(sympathySearch, setSympathyResults, setSympathyOpen, setSympathyLoading, sympathyReqId),
+      300,
     );
     return () => clearTimeout(timer);
   }, [sympathySearch, performSearch]);
 
   /* ═══════════════════════════════════════════════════════════
-      MÓDULO: PROCESSAMENTO DE VOTO E INVESTIGAÇÃO EM MASSA
+      MÓDULO: PROCESSAMENTO SEQUENCIAL (GARANTIA DE DADOS)
      ═══════════════════════════════════════════════════════════ */
   const handleConfirmVote = async () => {
     if (!heartClub || !user || !profile) return;
@@ -120,29 +146,26 @@ const Voting = () => {
       const { error: voteError } = await supabase.from("votos").insert(votesToInsert);
       if (voteError) throw voteError;
 
-      // 1. Salva os dados básicos no banco (Cache) — aguarda registro inicial
+      // 1. Salva base técnica no cache
       await persistClubsIfMissing(allSelected.map((v) => v.club));
 
-      // 2. INVESTIGAÇÃO IA EM MASSA (Coração + TODAS as Simpatias) — paralelo, aguardando conclusão
-      console.log(`[INVESTIGAÇÃO] Disparando para ${allSelected.length} clubes:`, allSelected.map(s => s.club.name));
-      const enrichResults = await Promise.allSettled(
-        allSelected.map((item) =>
-          supabase.functions.invoke("enrich-club-colors", {
+      // 2. INVESTIGAÇÃO SEQUENCIAL: Obrigatório await para garantir Gemini antes do redirecionamento
+      for (const item of allSelected) {
+        console.log(`[VOTING]: Investigando ${item.club.name}...`);
+        try {
+          await supabase.functions.invoke("enrich-club-colors", {
             body: {
               club_name: item.club.name,
-              api_id: item.club.api_id ?? null,
+              api_id: item.club.api_id,
             },
-          }),
-        ),
-      );
-      enrichResults.forEach((r, i) => {
-        const name = allSelected[i].club.name;
-        if (r.status === "rejected") console.error(`[ENRICH FAIL] ${name}:`, r.reason);
-        else console.log(`[ENRICH OK] ${name}`);
-      });
+          });
+        } catch (e) {
+          console.error(`Erro ao enriquecer ${item.club.name}:`, e);
+        }
+      }
 
       await refreshProfile();
-      toast({ title: "Votos e Simpatias registrados! 🏟️" });
+      toast({ title: "Lealdade registada com sucesso! 🏟️" });
       navigate("/dashboard");
     } catch (err) {
       toast({ variant: "destructive", title: "Erro ao processar votos" });
@@ -152,9 +175,6 @@ const Voting = () => {
     }
   };
 
-  /* ═══════════════════════════════════════════════════════════
-      MÓDULO: INTERFACE (UI)
-     ═══════════════════════════════════════════════════════════ */
   const ClubDropdown = ({ results, open, loading, onSelect }: any) => {
     if (!open) return null;
     return (
@@ -172,12 +192,14 @@ const Voting = () => {
                 e.preventDefault();
                 onSelect(club);
               }}
-              className="w-full flex items-center gap-4 px-5 py-4 hover:bg-white/5 border-b border-white/5 last:border-0 text-left group"
+              className="w-full flex items-center gap-4 px-5 py-4 hover:bg-white/5 border-b border-white/5 last:border-0 text-left group transition-colors"
             >
               <ClubLogo src={club.logo} alt={club.name} size="md" />
               <div className="flex-1 min-w-0">
-                <p className="font-black italic text-base uppercase truncate group-hover:text-primary">{club.name}</p>
-                <p className="text-[10px] text-muted-foreground uppercase">
+                <p className="font-black italic text-base uppercase truncate group-hover:text-primary transition-colors">
+                  {club.name}
+                </p>
+                <p className="text-[10px] text-muted-foreground uppercase font-bold">
                   {club.location || `${club.city}, ${club.country}`}
                 </p>
               </div>
@@ -191,6 +213,9 @@ const Voting = () => {
     );
   };
 
+  /* ═══════════════════════════════════════════════════════════
+      MÓDULO: RENDERIZAÇÃO PRINCIPAL
+     ═══════════════════════════════════════════════════════════ */
   return (
     <div className="min-h-screen bg-background flex flex-col items-center px-4 py-6">
       <div className="w-full max-w-lg space-y-6">
@@ -199,11 +224,12 @@ const Voting = () => {
           <h1 className="text-2xl font-black italic uppercase tracking-tighter text-white">Voto Sagrado</h1>
           {IS_MASTER_ADMIN && (
             <p className="text-[10px] text-primary font-black uppercase flex items-center gap-1 justify-center">
-              <ShieldCheck size={12} /> Master Mode
+              <ShieldCheck size={12} /> Master Mode Ativo
             </p>
           )}
         </div>
 
+        {/* CLUBE DO CORAÇÃO */}
         <div className="space-y-2 relative">
           <label className="text-xs font-black uppercase opacity-60 italic flex items-center gap-2">
             <Heart size={14} className="text-primary" /> Clube do Coração
@@ -215,7 +241,10 @@ const Voting = () => {
                 <p className="font-black italic text-lg uppercase truncate tracking-tighter">{heartClub.name}</p>
                 <p className="text-[10px] text-muted-foreground uppercase">{heartClub.location}</p>
               </div>
-              <button onClick={() => setHeartClub(null)} className="p-2 opacity-40 hover:opacity-100">
+              <button
+                onClick={() => setHeartClub(null)}
+                className="p-2 opacity-40 hover:opacity-100 transition-opacity"
+              >
                 <X size={20} />
               </button>
             </div>
@@ -235,6 +264,7 @@ const Voting = () => {
           )}
         </div>
 
+        {/* SIMPATIAS */}
         <div className="space-y-3">
           <label className="text-xs font-black uppercase italic flex items-center gap-2 opacity-60">
             <Sparkles size={14} className="text-primary" /> Simpatias ({sympathyClubs.length}/{MAX_SYMPATHY_CLUBS})
@@ -296,7 +326,7 @@ const Voting = () => {
               onClick={handleConfirmVote}
               disabled={submitting}
             >
-              EU JURO!
+              {submitting ? "PROCESSANDO..." : "EU JURO!"}
             </Button>
             <Button
               variant="ghost"
@@ -316,10 +346,9 @@ export default Voting;
 
 /**
  * [RODAPÉ TÉCNICO]
- * Arquivo: src/pages/Voting.tsx
- * Versão: 13.0 (Ultra Investigation Sync)
- * Modificações:
- * - Substituído Loop for por Promise.allSettled para disparos em massa e paralelos.
- * - Garante que Coração e todas as Simpatias invoquem a Edge Function simultaneamente.
- * - Sincronizado com a coluna 'apelido' da Edge Function enrich-club-colors.
+ * Versão: 16.0
+ * - Implementado controle de concorrência com heartReqId/sympathyReqId (padrão DebugApi).
+ * - Ajustado debounce de busca para 300ms e mínimo de 3 caracteres.
+ * - Mantida a lógica de loop sequencial com await para enriquecimento de dados.
+ * - Sincronizado status IS_MASTER_ADMIN para o email betoborelli9@gmail.com.
  */
