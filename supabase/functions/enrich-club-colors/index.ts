@@ -1,11 +1,8 @@
 /**
  * [CAMINHO]: supabase/functions/enrich-club-colors/index.ts
- * [STATUS]: PRODUÇÃO - VERSÃO 52.0 (A/B/C/D + FEMININO + RODAPÉ)
- * [CONTEXTO]: Enriquecimento híbrido (API + IA). Prioriza divisões nacionais e investiga futebol feminino.
- * [MODIFICAÇÕES]:
- * - Inclusão de rodapé técnico para rastreabilidade.
- * - Hierarquia de ligas brasileiras (Séries A, B, C, D).
- * - Investigação de departamento feminino via Gemini.
+ * [STATUS]: PRODUÇÃO - VERSÃO 50.0 (BRAZIL NATIONAL PRIORITY)
+ * [CONTEXTO]: Enriquecimento de dados com hierarquia de ligas (Nacional > Estadual).
+ * [DESCRIÇÃO]: Prioriza Séries A, B, C e D do Brasileirão. Caso não encontre, usa a liga atual disponível.
  */
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
@@ -16,6 +13,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// Limpa Markdown e garante que o JSON seja processável
 function cleanGeminiResponse(text: string): string {
   return text.replace(/```json|```/g, "").trim();
 }
@@ -46,6 +44,7 @@ serve(async (req) => {
     const teamJson = await teamRes.json();
     teamInfo = teamJson.response?.[0];
 
+    // Lógica de Hierarquia de Liga (Divisão)
     if (teamInfo?.team?.id) {
       const leagueRes = await fetch(`https://v3.football.api-sports.io/leagues?team=${teamInfo.team.id}&current=true`, {
         headers: { "x-apisports-key": apiKeyFootball },
@@ -53,23 +52,14 @@ serve(async (req) => {
       const leagueJson = await leagueRes.json();
       const leagues = leagueJson.response || [];
 
-      // HIERARQUIA BRASILEIRA (Tratando acentos e variações)
-      const tiers = [
-        "Série A",
-        "Série B",
-        "Série C",
-        "Série D",
-        "Serie A",
-        "Serie B",
-        "Serie C",
-        "Serie D",
-        "Brasileirão",
-      ];
+      // Filtra prioritariamente ligas brasileiras nacionais (A, B, C e D)
+      const tiers = ["Série A", "Série B", "Série C", "Série D", "Brasileirão"];
 
       const nationalLeague = leagues.find(
         (l: any) => l.league.country === "Brazil" && tiers.some((tier) => l.league.name.includes(tier)),
       );
 
+      // Se achou Nacional, usa. Se não, usa a primeira disponível (Estadual)
       const selectedLeague = nationalLeague || leagues.find((l: any) => l.league.type === "League") || leagues[0];
 
       if (selectedLeague) {
@@ -77,21 +67,18 @@ serve(async (req) => {
       }
     }
 
-    // 2. IA HISTORIADORA (GEMINI) - AGORA COM TIME FEMININO
+    // 2. BUSCA CRIATIVA (GEMINI)
     let aiData = {
       cor_primaria: "#ff6200",
       cor_secundaria: "#1a1a1a",
       cor_terciaria: "#ffffff",
       mascote: "Não Identificado",
-      tem_feminino: false,
     };
 
     if (geminiKey) {
       try {
-        const prompt = `Atue como Historiador de Futebol. Para o clube "${club_name}", retorne EXCLUSIVAMENTE este JSON: 
-        {"cor_primaria": "#HEX", "cor_secundaria": "#HEX", "cor_terciaria": "#HEX", "mascote": "NOME", "tem_feminino": boolean}. 
-        REGRA 1: "tem_feminino" deve ser true se o clube tiver um departamento de futebol feminino ativo.
-        REGRA 2: "mascote" deve ser o oficial. Jamais retorne campos vazios.`;
+        const prompt = `Atue como Historiador de Futebol Sênior. Para o clube "${club_name}", retorne EXCLUSIVAMENTE este JSON: {"cor_primaria": "#HEX", "cor_secundaria": "#HEX", "cor_terciaria": "#HEX", "mascote": "NOME"}. 
+        REGRA: O campo "mascote" deve ser o animal ou personagem oficial. Se não houver registro oficial, use a alcunha do mascote mais famosa. Nunca retorne vazio.`;
 
         const gRes = await fetch(
           `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiKey}`,
@@ -100,7 +87,10 @@ serve(async (req) => {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               contents: [{ parts: [{ text: prompt }] }],
-              generationConfig: { responseMimeType: "application/json", temperature: 0.1 },
+              generationConfig: {
+                responseMimeType: "application/json",
+                temperature: 0.1,
+              },
             }),
           },
         );
@@ -110,14 +100,16 @@ serve(async (req) => {
 
         if (rawText) {
           const parsed = JSON.parse(cleanGeminiResponse(rawText));
-          aiData = { ...aiData, ...parsed };
+          if (parsed.mascote && parsed.mascote.trim().length > 2) {
+            aiData = { ...aiData, ...parsed };
+          }
         }
       } catch (e) {
         console.error("[GEMINI ERROR]:", e);
       }
     }
 
-    // 3. SALVAMENTO FINAL
+    // 3. SALVAMENTO FINAL (UPSERT)
     const payload = {
       nome: club_name,
       nome_curto: teamInfo?.team?.code || club_name.substring(0, 3).toUpperCase(),
@@ -131,7 +123,6 @@ serve(async (req) => {
       estadio_capacidade: teamInfo?.venue?.capacity || null,
       division: division,
       mascote: aiData.mascote,
-      tem_feminino: aiData.tem_feminino,
       cor_primaria: aiData.cor_primaria,
       cor_secundaria: aiData.cor_secundaria,
       cor_terciaria: aiData.cor_terciaria,
@@ -160,8 +151,8 @@ serve(async (req) => {
 
 /**
  * [RODAPÉ TÉCNICO]
- * Versão: 52.0
- * - Corrigida hierarquia para capturar Séries B, C e D (Regex-like tiers).
- * - Adicionada investigação de futebol feminino via Gemini.
- * - Sincronizado payload com a tabela clubes_cache.
+ * Versão: 45.0
+ * - Inclusão de Alcunha (apelido) e Mascote via Gemini.
+ * - Limpeza de Markdown robusta para evitar erro 500.
+ * - Sincronizado com colunas TEXT do banco de dados.
  */
