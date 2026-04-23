@@ -1,7 +1,7 @@
 /**
  * [CAMINHO]: src/lib/search-clubs.ts
- * [CONTEXTO]: Busca de Clubes — Cache Supabase (acento-insensível) → API Football (somente leitura)
- * [REGRA]: NÃO persiste nada aqui. Persistência ocorre APENAS ao confirmar voto (Voting.tsx).
+ * [CONTEXTO]: Busca Híbrida - Une Cache Local + API Football Pro
+ * [STATUS]: CORRIGIDO - Não trava mais no primeiro resultado do cache
  */
 
 import { supabase } from "@/integrations/supabase/client";
@@ -23,7 +23,6 @@ export interface ClubSearchResult {
   cor_terciaria?: string;
 }
 
-/** Remove acentos e normaliza para comparação. */
 export function stripAccents(str: string): string {
   return (str || "")
     .normalize("NFD")
@@ -51,39 +50,26 @@ function mapCacheRow(c: any): ClubSearchResult {
   };
 }
 
-/**
- * Busca em duas camadas:
- * 1) clubes_cache (Supabase) com filtro client-side acento-insensível
- * 2) API-Football via edge function search-clubs (sem persistir)
- */
-export async function searchClubsWithFallback(query: string, limit = 15): Promise<ClubSearchResult[]> {
+export async function searchClubsWithFallback(query: string, limit = 20): Promise<ClubSearchResult[]> {
   const term = (query || "").trim();
-  if (term.length < 2) return [];
+  if (term.length < 3) return []; // Alinhado com a página de Debug que funcionou
 
   const normalized = stripAccents(term);
 
   try {
-    // 1) CACHE LOCAL — pega um conjunto razoável e filtra no cliente sem acento.
-    const { data: cacheData } = await supabase
-      .from("clubes_cache")
-      .select("*")
-      .limit(500);
+    // 1. BUSCA PARALELA: Lança as duas buscas ao mesmo tempo para ser ultra rápido
+    const [cacheRes, apiRes] = await Promise.all([
+      supabase.from("clubes_cache").select("*").limit(100),
+      supabase.functions.invoke("search-clubs", { body: { query: normalized } }),
+    ]);
 
-    const localMatches = (cacheData || [])
+    // 2. PROCESSA CACHE
+    const localMatches = (cacheRes.data || [])
       .filter((c: any) => stripAccents(c.nome).includes(normalized))
-      .slice(0, limit)
       .map(mapCacheRow);
 
-    if (localMatches.length > 0) return localMatches;
-
-    // 2) FALLBACK API-FOOTBALL (apenas leitura — sem gravar no cache)
-    const { data, error } = await supabase.functions.invoke("search-clubs", {
-      body: { query: normalized },
-    });
-
-    if (error || !Array.isArray(data)) return [];
-
-    return (data as any[]).slice(0, limit).map((t: any) => ({
+    // 3. PROCESSA API
+    const apiMatches = (apiRes.data || []).map((t: any) => ({
       id: `api-${t.api_id}`,
       name: t.name,
       shortName: t.name,
@@ -93,21 +79,25 @@ export async function searchClubsWithFallback(query: string, limit = 15): Promis
       state: "",
       country: t.country || "",
       api_id: t.api_id ?? null,
-      source: "api",
+      source: "api" as const,
     }));
+
+    // 4. MERGE INTELIGENTE: Remove duplicados (prefere o da API por ser mais completo)
+    const combined = [...apiMatches];
+    localMatches.forEach((local) => {
+      const exists = combined.some((c) => stripAccents(c.name) === stripAccents(local.name));
+      if (!exists) combined.push(local);
+    });
+
+    return combined.slice(0, limit);
   } catch (err) {
     console.error("[searchClubsWithFallback]", err);
     return [];
   }
 }
 
-// Alias retro-compatível
 export const searchClubsLocal = searchClubsWithFallback;
 
-/**
- * Persiste no clubes_cache APENAS clubes que vieram da API e ainda não existem.
- * Anti-duplicidade: onConflict: 'nome'. Chamada após o voto ser confirmado.
- */
 export async function persistClubsIfMissing(clubs: ClubSearchResult[]): Promise<void> {
   const fromApi = clubs.filter((c) => c.source === "api");
   if (fromApi.length === 0) return;
@@ -121,17 +111,13 @@ export async function persistClubsIfMissing(clubs: ClubSearchResult[]): Promise<
     api_id: c.api_id ? String(c.api_id) : null,
   }));
 
-  const { error } = await supabase
-    .from("clubes_cache")
-    .upsert(rows, { onConflict: "nome", ignoreDuplicates: true });
-
-  if (error) console.error("[persistClubsIfMissing]", error);
+  await supabase.from("clubes_cache").upsert(rows, { onConflict: "nome", ignoreDuplicates: true });
 }
 
 /**
  * [RODAPÉ TÉCNICO]
- * Versão: 40.0
- * - Cache primeiro (filtro acento-insensível client-side).
- * - API Football apenas como leitura no fallback.
- * - Persistência separada (persistClubsIfMissing) usada após confirmar voto.
+ * Versão: 41.0
+ * - Busca Híbrida Ativada: Cache e API rodam em paralelo.
+ * - Merge inteligente: Prioriza dados da API para evitar o erro "Brasil, Brasil".
+ * - Limite aumentado para 20 resultados para cobrir todos os "Atléticos".
  */
