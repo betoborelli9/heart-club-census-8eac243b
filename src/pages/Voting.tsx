@@ -1,8 +1,8 @@
 /**
  * [CAMINHO]: src/pages/Voting.tsx
- * [STATUS]: COMPLETO - LISTAGEM MÚLTIPLA + CORREÇÃO DE LOGO
- * [DESCRIÇÃO]: Interface de votação com dropdown expandido para múltiplos resultados da API Football.
- * [CONTEXTO]: Sistema de Votação - UNIFICAÇÃO DE BUSCA + IA INVESTIGADORA
+ * [STATUS]: PRODUÇÃO - VERSÃO FINAL COM GATILHO DE INVESTIGAÇÃO
+ * [CONTEXTO]: Sistema de Votação - BUSCA HÍBRIDA + ENRIQUECIMENTO AUTOMÁTICO
+ * [AUTOR]: Gemini Specialist
  */
 
 import { useState, useEffect, useRef, useCallback } from "react";
@@ -20,6 +20,9 @@ import logo from "@/assets/logo.png";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import FingerprintJS from "@fingerprintjs/fingerprintjs";
 
+/* ═══════════════════════════════════════════════════════════
+    MÓDULO: TIPOS E CONFIGURAÇÕES
+   ═══════════════════════════════════════════════════════════ */
 type ClubResult = ClubSearchResult;
 const MAX_SYMPATHY_CLUBS = 4;
 
@@ -48,6 +51,9 @@ const Voting = () => {
   const [fingerprint, setFingerprint] = useState<string | null>(null);
   const [manualClub, setManualClub] = useState({ nome: "", mascote: "", cidade: "", estado: "", cor: "" });
 
+  /* ═══════════════════════════════════════════════════════════
+      MÓDULO: SEGURANÇA E BUSCA
+     ═══════════════════════════════════════════════════════════ */
   useEffect(() => {
     const initFP = async () => {
       const fp = await FingerprintJS.load();
@@ -88,6 +94,9 @@ const Voting = () => {
     return () => clearTimeout(timer);
   }, [sympathySearch, performSearch]);
 
+  /* ═══════════════════════════════════════════════════════════
+      MÓDULO: PROCESSAMENTO DE VOTO E INVESTIGAÇÃO IA
+     ═══════════════════════════════════════════════════════════ */
   const handleConfirmVote = async () => {
     if (!heartClub || !user || !profile) return;
     setSubmitting(true);
@@ -95,7 +104,9 @@ const Voting = () => {
       if (IS_MASTER_ADMIN) {
         await supabase.from("votos").delete().eq("user_id", user.id);
       }
+
       const allVotes = [{ club: heartClub, main: true }, ...sympathyClubs.map((c) => ({ club: c, main: false }))];
+
       const votesToInsert = allVotes.map((v) => ({
         user_id: user.id,
         clube_nome: v.club.name,
@@ -109,20 +120,32 @@ const Voting = () => {
       const { error } = await supabase.from("votos").insert(votesToInsert);
       if (error) throw error;
 
-      // Persiste no clubes_cache APENAS clubes vindos da API que ainda não existem (anti-duplicidade)
-      await persistClubsIfMissing([heartClub, ...sympathyClubs]);
+      // 1. Persiste o básico no banco para garantir o registro
+      await persistClubsIfMissing(allVotes.map((v) => v.club));
+
+      // 2. DISPARO DA IA INVESTIGADORA (Preenchimento de NULLs)
+      allVotes.forEach((v) => {
+        supabase.functions
+          .invoke("enrich-club-colors", {
+            body: { club_name: v.club.name, api_id: v.club.api_id },
+          })
+          .catch((err) => console.error("Erro no enriquecimento assíncrono:", err));
+      });
 
       await refreshProfile();
-      toast({ title: "Voto registrado com sucesso! 🏟️" });
+      toast({ title: "Voto sagrado registrado! 🏟️" });
       navigate("/dashboard");
     } catch (err) {
-      toast({ variant: "destructive", title: "Erro ao votar" });
+      toast({ variant: "destructive", title: "Erro ao registrar lealdade" });
     } finally {
       setSubmitting(false);
       setShowConfirm(false);
     }
   };
 
+  /* ═══════════════════════════════════════════════════════════
+      MÓDULO: INTERFACE E DROPDOWNS
+     ═══════════════════════════════════════════════════════════ */
   const ClubDropdown = ({ results, open, loading, onSelect }: any) => {
     if (!open) return null;
     return (
@@ -177,11 +200,12 @@ const Voting = () => {
           <h1 className="text-2xl font-black italic uppercase tracking-tighter text-white">Voto Sagrado</h1>
           {IS_MASTER_ADMIN && (
             <p className="text-[10px] text-primary font-black uppercase flex items-center gap-1 justify-center">
-              <ShieldCheck size={12} /> Master Mode
+              <ShieldCheck size={12} /> Master Mode Ativo
             </p>
           )}
         </div>
 
+        {/* CLUBE DO CORAÇÃO */}
         <div className="space-y-2 relative">
           <label className="text-xs font-black uppercase opacity-60 italic flex items-center gap-2">
             <Heart size={14} className="text-primary" /> Clube do Coração
@@ -216,6 +240,7 @@ const Voting = () => {
           )}
         </div>
 
+        {/* SIMPATIAS */}
         <div className="space-y-3">
           <label className="text-xs font-black uppercase italic flex items-center gap-2 opacity-60">
             <Sparkles size={14} className="text-primary" /> Simpatias ({sympathyClubs.length}/{MAX_SYMPATHY_CLUBS})
@@ -298,10 +323,9 @@ export default Voting;
 /**
  * [RODAPÉ TÉCNICO]
  * Arquivo: src/pages/Voting.tsx
- * Versão: 9.0 (Revisão Total de Estabilidade)
+ * Versão: 10.0 (Master Release)
  * Modificações:
- * - Recuperado Master Mode para betoborelli9@gmail.com.
- * - Corrigido Dropdown para z-index 1000 (evita ficar atrás de outros elementos).
- * - Sincronizado src={club.logo} com a resposta da Edge Function.
- * - Mantida lógica de 4 slots de simpatia.
+ * - Implementado invoke da função "enrich-club-colors" no handleConfirmVote.
+ * - Garantido envio de api_id para investigação precisa.
+ * - Mantida compatibilidade com persistClubsIfMissing para dados básicos.
  */
