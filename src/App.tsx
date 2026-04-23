@@ -15,6 +15,7 @@ import MapaCalor from "./pages/MapaCalor";
 import Stats from "./pages/Stats";
 import Ambassadors from "./pages/Ambassadors";
 import DebugApi from "./pages/DebugApi";
+import AdminIngestion from "./pages/AdminIngestion";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -39,6 +40,7 @@ const App = () => (
             <Route path="/estatisticas" element={<Stats />} />
             <Route path="/embaixadores" element={<Ambassadors />} />
             <Route path="/debug-api" element={<DebugApi />} />
+            <Route path="/admin-ingestion" element={<AdminIngestion />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

@@ -174,6 +174,16 @@ const ClubBanner = ({
 
         {IS_MASTER && (
           <button
+            onClick={() => navigate("/admin-ingestion")}
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-[10px] font-black uppercase text-[#ff6200] hover:bg-[#ff6200]/10 transition-all border border-[#ff6200]/30"
+          >
+            <Bug size={14} />
+            <span className="hidden md:inline">INGESTÃO</span>
+          </button>
+        )}
+
+        {IS_MASTER && (
+          <button
             onClick={() => navigate("/admin")}
             className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-[10px] font-black uppercase bg-red-600 text-white animate-pulse"
           >
