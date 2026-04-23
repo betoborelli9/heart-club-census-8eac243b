@@ -1,6 +1,7 @@
 /**
  * [CAMINHO]: supabase/functions/enrich-club-colors/index.ts
- * [STATUS]: REVISÃO SÊNIOR - FORÇANDO PREENCHIMENTO DE DADOS
+ * [STATUS]: VERSÃO 43.0 - INVESTIGAÇÃO PROFUNDA (MASCOTE + APELIDO + DIVISÃO)
+ * [MODIFICAÇÕES]: Adicionado campo 'apelido' e prompt reforçado para o Gemini.
  */
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
@@ -21,8 +22,6 @@ serve(async (req) => {
 
     const { club_name, api_id } = await req.json();
     if (!club_name) throw new Error("Nome do clube é obrigatório");
-
-    console.log(`[INVESTIGANDO]: ${club_name} (ID: ${api_id})`);
 
     // 1. BUSCA TÉCNICA (API FOOTBALL)
     let teamInfo: any = null;
@@ -46,32 +45,42 @@ serve(async (req) => {
       if (mainLeague) division = mainLeague.league.name;
     }
 
-    // 2. BUSCA CRIATIVA (GEMINI)
-    let aiData = { cor_primaria: "#ff6200", cor_secundaria: "#1a1a1a", cor_terciaria: "#ffffff", mascote: "" };
+    // 2. BUSCA CRIATIVA REFORÇADA (GEMINI)
+    let aiData = {
+      cor_primaria: "#ff6200",
+      cor_secundaria: "#1a1a1a",
+      cor_terciaria: "#ffffff",
+      mascote: "Não Identificado",
+      apelido: "Não Identificado",
+    };
 
     if (geminiKey) {
       try {
-        const prompt = `Responda apenas com JSON puro para o clube "${club_name}": {"cor_primaria": "#HEX", "cor_secundaria": "#HEX", "cor_terciaria": "#HEX", "mascote": "Nome"}`;
+        const prompt = `Atue como historiador sênior de futebol. Para o clube "${club_name}", retorne estritamente um JSON: {"cor_primaria": "#HEX", "cor_secundaria": "#HEX", "cor_terciaria": "#HEX", "mascote": "Nome do Mascote Oficial", "apelido": "Apelido ou Alcunha histórica"}. Não invente, seja preciso.`;
+
         const gRes = await fetch(
           `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiKey}`,
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
+            body: JSON.stringify({
+              contents: [{ parts: [{ text: prompt }] }],
+              generationConfig: { responseMimeType: "application/json" },
+            }),
           },
         );
+
         const gJson = await gRes.json();
         const rawText = gJson.candidates?.[0]?.content?.parts?.[0]?.text;
         if (rawText) {
-          const cleanJson = rawText.replace(/```json|```/g, "").trim();
-          aiData = JSON.parse(cleanJson);
+          aiData = JSON.parse(rawText);
         }
       } catch (e) {
         console.error("[GEMINI ERROR]:", e);
       }
     }
 
-    // 3. SALVAMENTO FINAL COM MAPEAMENTO DE COLUNAS DO BANCO
+    // 3. SALVAMENTO FINAL (UPSERT)
     const payload = {
       nome: club_name,
       nome_curto: teamInfo?.team?.code || club_name.substring(0, 3).toUpperCase(),
@@ -84,7 +93,8 @@ serve(async (req) => {
       estadio_cidade: teamInfo?.venue?.city || null,
       estadio_capacidade: teamInfo?.venue?.capacity || null,
       division: division,
-      mascote: aiData.mascote || "Não Identificado",
+      mascote: aiData.mascote,
+      apelido: aiData.apelido, // Inserindo a Alcunha na coluna apelido
       cor_primaria: aiData.cor_primaria,
       cor_secundaria: aiData.cor_secundaria,
       cor_terciaria: aiData.cor_terciaria,
@@ -112,8 +122,8 @@ serve(async (req) => {
 
 /**
  * [RODAPÉ TÉCNICO]
- * Versão: 42.0
- * - Tratamento de Markdown do Gemini (remove ```json).
- * - Fallback de mascote para evitar NULL.
- * - Log de investigação para debug no Supabase.
+ * Versão: 43.0
+ * - Inclusão da coluna 'apelido' (alcunha).
+ * - Prompt Gemini configurado para modo historiador sênior.
+ * - Forçado JSON de resposta para evitar erros de parse.
  */
