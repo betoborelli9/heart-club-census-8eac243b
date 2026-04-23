@@ -6,7 +6,7 @@
 
 /* [MÓDULO: IMPORTS] */
 import { useNavigate, useLocation } from "react-router-dom";
-import { Flame, BarChart3, Crown, Users, MapPin, Trophy, ShieldAlert, Vote } from "lucide-react";
+import { Flame, BarChart3, Crown, Users, MapPin, Trophy, ShieldAlert, Vote, Bug } from "lucide-react";
 import { ClubLogo } from "@/components/ClubLogo";
 import { useUser } from "@/contexts/UserContext";
 import { type TeamTheme, defaultTeamTheme } from "@/data/teamColors";
@@ -159,6 +159,16 @@ const ClubBanner = ({
           >
             <Vote size={14} />
             <span className="hidden md:inline">VOTAÇÃO</span>
+          </button>
+        )}
+
+        {IS_MASTER && (
+          <button
+            onClick={() => navigate("/debug-api")}
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-[10px] font-black uppercase text-white/70 hover:text-white hover:bg-white/10 transition-all border border-white/20"
+          >
+            <Bug size={14} />
+            <span className="hidden md:inline">DEBUG API</span>
           </button>
         )}
 
