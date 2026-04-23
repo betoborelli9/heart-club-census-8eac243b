@@ -1,6 +1,6 @@
 /**
- * [CAMINHO/ARQUIVO]: supabase/functions/enrich-club-colors/index.ts
- * [STATUS]: PRODUÇÃO - MAPEAMENTO REAL CONFIRMADO
+ * [CAMINHO]: supabase/functions/enrich-club-colors/index.ts
+ * [STATUS]: REVISÃO SÊNIOR - FORÇANDO PREENCHIMENTO DE DADOS
  */
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
@@ -20,81 +20,86 @@ serve(async (req) => {
     const apiKeyFootball = "3b4a0ec2c5f513b9aa1e43c4adbae7aa";
 
     const { club_name, api_id } = await req.json();
+    if (!club_name) throw new Error("Nome do clube é obrigatório");
 
-    // 1. BUSCA DADOS TÉCNICOS NA API FOOTBALL
-    // Para pegar a divisão, precisamos consultar o time e suas ligas atuais
-    const footballUrl = api_id
-      ? `https://v3.football.api-sports.io/teams?id=${api_id}`
-      : `https://v3.football.api-sports.io/teams?search=${encodeURIComponent(club_name)}`;
+    console.log(`[INVESTIGANDO]: ${club_name} (ID: ${api_id})`);
 
-    const res = await fetch(footballUrl, { headers: { "x-apisports-key": apiKeyFootball } });
-    const json = await res.json();
-    const teamData = json.response?.[0];
-
-    // 2. BUSCA DA DIVISÃO (Série A, B, etc.)
-    // Consultamos as ligas do time no ano atual (2026)
+    // 1. BUSCA TÉCNICA (API FOOTBALL)
+    let teamInfo: any = null;
     let division = "Série Não Identificada";
-    if (teamData?.team?.id) {
-      const leagueRes = await fetch(`https://v3.football.api-sports.io/leagues?team=${teamData.team.id}&current=true`, {
+
+    const teamRes = await fetch(
+      api_id
+        ? `https://v3.football.api-sports.io/teams?id=${api_id}`
+        : `https://v3.football.api-sports.io/teams?search=${encodeURIComponent(club_name)}`,
+      { headers: { "x-apisports-key": apiKeyFootball } },
+    );
+    const teamJson = await teamRes.json();
+    teamInfo = teamJson.response?.[0];
+
+    if (teamInfo?.team?.id) {
+      const leagueRes = await fetch(`https://v3.football.api-sports.io/leagues?team=${teamInfo.team.id}&current=true`, {
         headers: { "x-apisports-key": apiKeyFootball },
       });
       const leagueJson = await leagueRes.json();
-      // Filtramos por ligas nacionais (Série A, B, C)
       const mainLeague = leagueJson.response?.find((l: any) => l.league.type === "League");
       if (mainLeague) division = mainLeague.league.name;
     }
 
-    // 3. MOTOR GEMINI (Cores e Mascote)
+    // 2. BUSCA CRIATIVA (GEMINI)
     let aiData = { cor_primaria: "#ff6200", cor_secundaria: "#1a1a1a", cor_terciaria: "#ffffff", mascote: "" };
+
     if (geminiKey) {
-      const prompt = `Para o clube "${club_name}", retorne JSON: {"cor_primaria": "#HEX", "cor_secundaria": "#HEX", "cor_terciaria": "#HEX", "mascote": "Nome"}.`;
-      const geminiRes = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiKey}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: prompt }] }],
-            generationConfig: { responseMimeType: "application/json" },
-          }),
-        },
-      );
-      const gJson = await geminiRes.json();
-      const text = gJson.candidates?.[0]?.content?.parts?.[0]?.text;
-      if (text) aiData = JSON.parse(text);
+      try {
+        const prompt = `Responda apenas com JSON puro para o clube "${club_name}": {"cor_primaria": "#HEX", "cor_secundaria": "#HEX", "cor_terciaria": "#HEX", "mascote": "Nome"}`;
+        const gRes = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiKey}`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
+          },
+        );
+        const gJson = await gRes.json();
+        const rawText = gJson.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (rawText) {
+          const cleanJson = rawText.replace(/```json|```/g, "").trim();
+          aiData = JSON.parse(cleanJson);
+        }
+      } catch (e) {
+        console.error("[GEMINI ERROR]:", e);
+      }
     }
 
-    // 4. UPSERT COM NOMES DE COLUNAS REAIS (Conforme seu SELECT)
-    const { data: finalClub, error: upsertError } = await supabase
+    // 3. SALVAMENTO FINAL COM MAPEAMENTO DE COLUNAS DO BANCO
+    const payload = {
+      nome: club_name,
+      nome_curto: teamInfo?.team?.code || club_name.substring(0, 3).toUpperCase(),
+      api_id: teamInfo?.team?.id?.toString() || api_id?.toString() || null,
+      escudo_url: teamInfo?.team?.logo || null,
+      fundado: teamInfo?.team?.founded || null,
+      cidade: teamInfo?.venue?.city || "Brasil",
+      pais: teamInfo?.team?.country || "Brasil",
+      estadio_nome: teamInfo?.venue?.name || null,
+      estadio_cidade: teamInfo?.venue?.city || null,
+      estadio_capacidade: teamInfo?.venue?.capacity || null,
+      division: division,
+      mascote: aiData.mascote || "Não Identificado",
+      cor_primaria: aiData.cor_primaria,
+      cor_secundaria: aiData.cor_secundaria,
+      cor_terciaria: aiData.cor_terciaria,
+      atualizado_em: new Date().toISOString(),
+    };
+
+    const { data, error: upsertError } = await supabase
       .from("clubes_cache")
-      .upsert(
-        {
-          nome: teamData?.team?.name || club_name,
-          nome_curto: teamData?.team?.code || club_name.substring(0, 3).toUpperCase(),
-          api_id: teamData?.team?.id?.toString() || api_id?.toString() || null,
-          escudo_url: teamData?.team?.logo || null,
-          fundado: teamData?.team?.founded || null,
-          cidade: teamData?.venue?.city || "Brasil",
-          pais: teamData?.team?.country || "Brasil",
-          estadio_nome: teamData?.venue?.name || null,
-          estadio_cidade: teamData?.venue?.city || null,
-          estadio_capacidade: teamData?.venue?.capacity || null,
-          division: division, // Aqui entra Vila Nova = Série B, etc.
-          mascote: aiData.mascote,
-          cor_primaria: aiData.cor_primaria,
-          cor_secundaria: aiData.cor_secundaria,
-          cor_terciaria: aiData.cor_terciaria,
-          tem_feminino: teamData?.team?.national === false, // Lógica simples: se não é seleção, pode ter feminino
-          atualizado_em: new Date().toISOString(),
-        },
-        { onConflict: "nome" },
-      )
+      .upsert(payload, { onConflict: "nome" })
       .select()
       .single();
 
     if (upsertError) throw upsertError;
 
-    return new Response(JSON.stringify({ success: true, club: finalClub }), {
+    return new Response(JSON.stringify({ success: true, club: data }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {
@@ -107,8 +112,8 @@ serve(async (req) => {
 
 /**
  * [RODAPÉ TÉCNICO]
- * Versão: 40.0 - IA Híbrida Ativada.
- * - Prioriza busca por api_id para precisão de estádio/capacidade.
- * - Gemini focado em Cores, Mascote e Apelido.
- * - Proteção de CORS e Upsert por nome garantidos.
+ * Versão: 42.0
+ * - Tratamento de Markdown do Gemini (remove ```json).
+ * - Fallback de mascote para evitar NULL.
+ * - Log de investigação para debug no Supabase.
  */
