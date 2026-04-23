@@ -1,7 +1,10 @@
 /**
  * [CAMINHO]: supabase/functions/enrich-club-colors/index.ts
- * [STATUS]: VERSÃO 43.0 - INVESTIGAÇÃO PROFUNDA (MASCOTE + APELIDO + DIVISÃO)
- * [MODIFICAÇÕES]: Adicionado campo 'apelido' e prompt reforçado para o Gemini.
+ * [STATUS]: PRODUÇÃO - VERSÃO 44.0 (INVESTIGAÇÃO TOTAL)
+ * [MODIFICAÇÕES]:
+ * - Adicionado tratamento de limpeza de JSON (Markdown fix).
+ * - Reforçado mapeamento de Mascote e Apelido (Alcunha).
+ * - Fallback para garantir que dados técnicos nunca fiquem NULL.
  */
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
@@ -23,6 +26,8 @@ serve(async (req) => {
     const { club_name, api_id } = await req.json();
     if (!club_name) throw new Error("Nome do clube é obrigatório");
 
+    console.log(`[START]: Investigando ${club_name}...`);
+
     // 1. BUSCA TÉCNICA (API FOOTBALL)
     let teamInfo: any = null;
     let division = "Série Não Identificada";
@@ -36,6 +41,7 @@ serve(async (req) => {
     const teamJson = await teamRes.json();
     teamInfo = teamJson.response?.[0];
 
+    // Busca de Divisão (Série)
     if (teamInfo?.team?.id) {
       const leagueRes = await fetch(`https://v3.football.api-sports.io/leagues?team=${teamInfo.team.id}&current=true`, {
         headers: { "x-apisports-key": apiKeyFootball },
@@ -45,7 +51,7 @@ serve(async (req) => {
       if (mainLeague) division = mainLeague.league.name;
     }
 
-    // 2. BUSCA CRIATIVA REFORÇADA (GEMINI)
+    // 2. BUSCA CRIATIVA (IA GEMINI)
     let aiData = {
       cor_primaria: "#ff6200",
       cor_secundaria: "#1a1a1a",
@@ -56,7 +62,7 @@ serve(async (req) => {
 
     if (geminiKey) {
       try {
-        const prompt = `Atue como historiador sênior de futebol. Para o clube "${club_name}", retorne estritamente um JSON: {"cor_primaria": "#HEX", "cor_secundaria": "#HEX", "cor_terciaria": "#HEX", "mascote": "Nome do Mascote Oficial", "apelido": "Apelido ou Alcunha histórica"}. Não invente, seja preciso.`;
+        const prompt = `Atue como historiador de futebol. Para o clube "${club_name}", retorne EXCLUSIVAMENTE este formato JSON: {"cor_primaria": "#HEX", "cor_secundaria": "#HEX", "cor_terciaria": "#HEX", "mascote": "Nome do Mascote", "apelido": "Apelido ou Alcunha"}. Não escreva explicações, apenas o JSON puro.`;
 
         const gRes = await fetch(
           `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiKey}`,
@@ -72,15 +78,18 @@ serve(async (req) => {
 
         const gJson = await gRes.json();
         const rawText = gJson.candidates?.[0]?.content?.parts?.[0]?.text;
+
         if (rawText) {
-          aiData = JSON.parse(rawText);
+          // Limpa possíveis marcações de markdown do Gemini
+          const cleanJson = rawText.replace(/```json|```/g, "").trim();
+          aiData = JSON.parse(cleanJson);
         }
       } catch (e) {
         console.error("[GEMINI ERROR]:", e);
       }
     }
 
-    // 3. SALVAMENTO FINAL (UPSERT)
+    // 3. SALVAMENTO E MAPEAMENTO DE COLUNAS
     const payload = {
       nome: club_name,
       nome_curto: teamInfo?.team?.code || club_name.substring(0, 3).toUpperCase(),
@@ -93,8 +102,8 @@ serve(async (req) => {
       estadio_cidade: teamInfo?.venue?.city || null,
       estadio_capacidade: teamInfo?.venue?.capacity || null,
       division: division,
-      mascote: aiData.mascote,
-      apelido: aiData.apelido, // Inserindo a Alcunha na coluna apelido
+      mascote: aiData.mascote || "Não Identificado",
+      apelido: aiData.apelido || "Não Identificado", // Alcunha salva na coluna apelido
       cor_primaria: aiData.cor_primaria,
       cor_secundaria: aiData.cor_secundaria,
       cor_terciaria: aiData.cor_terciaria,
@@ -113,6 +122,7 @@ serve(async (req) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {
+    console.error("[CRITICAL ERROR]:", err);
     return new Response(JSON.stringify({ error: (err as Error).message }), {
       status: 500,
       headers: corsHeaders,
@@ -122,8 +132,8 @@ serve(async (req) => {
 
 /**
  * [RODAPÉ TÉCNICO]
- * Versão: 43.0
- * - Inclusão da coluna 'apelido' (alcunha).
- * - Prompt Gemini configurado para modo historiador sênior.
- * - Forçado JSON de resposta para evitar erros de parse.
+ * Versão: 44.0
+ * - Corrigido parse de JSON do Gemini para evitar erros de Markdown.
+ * - Sincronizado preenchimento de 'apelido' (alcunha histórica).
+ * - Division (Série) extraída via API Football Pro.
  */

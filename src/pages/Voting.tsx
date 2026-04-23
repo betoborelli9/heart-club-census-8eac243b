@@ -1,12 +1,11 @@
 /**
  * [CAMINHO]: src/pages/Voting.tsx
- * [STATUS]: PRODUÇÃO - VERSÃO FINAL COM GATILHO DE INVESTIGAÇÃO
- * [CONTEXTO]: Sistema de Votação - BUSCA HÍBRIDA + ENRIQUECIMENTO AUTOMÁTICO
- * [AUTOR]: Gemini Specialist
+ * [STATUS]: PRODUÇÃO - VERSÃO 13.0 (ULTRA INVESTIGATION SYNC)
+ * [DESCRIÇÃO]: Interface de votação com disparo em massa para IA Investigadora.
+ * [CONTEXTO]: Heart Club - Global Fan Census
  */
 
-import { useState, useEffect, useRef, useCallback } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { useState, useEffect, useCallback } from "react";
 import { Heart, Loader2, X, Search, Sparkles, ShieldCheck, PlusCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,7 +20,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import FingerprintJS from "@fingerprintjs/fingerprintjs";
 
 /* ═══════════════════════════════════════════════════════════
-    MÓDULO: TIPOS E CONFIGURAÇÕES
+    MÓDULO: CONFIGURAÇÕES E ESTADOS
    ═══════════════════════════════════════════════════════════ */
 type ClubResult = ClubSearchResult;
 const MAX_SYMPATHY_CLUBS = 4;
@@ -46,13 +45,11 @@ const Voting = () => {
   const [sympathyLoading, setSympathyLoading] = useState(false);
 
   const [showConfirm, setShowConfirm] = useState(false);
-  const [showManualDialog, setShowManualDialog] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [fingerprint, setFingerprint] = useState<string | null>(null);
-  const [manualClub, setManualClub] = useState({ nome: "", mascote: "", cidade: "", estado: "", cor: "" });
 
   /* ═══════════════════════════════════════════════════════════
-      MÓDULO: SEGURANÇA E BUSCA
+      MÓDULO: SEGURANÇA (FINGERPRINT)
      ═══════════════════════════════════════════════════════════ */
   useEffect(() => {
     const initFP = async () => {
@@ -63,6 +60,9 @@ const Voting = () => {
     initFP();
   }, []);
 
+  /* ═══════════════════════════════════════════════════════════
+      MÓDULO: LÓGICA DE BUSCA
+     ═══════════════════════════════════════════════════════════ */
   const performSearch = useCallback(async (query: string, setterResults: any, setterOpen: any, setterLoading: any) => {
     if (query.length < 2) {
       setterResults([]);
@@ -95,7 +95,7 @@ const Voting = () => {
   }, [sympathySearch, performSearch]);
 
   /* ═══════════════════════════════════════════════════════════
-      MÓDULO: PROCESSAMENTO DE VOTO E INVESTIGAÇÃO IA
+      MÓDULO: PROCESSAMENTO DE VOTO E INVESTIGAÇÃO EM MASSA
      ═══════════════════════════════════════════════════════════ */
   const handleConfirmVote = async () => {
     if (!heartClub || !user || !profile) return;
@@ -105,9 +105,9 @@ const Voting = () => {
         await supabase.from("votos").delete().eq("user_id", user.id);
       }
 
-      const allVotes = [{ club: heartClub, main: true }, ...sympathyClubs.map((c) => ({ club: c, main: false }))];
+      const allSelected = [{ club: heartClub, main: true }, ...sympathyClubs.map((c) => ({ club: c, main: false }))];
 
-      const votesToInsert = allVotes.map((v) => ({
+      const votesToInsert = allSelected.map((v) => ({
         user_id: user.id,
         clube_nome: v.club.name,
         cidade: profile.cidade || "",
@@ -117,26 +117,30 @@ const Voting = () => {
         fingerprint: fingerprint || "web-client",
       }));
 
-      const { error } = await supabase.from("votos").insert(votesToInsert);
-      if (error) throw error;
+      const { error: voteError } = await supabase.from("votos").insert(votesToInsert);
+      if (voteError) throw voteError;
 
-      // 1. Persiste o básico no banco para garantir o registro
-      await persistClubsIfMissing(allVotes.map((v) => v.club));
+      // 1. Salva os dados básicos no banco (Cache)
+      await persistClubsIfMissing(allSelected.map((v) => v.club));
 
-      // 2. DISPARO DA IA INVESTIGADORA (Preenchimento de NULLs)
-      allVotes.forEach((v) => {
-        supabase.functions
-          .invoke("enrich-club-colors", {
-            body: { club_name: v.club.name, api_id: v.club.api_id },
-          })
-          .catch((err) => console.error("Erro no enriquecimento assíncrono:", err));
-      });
+      // 2. DISPARO EM MASSA PARA IA INVESTIGADORA (Coração + Simpatias)
+      // Usamos Settled para disparar todos de uma vez sem que um bloqueie o outro
+      Promise.allSettled(
+        allSelected.map((item) =>
+          supabase.functions.invoke("enrich-club-colors", {
+            body: {
+              club_name: item.club.name,
+              api_id: item.club.api_id,
+            },
+          }),
+        ),
+      ).then(() => console.log("[INVESTIGAÇÃO]: Finalizada para todos os clubes selecionados."));
 
       await refreshProfile();
-      toast({ title: "Voto sagrado registrado! 🏟️" });
+      toast({ title: "Votos e Simpatias registrados! 🏟️" });
       navigate("/dashboard");
     } catch (err) {
-      toast({ variant: "destructive", title: "Erro ao registrar lealdade" });
+      toast({ variant: "destructive", title: "Erro ao processar votos" });
     } finally {
       setSubmitting(false);
       setShowConfirm(false);
@@ -144,7 +148,7 @@ const Voting = () => {
   };
 
   /* ═══════════════════════════════════════════════════════════
-      MÓDULO: INTERFACE E DROPDOWNS
+      MÓDULO: INTERFACE (UI)
      ═══════════════════════════════════════════════════════════ */
   const ClubDropdown = ({ results, open, loading, onSelect }: any) => {
     if (!open) return null;
@@ -155,38 +159,28 @@ const Voting = () => {
             <Loader2 className="animate-spin text-primary" />
           </div>
         ) : (
-          <>
-            {results.map((club: ClubResult, i: number) => (
-              <button
-                key={i}
-                type="button"
-                onMouseDown={(e) => {
-                  e.preventDefault();
-                  onSelect(club);
-                }}
-                className="w-full flex items-center gap-4 px-5 py-4 hover:bg-white/5 border-b border-white/5 last:border-0 text-left transition-all group"
-              >
-                <ClubLogo src={club.logo} alt={club.name} size="md" />
-                <div className="flex-1 min-w-0">
-                  <p className="font-black italic text-base uppercase truncate tracking-tighter group-hover:text-primary">
-                    {club.name}
-                  </p>
-                  <p className="text-[10px] text-muted-foreground uppercase font-bold">
-                    {club.location || `${club.city}, ${club.country}`}
-                  </p>
-                </div>
-                <div className="text-[8px] font-black px-2 py-1 bg-primary/10 text-primary rounded uppercase italic">
-                  {club.source}
-                </div>
-              </button>
-            ))}
+          results.map((club: ClubResult, i: number) => (
             <button
-              className="w-full flex items-center justify-center gap-2 px-4 py-4 bg-muted/10 hover:bg-muted/20 text-[10px] font-black text-primary italic uppercase"
-              onClick={() => setShowManualDialog(true)}
+              key={i}
+              type="button"
+              onMouseDown={(e) => {
+                e.preventDefault();
+                onSelect(club);
+              }}
+              className="w-full flex items-center gap-4 px-5 py-4 hover:bg-white/5 border-b border-white/5 last:border-0 text-left group"
             >
-              <PlusCircle size={14} /> Clube não listado? Adicionar Manual
+              <ClubLogo src={club.logo} alt={club.name} size="md" />
+              <div className="flex-1 min-w-0">
+                <p className="font-black italic text-base uppercase truncate group-hover:text-primary">{club.name}</p>
+                <p className="text-[10px] text-muted-foreground uppercase">
+                  {club.location || `${club.city}, ${club.country}`}
+                </p>
+              </div>
+              <div className="text-[8px] font-black px-2 py-1 bg-primary/10 text-primary rounded uppercase italic">
+                {club.source}
+              </div>
             </button>
-          </>
+          ))
         )}
       </div>
     );
@@ -200,12 +194,11 @@ const Voting = () => {
           <h1 className="text-2xl font-black italic uppercase tracking-tighter text-white">Voto Sagrado</h1>
           {IS_MASTER_ADMIN && (
             <p className="text-[10px] text-primary font-black uppercase flex items-center gap-1 justify-center">
-              <ShieldCheck size={12} /> Master Mode Ativo
+              <ShieldCheck size={12} /> Master Mode
             </p>
           )}
         </div>
 
-        {/* CLUBE DO CORAÇÃO */}
         <div className="space-y-2 relative">
           <label className="text-xs font-black uppercase opacity-60 italic flex items-center gap-2">
             <Heart size={14} className="text-primary" /> Clube do Coração
@@ -217,10 +210,7 @@ const Voting = () => {
                 <p className="font-black italic text-lg uppercase truncate tracking-tighter">{heartClub.name}</p>
                 <p className="text-[10px] text-muted-foreground uppercase">{heartClub.location}</p>
               </div>
-              <button
-                onClick={() => setHeartClub(null)}
-                className="p-2 opacity-40 hover:opacity-100 transition-opacity"
-              >
+              <button onClick={() => setHeartClub(null)} className="p-2 opacity-40 hover:opacity-100">
                 <X size={20} />
               </button>
             </div>
@@ -240,7 +230,6 @@ const Voting = () => {
           )}
         </div>
 
-        {/* SIMPATIAS */}
         <div className="space-y-3">
           <label className="text-xs font-black uppercase italic flex items-center gap-2 opacity-60">
             <Sparkles size={14} className="text-primary" /> Simpatias ({sympathyClubs.length}/{MAX_SYMPATHY_CLUBS})
@@ -323,9 +312,9 @@ export default Voting;
 /**
  * [RODAPÉ TÉCNICO]
  * Arquivo: src/pages/Voting.tsx
- * Versão: 10.0 (Master Release)
+ * Versão: 13.0 (Ultra Investigation Sync)
  * Modificações:
- * - Implementado invoke da função "enrich-club-colors" no handleConfirmVote.
- * - Garantido envio de api_id para investigação precisa.
- * - Mantida compatibilidade com persistClubsIfMissing para dados básicos.
+ * - Substituído Loop for por Promise.allSettled para disparos em massa e paralelos.
+ * - Garante que Coração e todas as Simpatias invoquem a Edge Function simultaneamente.
+ * - Sincronizado com a coluna 'apelido' da Edge Function enrich-club-colors.
  */
