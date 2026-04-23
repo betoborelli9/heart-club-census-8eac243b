@@ -103,6 +103,7 @@ export type Database = {
       }
       clubes_cache: {
         Row: {
+          apelido: string | null
           api_id: string | null
           atualizado_em: string | null
           cidade: string
@@ -124,6 +125,7 @@ export type Database = {
           tem_feminino: boolean | null
         }
         Insert: {
+          apelido?: string | null
           api_id?: string | null
           atualizado_em?: string | null
           cidade: string
@@ -145,6 +147,7 @@ export type Database = {
           tem_feminino?: boolean | null
         }
         Update: {
+          apelido?: string | null
           api_id?: string | null
           atualizado_em?: string | null
           cidade?: string

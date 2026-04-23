@@ -120,21 +120,26 @@ const Voting = () => {
       const { error: voteError } = await supabase.from("votos").insert(votesToInsert);
       if (voteError) throw voteError;
 
-      // 1. Salva os dados básicos no banco (Cache)
+      // 1. Salva os dados básicos no banco (Cache) — aguarda registro inicial
       await persistClubsIfMissing(allSelected.map((v) => v.club));
 
-      // 2. DISPARO EM MASSA PARA IA INVESTIGADORA (Coração + Simpatias)
-      // Usamos Settled para disparar todos de uma vez sem que um bloqueie o outro
-      Promise.allSettled(
+      // 2. INVESTIGAÇÃO IA EM MASSA (Coração + TODAS as Simpatias) — paralelo, aguardando conclusão
+      console.log(`[INVESTIGAÇÃO] Disparando para ${allSelected.length} clubes:`, allSelected.map(s => s.club.name));
+      const enrichResults = await Promise.allSettled(
         allSelected.map((item) =>
           supabase.functions.invoke("enrich-club-colors", {
             body: {
               club_name: item.club.name,
-              api_id: item.club.api_id,
+              api_id: item.club.api_id ?? null,
             },
           }),
         ),
-      ).then(() => console.log("[INVESTIGAÇÃO]: Finalizada para todos os clubes selecionados."));
+      );
+      enrichResults.forEach((r, i) => {
+        const name = allSelected[i].club.name;
+        if (r.status === "rejected") console.error(`[ENRICH FAIL] ${name}:`, r.reason);
+        else console.log(`[ENRICH OK] ${name}`);
+      });
 
       await refreshProfile();
       toast({ title: "Votos e Simpatias registrados! 🏟️" });
