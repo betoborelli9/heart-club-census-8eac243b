@@ -23,25 +23,32 @@ function extractJson(text: string): string | null {
 
 async function callGemini(geminiKey: string, prompt: string, model: string): Promise<string | null> {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiKey}`;
-  const res = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      contents: [{ parts: [{ text: prompt }] }],
-      generationConfig: { temperature: 0.2, responseMimeType: "application/json" },
-    }),
-  });
-  const json = await res.json();
-  if (!res.ok) {
-    console.error(`[Gemini ${model}] HTTP ${res.status}:`, JSON.stringify(json).substring(0, 400));
+  console.error(`[Gemini] → POST ${model}`);
+  try {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: { temperature: 0.2, responseMimeType: "application/json" },
+      }),
+    });
+    const json = await res.json();
+    if (!res.ok) {
+      console.error(`[Gemini ${model}] HTTP ${res.status}:`, JSON.stringify(json).substring(0, 600));
+      return null;
+    }
+    const text = json.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!text) {
+      console.error(`[Gemini ${model}] resposta sem texto. finishReason=${json.candidates?.[0]?.finishReason} payload=${JSON.stringify(json).substring(0, 600)}`);
+      return null;
+    }
+    console.error(`[Gemini ${model}] OK, texto: ${text.substring(0, 200)}`);
+    return text;
+  } catch (e) {
+    console.error(`[Gemini ${model}] EXCEÇÃO:`, (e as Error).message);
     return null;
   }
-  const text = json.candidates?.[0]?.content?.parts?.[0]?.text;
-  if (!text) {
-    console.error(`[Gemini ${model}] sem texto na resposta:`, JSON.stringify(json).substring(0, 400));
-    return null;
-  }
-  return text;
 }
 
 serve(async (req) => {
@@ -102,9 +109,10 @@ Regras obrigatórias:
 - Cores em HEX válido (#RRGGBB).
 - Sem markdown, sem explicações, apenas o JSON.`;
 
-      // Tenta gemini-1.5-flash, depois gemini-1.5-flash-latest como fallback
-      let rawText = await callGemini(geminiKey, prompt, "gemini-1.5-flash");
-      if (!rawText) rawText = await callGemini(geminiKey, prompt, "gemini-1.5-flash-latest");
+      // Cascata de modelos atuais (1.5-flash foi descontinuado em 2025)
+      let rawText = await callGemini(geminiKey, prompt, "gemini-2.0-flash");
+      if (!rawText) rawText = await callGemini(geminiKey, prompt, "gemini-2.5-flash");
+      if (!rawText) rawText = await callGemini(geminiKey, prompt, "gemini-flash-latest");
 
       if (rawText) {
         const jsonStr = extractJson(rawText);
