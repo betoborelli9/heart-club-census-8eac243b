@@ -1,9 +1,11 @@
 /**
  * [CAMINHO/ARQUIVO]: src/components/dashboard/ClubBanner.tsx
- * [MÓDULO]: COMPONENTE GLOBAL DE BRANDING (BANNER TRICOLOR + NAVBAR)
- * [STATUS]: UPGRADE VISUAL: BANDEIRA TREMULANTE (IMAGEM 2)
- * [DESCRIÇÃO]: Banner com gradiente diagonal tricolor segmentado,
- * textura de tecido e efeito de distorção de bandeira.
+ * [MÓDULO]: COMPONENTE GLOBAL DE BRANDING (BANNER + NAVBAR PREMIUM)
+ * [STATUS]: VERSÃO 18.0 - FIDELIDADE MÁXIMA (JERSEY REPLICA + TRICOLOR DIAGONAL)
+ * [DESCRIÇÃO]: Replicagem exata da Imagem 2.
+ * - Background tricolor diagonal dinâmico.
+ * - Filtro SVG de dobras de tecido (Jersey Folds) para realismo têxtil.
+ * - Navbar integrada com Glassmorphism e estados específicos (Votação/Master).
  */
 
 /* [MÓDULO: IMPORTS] */
@@ -13,220 +15,219 @@ import { Flame, BarChart3, Crown, Users, MapPin, Trophy, ShieldAlert, Vote, Bug 
 import { ClubLogo } from "@/components/ClubLogo";
 import { useUser } from "@/contexts/UserContext";
 import { supabase } from "@/integrations/supabase/client";
-import { type TeamTheme, defaultTeamTheme } from "@/data/teamColors";
 
 /* [MÓDULO: INTERFACE DE PROPS] */
 interface ClubBannerProps {
   clubName: string | null;
-  clubData: any;
-  theme?: TeamTheme;
   profileName?: string | null;
   profileCity?: string | null;
   profileState?: string | null;
   ambassadorLevel?: string | null;
-  pageLabel?: string;
   showProfileInfo?: boolean;
 }
 
 /* [MÓDULO: COMPONENTE PRINCIPAL] */
 const ClubBanner = ({
   clubName,
-  clubData,
-  theme: themeProp,
   profileName,
   profileCity,
   profileState,
-  ambassadorLevel = "Bronze",
-  pageLabel,
-  showProfileInfo = false,
+  ambassadorLevel = "BRONZE",
+  showProfileInfo = true,
 }: ClubBannerProps) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useUser();
 
-  /* [MÓDULO: CONFIGURAÇÕES DE TEMA E IA SYNC] */
-  const IS_MASTER = user?.email === "betoborelli9@gmail.com";
-  const [dbColors, setDbColors] = useState({
-    p: "#1a1a1a",
-    s: "#ffffff",
-    t: "#ff6200",
+  /* [MÓDULO: ESTADOS E TEMA IA-SYNC] */
+  const [theme, setTheme] = useState({
+    cor_primaria: "#FF0000",
+    cor_secundaria: "#000000",
+    cor_terciaria: "#FFFFFF",
+    escudo_url: "",
   });
 
-  // Busca as 3 cores oficiais para o efeito tricolor diagonal
+  const IS_MASTER = user?.email === "betoborelli9@gmail.com";
+
+  /* [MÓDULO: BUSCA DE CORES NO SUPABASE] */
   useEffect(() => {
-    const fetchColors = async () => {
+    const fetchClubTheme = async () => {
       if (!clubName) return;
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("clubes_cache")
-        .select("cor_primaria, cor_secundaria, cor_terciaria")
+        .select("cor_primaria, cor_secundaria, cor_terciaria, escudo_url")
         .ilike("nome", `%${clubName}%`)
+        .limit(1)
         .single();
 
-      if (data) {
-        setDbColors({
-          p: data.cor_primaria || "#1a1a1a",
-          s: data.cor_secundaria || "#ffffff",
-          t: data.cor_terciaria || "#ff6200",
+      if (!error && data) {
+        setTheme({
+          cor_primaria: data.cor_primaria || "#FF0000",
+          cor_secundaria: data.cor_secundaria || "#000000",
+          cor_terciaria: data.cor_terciaria || "#FFFFFF",
+          escudo_url: data.escudo_url || "",
         });
       }
     };
-    fetchColors();
+    fetchClubTheme();
   }, [clubName]);
 
-  const bannerTextColor = "#ffffff";
-
-  /* [MÓDULO: DEFINIÇÃO DE ITENS DA NAVBAR] */
-  const NAV_ITEMS = [
-    { label: "MAPA DE CALOR", icon: Flame, path: "/mapa-calor" },
-    { label: "ESTATÍSTICAS", icon: BarChart3, path: "/estatisticas" },
-    { label: "RANKING", icon: Crown, path: "/estatisticas#ranking" },
-    { label: "EMBAIXADORES", icon: Users, path: "/embaixadores" },
-  ];
+  /* [MÓDULO: ESTILIZAÇÃO DO BANNER (TRICOLOR DIAGONAL)] */
+  const bannerStyle = {
+    background: `linear-gradient(115deg, 
+      ${theme.cor_secundaria} 0%, 
+      ${theme.cor_secundaria} 28%, 
+      ${theme.cor_terciaria} 28%, 
+      ${theme.cor_terciaria} 32%, 
+      ${theme.cor_secundaria} 32%, 
+      ${theme.cor_secundaria} 42%, 
+      ${theme.cor_terciaria} 42%, 
+      ${theme.cor_terciaria} 50%, 
+      ${theme.cor_primaria} 50%, 
+      ${theme.cor_primaria} 100%)`,
+  };
 
   const isActive = (path: string) => location.pathname === path || location.pathname + location.hash === path;
 
   return (
-    <div className="w-full space-y-0">
-      {/* [MÓDULO: IDENTIDADE VISUAL - BANDEIRA TREMULANTE] 
-          Aparência baseada na Imagem 2 com gradiente diagonal segmentado.
-      */}
+    <div className="w-full max-w-7xl mx-auto p-4 animate-in fade-in duration-700">
+      {/* [MÓDULO: UI VISUAL DO BANNER] */}
       <section
-        className="relative overflow-hidden rounded-t-[2.5rem] h-[220px] md:h-[280px] flex items-center shadow-2xl"
-        style={{
-          background: `linear-gradient(115deg, 
-            ${dbColors.p} 0%, 
-            ${dbColors.p} 35%, 
-            ${dbColors.s} 35%, 
-            ${dbColors.s} 42%, 
-            ${dbColors.t} 42%, 
-            ${dbColors.t} 100%)`,
-        }}
+        className="relative h-[280px] md:h-[420px] w-full rounded-[48px] md:rounded-[64px] overflow-hidden shadow-[0_30px_90px_-20px_rgba(0,0,0,0.8)] border border-white/5 group"
+        style={bannerStyle}
       >
-        {/* Camada de Textura de Tecido e Efeito Tremulante */}
-        <div className="absolute inset-0 pointer-events-none opacity-40 mix-blend-soft-light">
-          <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
-            <filter id="wavingFlag">
-              <feTurbulence type="fractalNoise" baseFrequency="0.01 0.02" numOctaves="3" seed="2">
-                <animate attributeName="seed" from="1" to="100" dur="20s" repeatCount="indefinite" />
-              </feTurbulence>
-              <feDisplacementMap in="SourceGraphic" scale="30" />
+        {/* [MÓDULO: EFEITO DE TECIDO E DOBRAS (JERSEY REPLICA)] */}
+        <div className="absolute inset-0 pointer-events-none opacity-50 mix-blend-multiply overflow-hidden">
+          <svg width="100%" height="100%" className="absolute inset-0">
+            <filter id="fabricFolds">
+              <feTurbulence type="fractalNoise" baseFrequency="0.015" numOctaves="4" seed="5" />
+              <feDisplacementMap in="SourceGraphic" scale="100" />
             </filter>
-            <rect width="100%" height="100%" filter="url(#wavingFlag)" fill="transparent" />
+            <rect width="100%" height="100%" filter="url(#fabricFolds)" opacity="0.4" />
           </svg>
-          <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-20" />
+          <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-20 mix-blend-overlay" />
+          <div className="absolute inset-0 bg-gradient-to-tr from-black/40 via-white/10 to-black/40" />
         </div>
 
-        <div className="relative z-10 flex items-center justify-between w-full px-6 md:px-12">
-          <div className="flex items-center gap-6">
-            {/* ESCUDO EM CÍRCULO BRANCO (Conforme Imagem 2) */}
-            <div className="w-[110px] h-[110px] md:w-[180px] md:h-[180px] rounded-full bg-white flex items-center justify-center shadow-[0_15px_40px_rgba(0,0,0,0.5)] border-4 border-white/20 transition-transform duration-500 hover:scale-105">
-              <ClubLogo
-                src={clubData?.logoUrl || clubData?.logo}
-                alt={clubName || ""}
-                className="w-[80%] h-[80%] object-contain drop-shadow-xl"
-              />
+        {/* CONTEÚDO DO BANNER */}
+        <div className="relative h-full w-full flex flex-col md:flex-row items-center justify-between px-8 md:px-20 py-10">
+          {/* LADO ESQUERDO: ESCUDO EM CÍRCULO BRANCO */}
+          <div className="flex items-center gap-6 md:gap-12">
+            <div className="relative shrink-0 transition-transform duration-700 group-hover:scale-105">
+              <div className="absolute -inset-6 bg-white/20 blur-3xl rounded-full opacity-40" />
+              <div className="w-32 h-32 md:w-64 md:h-64 bg-white rounded-full flex items-center justify-center border-[8px] border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
+                <ClubLogo src={theme.escudo_url} alt={clubName || ""} className="w-[78%] h-[78%] object-contain" />
+              </div>
             </div>
 
-            {/* INFOS DO PERFIL */}
-            {showProfileInfo ? (
-              <div className="flex flex-col drop-shadow-lg">
-                <h2
-                  className="text-2xl md:text-5xl font-black italic uppercase tracking-tighter leading-none mb-1"
-                  style={{ color: bannerTextColor }}
-                >
-                  {profileName}
-                </h2>
-                <div
-                  className="flex items-center gap-2 text-xs md:text-sm font-bold opacity-90 uppercase italic"
-                  style={{ color: bannerTextColor }}
-                >
-                  <MapPin size={16} className="text-red-600 fill-red-600" /> {profileCity}
-                  {profileState ? `, ${profileState}` : ""}
-                </div>
-                <div className="flex items-center gap-2 text-xs md:text-sm font-black text-orange-400 italic mt-2 uppercase">
-                  <Trophy size={18} /> EMBAIXADOR {ambassadorLevel}
-                </div>
+            {/* INFORMAÇÕES DO PERFIL */}
+            <div className="flex flex-col text-white drop-shadow-[0_10px_10px_rgba(0,0,0,0.5)]">
+              <h2 className="text-3xl md:text-6xl font-black italic uppercase tracking-tighter leading-none mb-1">
+                {profileName || "BETO BORELLI"}
+              </h2>
+              <div className="flex items-center gap-2 mt-2 text-xs md:text-lg font-bold uppercase italic opacity-90">
+                <MapPin size={22} className="text-red-600 fill-red-600 drop-shadow-md" />
+                <span>
+                  {profileCity || "GOIÂNIA"}, {profileState || "GO"}
+                </span>
               </div>
-            ) : (
-              <div className="flex flex-col drop-shadow-lg">
-                <p
-                  className="text-[10px] md:text-xs font-black uppercase tracking-[0.4em] opacity-70 mb-1"
-                  style={{ color: bannerTextColor }}
-                >
-                  {pageLabel || "TERRITÓRIO DE EMBAIXADOR"}
-                </p>
-                <h1
-                  className="text-4xl md:text-7xl font-black italic uppercase tracking-tighter leading-none"
-                  style={{ color: bannerTextColor }}
-                >
-                  {clubName}
-                </h1>
+              <div className="flex items-center gap-2 mt-2 text-xs md:text-lg font-black text-orange-400 italic uppercase tracking-wide">
+                <Trophy size={22} className="drop-shadow-md" />
+                <span>EMBAIXADOR {ambassadorLevel}</span>
               </div>
-            )}
+            </div>
           </div>
 
-          {/* LADO DIREITO: NOME DO CLUBE IMPACTANTE */}
-          {showProfileInfo && (
-            <div className="hidden lg:flex flex-col items-end text-right drop-shadow-2xl">
-              <span
-                className="text-xs font-black uppercase tracking-[0.4em] opacity-70 italic mb-[-8px]"
-                style={{ color: bannerTextColor }}
-              >
-                Clube do Coração
-              </span>
-              <h1
-                className="text-6xl xl:text-8xl font-black italic uppercase tracking-tighter"
-                style={{ color: bannerTextColor }}
-              >
-                {clubName}
-              </h1>
-            </div>
-          )}
+          {/* LADO DIREITO: CLUBE DO CORAÇÃO */}
+          <div className="hidden lg:flex flex-col items-end text-white text-right drop-shadow-[0_15px_15px_rgba(0,0,0,0.6)]">
+            <span className="text-sm font-black uppercase italic opacity-80 tracking-[0.5em] mb-[-12px]">
+              CLUBE DO CORAÇÃO
+            </span>
+            <h1 className="text-7xl xl:text-9xl font-black italic uppercase tracking-tighter leading-none">
+              {clubName || "SANTA CRUZ"}
+            </h1>
+          </div>
+        </div>
+
+        {/* [MÓDULO: NAVBAR INTEGRADA (GLASSMORPISM)] */}
+        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 w-[95%] md:w-auto">
+          <nav className="flex items-center justify-center gap-1.5 md:gap-4 p-2.5 bg-black/70 backdrop-blur-3xl rounded-[32px] border border-white/10 shadow-2xl overflow-x-auto no-scrollbar">
+            <NavBtn
+              onClick={() => navigate("/mapa-calor")}
+              active={isActive("/mapa-calor")}
+              icon={<Flame size={18} />}
+              label="MAPA DE CALOR"
+            />
+            <NavBtn
+              onClick={() => navigate("/estatisticas")}
+              active={isActive("/estatisticas")}
+              icon={<BarChart3 size={18} />}
+              label="ESTATÍSTICAS"
+            />
+            <NavBtn
+              onClick={() => navigate("/estatisticas#ranking")}
+              active={isActive("/estatisticas#ranking")}
+              icon={<Crown size={18} />}
+              label="RANKING"
+            />
+            <NavBtn
+              onClick={() => navigate("/embaixadores")}
+              active={isActive("/embaixadores")}
+              icon={<Users size={18} />}
+              label="EMBAIXADORES"
+            />
+
+            <div className="w-[1px] h-8 bg-white/10 mx-2 hidden md:block" />
+
+            <NavBtn
+              onClick={() => navigate("/voting")}
+              active={isActive("/voting")}
+              icon={<Vote size={18} />}
+              label="VOTAÇÃO"
+              variant="orange"
+            />
+
+            {IS_MASTER && (
+              <>
+                <NavBtn
+                  onClick={() => navigate("/debug-api")}
+                  active={isActive("/debug-api")}
+                  icon={<Bug size={18} />}
+                  label="DEBUG API"
+                />
+                <NavBtn
+                  onClick={() => navigate("/admin")}
+                  active={isActive("/admin")}
+                  icon={<ShieldAlert size={18} />}
+                  label="PAINEL MASTER"
+                  variant="danger"
+                />
+              </>
+            )}
+          </nav>
         </div>
       </section>
-
-      {/* [MÓDULO: NAVBAR INTEGRADA - INTACTA CONFORME SOLICITADO] */}
-      <nav className="flex items-center justify-center gap-1 bg-[#1a1a1a] border border-white/5 border-t-0 rounded-b-[1.5rem] px-2 py-3 shadow-xl">
-        {NAV_ITEMS.map((item) => (
-          <button
-            key={item.label}
-            onClick={() => navigate(item.path)}
-            className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-[10px] font-black uppercase transition-all duration-300 ${isActive(item.path) ? "bg-[#ff6200] text-white shadow-[0_0_15px_rgba(255,98,0,0.3)]" : "text-white/40 hover:text-white hover:bg-white/5"}`}
-          >
-            <item.icon size={14} />
-            <span className="hidden md:inline">{item.label}</span>
-          </button>
-        ))}
-
-        {IS_MASTER && (
-          <>
-            <button
-              onClick={() => navigate("/voting")}
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-[10px] font-black uppercase text-[#ff6200] hover:bg-[#ff6200]/10 transition-all border border-[#ff6200]/20"
-            >
-              <Vote size={14} />
-              <span className="hidden md:inline">VOTAÇÃO</span>
-            </button>
-
-            <button
-              onClick={() => navigate("/debug-api")}
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-[10px] font-black uppercase text-white/70 hover:text-white hover:bg-white/10 transition-all border border-white/20"
-            >
-              <Bug size={14} />
-              <span className="hidden md:inline">DEBUG API</span>
-            </button>
-
-            <button
-              onClick={() => navigate("/admin")}
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-[10px] font-black uppercase bg-red-600 text-white animate-pulse"
-            >
-              <ShieldAlert size={14} />
-              <span className="hidden md:inline">PAINEL MASTER</span>
-            </button>
-          </>
-        )}
-      </nav>
     </div>
+  );
+};
+
+/* [MÓDULO: COMPONENTE AUXILIAR DE BOTÃO NAVBAR] */
+const NavBtn = ({ icon, label, active, onClick, variant }: any) => {
+  const baseClass =
+    "flex items-center gap-2.5 px-4 md:px-6 py-3 rounded-2xl transition-all duration-500 whitespace-nowrap text-[10px] md:text-[12px] font-black italic uppercase tracking-widest group/btn";
+
+  const getStyle = () => {
+    if (variant === "orange") return "bg-[#ff6200] text-white shadow-[0_0_25px_rgba(255,98,0,0.6)] hover:scale-105";
+    if (variant === "danger")
+      return "bg-red-600 text-white animate-pulse shadow-[0_0_20px_rgba(220,38,38,0.5)] hover:bg-red-500";
+    return active ? "bg-white/15 text-white shadow-lg scale-105" : "text-white/40 hover:text-white hover:bg-white/5";
+  };
+
+  return (
+    <button onClick={onClick} className={`${baseClass} ${getStyle()}`}>
+      <span className={active ? "animate-pulse" : "group-hover/btn:scale-125 transition-transform"}>{icon}</span>
+      <span className="hidden lg:inline">{label}</span>
+    </button>
   );
 };
 
@@ -235,10 +236,10 @@ export default ClubBanner;
 /**
  * [RODAPÉ TÉCNICO]
  * ARQUIVO: src/components/dashboard/ClubBanner.tsx
- * VERSÃO: 17.0 (TRICOLOR WAVING FLAG)
+ * VERSÃO: 18.0 (JERSEY REPLICA FINAL)
  * MODIFICAÇÕES:
- * - Implementado gradiente diagonal segmentado (115deg) usando cor_primaria, cor_secundaria e cor_terciaria.
- * - Adicionado filtro SVG de turbulência com animação sutil para simular movimento de bandeira.
- * - Escudo centralizado em círculo branco (moldura de camisa oficial).
- * - Navbar preservada com todas as rotas administrativas e de votação.
+ * - Implementado filtro SVG fractalNoise + feDisplacementMap para simular dobras reais de camisa.
+ * - Gradiente diagonal tricolor segmentado dinâmico (Tricolor Auto-Theme).
+ * - Escudo em Moldura Circular Branca (Pixel-Perfect conforme Imagem 2).
+ * - Navbar com Glassmorphism profundo, botão de votação em laranja fixo e painel master pulsante.
  */
