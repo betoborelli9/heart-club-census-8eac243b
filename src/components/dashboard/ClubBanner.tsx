@@ -12,6 +12,14 @@ import { ClubLogo } from "@/components/ClubLogo";
 
 interface ClubBannerProps {
   clubName: string;
+  clubData?: any;
+  theme?: any;
+  pageLabel?: string;
+  ambassadorLevel?: string;
+  profileName?: string;
+  profileCity?: string;
+  profileState?: string;
+  showProfileInfo?: boolean;
 }
 
 const ClubBanner = ({ clubName }: ClubBannerProps) => {
