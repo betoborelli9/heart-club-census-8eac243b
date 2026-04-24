@@ -1,9 +1,9 @@
 /**
  * [CAMINHO/ARQUIVO]: src/components/dashboard/ClubBanner.tsx
  * [MÓDULO]: COMPONENTE GLOBAL DE BRANDING (BANNER + NAVBAR)
- * [STATUS]: VERSÃO 15.3 (FLAG WAVE FULL COLORS)
- * [DESCRIÇÃO]: Banner com topo tremulando como bandeira,
- *              aplicando cores primária, secundária e terciária do Supabase.
+ * [STATUS]: VERSÃO 16.0 (FLAG WAVE DIAGONAL)
+ * [DESCRIÇÃO]: Banner com topo tremulando em diagonais fortes,
+ *              adaptando para tricolor ou bicolor conforme Supabase.
  */
 
 /* ═══════════════════════════════════════════════════════════
@@ -87,7 +87,7 @@ const ClubBanner = ({
   const isActive = (path: string) => location.pathname === path || location.pathname + location.hash === path;
 
   /* ═══════════════════════════════════════════════════════════
-      MÓDULO: INTERFACE VISUAL DO TOPO (BANDEIRA TREMULANDO)
+      MÓDULO: INTERFACE VISUAL DO TOPO (BANDEIRA DIAGONAL TREMULANDO)
      ═══════════════════════════════════════════════════════════ */
   return (
     <div className="w-full space-y-0">
@@ -95,8 +95,8 @@ const ClubBanner = ({
         className="relative overflow-hidden rounded-t-[2.5rem] h-[200px] md:h-[240px] flex items-center shadow-2xl"
         style={{
           background: theme.cor_terciaria
-            ? `linear-gradient(90deg, ${theme.cor_primaria} 0%, ${theme.cor_secundaria} 50%, ${theme.cor_terciaria} 100%)`
-            : `linear-gradient(90deg, ${theme.cor_primaria} 0%, ${theme.cor_secundaria} 100%)`,
+            ? `linear-gradient(135deg, ${theme.cor_primaria} 0%, ${theme.cor_secundaria} 50%, ${theme.cor_terciaria} 100%)`
+            : `linear-gradient(135deg, ${theme.cor_primaria} 0%, ${theme.cor_secundaria} 100%)`,
           backgroundSize: "200% 200%",
           animation: "waveFlag 6s ease-in-out infinite",
         }}
@@ -136,7 +136,7 @@ const ClubBanner = ({
           </div>
 
           {showProfileInfo && (
-            <div className="flex flex-col items-end text-right md:items-end md:text-right">
+            <div className="flex flex-col items-end text-right">
               <span className="text-[10px] md:text-xs font-bold uppercase tracking-[0.3em] opacity-50 text-white">
                 Clube do Coração
               </span>
