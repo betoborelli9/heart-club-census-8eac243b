@@ -1,13 +1,12 @@
 /**
  * [CAMINHO/ARQUIVO]: src/components/dashboard/ClubBanner.tsx
  * [MÓDULO]: BRANDING & DASHBOARD NAVIGATION
- * [STATUS]: VERSÃO 35.0 (MAX BADGE IMPACT — DESKTOP RESIZE FIX)
- * [DESCRIÇÃO]: Ajuste cirúrgico no tamanho do emblema para Desktop.
- * - Escala Desktop: Emblema ampliado para 280px e Banner para 320px de altura para máximo impacto.
- * - Proporção Interna: Logotipo agora ocupa 85% da área do círculo (antes 80%).
- * - Mobile: Preservado integralmente conforme validação anterior (110px).
- * - Legibilidade: Mantido contorno 'enuviado' (soft shadow) e alinhamentos travados.
- * - Regras: Lógica IS_MASTER Diamante e Ambassador Gate preservadas.
+ * [STATUS]: VERSÃO 36.0 (BICOLOR 3-STRIPE SYNC — SLIM PROFILE)
+ * [DESCRIÇÃO]: Banner unificado com correção de proporção e nova lógica de faixas para bicolores.
+ * - Perfil Slim: Altura reduzida para 240px no desktop para maior elegância.
+ * - Bicolores: Implementada lógica de 3 faixas diagonais centrais (ex: Palmeiras Verde-Branco-Verde).
+ * - Escala: Emblema equilibrado em 210px (Desktop).
+ * - Legibilidade: Mantido contorno 'enuviado' (soft shadow).
  */
 
 /* ═══════════════════════════════════════════════════════════
@@ -62,9 +61,6 @@ const ClubBanner = ({
   const location = useLocation();
   const { user } = useUser();
 
-  /* ═══════════════════════════════════════════════════════════
-      MÓDULO: ESTADO E TEMA
-     ═══════════════════════════════════════════════════════════ */
   const [theme, setTheme] = useState({
     cor_primaria: "#1a1a1a",
     cor_secundaria: "#ffffff",
@@ -74,7 +70,6 @@ const ClubBanner = ({
 
   const IS_MASTER = user?.email === "betoborelli9@gmail.com";
 
-  // LOGICA DE EXCLUSIVIDADE: Beto é Diamante, outros dependem de convites.
   const hasLevel = ambassadorLevel && ambassadorLevel.toUpperCase() !== "NONE";
   const canSeeAmbassador = hasLevel || IS_MASTER;
   const displayLevel = IS_MASTER ? "DIAMANTE" : ambassadorLevel || "BRONZE";
@@ -107,24 +102,31 @@ const ClubBanner = ({
     const colors = [theme.cor_primaria, theme.cor_secundaria, theme.cor_terciaria].filter(Boolean);
     const sorted = [...colors].sort((a, b) => calculateLuminance(a) - calculateLuminance(b));
 
+    // TRICOLOR (São Paulo, Santa Cruz)
     if (sorted.length === 3) {
       return `linear-gradient(115deg, 
-        ${sorted[0]} 0%, ${sorted[0]} 36%, 
-        ${sorted[1]} 36%, ${sorted[1]} 41%, 
-        ${sorted[2]} 41%, ${sorted[2]} 46%, 
-        ${sorted[0]} 46%, ${sorted[0]} 51%, 
-        ${sorted[1]} 51%, ${sorted[1]} 100%)`;
+        ${sorted[0]} 0%, ${sorted[0]} 34%, 
+        ${sorted[1]} 34%, ${sorted[1]} 38%, 
+        ${sorted[2]} 38%, ${sorted[2]} 42%, 
+        ${sorted[0]} 42%, ${sorted[0]} 46%, 
+        ${sorted[1]} 46%, ${sorted[1]} 100%)`;
     }
 
+    // BICOLOR (Palmeiras, Vila Nova) - 3 faixas diagonais brancas no mesmo local
+    const strong = sorted[0];
+    const light = sorted[1] || "#ffffff";
     return `linear-gradient(115deg, 
-      ${sorted[0]} 0%, ${sorted[0]} 45%, 
-      ${sorted[1] || "#ffffff"} 45%, ${sorted[1] || "#ffffff"} 50%, 
-      ${sorted[1] || "#ffffff"} 50%, ${sorted[1] || "#ffffff"} 55%, 
-      ${sorted[0]} 55%, ${sorted[0]} 100%)`;
+      ${strong} 0%, ${strong} 38%, 
+      ${light} 38%, ${light} 41%, 
+      ${strong} 41%, ${strong} 44%, 
+      ${light} 44%, ${light} 47%, 
+      ${strong} 47%, ${strong} 50%, 
+      ${light} 50%, ${light} 53%, 
+      ${strong} 53%, ${strong} 100%)`;
   };
 
   /* ═══════════════════════════════════════════════════════════
-      MÓDULO: NAVBAR (ESTRUTURA ORIGINAL PRESERVADA)
+      MÓDULO: NAVBAR (ESTRUTURA PRESERVADA)
      ═══════════════════════════════════════════════════════════ */
   const isActive = (path: string) => location.pathname === path || location.pathname + location.hash === path;
 
@@ -146,10 +148,6 @@ const ClubBanner = ({
     </button>
   );
 
-  /**
-   * Estilo de contorno 'Enuviado' (Soft Cloud Glow).
-   * Usa múltiplas camadas de sombras difusas para garantir leitura sem linhas duras.
-   */
   const textOutlineStyle = {
     textShadow: "0 0 10px rgba(0,0,0,0.9), 0 0 20px rgba(0,0,0,0.5), 0 2px 4px rgba(0,0,0,0.8)",
   };
@@ -164,9 +162,9 @@ const ClubBanner = ({
       `}</style>
 
       <div className="overflow-hidden rounded-[2.5rem] border border-[#1a1a1a] shadow-2xl flex flex-col">
-        {/* TOPO DO BANNER - ALTURA AMPLIADA NO DESKTOP PARA DAR IMPACTO AO ESCUDO */}
+        {/* TOPO DO BANNER - ALTURA CORRIGIDA PARA SLIM (240px) */}
         <section
-          className="relative h-[240px] md:h-[320px] w-full flex items-center overflow-hidden"
+          className="relative h-[240px] md:h-[240px] w-full flex items-center overflow-hidden"
           style={{
             background: buildFlagGradient(),
             backgroundSize: "200% 200%",
@@ -176,18 +174,17 @@ const ClubBanner = ({
           <div className="absolute inset-0 opacity-20 pointer-events-none mix-blend-overlay bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]" />
 
           <div className="relative z-10 h-full w-full flex flex-row items-center justify-between px-6 md:px-16">
-            {/* LADO ESQUERDO: ESCUDO + PERFIL (DESKTOP) */}
             <div className="flex items-center h-full shrink-0">
-              {/* ESCUDO AMPLIADO NO DESKTOP (280px) */}
-              <div className="w-[110px] h-[110px] md:w-[280px] md:h-[280px] rounded-full bg-white flex items-center justify-center shrink-0 shadow-xl border-4 border-white/10">
+              {/* EMBLEMA EQUILIBRADO (210px) PARA O BANNER SLIM */}
+              <div className="w-[110px] h-[110px] md:w-[210px] md:h-[210px] rounded-full bg-white flex items-center justify-center shrink-0 shadow-xl border-4 border-white/10">
                 <ClubLogo
                   src={theme.escudo_url}
                   alt={clubName}
-                  className="w-[85%] h-[85%] object-contain drop-shadow-md"
+                  className="w-[82%] h-[82%] object-contain drop-shadow-md"
                 />
               </div>
 
-              {/* PERFIL DESKTOP (CENTRALIZADO VERTICALMENTE COM O EIXO DO ESCUDO) */}
+              {/* PERFIL DESKTOP (CENTRALIZADO VERTICALMENTE) */}
               {showProfileInfo && (
                 <div className="hidden md:flex flex-col text-white ml-8 h-full justify-center">
                   <h2
@@ -206,7 +203,6 @@ const ClubBanner = ({
                       {profileState ? `, ${profileState}` : ""}
                     </span>
                   </div>
-                  {/* TRAVA LÓGICA + STATUS DIAMANTE */}
                   {canSeeAmbassador && (
                     <div
                       className="flex items-center gap-2 mt-2 text-xs font-black italic uppercase tracking-widest"
@@ -220,9 +216,8 @@ const ClubBanner = ({
               )}
             </div>
 
-            {/* LADO DIREITO: PERFIL (MOBILE) + CLUBE (AMBOS) */}
             <div className="flex-1 flex flex-col h-full items-end text-right py-4 md:py-6">
-              {/* BLOCO DE PERFIL (SOMENTE MOBILE - CENTRALIZADO VERTICALMENTE COM O EIXO DO ESCUDO) */}
+              {/* PERFIL MOBILE */}
               {showProfileInfo && (
                 <div className="flex-1 md:hidden flex flex-col justify-center items-end text-white">
                   <h2
@@ -241,20 +236,19 @@ const ClubBanner = ({
                       {profileState ? `, ${profileState}` : ""}
                     </span>
                   </div>
-                  {/* TRAVA LÓGICA + STATUS DIAMANTE */}
                   {canSeeAmbassador && (
                     <div
                       className="flex items-center gap-1.5 mt-1 text-[9px] font-black text-white italic uppercase tracking-widest"
                       style={textOutlineStyle}
                     >
                       <Trophy size={12} className={IS_MASTER ? "text-cyan-400 animate-pulse" : "text-orange-500"} />
-                      <span>EMBAIXADOR {displayLevel}</span>
+                      <span>EMBAIXADOR {ambassadorLevel || "BRONZE"}</span>
                     </div>
                   )}
                 </div>
               )}
 
-              {/* IDENTIDADE DO CLUBE (ANCORADO NA BASE - DESKTOP E MOBILE) */}
+              {/* CLUBE DO CORAÇÃO (ANCORADO NA BASE) */}
               <div className="flex flex-col items-end justify-end text-white mt-auto">
                 <span
                   className="text-[8px] md:text-[9px] font-black uppercase italic opacity-70 tracking-[0.3em] mb-[-4px]"
@@ -273,7 +267,6 @@ const ClubBanner = ({
           </div>
         </section>
 
-        {/* NAVBAR INFERIOR (PRESERVADA) */}
         <nav className="flex items-center justify-center gap-1.5 bg-[#1a1a1a] px-4 py-3.5 overflow-x-auto no-scrollbar">
           <NavItem icon={Flame} label="MAPA DE CALOR" path="/mapa-calor" active={isActive("/mapa-calor")} />
           <NavItem icon={BarChart3} label="ESTATÍSTICAS" path="/estatisticas" active={isActive("/estatisticas")} />
@@ -284,11 +277,8 @@ const ClubBanner = ({
             active={isActive("/estatisticas#ranking")}
           />
           <NavItem icon={Users} label="EMBAIXADORES" path="/embaixadores" active={isActive("/embaixadores")} />
-
           <div className="w-[1px] h-6 bg-white/10 mx-2 hidden md:block" />
-
           <NavItem icon={Vote} label="VOTAÇÃO" path="/voting" variant="orange" />
-
           {IS_MASTER && (
             <>
               <NavItem icon={Bug} label="DEBUG API" path="/debug-api" />
@@ -306,10 +296,10 @@ export default ClubBanner;
 /**
  * [RODAPÉ TÉCNICO]
  * ARQUIVO: src/components/dashboard/ClubBanner.tsx
- * VERSÃO: 35.0
+ * VERSÃO: 36.0
  * CORREÇÕES:
- * - Escala Desktop: Círculo do emblema aumentado de 240px para 280px.
- * - Altura do Banner: Aumentada de 280px para 320px no desktop para acomodar o novo tamanho do escudo com margem de segurança.
- * - Proporção Logo: 'ClubLogo' ampliado para 85% (era 80%) dentro do círculo branco para reduzir a área vazia.
- * - Integridade: Sombras enuviadas, alinhamentos verticais e lógica de Embaixador Diamante rigorosamente mantidos.
+ * - Altura Slim: Banner desktop reduzido de 320px para 240px para retomar o visual elegante e estreito.
+ * - Emblema Balanceado: Tamanho ajustado para 210px (PC) para não colidir com as bordas do banner reduzido.
+ * - Lógica Bicolor: Adicionado suporte a 3 faixas diagonais centrais para clubes bicolores (Cor Forte -> Faixa 1 -> Forte -> Faixa 2 -> Forte -> Faixa 3 -> Cor Forte).
+ * - Integridade: Mantidos contornos enuviados, alinhamento base e lógica IS_MASTER.
  */
