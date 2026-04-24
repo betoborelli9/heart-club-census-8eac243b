@@ -1,13 +1,12 @@
 /**
  * [CAMINHO/ARQUIVO]: src/components/dashboard/ClubBanner.tsx
  * [MÓDULO]: BRANDING & DASHBOARD NAVIGATION
- * [STATUS]: VERSÃO 31.0 (SOFT TEXT GLOW — GEOMETRIC PERFECTION)
- * [DESCRIÇÃO]: Banner unificado com contorno enuviado (soft shadow) e alinhamentos travados.
- * - Legibilidade: Substituído contorno sólido por 'soft glow' difuso (enuviado).
- * - Alinhamento Mobile: Perfil centralizado no eixo do emblema; Clube na base.
- * - Alinhamento Desktop: Perfil centralizado no eixo do emblema; Clube na base direita.
- * - Escala: Emblema 180px (Desktop) / 110px (Mobile).
- * - Borda: Contorno unificado em #1a1a1a.
+ * [STATUS]: VERSÃO 34.0 (DIAMOND STATUS — ELITE AMBASSADOR LOGIC)
+ * [DESCRIÇÃO]: Banner unificado com distinção exclusiva para o Embaixador Diamante.
+ * - Regra de Negócio: Beto Borelli é fixado como DIAMANTE. Demais usuários são BRONZE (ou nível atingido) apenas se possuírem convites.
+ * - Visual: Efeito de brilho diferenciado para o nível Diamante.
+ * - Escala Desktop: Emblema em 240px; Altura do banner em 280px.
+ * - Legibilidade: Contorno 'enuviado' (soft shadow) preservado.
  */
 
 /* ═══════════════════════════════════════════════════════════
@@ -28,7 +27,7 @@ interface ClubBannerProps {
   profileName?: string;
   profileCity?: string;
   profileState?: string;
-  ambassadorLevel?: string;
+  ambassadorLevel?: string | null;
   pageLabel?: string;
   showProfileInfo?: boolean;
 }
@@ -54,7 +53,7 @@ const ClubBanner = ({
   profileName = "",
   profileCity = "",
   profileState = "",
-  ambassadorLevel = "BRONZE",
+  ambassadorLevel = null,
   pageLabel,
   showProfileInfo = false,
 }: ClubBannerProps) => {
@@ -73,6 +72,11 @@ const ClubBanner = ({
   });
 
   const IS_MASTER = user?.email === "betoborelli9@gmail.com";
+
+  // LOGICA DE EXCLUSIVIDADE: Beto é Diamante, outros dependem de convites.
+  const hasLevel = ambassadorLevel && ambassadorLevel.toUpperCase() !== "NONE";
+  const canSeeAmbassador = hasLevel || IS_MASTER;
+  const displayLevel = IS_MASTER ? "DIAMANTE" : ambassadorLevel || "BRONZE";
 
   useEffect(() => {
     if (!clubName) return;
@@ -96,7 +100,7 @@ const ClubBanner = ({
   }, [clubName]);
 
   /* ═══════════════════════════════════════════════════════════
-      MÓDULO: LARGURA DAS COLUNAS (NARROW PRECISION)
+      MÓDULO: LARGURA DAS COLUNAS (DIAGONAIS SÓLIDAS)
      ═══════════════════════════════════════════════════════════ */
   const buildFlagGradient = (): string => {
     const colors = [theme.cor_primaria, theme.cor_secundaria, theme.cor_terciaria].filter(Boolean);
@@ -141,10 +145,6 @@ const ClubBanner = ({
     </button>
   );
 
-  /**
-   * Estilo de contorno 'Enuviado' (Soft Cloud Glow).
-   * Usa múltiplas camadas de sombras difusas para garantir leitura sem linhas duras.
-   */
   const textOutlineStyle = {
     textShadow: "0 0 10px rgba(0,0,0,0.9), 0 0 20px rgba(0,0,0,0.5), 0 2px 4px rgba(0,0,0,0.8)",
   };
@@ -158,11 +158,10 @@ const ClubBanner = ({
         }
       `}</style>
 
-      {/* ═══════ CONTAINER UNIFICADO (BANNER + NAVBAR) ═══════ */}
       <div className="overflow-hidden rounded-[2.5rem] border border-[#1a1a1a] shadow-2xl flex flex-col">
         {/* TOPO DO BANNER */}
         <section
-          className="relative h-[240px] md:h-[220px] w-full flex items-center overflow-hidden"
+          className="relative h-[240px] md:h-[280px] w-full flex items-center overflow-hidden"
           style={{
             background: buildFlagGradient(),
             backgroundSize: "200% 200%",
@@ -174,7 +173,7 @@ const ClubBanner = ({
           <div className="relative z-10 h-full w-full flex flex-row items-center justify-between px-6 md:px-16">
             {/* LADO ESQUERDO: ESCUDO + PERFIL (DESKTOP) */}
             <div className="flex items-center h-full shrink-0">
-              <div className="w-[110px] h-[110px] md:w-[180px] md:h-[180px] rounded-full bg-white flex items-center justify-center shrink-0 shadow-xl border-4 border-white/10">
+              <div className="w-[110px] h-[110px] md:w-[240px] md:h-[240px] rounded-full bg-white flex items-center justify-center shrink-0 shadow-xl border-4 border-white/10">
                 <ClubLogo
                   src={theme.escudo_url}
                   alt={clubName}
@@ -182,7 +181,7 @@ const ClubBanner = ({
                 />
               </div>
 
-              {/* BLOCO DE PERFIL (DESKTOP - CENTRALIZADO VERTICALMENTE COM O EIXO DO ESCUDO) */}
+              {/* PERFIL DESKTOP (CENTRALIZADO) */}
               {showProfileInfo && (
                 <div className="hidden md:flex flex-col text-white ml-8 h-full justify-center">
                   <h2
@@ -201,20 +200,23 @@ const ClubBanner = ({
                       {profileState ? `, ${profileState}` : ""}
                     </span>
                   </div>
-                  <div
-                    className="flex items-center gap-2 mt-2 text-xs font-black text-white italic uppercase tracking-widest"
-                    style={textOutlineStyle}
-                  >
-                    <Trophy size={12} className="text-orange-500" />
-                    <span>EMBAIXADOR {ambassadorLevel}</span>
-                  </div>
+                  {/* TRAVA LÓGICA + STATUS DIAMANTE */}
+                  {canSeeAmbassador && (
+                    <div
+                      className="flex items-center gap-2 mt-2 text-xs font-black italic uppercase tracking-widest"
+                      style={textOutlineStyle}
+                    >
+                      <Trophy size={14} className={IS_MASTER ? "text-cyan-400 animate-pulse" : "text-orange-500"} />
+                      <span className={IS_MASTER ? "text-cyan-200" : "text-white"}>EMBAIXADOR {displayLevel}</span>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
 
-            {/* LADO DIREITO: PERFIL (MOBILE) + CLUBE (AMBOS) */}
+            {/* LADO DIREITO: PERFIL (MOBILE) + CLUBE */}
             <div className="flex-1 flex flex-col h-full items-end text-right py-4 md:py-6">
-              {/* BLOCO DE PERFIL (MOBILE - CENTRALIZADO VERTICALMENTE COM O EIXO DO ESCUDO) */}
+              {/* PERFIL MOBILE (CENTRALIZADO COM ESCUDO) */}
               {showProfileInfo && (
                 <div className="flex-1 md:hidden flex flex-col justify-center items-end text-white">
                   <h2
@@ -233,17 +235,20 @@ const ClubBanner = ({
                       {profileState ? `, ${profileState}` : ""}
                     </span>
                   </div>
-                  <div
-                    className="flex items-center gap-1.5 mt-1 text-[9px] font-black text-white italic uppercase tracking-widest"
-                    style={textOutlineStyle}
-                  >
-                    <Trophy size={12} className="text-orange-500" />
-                    <span>EMBAIXADOR {ambassadorLevel}</span>
-                  </div>
+                  {/* TRAVA LÓGICA + STATUS DIAMANTE */}
+                  {canSeeAmbassador && (
+                    <div
+                      className="flex items-center gap-1.5 mt-1 text-[9px] font-black italic uppercase tracking-widest"
+                      style={textOutlineStyle}
+                    >
+                      <Trophy size={12} className={IS_MASTER ? "text-cyan-400 animate-pulse" : "text-orange-500"} />
+                      <span className={IS_MASTER ? "text-cyan-200" : "text-white"}>EMBAIXADOR {displayLevel}</span>
+                    </div>
+                  )}
                 </div>
               )}
 
-              {/* IDENTIDADE DO CLUBE (ANCORADO NA BASE - DESKTOP E MOBILE) */}
+              {/* CLUBE DO CORAÇÃO (BASE) */}
               <div className="flex flex-col items-end justify-end text-white mt-auto">
                 <span
                   className="text-[8px] md:text-[9px] font-black uppercase italic opacity-70 tracking-[0.3em] mb-[-4px]"
@@ -262,7 +267,7 @@ const ClubBanner = ({
           </div>
         </section>
 
-        {/* NAVBAR INFERIOR */}
+        {/* NAVBAR */}
         <nav className="flex items-center justify-center gap-1.5 bg-[#1a1a1a] px-4 py-3.5 overflow-x-auto no-scrollbar">
           <NavItem icon={Flame} label="MAPA DE CALOR" path="/mapa-calor" active={isActive("/mapa-calor")} />
           <NavItem icon={BarChart3} label="ESTATÍSTICAS" path="/estatisticas" active={isActive("/estatisticas")} />
@@ -295,11 +300,10 @@ export default ClubBanner;
 /**
  * [RODAPÉ TÉCNICO]
  * ARQUIVO: src/components/dashboard/ClubBanner.tsx
- * VERSÃO: 31.0
+ * VERSÃO: 34.0
  * CORREÇÕES:
- * - Legibilidade 'Enuviada': Substituído text-shadow sólido por camadas difusas (blur 10px e 20px) para um visual 'cloud' profissional.
- * - Alinhamento Desktop: Perfil (Esquerda) agora usa 'justify-center' para alinhar-se perfeitamente ao centro vertical do emblema.
- * - Alinhamento Mobile: Perfil (Direita) centralizado no eixo horizontal do emblema via flex-1 justify-center.
- * - Posicionamento Base: Nome do clube mantido no rodapé (mt-auto) tanto em Desktop quanto Mobile para elegância visual.
- * - Integridade: Nenhuma alteração nas diagonais, cores ou lógica de busca de dados.
+ * - Status Elite: Implementada a lógica 'IS_MASTER' para forçar o título "EMBAIXADOR DIAMANTE" exclusivamente para Beto Borelli.
+ * - Visual Diamante: Adicionado tom ciano brilhante (text-cyan-200) e animação no troféu para destacar o status Diamante.
+ * - Segurança: Selo de embaixador ocultado para usuários sem nível, mantendo a exclusividade do sistema de convites.
+ * - Integridade: Preservados emblema de 240px, sombra enuviada e alinhamentos validados.
  */
