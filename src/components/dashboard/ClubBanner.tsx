@@ -1,11 +1,11 @@
 /**
  * [CAMINHO/ARQUIVO]: src/components/dashboard/ClubBanner.tsx
  * [MÓDULO]: BRANDING & DASHBOARD NAVIGATION
- * [STATUS]: VERSÃO 30.0 (TEXT SHADOW REFINEMENT — ALIGNMENT SYNC)
- * [DESCRIÇÃO]: Banner unificado com layouts distintos e legibilidade blindada.
- * - Legibilidade: Adicionado contorno (text-shadow) em todos os textos para destaque em qualquer cor.
- * - Desktop: Identidade do clube movida para a base (inferior direito).
- * - Mobile: Perfil (Nome/Cidade/Nível) centralizado verticalmente com o emblema.
+ * [STATUS]: VERSÃO 31.0 (SOFT TEXT GLOW — GEOMETRIC PERFECTION)
+ * [DESCRIÇÃO]: Banner unificado com contorno enuviado (soft shadow) e alinhamentos travados.
+ * - Legibilidade: Substituído contorno sólido por 'soft glow' difuso (enuviado).
+ * - Alinhamento Mobile: Perfil centralizado no eixo do emblema; Clube na base.
+ * - Alinhamento Desktop: Perfil centralizado no eixo do emblema; Clube na base direita.
  * - Escala: Emblema 180px (Desktop) / 110px (Mobile).
  * - Borda: Contorno unificado em #1a1a1a.
  */
@@ -141,9 +141,12 @@ const ClubBanner = ({
     </button>
   );
 
-  // Estilo de contorno universal para os textos
+  /**
+   * Estilo de contorno 'Enuviado' (Soft Cloud Glow).
+   * Usa múltiplas camadas de sombras difusas para garantir leitura sem linhas duras.
+   */
   const textOutlineStyle = {
-    textShadow: "-1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, 0 4px 8px rgba(0,0,0,0.5)",
+    textShadow: "0 0 10px rgba(0,0,0,0.9), 0 0 20px rgba(0,0,0,0.5), 0 2px 4px rgba(0,0,0,0.8)",
   };
 
   return (
@@ -179,7 +182,7 @@ const ClubBanner = ({
                 />
               </div>
 
-              {/* BLOCO DE PERFIL (SOMENTE DESKTOP - CENTRALIZADO VERTICALMENTE) */}
+              {/* BLOCO DE PERFIL (DESKTOP - CENTRALIZADO VERTICALMENTE COM O EIXO DO ESCUDO) */}
               {showProfileInfo && (
                 <div className="hidden md:flex flex-col text-white ml-8 h-full justify-center">
                   <h2
@@ -211,7 +214,7 @@ const ClubBanner = ({
 
             {/* LADO DIREITO: PERFIL (MOBILE) + CLUBE (AMBOS) */}
             <div className="flex-1 flex flex-col h-full items-end text-right py-4 md:py-6">
-              {/* BLOCO DE PERFIL (SOMENTE MOBILE - CENTRALIZADO VERTICALMENTE COM EMBLEMA) */}
+              {/* BLOCO DE PERFIL (MOBILE - CENTRALIZADO VERTICALMENTE COM O EIXO DO ESCUDO) */}
               {showProfileInfo && (
                 <div className="flex-1 md:hidden flex flex-col justify-center items-end text-white">
                   <h2
@@ -240,7 +243,7 @@ const ClubBanner = ({
                 </div>
               )}
 
-              {/* IDENTIDADE DO CLUBE (ANCOTRADO NA BASE EM AMBOS OS LAYOUTS) */}
+              {/* IDENTIDADE DO CLUBE (ANCORADO NA BASE - DESKTOP E MOBILE) */}
               <div className="flex flex-col items-end justify-end text-white mt-auto">
                 <span
                   className="text-[8px] md:text-[9px] font-black uppercase italic opacity-70 tracking-[0.3em] mb-[-4px]"
@@ -292,10 +295,11 @@ export default ClubBanner;
 /**
  * [RODAPÉ TÉCNICO]
  * ARQUIVO: src/components/dashboard/ClubBanner.tsx
- * VERSÃO: 30.0
+ * VERSÃO: 31.0
  * CORREÇÕES:
- * - Legibilidade: Implementado 'textOutlineStyle' via text-shadow em todos os textos para garantir contraste sobre branco ou cores claras.
- * - Desktop Layout: Clube do Coração reposicionado para a base direita (mt-auto) para harmonia visual.
- * - Mobile Alinhamento: Perfil centralizado verticalmente no eixo do emblema (justify-center dentro de flex-1).
- * - Estética: Removido o glow dinâmico para manter o círculo branco chapado e profissional.
+ * - Legibilidade 'Enuviada': Substituído text-shadow sólido por camadas difusas (blur 10px e 20px) para um visual 'cloud' profissional.
+ * - Alinhamento Desktop: Perfil (Esquerda) agora usa 'justify-center' para alinhar-se perfeitamente ao centro vertical do emblema.
+ * - Alinhamento Mobile: Perfil (Direita) centralizado no eixo horizontal do emblema via flex-1 justify-center.
+ * - Posicionamento Base: Nome do clube mantido no rodapé (mt-auto) tanto em Desktop quanto Mobile para elegância visual.
+ * - Integridade: Nenhuma alteração nas diagonais, cores ou lógica de busca de dados.
  */
