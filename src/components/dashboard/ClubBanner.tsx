@@ -197,5 +197,5 @@ export default ClubBanner;
 /**
  * [RODAPÉ TÉCNICO]
  * ARQUIVO: src/components/dashboard/ClubBanner.tsx
- * CORREÇÃO: Rota do botão VOTAÇÃO alterada para /voting.
+ * CORREÇÃO: Rota do botão VOTAÇÃO alterada para /voting copilot.
  */
