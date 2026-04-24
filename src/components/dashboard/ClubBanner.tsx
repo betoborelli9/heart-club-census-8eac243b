@@ -1,11 +1,11 @@
 /**
  * [CAMINHO/ARQUIVO]: src/components/dashboard/ClubBanner.tsx
  * [MÓDULO]: BRANDING & DASHBOARD NAVIGATION
- * [STATUS]: VERSÃO 19.0 (REPLICA VISUAL — IMAGE 2 PRECISION)
- * [DESCRIÇÃO]: Banner com bandeira diagonal (tricolor/bicolor) modularizado.
- * - Hierarquia Visual: Cor mais forte (Início) | Segunda mais forte (Fim).
- * - Diagonais Sólidas: Sem degradê (Hard Stops) com inclinação de 135 graus.
- * - Tipografia Delicada: Proporcional e legível.
+ * [STATUS]: VERSÃO 20.0 (PRECISÃO GEOMÉTRICA — IMAGE 2 ADJUST)
+ * [DESCRIÇÃO]: Banner estreito com diagonais em 115 graus.
+ * - Inclinação: Ajustada de 135deg para 115deg (mais vertical/menos inclinada).
+ * - Altura: Reduzida para um perfil mais estreito (220px desktop).
+ * - Hierarquia: Cor forte (Início) | Segunda forte (Fim) | Branca (Meio).
  * - Navbar: Preservada integralmente.
  */
 
@@ -95,33 +95,32 @@ const ClubBanner = ({
   }, [clubName]);
 
   /* ═══════════════════════════════════════════════════════════
-      MÓDULO: LARGURA DAS COLUNAS (LÓGICA DE BRANDING)
+      MÓDULO: LARGURA E INCLINAÇÃO DAS COLUNAS (115 DEGREES)
      ═══════════════════════════════════════════════════════════ */
   const buildFlagGradient = (): string => {
     const colors = [theme.cor_primaria, theme.cor_secundaria, theme.cor_terciaria].filter(Boolean);
-    // Ordena da mais escura para a mais clara
     const sorted = [...colors].sort((a, b) => calculateLuminance(a) - calculateLuminance(b));
 
-    // sorted[0] = Cor mais forte (Fundo inicial)
-    // sorted[1] = Segunda mais forte (Fundo final)
-    // sorted[2] = Mais clara / Branco (Detalhe diagonal)
+    // sorted[0] = Cor mais forte (Início)
+    // sorted[1] = Segunda mais forte (Fim)
+    // sorted[2] = Mais clara / Branco (Detalhe central)
 
     if (sorted.length === 3) {
-      // TRICOLOR (São Paulo, Santa Cruz)
-      return `linear-gradient(135deg, 
-        ${sorted[0]} 0%, ${sorted[0]} 30%, 
-        ${sorted[1]} 30%, ${sorted[1]} 38%, 
-        ${sorted[2]} 38%, ${sorted[2]} 46%, 
-        ${sorted[0]} 46%, ${sorted[0]} 54%, 
-        ${sorted[1]} 54%, ${sorted[1]} 100%)`;
+      // TRICOLOR - Inclinação 115deg (Menos inclinada que a anterior)
+      return `linear-gradient(115deg, 
+        ${sorted[0]} 0%, ${sorted[0]} 32%, 
+        ${sorted[1]} 32%, ${sorted[1]} 40%, 
+        ${sorted[2]} 40%, ${sorted[2]} 48%, 
+        ${sorted[0]} 48%, ${sorted[0]} 56%, 
+        ${sorted[1]} 56%, ${sorted[1]} 100%)`;
     }
 
-    // BICOLOR (Vila Nova, Palmeiras)
-    return `linear-gradient(135deg, 
-      ${sorted[0]} 0%, ${sorted[0]} 40%, 
-      ${sorted[1] || "#ffffff"} 40%, ${sorted[1] || "#ffffff"} 48%, 
-      ${sorted[1] || "#ffffff"} 48%, ${sorted[1] || "#ffffff"} 56%, 
-      ${sorted[0]} 56%, ${sorted[0]} 100%)`;
+    // BICOLOR - Inclinação 115deg
+    return `linear-gradient(115deg, 
+      ${sorted[0]} 0%, ${sorted[0]} 42%, 
+      ${sorted[1] || "#ffffff"} 42%, ${sorted[1] || "#ffffff"} 50%, 
+      ${sorted[1] || "#ffffff"} 50%, ${sorted[1] || "#ffffff"} 58%, 
+      ${sorted[0]} 58%, ${sorted[0]} 100%)`;
   };
 
   /* ═══════════════════════════════════════════════════════════
@@ -156,24 +155,24 @@ const ClubBanner = ({
         }
       `}</style>
 
-      {/* ═══════ TOPO DO BANNER (FLAG SECTION) ═══════ */}
+      {/* ═══════ TOPO DO BANNER (ESTREITO / NARROW PROFILE) ═══════ */}
       <section
-        className="relative h-[220px] md:h-[280px] w-full rounded-t-[2.5rem] overflow-hidden flex items-center shadow-2xl"
+        className="relative h-[180px] md:h-[220px] w-full rounded-t-[2.5rem] overflow-hidden flex items-center shadow-2xl"
         style={{
           background: buildFlagGradient(),
           backgroundSize: "200% 200%",
-          animation: "waveFlag 12s ease-in-out infinite",
+          animation: "waveFlag 15s ease-in-out infinite",
         }}
       >
-        {/* Overlay de Textura (Tecido Jersey) */}
+        {/* Overlay de Textura Jersey */}
         <div className="absolute inset-0 opacity-20 pointer-events-none mix-blend-overlay bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]" />
 
         <div className="relative z-10 flex items-center justify-between w-full px-6 md:px-16">
           <div className="flex items-center gap-4 md:gap-8">
-            {/* ESCUDO (CÍRCULO BRANCO PROPORCIONAL) */}
+            {/* ESCUDO PROPORCIONAL AO BANNER ESTREITO */}
             <div
-              className="w-[120px] h-[120px] md:w-[160px] md:h-[160px] rounded-full bg-white flex items-center justify-center border-4 border-white/20 shadow-2xl transition-transform duration-500 hover:scale-105 shrink-0"
-              style={{ boxShadow: `0 15px 35px -10px ${theme.cor_primaria}CC` }}
+              className="w-[110px] h-[110px] md:w-[140px] md:h-[140px] rounded-full bg-white flex items-center justify-center border-4 border-white/20 shadow-2xl transition-transform duration-500 hover:scale-105 shrink-0"
+              style={{ boxShadow: `0 12px 28px -8px ${theme.cor_primaria}CC` }}
             >
               <ClubLogo
                 src={theme.escudo_url}
@@ -182,31 +181,31 @@ const ClubBanner = ({
               />
             </div>
 
-            {/* TIPOGRAFIA DELICADA (INFO PERFIL) */}
+            {/* TIPOGRAFIA DELICADA */}
             <div className="flex flex-col text-white">
               {showProfileInfo ? (
                 <>
-                  <h2 className="text-2xl md:text-3xl font-black italic uppercase tracking-tighter drop-shadow-md leading-none">
+                  <h2 className="text-xl md:text-2xl font-black italic uppercase tracking-tighter drop-shadow-md leading-none">
                     {profileName}
                   </h2>
-                  <div className="flex items-center gap-1.5 mt-2 text-[10px] md:text-sm font-bold uppercase opacity-90 italic">
-                    <MapPin size={14} className="text-white/70" />
+                  <div className="flex items-center gap-1.5 mt-1.5 text-[9px] md:text-xs font-bold uppercase opacity-90 italic">
+                    <MapPin size={12} className="text-white/70" />
                     <span>
                       {profileCity}
                       {profileState ? `, ${profileState}` : ""}
                     </span>
                   </div>
-                  <div className="flex items-center gap-1.5 mt-1.5 text-[10px] md:text-sm font-black text-[#ff6200] italic uppercase tracking-widest drop-shadow">
-                    <Trophy size={14} />
+                  <div className="flex items-center gap-1.5 mt-1 text-[9px] md:text-xs font-black text-[#ff6200] italic uppercase tracking-widest drop-shadow">
+                    <Trophy size={12} />
                     <span>EMBAIXADOR {ambassadorLevel}</span>
                   </div>
                 </>
               ) : (
                 <>
-                  <span className="text-[10px] font-black uppercase tracking-[0.4em] opacity-70 mb-1">
+                  <span className="text-[9px] font-black uppercase tracking-[0.4em] opacity-70 mb-1">
                     {pageLabel || "TERRITÓRIO DE EMBAIXADOR"}
                   </span>
-                  <h1 className="text-2xl md:text-4xl font-black italic uppercase tracking-tighter leading-none drop-shadow-lg">
+                  <h1 className="text-xl md:text-3xl font-black italic uppercase tracking-tighter leading-none drop-shadow-lg">
                     {clubName}
                   </h1>
                 </>
@@ -214,13 +213,13 @@ const ClubBanner = ({
             </div>
           </div>
 
-          {/* TIPOGRAFIA DELICADA (NOME DO CLUBE) */}
+          {/* LADO DIREITO (CLUBE DO CORAÇÃO) */}
           {showProfileInfo && (
             <div className="hidden lg:flex flex-col items-end text-white text-right drop-shadow-lg">
-              <span className="text-[10px] font-black uppercase italic opacity-70 tracking-[0.3em] mb-[-4px]">
+              <span className="text-[9px] font-black uppercase italic opacity-70 tracking-[0.3em] mb-[-4px]">
                 CLUBE DO CORAÇÃO
               </span>
-              <h1 className="text-2xl md:text-4xl font-black italic uppercase tracking-tighter leading-none">
+              <h1 className="text-xl md:text-3xl font-black italic uppercase tracking-tighter leading-none">
                 {clubName}
               </h1>
             </div>
@@ -255,11 +254,11 @@ export default ClubBanner;
 /**
  * [RODAPÉ TÉCNICO]
  * ARQUIVO: src/components/dashboard/ClubBanner.tsx
- * VERSÃO: 19.0
+ * VERSÃO: 20.0
  * CORREÇÕES:
- * - Algoritmo de Luminância Inteligente: Garante a cor mais escura no início e a segunda mais escura no final.
- * - Fundo Diagonal Sólido: Colunas medidas (30% | 8% | 8% | 8% | 46%) com Hard Stops para Tricolores.
- * - Tipografia Proporcional: Respeito absoluto aos tamanhos 2xl/3xl/4xl solicitados.
- * - Legibilidade: Proteção da cor branca no centro das diagonais, evitando conflito com o texto branco nas pontas.
- * - Navbar: Mantida integralmente sem alterações de lógica ou estilo.
+ * - Inclinação das diagonais ajustada para 115 graus (mais vertical, conforme imagem 2).
+ * - Altura do banner reduzida para 220px (Desktop) para um visual mais estreito e profissional.
+ * - Tamanho do escudo e fontes ajustados proporcionalmente à nova altura do banner.
+ * - Lógica de cores preservada: Cor escura (sorted[0]) no início e segunda forte (sorted[1]) no final.
+ * - Navbar mantida sem alterações estéticas ou de lógica.
  */
