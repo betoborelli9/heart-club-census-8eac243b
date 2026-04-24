@@ -1,12 +1,12 @@
 /**
  * [CAMINHO/ARQUIVO]: src/components/dashboard/ClubBanner.tsx
  * [MÓDULO]: BRANDING & DASHBOARD NAVIGATION
- * [STATUS]: VERSÃO 24.0 (CLEAN BORDER — NAVBAR SYNC ONLY)
- * [DESCRIÇÃO]: Banner e Navbar unificados com contorno único e limpo.
- * - Borda: Contorno único em #1a1a1a (cor da navbar) em todo o conjunto.
- * - Limpeza: Removidas bordas brancas, vermelhas ou cinzas que causavam ruído visual.
- * - Diagonais: Mantida inclinação de 115 graus com faixas estreitas (5%).
- * - Tipografia: Mantida delicada e proporcional.
+ * [STATUS]: VERSÃO 26.0 (UI RESPONSIVA — MOBILE SYNC & DESKTOP BADGE)
+ * [DESCRIÇÃO]: Banner unificado com ajustes de escala e posicionamento mobile.
+ * - Escala: Emblema aumentado para 180px no desktop.
+ * - Mobile: Nome do clube habilitado e movido para o canto inferior direito.
+ * - Embaixador: Destaque visual em Branco/Brilho para legibilidade universal.
+ * - Borda: Contorno unificado em #1a1a1a.
  */
 
 /* ═══════════════════════════════════════════════════════════
@@ -50,9 +50,9 @@ const calculateLuminance = (hex: string): number => {
    ═══════════════════════════════════════════════════════════ */
 const ClubBanner = ({
   clubName,
-  profileName = "BETO BORELLI",
-  profileCity = "GOIÂNIA",
-  profileState = "GO",
+  profileName = "",
+  profileCity = "",
+  profileState = "",
   ambassadorLevel = "BRONZE",
   pageLabel,
   showProfileInfo = false,
@@ -99,11 +99,9 @@ const ClubBanner = ({
      ═══════════════════════════════════════════════════════════ */
   const buildFlagGradient = (): string => {
     const colors = [theme.cor_primaria, theme.cor_secundaria, theme.cor_terciaria].filter(Boolean);
-    // Ordena da mais escura (início) para a segunda mais escura (fim)
     const sorted = [...colors].sort((a, b) => calculateLuminance(a) - calculateLuminance(b));
 
     if (sorted.length === 3) {
-      // TRICOLOR (ex: Santa Cruz, São Paulo)
       return `linear-gradient(115deg, 
         ${sorted[0]} 0%, ${sorted[0]} 36%, 
         ${sorted[1]} 36%, ${sorted[1]} 41%, 
@@ -112,7 +110,6 @@ const ClubBanner = ({
         ${sorted[1]} 51%, ${sorted[1]} 100%)`;
     }
 
-    // BICOLOR (ex: Vila Nova, Palmeiras)
     return `linear-gradient(115deg, 
       ${sorted[0]} 0%, ${sorted[0]} 45%, 
       ${sorted[1] || "#ffffff"} 45%, ${sorted[1] || "#ffffff"} 50%, 
@@ -153,24 +150,22 @@ const ClubBanner = ({
       `}</style>
 
       {/* ═══════ CONTAINER UNIFICADO (BANNER + NAVBAR) ═══════ */}
-      {/* Borda ÚNICA definida em #1a1a1a - sem misturas de cores nas bordas */}
       <div className="overflow-hidden rounded-[2.5rem] border border-[#1a1a1a] shadow-2xl flex flex-col">
-        {/* TOPO DO BANNER - Sem nenhuma borda interna ou outline */}
+        {/* TOPO DO BANNER */}
         <section
-          className="relative h-[180px] md:h-[220px] w-full flex items-center overflow-hidden"
+          className="relative h-[240px] md:h-[220px] w-full flex items-center overflow-hidden"
           style={{
             background: buildFlagGradient(),
             backgroundSize: "200% 200%",
             animation: "waveFlag 30s ease-in-out infinite",
           }}
         >
-          {/* Overlay de Textura Jersey */}
           <div className="absolute inset-0 opacity-20 pointer-events-none mix-blend-overlay bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]" />
 
-          <div className="relative z-10 flex items-center justify-between w-full px-6 md:px-16">
-            <div className="flex items-center gap-4 md:gap-8">
-              {/* ESCUDO (CHAPADO - SEM BORDAS COLORIDAS) */}
-              <div className="w-[110px] h-[110px] md:w-[140px] md:h-[140px] rounded-full bg-white flex items-center justify-center shrink-0 shadow-xl">
+          <div className="relative z-10 h-full w-full flex flex-col md:flex-row items-center justify-between px-6 md:px-16 py-4 md:py-0">
+            <div className="flex items-center gap-4 md:gap-8 w-full md:w-auto">
+              {/* ESCUDO (AUMENTADO NO DESKTOP) */}
+              <div className="w-[110px] h-[110px] md:w-[180px] md:h-[180px] rounded-full bg-white flex items-center justify-center shrink-0 shadow-xl border-4 border-white/10">
                 <ClubLogo
                   src={theme.escudo_url}
                   alt={clubName}
@@ -178,12 +173,12 @@ const ClubBanner = ({
                 />
               </div>
 
-              {/* TIPOGRAFIA */}
+              {/* TIPOGRAFIA DINÂMICA */}
               <div className="flex flex-col text-white">
                 {showProfileInfo ? (
                   <>
                     <h2 className="text-xl md:text-2xl font-black italic uppercase tracking-tighter drop-shadow-md leading-none">
-                      {profileName}
+                      {profileName || "CARREGANDO..."}
                     </h2>
                     <div className="flex items-center gap-1.5 mt-1.5 text-[9px] md:text-xs font-bold uppercase opacity-90 italic">
                       <MapPin size={12} className="text-white/70" />
@@ -192,9 +187,10 @@ const ClubBanner = ({
                         {profileState ? `, ${profileState}` : ""}
                       </span>
                     </div>
-                    <div className="flex items-center gap-1.5 mt-1 text-[9px] md:text-xs font-black text-[#ff6200] italic uppercase tracking-widest drop-shadow">
-                      <Trophy size={12} />
-                      <span>EMBAIXADOR {ambassadorLevel}</span>
+                    {/* DESTAQUE UNIVERSAL PARA O NÍVEL */}
+                    <div className="flex items-center gap-1.5 mt-1 text-[9px] md:text-xs font-black text-white italic uppercase tracking-widest drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
+                      <Trophy size={12} className="text-orange-400" />
+                      <span className="bg-orange-600/20 px-1 rounded">EMBAIXADOR {ambassadorLevel}</span>
                     </div>
                   </>
                 ) : (
@@ -210,11 +206,11 @@ const ClubBanner = ({
               </div>
             </div>
 
-            {/* LADO DIREITO (CLUBE) */}
+            {/* LADO DIREITO (CLUBE) - POSICIONADO ABAIXO E À DIREITA NO MOBILE */}
             {showProfileInfo && (
-              <div className="hidden lg:flex flex-col items-end text-white text-right drop-shadow-lg">
-                <span className="text-[9px] font-black uppercase italic opacity-70 tracking-[0.3em] mb-[-4px]">
-                  CLUBE DO CORAÇÃO
+              <div className="flex flex-col items-end text-white text-right drop-shadow-lg self-end md:self-center mt-auto md:mt-0">
+                <span className="text-[8px] md:text-[9px] font-black uppercase italic opacity-70 tracking-[0.3em] mb-[-4px]">
+                  Clube do Coração
                 </span>
                 <h1 className="text-xl md:text-3xl font-black italic uppercase tracking-tighter leading-none">
                   {clubName}
@@ -224,7 +220,7 @@ const ClubBanner = ({
           </div>
         </section>
 
-        {/* NAVBAR INFERIOR (INTEGRADA SEM BORDAS INTERNAS) */}
+        {/* NAVBAR INFERIOR */}
         <nav className="flex items-center justify-center gap-1.5 bg-[#1a1a1a] px-4 py-3.5 overflow-x-auto no-scrollbar">
           <NavItem icon={Flame} label="MAPA DE CALOR" path="/mapa-calor" active={isActive("/mapa-calor")} />
           <NavItem icon={BarChart3} label="ESTATÍSTICAS" path="/estatisticas" active={isActive("/estatisticas")} />
@@ -257,10 +253,10 @@ export default ClubBanner;
 /**
  * [RODAPÉ TÉCNICO]
  * ARQUIVO: src/components/dashboard/ClubBanner.tsx
- * VERSÃO: 24.0
+ * VERSÃO: 26.0
  * CORREÇÕES:
- * - Borda Única: Removidas todas as bordas internas do banner e do escudo que causavam mistura de cores.
- * - Sincronização de Contorno: O contorno externo do conjunto agora é apenas border-[#1a1a1a] sólido.
- * - Limpeza Visual: Removidas as bordas brancas/vermelhas nas extremidades laterais do topo.
- * - Legibilidade: Mantido o algoritmo de cores para contraste e tipografia proporcional.
+ * - Escala: Emblema aumentado de 140px para 180px no desktop para maior presença visual.
+ * - Mobile UI: Removida a classe 'hidden lg:flex' do nome do clube. Agora ele aparece no mobile, alinhado à direita e posicionado no rodapé do banner via 'self-end' e 'mt-auto'.
+ * - Contraste: Nível de embaixador agora utiliza Branco com drop-shadow pesado e um fundo sutil para garantir legibilidade sobre qualquer cor de clube (Vila, Palmeiras, SPFC).
+ * - Layout: Ajustado padding e flex do container interno para suportar o novo posicionamento mobile.
  */
