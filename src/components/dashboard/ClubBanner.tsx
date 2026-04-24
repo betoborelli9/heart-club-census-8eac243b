@@ -1,10 +1,11 @@
 /**
  * [CAMINHO/ARQUIVO]: src/components/dashboard/ClubBanner.tsx
  * [MÓDULO]: BRANDING & DASHBOARD NAVIGATION
- * [STATUS]: VERSÃO 29.0 (HYBRID LAYOUT — DESKTOP RESTORE & MOBILE RIGHT)
- * [DESCRIÇÃO]: Banner unificado com layouts distintos por dispositivo.
- * - Desktop: Badge + Perfil à esquerda; Clube à direita.
- * - Mobile: Perfil centralizado à direita; Clube no rodapé à direita.
+ * [STATUS]: VERSÃO 30.0 (TEXT SHADOW REFINEMENT — ALIGNMENT SYNC)
+ * [DESCRIÇÃO]: Banner unificado com layouts distintos e legibilidade blindada.
+ * - Legibilidade: Adicionado contorno (text-shadow) em todos os textos para destaque em qualquer cor.
+ * - Desktop: Identidade do clube movida para a base (inferior direito).
+ * - Mobile: Perfil (Nome/Cidade/Nível) centralizado verticalmente com o emblema.
  * - Escala: Emblema 180px (Desktop) / 110px (Mobile).
  * - Borda: Contorno unificado em #1a1a1a.
  */
@@ -140,6 +141,11 @@ const ClubBanner = ({
     </button>
   );
 
+  // Estilo de contorno universal para os textos
+  const textOutlineStyle = {
+    textShadow: "-1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, 0 4px 8px rgba(0,0,0,0.5)",
+  };
+
   return (
     <div className="w-full max-w-7xl mx-auto p-4">
       <style>{`
@@ -164,7 +170,7 @@ const ClubBanner = ({
 
           <div className="relative z-10 h-full w-full flex flex-row items-center justify-between px-6 md:px-16">
             {/* LADO ESQUERDO: ESCUDO + PERFIL (DESKTOP) */}
-            <div className="flex items-center shrink-0">
+            <div className="flex items-center h-full shrink-0">
               <div className="w-[110px] h-[110px] md:w-[180px] md:h-[180px] rounded-full bg-white flex items-center justify-center shrink-0 shadow-xl border-4 border-white/10">
                 <ClubLogo
                   src={theme.escudo_url}
@@ -173,20 +179,29 @@ const ClubBanner = ({
                 />
               </div>
 
-              {/* BLOCO DE PERFIL (SOMENTE DESKTOP) */}
+              {/* BLOCO DE PERFIL (SOMENTE DESKTOP - CENTRALIZADO VERTICALMENTE) */}
               {showProfileInfo && (
-                <div className="hidden md:flex flex-col text-white ml-8 drop-shadow-lg">
-                  <h2 className="text-3xl font-black italic uppercase tracking-tighter leading-none mb-2">
+                <div className="hidden md:flex flex-col text-white ml-8 h-full justify-center">
+                  <h2
+                    className="text-3xl font-black italic uppercase tracking-tighter leading-none mb-2"
+                    style={textOutlineStyle}
+                  >
                     {profileName || "CARREGANDO..."}
                   </h2>
-                  <div className="flex items-center gap-2 text-xs font-bold uppercase opacity-90 italic">
+                  <div
+                    className="flex items-center gap-2 text-xs font-bold uppercase opacity-90 italic"
+                    style={textOutlineStyle}
+                  >
                     <MapPin size={12} className="text-white/70" />
                     <span>
                       {profileCity}
                       {profileState ? `, ${profileState}` : ""}
                     </span>
                   </div>
-                  <div className="flex items-center gap-2 mt-2 text-xs font-black text-white italic uppercase tracking-widest drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]">
+                  <div
+                    className="flex items-center gap-2 mt-2 text-xs font-black text-white italic uppercase tracking-widest"
+                    style={textOutlineStyle}
+                  >
                     <Trophy size={12} className="text-orange-500" />
                     <span>EMBAIXADOR {ambassadorLevel}</span>
                   </div>
@@ -196,32 +211,47 @@ const ClubBanner = ({
 
             {/* LADO DIREITO: PERFIL (MOBILE) + CLUBE (AMBOS) */}
             <div className="flex-1 flex flex-col h-full items-end text-right py-4 md:py-6">
-              {/* BLOCO DE PERFIL (SOMENTE MOBILE - CENTRALIZADO) */}
+              {/* BLOCO DE PERFIL (SOMENTE MOBILE - CENTRALIZADO VERTICALMENTE COM EMBLEMA) */}
               {showProfileInfo && (
-                <div className="flex-1 md:hidden flex flex-col justify-center items-end text-white drop-shadow-lg">
-                  <h2 className="text-xl font-black italic uppercase tracking-tighter leading-none mb-1">
+                <div className="flex-1 md:hidden flex flex-col justify-center items-end text-white">
+                  <h2
+                    className="text-xl font-black italic uppercase tracking-tighter leading-none mb-1"
+                    style={textOutlineStyle}
+                  >
                     {profileName || "CARREGANDO..."}
                   </h2>
-                  <div className="flex items-center gap-1.5 text-[9px] font-bold uppercase opacity-90 italic">
+                  <div
+                    className="flex items-center gap-1.5 text-[9px] font-bold uppercase opacity-90 italic"
+                    style={textOutlineStyle}
+                  >
                     <MapPin size={12} className="text-white/70" />
                     <span>
                       {profileCity}
                       {profileState ? `, ${profileState}` : ""}
                     </span>
                   </div>
-                  <div className="flex items-center gap-1.5 mt-1 text-[9px] font-black text-white italic uppercase tracking-widest drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]">
+                  <div
+                    className="flex items-center gap-1.5 mt-1 text-[9px] font-black text-white italic uppercase tracking-widest"
+                    style={textOutlineStyle}
+                  >
                     <Trophy size={12} className="text-orange-500" />
                     <span>EMBAIXADOR {ambassadorLevel}</span>
                   </div>
                 </div>
               )}
 
-              {/* IDENTIDADE DO CLUBE (NO FINAL NO MOBILE / CENTRALIZADO NO DESKTOP) */}
-              <div className="flex-1 md:flex-none flex flex-col items-end justify-end md:justify-center text-white drop-shadow-lg">
-                <span className="text-[8px] md:text-[9px] font-black uppercase italic opacity-70 tracking-[0.3em] mb-[-4px]">
+              {/* IDENTIDADE DO CLUBE (ANCOTRADO NA BASE EM AMBOS OS LAYOUTS) */}
+              <div className="flex flex-col items-end justify-end text-white mt-auto">
+                <span
+                  className="text-[8px] md:text-[9px] font-black uppercase italic opacity-70 tracking-[0.3em] mb-[-4px]"
+                  style={textOutlineStyle}
+                >
                   Clube do Coração
                 </span>
-                <h1 className="text-xl md:text-4xl font-black italic uppercase tracking-tighter leading-none">
+                <h1
+                  className="text-xl md:text-4xl font-black italic uppercase tracking-tighter leading-none"
+                  style={textOutlineStyle}
+                >
                   {clubName}
                 </h1>
               </div>
@@ -262,10 +292,10 @@ export default ClubBanner;
 /**
  * [RODAPÉ TÉCNICO]
  * ARQUIVO: src/components/dashboard/ClubBanner.tsx
- * VERSÃO: 29.0
+ * VERSÃO: 30.0
  * CORREÇÕES:
- * - Hybrid Layout: Restaurada a posição do perfil à esquerda (ao lado do badge) para Desktop.
- * - Mobile UI: Mantida a regra de perfil à direita (centralizado) e nome do clube na base para celular.
- * - Escala: Emblema em 180px (Desktop) para presença visual.
- * - Alinhamento: Uso de 'flex-1 md:flex-none' para alternar a ancoragem do conteúdo entre dispositivos.
+ * - Legibilidade: Implementado 'textOutlineStyle' via text-shadow em todos os textos para garantir contraste sobre branco ou cores claras.
+ * - Desktop Layout: Clube do Coração reposicionado para a base direita (mt-auto) para harmonia visual.
+ * - Mobile Alinhamento: Perfil centralizado verticalmente no eixo do emblema (justify-center dentro de flex-1).
+ * - Estética: Removido o glow dinâmico para manter o círculo branco chapado e profissional.
  */
