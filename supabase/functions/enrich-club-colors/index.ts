@@ -1,8 +1,8 @@
 /**
  * [CAMINHO]: supabase/functions/enrich-club-colors/index.ts
- * [STATUS]: PRODUÇÃO - VERSÃO 50.0 (BRAZIL NATIONAL PRIORITY)
- * [CONTEXTO]: Enriquecimento de dados com hierarquia de ligas (Nacional > Estadual).
- * [DESCRIÇÃO]: Prioriza Séries A, B, C e D do Brasileirão. Caso não encontre, usa a liga atual disponível.
+ * [STATUS]: PRODUÇÃO - VERSÃO 56.0 (FEMININO + HIERARQUIA DE CORES)
+ * [CONTEXTO]: Enriquecimento de dados com detecção de Futebol Feminino e Cores Automatizadas.
+ * [DESCRIÇÃO]: Prioriza Séries A, B, C e D. Gemini identifica Mascote, Cores (Primária = Predominante) e existência de Time Feminino.
  */
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
@@ -13,7 +13,9 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// Limpa Markdown e garante que o JSON seja processável
+/* ═══════════════════════════════════════════════════════════
+    MÓDULO: UTILITÁRIOS DE LIMPEZA
+   ═══════════════════════════════════════════════════════════ */
 function cleanGeminiResponse(text: string): string {
   return text.replace(/```json|```/g, "").trim();
 }
@@ -31,7 +33,9 @@ serve(async (req) => {
 
     console.log(`[LOG]: Investigando ${club_name}...`);
 
-    // 1. BUSCA TÉCNICA (API FOOTBALL)
+    /* ═══════════════════════════════════════════════════════════
+        MÓDULO 1: BUSCA TÉCNICA (API FOOTBALL)
+       ═══════════════════════════════════════════════════════════ */
     let teamInfo: any = null;
     let division = "Série Não Identificada";
 
@@ -44,7 +48,6 @@ serve(async (req) => {
     const teamJson = await teamRes.json();
     teamInfo = teamJson.response?.[0];
 
-    // Lógica de Hierarquia de Liga (Divisão)
     if (teamInfo?.team?.id) {
       const leagueRes = await fetch(`https://v3.football.api-sports.io/leagues?team=${teamInfo.team.id}&current=true`, {
         headers: { "x-apisports-key": apiKeyFootball },
@@ -52,33 +55,35 @@ serve(async (req) => {
       const leagueJson = await leagueRes.json();
       const leagues = leagueJson.response || [];
 
-      // Filtra prioritariamente ligas brasileiras nacionais (A, B, C e D)
       const tiers = ["Série A", "Série B", "Série C", "Série D", "Brasileirão"];
-
       const nationalLeague = leagues.find(
         (l: any) => l.league.country === "Brazil" && tiers.some((tier) => l.league.name.includes(tier)),
       );
 
-      // Se achou Nacional, usa. Se não, usa a primeira disponível (Estadual)
-      const selectedLeague = nationalLeague || leagues.find((l: any) => l.league.type === "League") || leagues[0];
-
-      if (selectedLeague) {
-        division = selectedLeague.league.name;
-      }
+      const mainLeague = nationalLeague || leagues.find((l: any) => l.league.type === "League") || leagues[0];
+      if (mainLeague) division = mainLeague.league.name;
     }
 
-    // 2. BUSCA CRIATIVA (GEMINI)
+    /* ═══════════════════════════════════════════════════════════
+        MÓDULO 2: BUSCA HISTÓRICA E SOCIAL (GEMINI)
+       ═══════════════════════════════════════════════════════════ */
     let aiData = {
-      cor_primaria: "#ff6200",
-      cor_secundaria: "#1a1a1a",
-      cor_terciaria: "#ffffff",
+      cor_primaria: "#1a1a1a",
+      cor_secundaria: "#ffffff",
+      cor_terciaria: "#ff6200",
       mascote: "Não Identificado",
+      tem_feminino: false,
     };
 
     if (geminiKey) {
       try {
-        const prompt = `Atue como Historiador de Futebol Sênior. Para o clube "${club_name}", retorne EXCLUSIVAMENTE este JSON: {"cor_primaria": "#HEX", "cor_secundaria": "#HEX", "cor_terciaria": "#HEX", "mascote": "NOME"}. 
-        REGRA: O campo "mascote" deve ser o animal ou personagem oficial. Se não houver registro oficial, use a alcunha do mascote mais famosa. Nunca retorne vazio.`;
+        const prompt = `Atue como Historiador de Futebol Sênior. Para o clube "${club_name}", retorne EXCLUSIVAMENTE um JSON puro.
+        REGRAS DE OURO:
+        1. cor_primaria DEVE ser a cor predominante do clube (ex: SPFC = Vermelho).
+        2. tem_feminino deve ser TRUE se o clube tiver departamento de futebol feminino profissional ativo.
+        3. mascote deve ser o oficial histórico.
+        
+        FORMATO: {"cor_primaria": "#HEX", "cor_secundaria": "#HEX", "cor_terciaria": "#HEX", "mascote": "NOME", "tem_feminino": boolean}`;
 
         const gRes = await fetch(
           `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiKey}`,
@@ -97,19 +102,18 @@ serve(async (req) => {
 
         const gJson = await gRes.json();
         const rawText = gJson.candidates?.[0]?.content?.parts?.[0]?.text;
-
         if (rawText) {
           const parsed = JSON.parse(cleanGeminiResponse(rawText));
-          if (parsed.mascote && parsed.mascote.trim().length > 2) {
-            aiData = { ...aiData, ...parsed };
-          }
+          aiData = { ...aiData, ...parsed };
         }
       } catch (e) {
         console.error("[GEMINI ERROR]:", e);
       }
     }
 
-    // 3. SALVAMENTO FINAL (UPSERT)
+    /* ═══════════════════════════════════════════════════════════
+        MÓDULO 3: PERSISTÊNCIA (UPSERT)
+       ═══════════════════════════════════════════════════════════ */
     const payload = {
       nome: club_name,
       nome_curto: teamInfo?.team?.code || club_name.substring(0, 3).toUpperCase(),
@@ -123,7 +127,8 @@ serve(async (req) => {
       estadio_capacidade: teamInfo?.venue?.capacity || null,
       division: division,
       mascote: aiData.mascote,
-      cor_primaria: aiData.cor_primaria,
+      tem_feminino: aiData.tem_feminino, // NOVO: Identificação Automática
+      cor_primaria: aiData.cor_primaria, // AUTOMÁTICO: Predominante
       cor_secundaria: aiData.cor_secundaria,
       cor_terciaria: aiData.cor_terciaria,
       atualizado_em: new Date().toISOString(),
@@ -151,8 +156,8 @@ serve(async (req) => {
 
 /**
  * [RODAPÉ TÉCNICO]
- * Versão: 45.0
- * - Inclusão de Alcunha (apelido) e Mascote via Gemini.
- * - Limpeza de Markdown robusta para evitar erro 500.
- * - Sincronizado com colunas TEXT do banco de dados.
+ * Versão: 56.0
+ * - Inclusão de tem_feminino (boolean) via Gemini.
+ * - Hierarquia de cores forçada: Primária = Predominante.
+ * - responseMimeType: "application/json" ativado para resiliência.
  */
