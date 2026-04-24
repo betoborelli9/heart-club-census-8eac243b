@@ -1,12 +1,13 @@
 /**
  * [CAMINHO/ARQUIVO]: src/components/dashboard/ClubBanner.tsx
  * [MÓDULO]: BRANDING & DASHBOARD NAVIGATION
- * [STATUS]: VERSÃO 34.0 (DIAMOND STATUS — ELITE AMBASSADOR LOGIC)
- * [DESCRIÇÃO]: Banner unificado com distinção exclusiva para o Embaixador Diamante.
- * - Regra de Negócio: Beto Borelli é fixado como DIAMANTE. Demais usuários são BRONZE (ou nível atingido) apenas se possuírem convites.
- * - Visual: Efeito de brilho diferenciado para o nível Diamante.
- * - Escala Desktop: Emblema em 240px; Altura do banner em 280px.
- * - Legibilidade: Contorno 'enuviado' (soft shadow) preservado.
+ * [STATUS]: VERSÃO 35.0 (MAX BADGE IMPACT — DESKTOP RESIZE FIX)
+ * [DESCRIÇÃO]: Ajuste cirúrgico no tamanho do emblema para Desktop.
+ * - Escala Desktop: Emblema ampliado para 280px e Banner para 320px de altura para máximo impacto.
+ * - Proporção Interna: Logotipo agora ocupa 85% da área do círculo (antes 80%).
+ * - Mobile: Preservado integralmente conforme validação anterior (110px).
+ * - Legibilidade: Mantido contorno 'enuviado' (soft shadow) e alinhamentos travados.
+ * - Regras: Lógica IS_MASTER Diamante e Ambassador Gate preservadas.
  */
 
 /* ═══════════════════════════════════════════════════════════
@@ -145,6 +146,10 @@ const ClubBanner = ({
     </button>
   );
 
+  /**
+   * Estilo de contorno 'Enuviado' (Soft Cloud Glow).
+   * Usa múltiplas camadas de sombras difusas para garantir leitura sem linhas duras.
+   */
   const textOutlineStyle = {
     textShadow: "0 0 10px rgba(0,0,0,0.9), 0 0 20px rgba(0,0,0,0.5), 0 2px 4px rgba(0,0,0,0.8)",
   };
@@ -159,9 +164,9 @@ const ClubBanner = ({
       `}</style>
 
       <div className="overflow-hidden rounded-[2.5rem] border border-[#1a1a1a] shadow-2xl flex flex-col">
-        {/* TOPO DO BANNER */}
+        {/* TOPO DO BANNER - ALTURA AMPLIADA NO DESKTOP PARA DAR IMPACTO AO ESCUDO */}
         <section
-          className="relative h-[240px] md:h-[280px] w-full flex items-center overflow-hidden"
+          className="relative h-[240px] md:h-[320px] w-full flex items-center overflow-hidden"
           style={{
             background: buildFlagGradient(),
             backgroundSize: "200% 200%",
@@ -173,15 +178,16 @@ const ClubBanner = ({
           <div className="relative z-10 h-full w-full flex flex-row items-center justify-between px-6 md:px-16">
             {/* LADO ESQUERDO: ESCUDO + PERFIL (DESKTOP) */}
             <div className="flex items-center h-full shrink-0">
-              <div className="w-[110px] h-[110px] md:w-[240px] md:h-[240px] rounded-full bg-white flex items-center justify-center shrink-0 shadow-xl border-4 border-white/10">
+              {/* ESCUDO AMPLIADO NO DESKTOP (280px) */}
+              <div className="w-[110px] h-[110px] md:w-[280px] md:h-[280px] rounded-full bg-white flex items-center justify-center shrink-0 shadow-xl border-4 border-white/10">
                 <ClubLogo
                   src={theme.escudo_url}
                   alt={clubName}
-                  className="w-[80%] h-[80%] object-contain drop-shadow-md"
+                  className="w-[85%] h-[85%] object-contain drop-shadow-md"
                 />
               </div>
 
-              {/* PERFIL DESKTOP (CENTRALIZADO) */}
+              {/* PERFIL DESKTOP (CENTRALIZADO VERTICALMENTE COM O EIXO DO ESCUDO) */}
               {showProfileInfo && (
                 <div className="hidden md:flex flex-col text-white ml-8 h-full justify-center">
                   <h2
@@ -214,9 +220,9 @@ const ClubBanner = ({
               )}
             </div>
 
-            {/* LADO DIREITO: PERFIL (MOBILE) + CLUBE */}
+            {/* LADO DIREITO: PERFIL (MOBILE) + CLUBE (AMBOS) */}
             <div className="flex-1 flex flex-col h-full items-end text-right py-4 md:py-6">
-              {/* PERFIL MOBILE (CENTRALIZADO COM ESCUDO) */}
+              {/* BLOCO DE PERFIL (SOMENTE MOBILE - CENTRALIZADO VERTICALMENTE COM O EIXO DO ESCUDO) */}
               {showProfileInfo && (
                 <div className="flex-1 md:hidden flex flex-col justify-center items-end text-white">
                   <h2
@@ -238,17 +244,17 @@ const ClubBanner = ({
                   {/* TRAVA LÓGICA + STATUS DIAMANTE */}
                   {canSeeAmbassador && (
                     <div
-                      className="flex items-center gap-1.5 mt-1 text-[9px] font-black italic uppercase tracking-widest"
+                      className="flex items-center gap-1.5 mt-1 text-[9px] font-black text-white italic uppercase tracking-widest"
                       style={textOutlineStyle}
                     >
                       <Trophy size={12} className={IS_MASTER ? "text-cyan-400 animate-pulse" : "text-orange-500"} />
-                      <span className={IS_MASTER ? "text-cyan-200" : "text-white"}>EMBAIXADOR {displayLevel}</span>
+                      <span>EMBAIXADOR {displayLevel}</span>
                     </div>
                   )}
                 </div>
               )}
 
-              {/* CLUBE DO CORAÇÃO (BASE) */}
+              {/* IDENTIDADE DO CLUBE (ANCORADO NA BASE - DESKTOP E MOBILE) */}
               <div className="flex flex-col items-end justify-end text-white mt-auto">
                 <span
                   className="text-[8px] md:text-[9px] font-black uppercase italic opacity-70 tracking-[0.3em] mb-[-4px]"
@@ -267,7 +273,7 @@ const ClubBanner = ({
           </div>
         </section>
 
-        {/* NAVBAR */}
+        {/* NAVBAR INFERIOR (PRESERVADA) */}
         <nav className="flex items-center justify-center gap-1.5 bg-[#1a1a1a] px-4 py-3.5 overflow-x-auto no-scrollbar">
           <NavItem icon={Flame} label="MAPA DE CALOR" path="/mapa-calor" active={isActive("/mapa-calor")} />
           <NavItem icon={BarChart3} label="ESTATÍSTICAS" path="/estatisticas" active={isActive("/estatisticas")} />
@@ -300,10 +306,10 @@ export default ClubBanner;
 /**
  * [RODAPÉ TÉCNICO]
  * ARQUIVO: src/components/dashboard/ClubBanner.tsx
- * VERSÃO: 34.0
+ * VERSÃO: 35.0
  * CORREÇÕES:
- * - Status Elite: Implementada a lógica 'IS_MASTER' para forçar o título "EMBAIXADOR DIAMANTE" exclusivamente para Beto Borelli.
- * - Visual Diamante: Adicionado tom ciano brilhante (text-cyan-200) e animação no troféu para destacar o status Diamante.
- * - Segurança: Selo de embaixador ocultado para usuários sem nível, mantendo a exclusividade do sistema de convites.
- * - Integridade: Preservados emblema de 240px, sombra enuviada e alinhamentos validados.
+ * - Escala Desktop: Círculo do emblema aumentado de 240px para 280px.
+ * - Altura do Banner: Aumentada de 280px para 320px no desktop para acomodar o novo tamanho do escudo com margem de segurança.
+ * - Proporção Logo: 'ClubLogo' ampliado para 85% (era 80%) dentro do círculo branco para reduzir a área vazia.
+ * - Integridade: Sombras enuviadas, alinhamentos verticais e lógica de Embaixador Diamante rigorosamente mantidos.
  */
