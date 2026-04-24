@@ -1,252 +1,188 @@
 /**
- * [CAMINHO]: src/components/dashboard/ClubBanner.tsx
- * [MÓDULO]: BRANDING GLOBAL (BANNER + NAVBAR)
- * [STATUS]: VERSÃO 25.0 - BUILD FIX & FIDELIDADE ABSOLUTA
- * [DESCRIÇÃO]: Replicagem da imagem 87d855.
- * - Correção de Build: Export default e imports compatíveis com Vite/React.
- * - Jersey Design: Filtro SVG de dobras de tecido e gradiente tricolor segmentado.
- * - Medidas: Altura 450px, Escudo 256px, Fonte 9xl.
+ * [CAMINHO/ARQUIVO]: src/components/dashboard/ClubBanner.tsx
+ * [MÓDULO]: COMPONENTE GLOBAL DE BRANDING (BANNER + NAVBAR)
+ * [STATUS]: CORREÇÃO DE ROTA: /landing -> /voting
  */
 
-/* ═══════════════════════════════════════════════════════════
-    MÓDULO: IMPORTS
-   ═══════════════════════════════════════════════════════════ */
-import { useEffect, useState } from "react";
+/* [MÓDULO: IMPORTS] */
 import { useNavigate, useLocation } from "react-router-dom";
 import { Flame, BarChart3, Crown, Users, MapPin, Trophy, ShieldAlert, Vote, Bug } from "lucide-react";
-import { motion } from "framer-motion";
 import { ClubLogo } from "@/components/ClubLogo";
 import { useUser } from "@/contexts/UserContext";
-import { supabase } from "@/integrations/supabase/client";
+import { type TeamTheme, defaultTeamTheme } from "@/data/teamColors";
 
-/* ═══════════════════════════════════════════════════════════
-    MÓDULO: INTERFACE DE PROPS
-   ═══════════════════════════════════════════════════════════ */
+/* [MÓDULO: INTERFACE DE PROPS] */
 interface ClubBannerProps {
   clubName: string | null;
+  clubData: any;
+  theme?: TeamTheme;
   profileName?: string | null;
   profileCity?: string | null;
   profileState?: string | null;
   ambassadorLevel?: string | null;
-  clubData?: any;
-  theme?: any;
   pageLabel?: string;
   showProfileInfo?: boolean;
 }
 
-/* ═══════════════════════════════════════════════════════════
-    MÓDULO: COMPONENTE PRINCIPAL (EXPORT DEFAULT)
-   ═══════════════════════════════════════════════════════════ */
+/* [MÓDULO: COMPONENTE PRINCIPAL] */
 const ClubBanner = ({
   clubName,
-  profileName = "Beto Borelli",
-  profileCity = "Goiânia",
-  profileState = "GO",
+  clubData,
+  theme: themeProp,
+  profileName,
+  profileCity,
+  profileState,
   ambassadorLevel = "Bronze",
+  pageLabel,
+  showProfileInfo = false,
 }: ClubBannerProps) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useUser();
 
-  const [theme, setTheme] = useState({
-    cor_primaria: "transparent",
-    cor_secundaria: "transparent",
-    cor_terciaria: "transparent",
-    escudo_url: "",
-    loaded: false,
-  });
-
+  /* [MÓDULO: CONFIGURAÇÕES DE TEMA E SEGURANÇA] */
   const IS_MASTER = user?.email === "betoborelli9@gmail.com";
+  const theme = themeProp || defaultTeamTheme;
+  const bannerTextColor = theme.textClass === "text-black" ? "#1a1a1a" : "#ffffff";
 
-  /* [MÓDULO: BUSCA DE TEMA NO SUPABASE] */
-  useEffect(() => {
-    const fetchTheme = async () => {
-      if (!clubName) return;
-      const { data } = await supabase
-        .from("clubes_cache")
-        .select("cor_primaria, cor_secundaria, cor_terciaria, escudo_url")
-        .ilike("nome", `%${clubName}%`)
-        .single();
-
-      if (data) {
-        setTheme({
-          cor_primaria: data.cor_primaria,
-          cor_secundaria: data.cor_secundaria,
-          cor_terciaria: data.cor_terciaria,
-          escudo_url: data.escudo_url,
-          loaded: true,
-        });
-      }
-    };
-    fetchTheme();
-  }, [clubName]);
-
-  /* [MÓDULO: ESTILIZAÇÃO JERSEY (MEDIDAS IMAGEM 87d855)] */
-  const bannerStyle = {
-    background: theme.loaded
-      ? `linear-gradient(110deg, 
-          ${theme.cor_secundaria} 0%, 
-          ${theme.cor_secundaria} 25%, 
-          ${theme.cor_terciaria} 25%, 
-          ${theme.cor_terciaria} 32%, 
-          ${theme.cor_primaria} 32%, 
-          ${theme.cor_primaria} 70%, 
-          ${theme.cor_secundaria} 70%, 
-          ${theme.cor_secundaria} 75%, 
-          ${theme.cor_primaria} 75%, 
-          ${theme.cor_primaria} 100%)`
-      : "#111111",
-  };
+  /* [MÓDULO: DEFINIÇÃO DE ITENS DA NAVBAR] */
+  const NAV_ITEMS = [
+    { label: "MAPA DE CALOR", icon: Flame, path: "/mapa-calor" },
+    { label: "ESTATÍSTICAS", icon: BarChart3, path: "/estatisticas" },
+    { label: "RANKING", icon: Crown, path: "/estatisticas#ranking" },
+    { label: "EMBAIXADORES", icon: Users, path: "/embaixadores" },
+  ];
 
   const isActive = (path: string) => location.pathname === path || location.pathname + location.hash === path;
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: -20 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="w-full max-w-7xl mx-auto p-4"
-    >
+    <div className="w-full space-y-0">
+      {/* [MÓDULO: UI VISUAL DO BANNER] */}
       <section
-        className="relative h-[300px] md:h-[450px] w-full rounded-[48px] md:rounded-[64px] overflow-hidden shadow-[0_45px_100px_-20px_rgba(0,0,0,0.8)] border border-white/5 group"
-        style={bannerStyle}
+        className="relative overflow-hidden rounded-t-[2.5rem] h-[180px] md:h-[240px] flex items-center shadow-2xl transition-colors duration-500"
+        style={{ backgroundColor: theme.primaryHex }}
       >
-        {/* MÓDULO: TEXTURA E DOBRAS DE TECIDO (SVG JERSEY FILTER) */}
-        <div className="absolute inset-0 pointer-events-none opacity-50 mix-blend-multiply">
-          <svg width="100%" height="100%" className="absolute inset-0">
-            <filter id="jerseyTextureFinal">
-              <feTurbulence type="fractalNoise" baseFrequency="0.012" numOctaves="4" seed="5" />
-              <feDisplacementMap in="SourceGraphic" scale="80" />
-            </filter>
-            <rect width="100%" height="100%" filter="url(#jerseyTextureFinal)" opacity="0.3" />
-          </svg>
-          <div className="absolute inset-0 bg-gradient-to-tr from-black/50 via-white/10 to-black/50" />
-          <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-15 mix-blend-overlay" />
+        <div className="absolute inset-0 pointer-events-none opacity-30">
+          <div
+            className="absolute inset-0"
+            style={{
+              background: `linear-gradient(115deg, transparent 40%, ${theme.secondaryHex} 40%, ${theme.secondaryHex} 45%, transparent 45%, transparent 50%, ${theme.accentHex || theme.secondaryHex} 50%, ${theme.accentHex || theme.secondaryHex} 55%, transparent 55%)`,
+              backgroundSize: "200% 100%",
+            }}
+          />
         </div>
 
-        {/* MÓDULO: CONTEÚDO PRINCIPAL (LAYOUT 87d855) */}
-        <div className="relative h-full w-full flex flex-col md:flex-row items-center justify-between px-10 md:px-24 py-12">
-          <div className="flex items-center gap-6 md:gap-14">
-            {/* ESCUDO (CÍRCULO BRANCO - MEDIDA 256px) */}
-            <div className="relative shrink-0 transition-transform duration-1000 group-hover:scale-105">
-              <div className="absolute -inset-8 bg-white/20 blur-[80px] rounded-full opacity-40" />
-              <div className="w-32 h-32 md:w-64 md:h-64 bg-white rounded-full flex items-center justify-center border-[8px] border-white/10 shadow-2xl overflow-hidden">
-                <ClubLogo src={theme.escudo_url} alt={clubName || ""} className="w-[75%] h-[75%] object-contain" />
-              </div>
+        <div className="relative z-10 flex items-center justify-between w-full px-6 md:px-12">
+          <div className="flex items-center gap-6">
+            <div
+              className="w-[102px] h-[102px] md:w-[166px] md:h-[166px] rounded-full bg-white flex items-center justify-center shadow-2xl border-4 border-white/10"
+              style={{ boxShadow: `0 0 30px ${theme.primaryHex}66` }}
+            >
+              <ClubLogo
+                src={clubData?.logoUrl || clubData?.logo}
+                alt={clubName || ""}
+                className="w-[85%] h-[85%] object-contain"
+              />
             </div>
 
-            {/* INFO PERFIL (TEXT-7XL) */}
-            <div className="flex flex-col text-white drop-shadow-[0_8px_8px_rgba(0,0,0,0.8)]">
-              <h2 className="text-4xl md:text-7xl font-black italic uppercase tracking-tighter leading-none">
-                {profileName}
-              </h2>
-              <div className="flex items-center gap-2 mt-3 text-sm md:text-xl font-bold uppercase italic opacity-90">
-                <MapPin size={24} className="text-red-600 fill-red-600 drop-shadow-md" />
-                <span>
-                  {profileCity} - {profileState}
-                </span>
+            {showProfileInfo ? (
+              <div className="flex flex-col">
+                <h2
+                  className="text-xl md:text-2xl font-black italic uppercase tracking-tight"
+                  style={{ color: bannerTextColor }}
+                >
+                  {profileName}
+                </h2>
+                <div
+                  className="flex items-center gap-1 text-xs font-bold opacity-70 uppercase"
+                  style={{ color: bannerTextColor }}
+                >
+                  <MapPin size={12} /> {profileCity}
+                  {profileState ? `, ${profileState}` : ""}
+                </div>
+                <div className="flex items-center gap-1 text-xs font-black text-[#ff6200] italic mt-1 uppercase">
+                  <Trophy size={12} /> EMBAIXADOR {ambassadorLevel}
+                </div>
               </div>
-              <div className="flex items-center gap-2 mt-2 text-sm md:text-xl font-black text-orange-400 italic uppercase tracking-widest">
-                <Trophy size={24} className="drop-shadow-md" />
-                <span>EMBAIXADOR {ambassadorLevel}</span>
+            ) : (
+              <div className="flex flex-col">
+                <p
+                  className="text-[10px] md:text-xs font-black uppercase tracking-[0.4em] opacity-70"
+                  style={{ color: bannerTextColor }}
+                >
+                  {pageLabel || "TERRITÓRIO DE EMBAIXADOR"}
+                </p>
+                <h1
+                  className="text-3xl md:text-6xl font-black italic uppercase tracking-tighter leading-none"
+                  style={{ color: bannerTextColor }}
+                >
+                  {clubName}
+                </h1>
               </div>
-            </div>
-          </div>
-
-          {/* CLUBE IMPACTANTE (TEXT-9XL) */}
-          <div className="hidden lg:flex flex-col items-end text-white text-right drop-shadow-[0_15px_15px_rgba(0,0,0,0.7)]">
-            <span className="text-sm font-black uppercase italic opacity-80 tracking-[0.5em] mb-[-12px]">
-              CLUBE DO CORAÇÃO
-            </span>
-            <h1 className="text-8xl xl:text-9xl font-black italic uppercase tracking-tighter leading-none">
-              {clubName}
-            </h1>
-          </div>
-        </div>
-
-        {/* MÓDULO: NAVBAR INFERIOR (PÍLULA ESCURA) */}
-        <div className="absolute bottom-10 left-1/2 -translate-x-1/2 w-[95%] md:w-auto">
-          <nav className="flex items-center justify-center gap-2 md:gap-4 p-3 bg-black/80 backdrop-blur-3xl rounded-[32px] border border-white/10 shadow-2xl overflow-x-auto no-scrollbar">
-            <NavBtn
-              onClick={() => navigate("/mapa-calor")}
-              active={isActive("/mapa-calor")}
-              icon={<Flame size={18} />}
-              label="MAPA"
-            />
-            <NavBtn
-              onClick={() => navigate("/estatisticas")}
-              active={isActive("/estatisticas")}
-              icon={<BarChart3 size={18} />}
-              label="ESTATÍSTICAS"
-            />
-            <NavBtn
-              onClick={() => navigate("/estatisticas#ranking")}
-              active={isActive("/estatisticas#ranking")}
-              icon={<Crown size={18} />}
-              label="RANKING"
-            />
-            <NavBtn
-              onClick={() => navigate("/embaixadores")}
-              active={isActive("/embaixadores")}
-              icon={<Users size={18} />}
-              label="EMBAIXADORES"
-            />
-
-            <div className="w-[1px] h-8 bg-white/10 mx-1 hidden md:block" />
-
-            {/* VOTAÇÃO EM LARANJA */}
-            <NavBtn
-              onClick={() => navigate("/voting")}
-              active={isActive("/voting")}
-              icon={<Vote size={18} />}
-              label="VOTAÇÃO"
-              variant="orange"
-            />
-
-            {IS_MASTER && (
-              <>
-                <NavBtn
-                  onClick={() => navigate("/debug-api")}
-                  active={isActive("/debug-api")}
-                  icon={<Bug size={18} />}
-                  label="DEBUG"
-                />
-                {/* PAINEL MASTER PULSANTE */}
-                <NavBtn
-                  onClick={() => navigate("/admin")}
-                  active={isActive("/admin")}
-                  icon={<ShieldAlert size={18} />}
-                  label="MASTER"
-                  variant="danger"
-                />
-              </>
             )}
-          </nav>
+          </div>
+
+          {showProfileInfo && (
+            <div className="hidden md:flex flex-col items-end text-right">
+              <span
+                className="text-[10px] font-bold uppercase tracking-[0.3em] opacity-50"
+                style={{ color: bannerTextColor }}
+              >
+                Clube do Coração
+              </span>
+              <h1 className="text-4xl font-black italic uppercase" style={{ color: bannerTextColor }}>
+                {clubName}
+              </h1>
+            </div>
+          )}
         </div>
       </section>
-    </motion.div>
-  );
-};
 
-/* ═══════════════════════════════════════════════════════════
-    MÓDULO: COMPONENTE AUXILIAR (BOTÃO NAVBAR)
-   ═══════════════════════════════════════════════════════════ */
-const NavBtn = ({ icon, label, active, onClick, variant }: any) => {
-  const baseClass =
-    "flex items-center gap-2.5 px-5 md:px-7 py-3.5 rounded-2xl transition-all duration-500 whitespace-nowrap text-[10px] md:text-[12px] font-black italic uppercase tracking-widest group/btn";
+      {/* [MÓDULO: NAVBAR INTEGRADA] */}
+      <nav className="flex items-center justify-center gap-1 bg-[#1a1a1a] border border-white/5 border-t-0 rounded-b-[1.5rem] px-2 py-3 shadow-xl">
+        {NAV_ITEMS.map((item) => (
+          <button
+            key={item.label}
+            onClick={() => navigate(item.path)}
+            className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-[10px] font-black uppercase transition-all duration-300 ${isActive(item.path) ? "bg-[#ff6200] text-white shadow-[0_0_15px_rgba(255,98,0,0.3)]" : "text-white/40 hover:text-white hover:bg-white/5"}`}
+          >
+            <item.icon size={14} />
+            <span className="hidden md:inline">{item.label}</span>
+          </button>
+        ))}
 
-  const getStyle = () => {
-    if (variant === "orange")
-      return "bg-[#ff6200] text-white shadow-[0_0_25px_rgba(255,98,0,0.6)] hover:scale-105 active:scale-95";
-    if (variant === "danger")
-      return "bg-red-600 text-white animate-pulse shadow-[0_0_20px_rgba(220,38,38,0.5)] hover:bg-red-500 active:scale-95";
-    return active ? "bg-white/20 text-white shadow-xl scale-105" : "text-white/40 hover:text-white hover:bg-white/10";
-  };
+        {/* LINK DE VOTAÇÃO - ROTA CORRIGIDA PARA /voting */}
+        {IS_MASTER && (
+          <button
+            onClick={() => navigate("/voting")}
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-[10px] font-black uppercase text-[#ff6200] hover:bg-[#ff6200]/10 transition-all border border-[#ff6200]/20"
+          >
+            <Vote size={14} />
+            <span className="hidden md:inline">VOTAÇÃO</span>
+          </button>
+        )}
 
-  return (
-    <button onClick={onClick} className={`${baseClass} ${getStyle()}`}>
-      <span className={active ? "animate-pulse" : "group-hover/btn:scale-125 transition-transform"}>{icon}</span>
-      <span className="hidden lg:inline">{label}</span>
-    </button>
+        {IS_MASTER && (
+          <button
+            onClick={() => navigate("/debug-api")}
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-[10px] font-black uppercase text-white/70 hover:text-white hover:bg-white/10 transition-all border border-white/20"
+          >
+            <Bug size={14} />
+            <span className="hidden md:inline">DEBUG API</span>
+          </button>
+        )}
+
+        {IS_MASTER && (
+          <button
+            onClick={() => navigate("/admin")}
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-[10px] font-black uppercase bg-red-600 text-white animate-pulse"
+          >
+            <ShieldAlert size={14} />
+            <span className="hidden md:inline">PAINEL MASTER</span>
+          </button>
+        )}
+      </nav>
+    </div>
   );
 };
 
@@ -254,6 +190,6 @@ export default ClubBanner;
 
 /**
  * [RODAPÉ TÉCNICO]
- * Versão: 25.0
- * Caminho: src/components/dashboard/ClubBanner.tsx
+ * ARQUIVO: src/components/dashboard/ClubBanner.tsx
+ * CORREÇÃO: Rota do botão VOTAÇÃO alterada para /voting.
  */
