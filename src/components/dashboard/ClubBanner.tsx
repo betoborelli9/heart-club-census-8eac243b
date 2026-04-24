@@ -1,9 +1,11 @@
 /**
  * [CAMINHO/ARQUIVO]: src/components/dashboard/ClubBanner.tsx
  * [MÓDULO]: COMPONENTE GLOBAL DE BRANDING (BANNER + NAVBAR PREMIUM)
- * [STATUS]: VERSÃO 20.0 - MEDIDAS REAIS (JERSEY REPLICA FINAL)
- * [DESCRIÇÃO]: Replicagem exata da Imagem 87d855 com medidas fixas de alta fidelidade.
- * - Sincronização de cores e escudo via Supabase (clubes_cache).
+ * [STATUS]: VERSÃO 21.0 - FIDELIDADE TOTAL (JERSEY REPLICA + AUTO-SYNC)
+ * [DESCRIÇÃO]: Replicagem exata da Imagem 87d855.
+ * - Busca dinâmica de cores e escudo no Supabase (clubes_cache).
+ * - Estado inicial neutro para evitar flicker de cores erradas.
+ * - Navbar com Votação (Laranja) e Painel Master (Vermelho Pulsante).
  */
 
 import { useEffect, useState } from "react";
@@ -34,15 +36,18 @@ const ClubBanner = ({
   const location = useLocation();
   const { user } = useUser();
 
+  // Módulo de Estado Inicial Neutro (Anti-Flicker)
   const [theme, setTheme] = useState({
-    cor_primaria: "#FF0000",
-    cor_secundaria: "#000000",
-    cor_terciaria: "#FFFFFF",
+    cor_primaria: "transparent",
+    cor_secundaria: "transparent",
+    cor_terciaria: "transparent",
     escudo_url: "",
+    loaded: false,
   });
 
   const IS_MASTER = user?.email === "betoborelli9@gmail.com";
 
+  /* [MÓDULO: SINCRONIZAÇÃO COM CLUBES CACHE] */
   useEffect(() => {
     const fetchClubTheme = async () => {
       if (!clubName) return;
@@ -55,67 +60,70 @@ const ClubBanner = ({
 
       if (!error && data) {
         setTheme({
-          cor_primaria: data.cor_primaria || "#FF0000",
-          cor_secundaria: data.cor_secundaria || "#000000",
-          cor_terciaria: data.cor_terciaria || "#FFFFFF",
-          escudo_url: data.escudo_url || "",
+          cor_primaria: data.cor_primaria,
+          cor_secundaria: data.cor_secundaria,
+          cor_terciaria: data.cor_terciaria,
+          escudo_url: data.escudo_url,
+          loaded: true,
         });
       }
     };
     fetchClubTheme();
   }, [clubName]);
 
-  // Medida: 110 graus de inclinação para as faixas diagonais
+  /* [MÓDULO: MEDIDAS E GRADIENTE DIAGONAL (REFERÊNCIA 87d855)] */
   const bannerStyle = {
-    background: `linear-gradient(110deg, 
-      ${theme.cor_secundaria} 0%, 
-      ${theme.cor_secundaria} 25%, 
-      ${theme.cor_primaria} 25%, 
-      ${theme.cor_primaria} 32%, 
-      ${theme.cor_terciaria} 32%, 
-      ${theme.cor_terciaria} 40%, 
-      ${theme.cor_secundaria} 40%, 
-      ${theme.cor_secundaria} 48%, 
-      ${theme.cor_primaria} 48%, 
-      ${theme.cor_primaria} 100%)`,
+    background: theme.loaded
+      ? `linear-gradient(110deg, 
+          ${theme.cor_secundaria} 0%, 
+          ${theme.cor_secundaria} 25%, 
+          ${theme.cor_primaria} 25%, 
+          ${theme.cor_primaria} 32%, 
+          ${theme.cor_terciaria} 32%, 
+          ${theme.cor_terciaria} 40%, 
+          ${theme.cor_secundaria} 40%, 
+          ${theme.cor_secundaria} 48%, 
+          ${theme.cor_primaria} 48%, 
+          ${theme.cor_primaria} 100%)`
+      : "#111111", // Fundo neutro enquanto carrega
   };
 
   const isActive = (path: string) => location.pathname === path || location.pathname + location.hash === path;
 
   return (
     <div className="w-full max-w-7xl mx-auto p-4 animate-in fade-in duration-1000">
-      {/* SECTION: Altura fixa 450px para impacto visual premium */}
+      {/* [MÓDULO: UI VISUAL DO BANNER - ALTURA 450px] */}
       <section
-        className="relative h-[280px] md:h-[450px] w-full rounded-[48px] md:rounded-[64px] overflow-hidden shadow-[0_45px_100px_-20px_rgba(0,0,0,0.8)] border border-white/5 group"
+        className="relative h-[280px] md:h-[450px] w-full rounded-[48px] md:rounded-[64px] overflow-hidden shadow-[0_45px_100px_-20px_rgba(0,0,0,0.8)] border border-white/5 group transition-all duration-500"
         style={bannerStyle}
       >
-        {/* MÓDULO: Efeito de Tecido (Medida de Deslocamento: 80) */}
+        {/* TEXTURA DE CAMISA (JERSEY TEXTURE + FOLDS) */}
         <div className="absolute inset-0 pointer-events-none opacity-60 mix-blend-multiply overflow-hidden">
           <svg width="100%" height="100%" className="absolute inset-0">
-            <filter id="jerseyFoldsMedidas">
+            <filter id="jerseyFoldsFinal">
               <feTurbulence type="fractalNoise" baseFrequency="0.012" numOctaves="4" seed="10" />
               <feDisplacementMap in="SourceGraphic" scale="80" />
             </filter>
-            <rect width="100%" height="100%" filter="url(#jerseyFoldsMedidas)" opacity="0.3" />
+            <rect width="100%" height="100%" filter="url(#jerseyFoldsFinal)" opacity="0.3" />
           </svg>
           <div className="absolute inset-0 bg-gradient-to-tr from-black/50 via-white/10 to-black/50" />
           <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-15 mix-blend-overlay" />
         </div>
 
-        {/* CONTEÚDO PRINCIPAL: Alinhamento centralizado com padding 24 (96px) */}
+        {/* CONTEÚDO PRINCIPAL (PADDING 24) */}
         <div className="relative h-full w-full flex flex-col md:flex-row items-center justify-between px-10 md:px-24 py-12">
-          {/* LADO ESQUERDO: Escudo em Círculo Branco (Medida: w-64 / 256px) */}
+          {/* LADO ESQUERDO: ESCUDO EM CÍRCULO BRANCO (MEDIDA 256px) */}
           <div className="flex items-center gap-6 md:gap-14">
             <div className="relative shrink-0 transition-transform duration-1000 group-hover:scale-105">
               <div className="absolute -inset-8 bg-white/20 blur-[80px] rounded-full opacity-40" />
-              <div className="w-36 h-36 md:w-64 md:h-64 bg-white rounded-full flex items-center justify-center border-[8px] border-white/10 shadow-[0_30px_60px_rgba(0,0,0,0.6)]">
+              <div className="w-32 h-32 md:w-64 md:h-64 bg-white rounded-full flex items-center justify-center border-[8px] border-white/10 shadow-[0_30px_60px_rgba(0,0,0,0.6)]">
                 <ClubLogo src={theme.escudo_url} alt={clubName || ""} className="w-[75%] h-[75%] object-contain" />
               </div>
             </div>
 
-            {/* INFOS PERFIL: text-7xl (72px) para o Nome */}
+            {/* INFO PERFIL (TEXT-7XL / 72px) */}
             <div className="flex flex-col text-white drop-shadow-[0_8px_8px_rgba(0,0,0,0.8)]">
-              <h2 className="text-4xl md:text-7xl font-black italic uppercase tracking-tighter leading-none mb-1">
+              <h2 className="text-3xl md:text-7xl font-black italic uppercase tracking-tighter leading-none mb-1">
                 {profileName || "BETO BORELLI"}
               </h2>
               <div className="flex items-center gap-2 mt-2 text-sm md:text-xl font-bold uppercase italic opacity-90">
@@ -131,7 +139,7 @@ const ClubBanner = ({
             </div>
           </div>
 
-          {/* LADO DIREITO: Nome do Clube (Medida: text-9xl / 128px) */}
+          {/* LADO DIREITO: CLUBE (TEXT-9XL / 128px) */}
           <div className="hidden lg:flex flex-col items-end text-white text-right drop-shadow-[0_15px_15px_rgba(0,0,0,0.7)]">
             <span className="text-sm font-black uppercase italic opacity-80 tracking-[0.5em] mb-[-12px]">
               CLUBE DO CORAÇÃO
@@ -142,7 +150,7 @@ const ClubBanner = ({
           </div>
         </div>
 
-        {/* NAVBAR: Glassmorphism profundo com padding lateral 28 (112px) */}
+        {/* [MÓDULO: BARRA INFERIOR (NAVBAR) - FAIXA ESCURA COM BOTÕES] */}
         <div className="absolute bottom-10 left-1/2 -translate-x-1/2 w-[95%] md:w-auto">
           <nav className="flex items-center justify-center gap-2 md:gap-5 p-3 bg-black/80 backdrop-blur-3xl rounded-[32px] border border-white/10 shadow-[0_25px_50px_rgba(0,0,0,0.6)] overflow-x-auto no-scrollbar">
             <NavBtn
@@ -172,6 +180,7 @@ const ClubBanner = ({
 
             <div className="w-[1px] h-8 bg-white/10 mx-1 hidden md:block" />
 
+            {/* VOTAÇÃO (DESTAQUE EM LARANJA) */}
             <NavBtn
               onClick={() => navigate("/voting")}
               active={isActive("/voting")}
@@ -188,6 +197,8 @@ const ClubBanner = ({
                   icon={<Bug size={18} />}
                   label="DEBUG API"
                 />
+
+                {/* PAINEL MASTER (BOTÃO VERMELHO PULSANTE) */}
                 <NavBtn
                   onClick={() => navigate("/admin")}
                   active={isActive("/admin")}
@@ -204,6 +215,7 @@ const ClubBanner = ({
   );
 };
 
+/* [MÓDULO: COMPONENTE AUXILIAR DE BOTÃO NAVBAR] */
 const NavBtn = ({ icon, label, active, onClick, variant }: any) => {
   const baseClass =
     "flex items-center gap-3 px-5 md:px-7 py-3.5 rounded-2xl transition-all duration-500 whitespace-nowrap text-[10px] md:text-[12px] font-black italic uppercase tracking-widest group/btn";
@@ -231,9 +243,9 @@ export default ClubBanner;
 /**
  * [RODAPÉ TÉCNICO]
  * ARQUIVO: src/components/dashboard/ClubBanner.tsx
- * VERSÃO: 20.0 (JERSEY REPLICA - FINAL FIDELITY)
- * - Proporção de 450px de altura para Desktop.
- * - Medida do Escudo: 256px (w-64) com logo interna de 75%.
- * - Font-size para Títulos: text-7xl e text-9xl (Extra Impacto).
- * - Sincronia de cores dinâmica via Supabase.
+ * VERSÃO: 21.0 (FIDELIDADE TOTAL)
+ * - Removido estado inicial tricolor (Preto/Branco/Vermelho) para evitar erro visual em outros clubes.
+ * - Sincronia real com 'clubes_cache' via useEffect.
+ * - Navbar rigorosamente conforme descrição: Votação (Laranja), Painel Master (Vermelho Pulsante).
+ * - Proporções de texto (7xl/9xl) e escudo (256px) conforme Imagem 87d855.
  */
