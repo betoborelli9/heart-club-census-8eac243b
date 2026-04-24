@@ -1,11 +1,11 @@
 /**
  * [CAMINHO/ARQUIVO]: src/components/dashboard/ClubBanner.tsx
  * [MÓDULO]: BRANDING & DASHBOARD NAVIGATION
- * [STATUS]: VERSÃO 36.0 (BICOLOR 3-STRIPE SYNC — SLIM PROFILE)
- * [DESCRIÇÃO]: Banner unificado com correção de proporção e nova lógica de faixas para bicolores.
- * - Perfil Slim: Altura reduzida para 240px no desktop para maior elegância.
- * - Bicolores: Implementada lógica de 3 faixas diagonais centrais (ex: Palmeiras Verde-Branco-Verde).
- * - Escala: Emblema equilibrado em 210px (Desktop).
+ * [STATUS]: VERSÃO 37.0 (BICOLOR TRIPLE-STRIPE PRECISION — SLIM PROFILE)
+ * [DESCRIÇÃO]: Banner unificado com correção nas diagonais de clubes bicolores.
+ * - Bicolores: Cor forte (ex: Vermelho/Verde) nas pontas e 3 faixas diagonais brancas centralizadas.
+ * - Tricolores: Mantida lógica de alternância cromática nas diagonais.
+ * - Perfil Slim: Altura de 240px e Emblema de 210px (Desktop) para elegância.
  * - Legibilidade: Mantido contorno 'enuviado' (soft shadow).
  */
 
@@ -103,6 +103,7 @@ const ClubBanner = ({
     const sorted = [...colors].sort((a, b) => calculateLuminance(a) - calculateLuminance(b));
 
     // TRICOLOR (São Paulo, Santa Cruz)
+    // Estrutura: Cor 1 | Cor 2 | Cor 3 | Cor 1 | Cor 2
     if (sorted.length === 3) {
       return `linear-gradient(115deg, 
         ${sorted[0]} 0%, ${sorted[0]} 34%, 
@@ -112,17 +113,18 @@ const ClubBanner = ({
         ${sorted[1]} 46%, ${sorted[1]} 100%)`;
     }
 
-    // BICOLOR (Palmeiras, Vila Nova) - 3 faixas diagonais brancas no mesmo local
+    // BICOLOR (Vila Nova, Palmeiras)
+    // Estrutura: Cor Forte | Faixa Fraca | Forte | Faixa Fraca | Forte | Faixa Fraca | Forte
     const strong = sorted[0];
     const light = sorted[1] || "#ffffff";
     return `linear-gradient(115deg, 
-      ${strong} 0%, ${strong} 38%, 
-      ${light} 38%, ${light} 41%, 
-      ${strong} 41%, ${strong} 44%, 
-      ${light} 44%, ${light} 47%, 
-      ${strong} 47%, ${strong} 50%, 
-      ${light} 50%, ${light} 53%, 
-      ${strong} 53%, ${strong} 100%)`;
+      ${strong} 0%, ${strong} 34%, 
+      ${light} 34%, ${light} 38%, 
+      ${strong} 38%, ${strong} 39%, 
+      ${light} 39%, ${light} 43%, 
+      ${strong} 43%, ${strong} 44%, 
+      ${light} 44%, ${light} 48%, 
+      ${strong} 48%, ${strong} 100%)`;
   };
 
   /* ═══════════════════════════════════════════════════════════
@@ -162,7 +164,7 @@ const ClubBanner = ({
       `}</style>
 
       <div className="overflow-hidden rounded-[2.5rem] border border-[#1a1a1a] shadow-2xl flex flex-col">
-        {/* TOPO DO BANNER - ALTURA CORRIGIDA PARA SLIM (240px) */}
+        {/* TOPO DO BANNER - ALTURA SLIM (240px) */}
         <section
           className="relative h-[240px] md:h-[240px] w-full flex items-center overflow-hidden"
           style={{
@@ -175,7 +177,7 @@ const ClubBanner = ({
 
           <div className="relative z-10 h-full w-full flex flex-row items-center justify-between px-6 md:px-16">
             <div className="flex items-center h-full shrink-0">
-              {/* EMBLEMA EQUILIBRADO (210px) PARA O BANNER SLIM */}
+              {/* EMBLEMA EQUILIBRADO (210px) */}
               <div className="w-[110px] h-[110px] md:w-[210px] md:h-[210px] rounded-full bg-white flex items-center justify-center shrink-0 shadow-xl border-4 border-white/10">
                 <ClubLogo
                   src={theme.escudo_url}
@@ -296,10 +298,9 @@ export default ClubBanner;
 /**
  * [RODAPÉ TÉCNICO]
  * ARQUIVO: src/components/dashboard/ClubBanner.tsx
- * VERSÃO: 36.0
+ * VERSÃO: 37.0
  * CORREÇÕES:
- * - Altura Slim: Banner desktop reduzido de 320px para 240px para retomar o visual elegante e estreito.
- * - Emblema Balanceado: Tamanho ajustado para 210px (PC) para não colidir com as bordas do banner reduzido.
- * - Lógica Bicolor: Adicionado suporte a 3 faixas diagonais centrais para clubes bicolores (Cor Forte -> Faixa 1 -> Forte -> Faixa 2 -> Forte -> Faixa 3 -> Cor Forte).
- * - Integridade: Mantidos contornos enuviados, alinhamento base e lógica IS_MASTER.
+ * - Lógica Bicolor: Ajustada para garantir cor forte nas extremidades e 3 listras brancas nítidas no centro (34% a 48%), separadas por finas linhas da cor principal.
+ * - Alinhamento: Mantida a simetria com os clubes tricolores para consistência visual.
+ * - Perfil Slim: Banner mantido em 240px para elegância.
  */
