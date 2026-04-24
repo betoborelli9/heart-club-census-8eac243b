@@ -1,11 +1,11 @@
 /**
  * [CAMINHO/ARQUIVO]: src/components/dashboard/ClubBanner.tsx
  * [MÓDULO]: BRANDING & DASHBOARD NAVIGATION
- * [STATUS]: VERSÃO 20.0 (PRECISÃO GEOMÉTRICA — IMAGE 2 ADJUST)
- * [DESCRIÇÃO]: Banner estreito com diagonais em 115 graus.
- * - Inclinação: Ajustada de 135deg para 115deg (mais vertical/menos inclinada).
- * - Altura: Reduzida para um perfil mais estreito (220px desktop).
- * - Hierarquia: Cor forte (Início) | Segunda forte (Fim) | Branca (Meio).
+ * [STATUS]: VERSÃO 21.0 (REFINAMENTO GEOMÉTRICO — NARROW DIAGONALS)
+ * [DESCRIÇÃO]: Banner estreito com diagonais precisas e borda de contraste.
+ * - Diagonais: Faixas centrais reduzidas para 5% de largura.
+ * - Escudo: Círculo branco sem glow (chapado).
+ * - Borda: Adicionado outline branco sutil para contraste com o site.
  * - Navbar: Preservada integralmente.
  */
 
@@ -95,7 +95,7 @@ const ClubBanner = ({
   }, [clubName]);
 
   /* ═══════════════════════════════════════════════════════════
-      MÓDULO: LARGURA E INCLINAÇÃO DAS COLUNAS (115 DEGREES)
+      MÓDULO: LARGURA DAS COLUNAS (NARROW PRECISION)
      ═══════════════════════════════════════════════════════════ */
   const buildFlagGradient = (): string => {
     const colors = [theme.cor_primaria, theme.cor_secundaria, theme.cor_terciaria].filter(Boolean);
@@ -106,21 +106,21 @@ const ClubBanner = ({
     // sorted[2] = Mais clara / Branco (Detalhe central)
 
     if (sorted.length === 3) {
-      // TRICOLOR - Inclinação 115deg (Menos inclinada que a anterior)
+      // TRICOLOR - Diagonais estreitas de 5%
       return `linear-gradient(115deg, 
-        ${sorted[0]} 0%, ${sorted[0]} 32%, 
-        ${sorted[1]} 32%, ${sorted[1]} 40%, 
-        ${sorted[2]} 40%, ${sorted[2]} 48%, 
-        ${sorted[0]} 48%, ${sorted[0]} 56%, 
-        ${sorted[1]} 56%, ${sorted[1]} 100%)`;
+        ${sorted[0]} 0%, ${sorted[0]} 36%, 
+        ${sorted[1]} 36%, ${sorted[1]} 41%, 
+        ${sorted[2]} 41%, ${sorted[2]} 46%, 
+        ${sorted[0]} 46%, ${sorted[0]} 51%, 
+        ${sorted[1]} 51%, ${sorted[1]} 100%)`;
     }
 
-    // BICOLOR - Inclinação 115deg
+    // BICOLOR - Faixas centrais de 5%
     return `linear-gradient(115deg, 
-      ${sorted[0]} 0%, ${sorted[0]} 42%, 
-      ${sorted[1] || "#ffffff"} 42%, ${sorted[1] || "#ffffff"} 50%, 
-      ${sorted[1] || "#ffffff"} 50%, ${sorted[1] || "#ffffff"} 58%, 
-      ${sorted[0]} 58%, ${sorted[0]} 100%)`;
+      ${sorted[0]} 0%, ${sorted[0]} 45%, 
+      ${sorted[1] || "#ffffff"} 45%, ${sorted[1] || "#ffffff"} 50%, 
+      ${sorted[1] || "#ffffff"} 50%, ${sorted[1] || "#ffffff"} 55%, 
+      ${sorted[0]} 55%, ${sorted[0]} 100%)`;
   };
 
   /* ═══════════════════════════════════════════════════════════
@@ -155,13 +155,13 @@ const ClubBanner = ({
         }
       `}</style>
 
-      {/* ═══════ TOPO DO BANNER (ESTREITO / NARROW PROFILE) ═══════ */}
+      {/* ═══════ TOPO DO BANNER (BORDA DE CONTRASTE ATIVADA) ═══════ */}
       <section
-        className="relative h-[180px] md:h-[220px] w-full rounded-t-[2.5rem] overflow-hidden flex items-center shadow-2xl"
+        className="relative h-[180px] md:h-[220px] w-full rounded-t-[2.5rem] overflow-hidden flex items-center shadow-2xl border border-white/15"
         style={{
           background: buildFlagGradient(),
           backgroundSize: "200% 200%",
-          animation: "waveFlag 15s ease-in-out infinite",
+          animation: "waveFlag 20s ease-in-out infinite",
         }}
       >
         {/* Overlay de Textura Jersey */}
@@ -169,11 +169,8 @@ const ClubBanner = ({
 
         <div className="relative z-10 flex items-center justify-between w-full px-6 md:px-16">
           <div className="flex items-center gap-4 md:gap-8">
-            {/* ESCUDO PROPORCIONAL AO BANNER ESTREITO */}
-            <div
-              className="w-[110px] h-[110px] md:w-[140px] md:h-[140px] rounded-full bg-white flex items-center justify-center border-4 border-white/20 shadow-2xl transition-transform duration-500 hover:scale-105 shrink-0"
-              style={{ boxShadow: `0 12px 28px -8px ${theme.cor_primaria}CC` }}
-            >
+            {/* ESCUDO (CHAPADO / SEM COLORACAO EM VOLTA) */}
+            <div className="w-[110px] h-[110px] md:w-[140px] md:h-[140px] rounded-full bg-white flex items-center justify-center border-4 border-white/20 shrink-0">
               <ClubLogo
                 src={theme.escudo_url}
                 alt={clubName}
@@ -254,11 +251,10 @@ export default ClubBanner;
 /**
  * [RODAPÉ TÉCNICO]
  * ARQUIVO: src/components/dashboard/ClubBanner.tsx
- * VERSÃO: 20.0
+ * VERSÃO: 21.0
  * CORREÇÕES:
- * - Inclinação das diagonais ajustada para 115 graus (mais vertical, conforme imagem 2).
- * - Altura do banner reduzida para 220px (Desktop) para um visual mais estreito e profissional.
- * - Tamanho do escudo e fontes ajustados proporcionalmente à nova altura do banner.
- * - Lógica de cores preservada: Cor escura (sorted[0]) no início e segunda forte (sorted[1]) no final.
- * - Navbar mantida sem alterações estéticas ou de lógica.
+ * - Colunas diagonais estreitadas para 5% de largura total, aumentando a área das cores principais.
+ * - Círculo branco do escudo agora é 100% chapado (removido shadow inline dinâmico).
+ * - Adicionado contorno branco sutil (border-white/15) ao banner para separação visual em clubes pretos.
+ * - Navbar e tipografia delicada mantidas conforme especificação anterior.
  */
