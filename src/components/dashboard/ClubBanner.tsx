@@ -136,11 +136,11 @@ const ClubBanner = ({
           </div>
 
           {showProfileInfo && (
-            <div className="hidden md:flex flex-col items-end text-right">
+            <div className="flex flex-col items-end text-right md:items-end md:text-right">
               <span className="text-[10px] md:text-xs font-bold uppercase tracking-[0.3em] opacity-50 text-white">
                 Clube do Coração
               </span>
-              <h1 className="text-4xl font-black italic uppercase text-white">{clubName}</h1>
+              <h1 className="text-2xl md:text-4xl font-black italic uppercase text-white">{clubName}</h1>
             </div>
           )}
         </div>
