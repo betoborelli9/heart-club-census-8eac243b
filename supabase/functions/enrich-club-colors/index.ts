@@ -1,8 +1,11 @@
 /**
  * [CAMINHO]: supabase/functions/enrich-club-colors/index.ts
- * [STATUS]: PRODUÇÃO - VERSÃO 56.0 (FEMININO + HIERARQUIA DE CORES)
- * [CONTEXTO]: Enriquecimento de dados com detecção de Futebol Feminino e Cores Automatizadas.
- * [DESCRIÇÃO]: Prioriza Séries A, B, C e D. Gemini identifica Mascote, Cores (Primária = Predominante) e existência de Time Feminino.
+ * [STATUS]: PRODUÇÃO - VERSÃO 57.0 (HIERARQUIA VISUAL + FEMININO)
+ * [CONTEXTO]: Enriquecimento de dados com foco em Contraste de Escudo e Futebol Feminino.
+ * [DESCRIÇÃO]:
+ * - cor_primaria: Agora forçada como a cor de fundo do escudo (Preto/Escura) para contraste.
+ * - cor_secundaria: Cor principal/predominante do clube.
+ * - tem_feminino: Identificação obrigatória via Gemini.
  */
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
@@ -65,25 +68,29 @@ serve(async (req) => {
     }
 
     /* ═══════════════════════════════════════════════════════════
-        MÓDULO 2: BUSCA HISTÓRICA E SOCIAL (GEMINI)
+        MÓDULO 2: BUSCA HISTÓRICA E SOCIAL (GEMINI 1.5 FLASH)
        ═══════════════════════════════════════════════════════════ */
     let aiData = {
-      cor_primaria: "#1a1a1a",
-      cor_secundaria: "#ffffff",
-      cor_terciaria: "#ff6200",
+      cor_primaria: "#000000", // Default: Fundo do escudo
+      cor_secundaria: "#ff0000", // Default: Cor principal
+      cor_terciaria: "#ffffff",
       mascote: "Não Identificado",
       tem_feminino: false,
     };
 
     if (geminiKey) {
       try {
-        const prompt = `Atue como Historiador de Futebol Sênior. Para o clube "${club_name}", retorne EXCLUSIVAMENTE um JSON puro.
-        REGRAS DE OURO:
-        1. cor_primaria DEVE ser a cor predominante do clube (ex: SPFC = Vermelho).
-        2. tem_feminino deve ser TRUE se o clube tiver departamento de futebol feminino profissional ativo.
-        3. mascote deve ser o oficial histórico.
+        const prompt = `Atue como Historiador de Futebol Sênior especialista em Branding. 
+        Para o clube "${club_name}", retorne EXCLUSIVAMENTE um JSON puro.
         
-        FORMATO: {"cor_primaria": "#HEX", "cor_secundaria": "#HEX", "cor_terciaria": "#HEX", "mascote": "NOME", "tem_feminino": boolean}`;
+        REGRAS DE HIERARQUIA PARA O LAYOUT:
+        1. cor_primaria: DEVE ser a cor de fundo do escudo no banner (Geralmente PRETO ou a cor mais ESCURA para dar contraste ao círculo branco).
+        2. cor_secundaria: DEVE ser a cor predominante/principal do clube (Ex: Vermelho no Santa Cruz).
+        3. cor_terciaria: DEVE ser a cor de apoio (Ex: Branco).
+        4. tem_feminino: Identifique se o clube possui time de futebol feminino profissional ativo (Retorne true ou false).
+        5. mascote: Nome do mascote oficial.
+
+        FORMATO EXIGIDO: {"cor_primaria": "#HEX", "cor_secundaria": "#HEX", "cor_terciaria": "#HEX", "mascote": "NOME", "tem_feminino": boolean}`;
 
         const gRes = await fetch(
           `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiKey}`,
@@ -127,10 +134,10 @@ serve(async (req) => {
       estadio_capacidade: teamInfo?.venue?.capacity || null,
       division: division,
       mascote: aiData.mascote,
-      tem_feminino: aiData.tem_feminino, // NOVO: Identificação Automática
-      cor_primaria: aiData.cor_primaria, // AUTOMÁTICO: Predominante
-      cor_secundaria: aiData.cor_secundaria,
-      cor_terciaria: aiData.cor_terciaria,
+      tem_feminino: aiData.tem_feminino,
+      cor_primaria: aiData.cor_primaria, // Fundo Escudo
+      cor_secundaria: aiData.cor_secundaria, // Predominante
+      cor_terciaria: aiData.cor_terciaria, // Apoio
       atualizado_em: new Date().toISOString(),
     };
 
@@ -156,8 +163,7 @@ serve(async (req) => {
 
 /**
  * [RODAPÉ TÉCNICO]
- * Versão: 56.0
- * - Inclusão de tem_feminino (boolean) via Gemini.
- * - Hierarquia de cores forçada: Primária = Predominante.
- * - responseMimeType: "application/json" ativado para resiliência.
+ * Versão: 57.0
+ * - Inclusão de tem_feminino identificada via Gemini.
+ * - Reordenação de Cores: Primária (Fundo Escudo/Escura), Secundária (Predominante), Terciária (Apoio).
  */
