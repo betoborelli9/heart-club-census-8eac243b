@@ -114,7 +114,8 @@ const ClubBanner = ({
                   {profileName}
                 </h2>
                 <div className="flex items-center gap-1 text-xs md:text-sm font-bold opacity-70 uppercase text-white">
-                  <MapPin size={12} /> {profileCity}{profileState ? `, ${profileState}` : ""}
+                  <MapPin size={12} /> {profileCity}
+                  {profileState ? `, ${profileState}` : ""}
                 </div>
                 <div className="flex items-center gap-1 text-xs md:text-sm font-black text-[#ff6200] italic mt-1 uppercase">
                   <Trophy size={12} /> EMBAIXADOR {ambassadorLevel}
@@ -137,45 +138,64 @@ const ClubBanner = ({
               <span className="text-[10px] md:text-xs font-bold uppercase tracking-[0.3em] opacity-50 text-white">
                 Clube do Coração
               </span>
-              <h1 className="text-4xl font-black italic uppercase text-white">
-                {clubName}
-              </h1>
+              <h1 className="text-4xl font-black italic uppercase text-white">{clubName}</h1>
             </div>
           )}
         </div>
       </section>
 
-      {/* ═══════════════════════════════════════════════════════════
-          MÓDULO: NAVBAR INTEGRADA (NÃO ALTERADA)
-         ═══════════════════════════════════════════════════════════ */}
+      {/* [MÓDULO: NAVBAR INTEGRADA] */}
       <nav className="flex items-center justify-center gap-1 bg-[#1a1a1a] border border-white/5 border-t-0 rounded-b-[1.5rem] px-2 py-3 shadow-xl">
         {NAV_ITEMS.map((item) => (
           <button
             key={item.label}
             onClick={() => navigate(item.path)}
-            className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-[10px] font-black uppercase transition-all duration-300 ${
-              isActive(item.path)
-                ? "bg-[#ff6200] text-white shadow-[0_0_15px_rgba(255,98,0,0.3)]"
-                : "text-white/40 hover:text-white hover:bg-white/5"
-            }`}
+            className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-[10px] font-black uppercase transition-all duration-300 ${isActive(item.path) ? "bg-[#ff6200] text-white shadow-[0_0_15px_rgba(255,98,0,0.3)]" : "text-white/40 hover:text-white hover:bg-white/5"}`}
           >
             <item.icon size={14} />
             <span className="hidden md:inline">{item.label}</span>
           </button>
         ))}
 
+        {/* LINK DE VOTAÇÃO - ROTA CORRIGIDA PARA /voting */}
         {IS_MASTER && (
-          <>
-            <button
-              onClick={() => navigate("/voting")}
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-[10px] font-black uppercase text-[#ff6200] hover:bg-[#ff6200]/10 transition-all border border-[#ff6200]/20"
-            >
-              <Vote size={14} />
-              <span className="hidden md:inline">VOTAÇÃO</span>
-            </button>
+          <button
+            onClick={() => navigate("/voting")}
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-[10px] font-black uppercase text-[#ff6200] hover:bg-[#ff6200]/10 transition-all border border-[#ff6200]/20"
+          >
+            <Vote size={14} />
+            <span className="hidden md:inline">VOTAÇÃO</span>
+          </button>
+        )}
 
-            <button
-              onClick={() => navigate("/debug-api")}
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-[10px] font-black uppercase text-white/70 hover:text-white hover:bg-white/10 transition-all border border-white/20"
-            >
-              <Bug
+        {IS_MASTER && (
+          <button
+            onClick={() => navigate("/debug-api")}
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-[10px] font-black uppercase text-white/70 hover:text-white hover:bg-white/10 transition-all border border-white/20"
+          >
+            <Bug size={14} />
+            <span className="hidden md:inline">DEBUG API</span>
+          </button>
+        )}
+
+        {IS_MASTER && (
+          <button
+            onClick={() => navigate("/admin")}
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-[10px] font-black uppercase bg-red-600 text-white animate-pulse"
+          >
+            <ShieldAlert size={14} />
+            <span className="hidden md:inline">PAINEL MASTER</span>
+          </button>
+        )}
+      </nav>
+    </div>
+  );
+};
+
+export default ClubBanner;
+
+/**
+ * [RODAPÉ TÉCNICO]
+ * ARQUIVO: src/components/dashboard/ClubBanner.tsx
+ * CORREÇÃO: Rota do botão VOTAÇÃO alterada para /voting.
+ */
