@@ -1,11 +1,11 @@
 /**
  * [CAMINHO/ARQUIVO]: src/components/dashboard/ClubBanner.tsx
  * [MÓDULO]: BRANDING & DASHBOARD NAVIGATION
- * [STATUS]: VERSÃO 23.0 (CONTORNO DE PRECISÃO — NAVBAR COLOR SYNC)
- * [DESCRIÇÃO]: Banner e Navbar unificados com borda na cor exata da navegação.
- * - Borda: Contorno único em #1a1a1a para distinção limpa do fundo do site.
- * - Estética: Removidas bordas brancas/claras que causavam mistura visual.
- * - Diagonais: Mantido refinamento estreito (5%) e inclinação de 115 graus.
+ * [STATUS]: VERSÃO 24.0 (CLEAN BORDER — NAVBAR SYNC ONLY)
+ * [DESCRIÇÃO]: Banner e Navbar unificados com contorno único e limpo.
+ * - Borda: Contorno único em #1a1a1a (cor da navbar) em todo o conjunto.
+ * - Limpeza: Removidas bordas brancas, vermelhas ou cinzas que causavam ruído visual.
+ * - Diagonais: Mantida inclinação de 115 graus com faixas estreitas (5%).
  * - Tipografia: Mantida delicada e proporcional.
  */
 
@@ -99,9 +99,11 @@ const ClubBanner = ({
      ═══════════════════════════════════════════════════════════ */
   const buildFlagGradient = (): string => {
     const colors = [theme.cor_primaria, theme.cor_secundaria, theme.cor_terciaria].filter(Boolean);
+    // Ordena da mais escura (início) para a segunda mais escura (fim)
     const sorted = [...colors].sort((a, b) => calculateLuminance(a) - calculateLuminance(b));
 
     if (sorted.length === 3) {
+      // TRICOLOR (ex: Santa Cruz, São Paulo)
       return `linear-gradient(115deg, 
         ${sorted[0]} 0%, ${sorted[0]} 36%, 
         ${sorted[1]} 36%, ${sorted[1]} 41%, 
@@ -110,6 +112,7 @@ const ClubBanner = ({
         ${sorted[1]} 51%, ${sorted[1]} 100%)`;
     }
 
+    // BICOLOR (ex: Vila Nova, Palmeiras)
     return `linear-gradient(115deg, 
       ${sorted[0]} 0%, ${sorted[0]} 45%, 
       ${sorted[1] || "#ffffff"} 45%, ${sorted[1] || "#ffffff"} 50%, 
@@ -150,15 +153,15 @@ const ClubBanner = ({
       `}</style>
 
       {/* ═══════ CONTAINER UNIFICADO (BANNER + NAVBAR) ═══════ */}
-      {/* Borda definida em #1a1a1a para evitar misturas de cores */}
+      {/* Borda ÚNICA definida em #1a1a1a - sem misturas de cores nas bordas */}
       <div className="overflow-hidden rounded-[2.5rem] border border-[#1a1a1a] shadow-2xl flex flex-col">
-        {/* TOPO DO BANNER */}
+        {/* TOPO DO BANNER - Sem nenhuma borda interna ou outline */}
         <section
           className="relative h-[180px] md:h-[220px] w-full flex items-center overflow-hidden"
           style={{
             background: buildFlagGradient(),
             backgroundSize: "200% 200%",
-            animation: "waveFlag 25s ease-in-out infinite",
+            animation: "waveFlag 30s ease-in-out infinite",
           }}
         >
           {/* Overlay de Textura Jersey */}
@@ -166,8 +169,8 @@ const ClubBanner = ({
 
           <div className="relative z-10 flex items-center justify-between w-full px-6 md:px-16">
             <div className="flex items-center gap-4 md:gap-8">
-              {/* ESCUDO (CHAPADO) */}
-              <div className="w-[110px] h-[110px] md:w-[140px] md:h-[140px] rounded-full bg-white flex items-center justify-center border-2 border-black/5 shrink-0">
+              {/* ESCUDO (CHAPADO - SEM BORDAS COLORIDAS) */}
+              <div className="w-[110px] h-[110px] md:w-[140px] md:h-[140px] rounded-full bg-white flex items-center justify-center shrink-0 shadow-xl">
                 <ClubLogo
                   src={theme.escudo_url}
                   alt={clubName}
@@ -221,7 +224,7 @@ const ClubBanner = ({
           </div>
         </section>
 
-        {/* NAVBAR INFERIOR (INTEGRADA NO CONTAINER) */}
+        {/* NAVBAR INFERIOR (INTEGRADA SEM BORDAS INTERNAS) */}
         <nav className="flex items-center justify-center gap-1.5 bg-[#1a1a1a] px-4 py-3.5 overflow-x-auto no-scrollbar">
           <NavItem icon={Flame} label="MAPA DE CALOR" path="/mapa-calor" active={isActive("/mapa-calor")} />
           <NavItem icon={BarChart3} label="ESTATÍSTICAS" path="/estatisticas" active={isActive("/estatisticas")} />
@@ -254,10 +257,10 @@ export default ClubBanner;
 /**
  * [RODAPÉ TÉCNICO]
  * ARQUIVO: src/components/dashboard/ClubBanner.tsx
- * VERSÃO: 23.0
+ * VERSÃO: 24.0
  * CORREÇÕES:
- * - Ajuste de Borda: Contorno agora utiliza a cor sólida #1a1a1a (cor da navbar).
- * - Estética: Removido o border-white/10 que causava misturas indesejadas com as cores do banner.
- * - Bug Fix: Corrigida função calculateLuminance que apresentava erro de sintaxe.
- * - Refinamento: Borda do escudo reduzida para border-black/5 para um visual mais limpo.
+ * - Borda Única: Removidas todas as bordas internas do banner e do escudo que causavam mistura de cores.
+ * - Sincronização de Contorno: O contorno externo do conjunto agora é apenas border-[#1a1a1a] sólido.
+ * - Limpeza Visual: Removidas as bordas brancas/vermelhas nas extremidades laterais do topo.
+ * - Legibilidade: Mantido o algoritmo de cores para contraste e tipografia proporcional.
  */
