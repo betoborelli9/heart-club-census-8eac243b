@@ -1,11 +1,12 @@
 /**
  * [CAMINHO]: supabase/functions/enrich-club-colors/index.ts
- * [STATUS]: PRODUÇÃO - VERSÃO 57.0 (HIERARQUIA VISUAL + FEMININO)
- * [CONTEXTO]: Enriquecimento de dados com foco em Contraste de Escudo e Futebol Feminino.
+ * [STATUS]: PRODUÇÃO - VERSÃO 58.0 (HIERARQUIA VISUAL AVANÇADA + FEMININO)
+ * [CONTEXTO]: Enriquecimento de dados com foco em Alfaiataria Visual (Jersey Design).
  * [DESCRIÇÃO]:
- * - cor_primaria: Agora forçada como a cor de fundo do escudo (Preto/Escura) para contraste.
- * - cor_secundaria: Cor principal/predominante do clube.
- * - tem_feminino: Identificação obrigatória via Gemini.
+ * - cor_primaria: Cor de fundo/base (Geralmente a mais escura/preta para contraste do escudo).
+ * - cor_secundaria: Cor predominante que encerra o banner (A "cor da camisa").
+ * - cor_terciaria: Cor de detalhe/faixa diagonal.
+ * - tem_feminino: Identificação obrigatória de departamento profissional ativo.
  */
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
@@ -34,7 +35,7 @@ serve(async (req) => {
     const { club_name, api_id } = await req.json();
     if (!club_name) throw new Error("Nome do clube é obrigatório");
 
-    console.log(`[LOG]: Investigando ${club_name}...`);
+    console.log(`[LOG]: Investigando design de ${club_name}...`);
 
     /* ═══════════════════════════════════════════════════════════
         MÓDULO 1: BUSCA TÉCNICA (API FOOTBALL)
@@ -68,11 +69,11 @@ serve(async (req) => {
     }
 
     /* ═══════════════════════════════════════════════════════════
-        MÓDULO 2: BUSCA HISTÓRICA E SOCIAL (GEMINI 1.5 FLASH)
+        MÓDULO 2: ENGENHARIA DE PROMPT (BRANDING & FEMININO)
        ═══════════════════════════════════════════════════════════ */
     let aiData = {
-      cor_primaria: "#000000", // Default: Fundo do escudo
-      cor_secundaria: "#ff0000", // Default: Cor principal
+      cor_primaria: "#000000",
+      cor_secundaria: "#ff0000",
       cor_terciaria: "#ffffff",
       mascote: "Não Identificado",
       tem_feminino: false,
@@ -80,15 +81,15 @@ serve(async (req) => {
 
     if (geminiKey) {
       try {
-        const prompt = `Atue como Historiador de Futebol Sênior especialista em Branding. 
-        Para o clube "${club_name}", retorne EXCLUSIVAMENTE um JSON puro.
+        const prompt = `Atue como Designer de Branding Esportivo e Historiador. 
+        Para o clube "${club_name}", analise as cores oficiais e retorne EXCLUSIVAMENTE um JSON puro.
         
-        REGRAS DE HIERARQUIA PARA O LAYOUT:
-        1. cor_primaria: DEVE ser a cor de fundo do escudo no banner (Geralmente PRETO ou a cor mais ESCURA para dar contraste ao círculo branco).
-        2. cor_secundaria: DEVE ser a cor predominante/principal do clube (Ex: Vermelho no Santa Cruz).
-        3. cor_terciaria: DEVE ser a cor de apoio (Ex: Branco).
-        4. tem_feminino: Identifique se o clube possui time de futebol feminino profissional ativo (Retorne true ou false).
-        5. mascote: Nome do mascote oficial.
+        REGRAS DE MAPEAMENTO PARA O BANNER:
+        1. "cor_primaria": Deve ser a cor de FUNDO do escudo (Lado esquerdo). Para clubes como São Paulo, Santa Cruz ou Flamengo, deve ser PRETO (#000000) para dar contraste ao círculo branco. Para bicolores como Palmeiras ou Vila Nova, pode ser a cor principal (Verde ou Vermelho).
+        2. "cor_secundaria": Deve ser a cor que FINALIZA o banner no lado direito. É a cor mais forte da camisa (Ex: Vermelho para Santa Cruz/Vila Nova, Verde para Palmeiras).
+        3. "cor_terciaria": Cor de contraste para as faixas diagonais centrais (Geralmente Branco #FFFFFF).
+        4. "tem_feminino": Verifique se o clube possui time de futebol feminino profissional ou sub-20 ativo em competições oficiais (true/false).
+        5. "mascote": Nome do mascote oficial.
 
         FORMATO EXIGIDO: {"cor_primaria": "#HEX", "cor_secundaria": "#HEX", "cor_terciaria": "#HEX", "mascote": "NOME", "tem_feminino": boolean}`;
 
@@ -119,7 +120,7 @@ serve(async (req) => {
     }
 
     /* ═══════════════════════════════════════════════════════════
-        MÓDULO 3: PERSISTÊNCIA (UPSERT)
+        MÓDULO 3: PERSISTÊNCIA NO BANCO (UPSERT)
        ═══════════════════════════════════════════════════════════ */
     const payload = {
       nome: club_name,
@@ -135,9 +136,9 @@ serve(async (req) => {
       division: division,
       mascote: aiData.mascote,
       tem_feminino: aiData.tem_feminino,
-      cor_primaria: aiData.cor_primaria, // Fundo Escudo
-      cor_secundaria: aiData.cor_secundaria, // Predominante
-      cor_terciaria: aiData.cor_terciaria, // Apoio
+      cor_primaria: aiData.cor_primaria,
+      cor_secundaria: aiData.cor_secundaria,
+      cor_terciaria: aiData.cor_terciaria,
       atualizado_em: new Date().toISOString(),
     };
 
@@ -163,7 +164,8 @@ serve(async (req) => {
 
 /**
  * [RODAPÉ TÉCNICO]
- * Versão: 57.0
- * - Inclusão de tem_feminino identificada via Gemini.
- * - Reordenação de Cores: Primária (Fundo Escudo/Escura), Secundária (Predominante), Terciária (Apoio).
+ * Versão: 58.0
+ * - Lógica de Cores: Primária (Início/Contraste), Secundária (Fim/Predominante), Terciária (Meio/Faixas).
+ * - Identificação de Futebol Feminino integrada ao fluxo principal.
+ * - JSON parse blindado com cleaner de markdown.
  */
