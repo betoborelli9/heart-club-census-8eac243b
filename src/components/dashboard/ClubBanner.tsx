@@ -1,9 +1,9 @@
 /**
  * [CAMINHO/ARQUIVO]: src/components/dashboard/ClubBanner.tsx
  * [MÓDULO]: COMPONENTE GLOBAL DE BRANDING (BANNER + NAVBAR)
- * [STATUS]: VERSÃO 15.0 (FLAG WAVE AUTO-THEME)
- * [DESCRIÇÃO]: Banner completo com topo tremulando como bandeira
- *              e navbar integrada. Cores e escudo buscados do Supabase.
+ * [STATUS]: VERSÃO 15.3 (FLAG WAVE FULL COLORS)
+ * [DESCRIÇÃO]: Banner com topo tremulando como bandeira,
+ *              aplicando cores primária, secundária e terciária do Supabase.
  */
 
 /* ═══════════════════════════════════════════════════════════
@@ -51,7 +51,7 @@ const ClubBanner = ({
   const [theme, setTheme] = useState({
     cor_primaria: "#1a1a1a",
     cor_secundaria: "#ffffff",
-    cor_terciaria: "#ff0000",
+    cor_terciaria: "",
     escudo_url: "",
   });
 
@@ -94,7 +94,9 @@ const ClubBanner = ({
       <section
         className="relative overflow-hidden rounded-t-[2.5rem] h-[200px] md:h-[240px] flex items-center shadow-2xl"
         style={{
-          background: `linear-gradient(90deg, ${theme.cor_primaria} 0%, ${theme.cor_secundaria} 50%, ${theme.cor_terciaria || theme.cor_secundaria} 100%)`,
+          background: theme.cor_terciaria
+            ? `linear-gradient(90deg, ${theme.cor_primaria} 0%, ${theme.cor_secundaria} 50%, ${theme.cor_terciaria} 100%)`
+            : `linear-gradient(90deg, ${theme.cor_primaria} 0%, ${theme.cor_secundaria} 100%)`,
           backgroundSize: "200% 200%",
           animation: "waveFlag 6s ease-in-out infinite",
         }}
