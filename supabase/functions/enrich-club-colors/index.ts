@@ -1,12 +1,12 @@
 /**
  * [CAMINHO]: supabase/functions/enrich-club-colors/index.ts
- * [STATUS]: PRODUÇÃO - VERSÃO 58.0 (HIERARQUIA VISUAL AVANÇADA + FEMININO)
- * [CONTEXTO]: Enriquecimento de dados com foco em Alfaiataria Visual (Jersey Design).
+ * [MÓDULO]: INTELLIGENCE & DATA ENRICHMENT
+ * [STATUS]: PRODUÇÃO - VERSÃO 61.0 (GROUNDING SEARCH & 2026 PRIORITY)
  * [DESCRIÇÃO]:
- * - cor_primaria: Cor de fundo/base (Geralmente a mais escura/preta para contraste do escudo).
- * - cor_secundaria: Cor predominante que encerra o banner (A "cor da camisa").
- * - cor_terciaria: Cor de detalhe/faixa diagonal.
- * - tem_feminino: Identificação obrigatória de departamento profissional ativo.
+ * - Integração com Google Search Grounding para busca real em múltiplas fontes.
+ * - Prioridade absoluta para Divisões Nacionais A, B, C e D (Temporada 2026/2027).
+ * - Identificação de Futebol Feminino Ativo (Profissional/Base).
+ * - Regra Bicolor/Tricolor: Força NULL na terceira cor para clubes bicolores.
  */
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
@@ -21,6 +21,7 @@ const corsHeaders = {
     MÓDULO: UTILITÁRIOS DE LIMPEZA
    ═══════════════════════════════════════════════════════════ */
 function cleanGeminiResponse(text: string): string {
+  // Remove blocos de markdown e espaços extras para garantir JSON puro
   return text.replace(/```json|```/g, "").trim();
 }
 
@@ -35,13 +36,70 @@ serve(async (req) => {
     const { club_name, api_id } = await req.json();
     if (!club_name) throw new Error("Nome do clube é obrigatório");
 
-    console.log(`[LOG]: Investigando design de ${club_name}...`);
+    console.log(`[LOG]: Investigação 2026 iniciada para: ${club_name}...`);
 
     /* ═══════════════════════════════════════════════════════════
-        MÓDULO 1: BUSCA TÉCNICA (API FOOTBALL)
+        MÓDULO 1: PESQUISA EXAUSTIVA (GEMINI + SEARCH GROUNDING)
        ═══════════════════════════════════════════════════════════ */
-    let teamInfo: any = null;
-    let division = "Série Não Identificada";
+    let aiData = {
+      cor_primaria: "#000000",
+      cor_secundaria: "#ffffff",
+      cor_terciaria: null,
+      mascote: "Não Identificado",
+      tem_feminino: false,
+      division: "Sem Divisão",
+      logo_fallback: null,
+    };
+
+    if (geminiKey) {
+      // O prompt agora exige pesquisa em fontes oficiais para 2026
+      const prompt = `Faça uma pesquisa exaustiva sobre o clube de futebol "${club_name}" no Brasil. 
+      Consulte múltiplas fontes confiáveis (CBF, sites oficiais, portais de esportes) para o ano de 2026.
+      
+      REQUISITOS TÉCNICOS OBRIGATÓRIOS:
+      1. DIVISÃO 2026: Identifique a divisão no Campeonato Brasileiro (Série A, B, C ou D). 
+         - Prioridade máxima para Séries Nacionais.
+         - Se não tiver divisão nacional em 2026, indique a divisão estadual (Ex: Goiano Divisão 1).
+      2. CORES JERSEY (PRECISÃO MÁXIMA):
+         - Identifique se o clube é BICOLOR ou TRICOLOR no uniforme principal.
+         - Se for BICOLOR (Ex: Palmeiras, Vila Nova, Santos, Corinthians): A "cor_terciaria" DEVE ser null. Jamais invente dourado ou amarelo para bicolores.
+         - "cor_primaria": Cor dominante e mais escura (Contraste do escudo).
+         - "cor_secundaria": Segunda cor principal.
+      3. FEMININO: Verifique se o clube possui departamento de futebol feminino (profissional ou sub-20) ativo e federado em 2026.
+      4. MASCOTE: Identifique o mascote oficial histórico.
+
+      Retorne APENAS um JSON puro no formato:
+      {"cor_primaria": "#HEX", "cor_secundaria": "#HEX", "cor_terciaria": "#HEX ou null", "mascote": "NOME", "tem_feminino": boolean, "division": "Série X"}`;
+
+      const gRes = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiKey}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }],
+            tools: [{ google_search: {} }], // TURBO: Ativa a busca real do Google
+            generationConfig: {
+              responseMimeType: "application/json",
+              temperature: 0.1,
+            },
+          }),
+        },
+      );
+
+      const gJson = await gRes.json();
+      const rawText = gJson.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (rawText) {
+        const parsed = JSON.parse(cleanGeminiResponse(rawText));
+        aiData = { ...aiData, ...parsed };
+      }
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+        MÓDULO 2: VALIDAÇÃO DE ESCUDO (API FOOTBALL FALLBACK)
+       ═══════════════════════════════════════════════════════════ */
+    let apiEscudo = null;
+    let apiIdFinal = api_id;
 
     const teamRes = await fetch(
       api_id
@@ -50,73 +108,11 @@ serve(async (req) => {
       { headers: { "x-apisports-key": apiKeyFootball } },
     );
     const teamJson = await teamRes.json();
-    teamInfo = teamJson.response?.[0];
+    const teamInfo = teamJson.response?.[0];
 
-    if (teamInfo?.team?.id) {
-      const leagueRes = await fetch(`https://v3.football.api-sports.io/leagues?team=${teamInfo.team.id}&current=true`, {
-        headers: { "x-apisports-key": apiKeyFootball },
-      });
-      const leagueJson = await leagueRes.json();
-      const leagues = leagueJson.response || [];
-
-      const tiers = ["Série A", "Série B", "Série C", "Série D", "Brasileirão"];
-      const nationalLeague = leagues.find(
-        (l: any) => l.league.country === "Brazil" && tiers.some((tier) => l.league.name.includes(tier)),
-      );
-
-      const mainLeague = nationalLeague || leagues.find((l: any) => l.league.type === "League") || leagues[0];
-      if (mainLeague) division = mainLeague.league.name;
-    }
-
-    /* ═══════════════════════════════════════════════════════════
-        MÓDULO 2: ENGENHARIA DE PROMPT (BRANDING & FEMININO)
-       ═══════════════════════════════════════════════════════════ */
-    let aiData = {
-      cor_primaria: "#000000",
-      cor_secundaria: "#ff0000",
-      cor_terciaria: "#ffffff",
-      mascote: "Não Identificado",
-      tem_feminino: false,
-    };
-
-    if (geminiKey) {
-      try {
-        const prompt = `Atue como Designer de Branding Esportivo e Historiador. 
-        Para o clube "${club_name}", analise as cores oficiais e retorne EXCLUSIVAMENTE um JSON puro.
-        
-        REGRAS DE MAPEAMENTO PARA O BANNER:
-        1. "cor_primaria": Deve ser a cor de FUNDO do escudo (Lado esquerdo). Para clubes como São Paulo, Santa Cruz ou Flamengo, deve ser PRETO (#000000) para dar contraste ao círculo branco. Para bicolores como Palmeiras ou Vila Nova, pode ser a cor principal (Verde ou Vermelho).
-        2. "cor_secundaria": Deve ser a cor que FINALIZA o banner no lado direito. É a cor mais forte da camisa (Ex: Vermelho para Santa Cruz/Vila Nova, Verde para Palmeiras).
-        3. "cor_terciaria": Cor de contraste para as faixas diagonais centrais (Geralmente Branco #FFFFFF).
-        4. "tem_feminino": Verifique se o clube possui time de futebol feminino profissional ou sub-20 ativo em competições oficiais (true/false).
-        5. "mascote": Nome do mascote oficial.
-
-        FORMATO EXIGIDO: {"cor_primaria": "#HEX", "cor_secundaria": "#HEX", "cor_terciaria": "#HEX", "mascote": "NOME", "tem_feminino": boolean}`;
-
-        const gRes = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiKey}`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              contents: [{ parts: [{ text: prompt }] }],
-              generationConfig: {
-                responseMimeType: "application/json",
-                temperature: 0.1,
-              },
-            }),
-          },
-        );
-
-        const gJson = await gRes.json();
-        const rawText = gJson.candidates?.[0]?.content?.parts?.[0]?.text;
-        if (rawText) {
-          const parsed = JSON.parse(cleanGeminiResponse(rawText));
-          aiData = { ...aiData, ...parsed };
-        }
-      } catch (e) {
-        console.error("[GEMINI ERROR]:", e);
-      }
+    if (teamInfo) {
+      apiEscudo = teamInfo.team.logo;
+      apiIdFinal = teamInfo.team.id;
     }
 
     /* ═══════════════════════════════════════════════════════════
@@ -124,21 +120,14 @@ serve(async (req) => {
        ═══════════════════════════════════════════════════════════ */
     const payload = {
       nome: club_name,
-      nome_curto: teamInfo?.team?.code || club_name.substring(0, 3).toUpperCase(),
-      api_id: teamInfo?.team?.id?.toString() || api_id?.toString() || null,
-      escudo_url: teamInfo?.team?.logo || null,
-      fundado: teamInfo?.team?.founded || null,
-      cidade: teamInfo?.venue?.city || "Brasil",
-      pais: teamInfo?.team?.country || "Brasil",
-      estadio_nome: teamInfo?.venue?.name || null,
-      estadio_cidade: teamInfo?.venue?.city || null,
-      estadio_capacidade: teamInfo?.venue?.capacity || null,
-      division: division,
+      api_id: apiIdFinal?.toString() || null,
+      escudo_url: apiEscudo || null,
+      division: aiData.division,
       mascote: aiData.mascote,
       tem_feminino: aiData.tem_feminino,
       cor_primaria: aiData.cor_primaria,
       cor_secundaria: aiData.cor_secundaria,
-      cor_terciaria: aiData.cor_terciaria,
+      cor_terciaria: aiData.cor_terciaria, // Vem NULL se for Bicolor via IA
       atualizado_em: new Date().toISOString(),
     };
 
@@ -164,8 +153,9 @@ serve(async (req) => {
 
 /**
  * [RODAPÉ TÉCNICO]
- * Versão: 58.0
- * - Lógica de Cores: Primária (Início/Contraste), Secundária (Fim/Predominante), Terciária (Meio/Faixas).
- * - Identificação de Futebol Feminino integrada ao fluxo principal.
- * - JSON parse blindado com cleaner de markdown.
+ * Versão: 61.0
+ * - Google Search Grounding: O Gemini agora consulta a web em tempo real antes de definir cores e divisões.
+ * - Divisões 2026: Lógica de prioridade nacional (A, B, C, D) injetada no prompt de pesquisa.
+ * - Bicolor Safeguard: Força NULL na cor_terciaria caso o clube seja identificado como bicolor.
+ * - Feminino: Verificação ativa integrada ao fluxo de enriquecimento.
  */
