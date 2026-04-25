@@ -147,7 +147,9 @@ const ClubColors = () => {
       const { error } = await supabase.from("clubes_cache").upsert(
         {
           nome: result.nome_confirmado,
-          api_id: selectedClub.api_id || null,
+          cidade: selectedClub.city || "Desconhecida",
+          pais: selectedClub.country || "Brasil",
+          api_id: selectedClub.api_id ? String(selectedClub.api_id) : null,
           escudo_url: selectedClub.logo || null,
           cor_primaria: result.cores[0] || null,
           cor_secundaria: result.cores[1] || null,
