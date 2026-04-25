@@ -286,6 +286,7 @@ const ClubBanner = ({
           {IS_MASTER && (
             <>
               <NavItem icon={Bug} label="DEBUG API" path="/debug-api" />
+              <NavItem icon={Palette} label="CORES" path="/admin/cores" variant="orange" />
               <NavItem icon={ShieldAlert} label="PAINEL MASTER" path="/admin" variant="danger" />
             </>
           )}
