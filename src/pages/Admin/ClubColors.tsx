@@ -11,7 +11,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, CheckCircle2, Database, Loader2, Search, Shield, Sparkles, Venus, X } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Database, Loader2, Search, Shield, Sparkles, Users, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ClubLogo } from "@/components/ClubLogo";
@@ -240,7 +240,7 @@ const ClubColors = () => {
                         <Shield size={13} /> {result.mascote}
                       </span>
                       <span className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-muted-foreground">
-                        <Venus size={13} /> Feminino: {result.tem_feminino ? "SIM" : "NÃO"}
+                        <Users size={13} /> Feminino: {result.tem_feminino ? "SIM" : "NÃO"}
                       </span>
                       <span className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-primary">
                         <CheckCircle2 size={13} /> {result.division}
