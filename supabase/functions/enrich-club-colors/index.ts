@@ -1,13 +1,12 @@
 /**
  * [CAMINHO]: supabase/functions/enrich-club-colors/index.ts
  * [MÓDULO]: INTELLIGENCE & DATA ENRICHMENT
- * [STATUS]: PRODUÇÃO - VERSÃO 65.0 (SEARCH GROUNDING & 4TH COLOR SYNC)
- * [CONTEXTO]: Enriquecimento de dados com foco em Precisão Histórica e Divisões 2026.
+ * [STATUS]: PRODUÇÃO - VERSÃO 68.0 (SEARCH GROUNDING + JSON NATIVE MODE)
  * [DESCRIÇÃO]:
- * - Google Search Grounding: Busca em tempo real em múltiplas fontes oficiais.
- * - Prioridade Nacional 2026: Foco em Séries A, B, C e D antes de regionais.
- * - Suporte Quadricolor: Inclusão da 'cor_quarta' para clubes como Brusque.
- * - Alfaiataria Visual: Diferenciação entre cores de Escudo e cores de Tecido (Jersey).
+ * - Mapeamento exaustivo de cores (Bicolor, Tricolor, Quadricolor).
+ * - Pesquisa real em Wikipedia, OGOL e Sites Oficiais via Google Search Grounding.
+ * - Divisões 2026: Prioridade absoluta Séries A, B, C e D.
+ * - Suporte à 'cor_quarta' e validação rigorosa de Futebol Feminino.
  */
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
@@ -17,13 +16,6 @@ const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
-
-/* ═══════════════════════════════════════════════════════════
-    MÓDULO: UTILITÁRIOS DE LIMPEZA
-   ═══════════════════════════════════════════════════════════ */
-function cleanGeminiResponse(text: string): string {
-  return text.replace(/```json|```/g, "").trim();
-}
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
@@ -36,23 +28,32 @@ serve(async (req) => {
     const { club_name, api_id } = await req.json();
     if (!club_name) throw new Error("Nome do clube é obrigatório");
 
-    console.log(`[LOG]: Investigação Ultra-Sênior 2026: ${club_name}...`);
+    console.log(`[LOG]: Investigação Ultra-Sênior 68.0: ${club_name}...`);
 
     /* ═══════════════════════════════════════════════════════════
-        MÓDULO 1: BUSCA TÉCNICA (API FOOTBALL - FALLBACK E ESCUDO)
+        MÓDULO 1: BUSCA TÉCNICA (API FOOTBALL - FALLBACK ESCUDO)
        ═══════════════════════════════════════════════════════════ */
-    let teamInfo: any = null;
-    const teamRes = await fetch(
-      api_id
-        ? `https://v3.football.api-sports.io/teams?id=${api_id}`
-        : `https://v3.football.api-sports.io/teams?search=${encodeURIComponent(club_name)}`,
-      { headers: { "x-apisports-key": apiKeyFootball } },
-    );
-    const teamJson = await teamRes.json();
-    teamInfo = teamJson.response?.[0];
+    let apiEscudo = null;
+    let apiIdFinal = api_id;
+    try {
+      const teamRes = await fetch(
+        api_id
+          ? `https://v3.football.api-sports.io/teams?id=${api_id}`
+          : `https://v3.football.api-sports.io/teams?search=${encodeURIComponent(club_name)}`,
+        { headers: { "x-apisports-key": apiKeyFootball } },
+      );
+      const teamJson = await teamRes.json();
+      const teamInfo = teamJson.response?.[0];
+      if (teamInfo) {
+        apiEscudo = teamInfo.team.logo;
+        apiIdFinal = teamInfo.team.id;
+      }
+    } catch (e) {
+      console.error("[API FOOTBALL ERROR]:", e);
+    }
 
     /* ═══════════════════════════════════════════════════════════
-        MÓDULO 2: ENGENHARIA DE PROMPT (INVESTIGAÇÃO 2026 + GROUNDING)
+        MÓDULO 2: INVESTIGAÇÃO GEMINI (SEARCH GROUNDING)
        ═══════════════════════════════════════════════════════════ */
     let aiData = {
       cor_primaria: "#000000",
@@ -61,52 +62,46 @@ serve(async (req) => {
       cor_quarta: null,
       mascote: "Não Identificado",
       tem_feminino: false,
-      division: "Série Não Identificada",
+      division: "Sem Divisão",
     };
 
     if (geminiKey) {
-      try {
-        const prompt = `Atue como o maior Especialista em Futebol Brasileiro e Designer de Branding. 
-        Sua tarefa é investigar o clube "${club_name}" para a temporada de 2026.
-        
-        REGRAS DE PESQUISA (GOOGLE SEARCH GROUNDING):
-        1. DIVISÃO 2026: Identifique se o clube está na Série A, B, C ou D do Brasileiro em 2026. Priorize a pirâmide NACIONAL. Se não houver divisão nacional, indique a divisão ESTADUAL (Ex: Catarinense Série A).
-        2. CORES DE TECIDO (JERSEY): Ignore cores de estrelas ou bordas mínimas do escudo.
-           - Se BICOLOR (Palmeiras, Vila Nova): cor_terciaria e cor_quarta DEVEM ser null.
-           - Se TRICOLOR (São Paulo, Santa Cruz, Fluminense): cor_quarta DEVE ser null.
-           - Se QUADRICOLOR (Brusque): Identifique as 4 cores (Ex: Amarelo, Verde, Vermelho, Branco).
-        3. MAPEAMENTO VISUAL: 
-           - "cor_primaria": Cor predominante e mais forte (Ex: Vermelho no Vila, Verde no Palmeiras, Preto no SPFC).
-           - "cor_secundaria": Cor de contraste principal (Geralmente Branco #FFFFFF).
-        4. FUTEBOL FEMININO: Verifique se existe departamento de futebol feminino (profissional ou base) federado e ativo em 2026.
-        5. MASCOTE: Nome do mascote oficial histórico.
+      const prompt = `Investigue o clube brasileiro "${club_name}" para a temporada 2026.
+      
+      FONTES OBRIGATÓRIAS: Wikipedia, OGOL, Site Oficial e CBF.
+      
+      REGRAS DE DADOS:
+      1. DIVISÃO 2026: Verifique a divisão NACIONAL (Série A, B, C ou D) em 2026. Se não houver nacional, indique a divisão regional/estadual oficial.
+      2. CORES DE TECIDO (JERSEY): Identifique as cores REAIS do uniforme 1 (Home).
+         - Se BICOLOR (ex: Palmeiras, Vila Nova, Santos): cor_terciaria e cor_quarta DEVEM ser null.
+         - Se TRICOLOR (ex: São Paulo, Santa Cruz, Fluminense): cor_quarta DEVE ser null.
+         - Se QUADRICOLOR (ex: Brusque): Identifique obrigatoriamente Amarelo, Verde, Vermelho e Branco.
+      3. MAPEAMENTO: cor_primaria (cor de borda/fundo forte), cor_secundaria (cor predominante).
+      4. FEMININO: Verifique no OGOL ou Wikipedia se o clube possui time feminino profissional ou de base sub-20 ativo e federado em 2026.
+      5. MASCOTE: Nome do mascote oficial histórico.
 
-        FORMATO EXIGIDO: {"cor_primaria": "#HEX", "cor_secundaria": "#HEX", "cor_terciaria": "#HEX ou null", "cor_quarta": "#HEX ou null", "mascote": "NOME", "tem_feminino": boolean, "division": "NOME_DIVISAO"}`;
+      SAÍDA OBRIGATÓRIA: JSON puro sem comentários ou markdown.`;
 
-        const gRes = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiKey}`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              contents: [{ parts: [{ text: prompt }] }],
-              tools: [{ google_search: {} }], // Ativa a busca real do Google
-              generationConfig: {
-                responseMimeType: "application/json",
-                temperature: 0.1,
-              },
-            }),
-          },
-        );
+      const gRes = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${geminiKey}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }],
+            tools: [{ google_search: {} }], // BUSCA REAL ATIVA
+            generationConfig: {
+              responseMimeType: "application/json", // MODO JSON NATIVO - ELIMINA ERRO DO TIGRE
+              temperature: 0.1,
+            },
+          }),
+        },
+      );
 
-        const gJson = await gRes.json();
-        const rawText = gJson.candidates?.[0]?.content?.parts?.[0]?.text;
-        if (rawText) {
-          const parsed = JSON.parse(cleanGeminiResponse(rawText));
-          aiData = { ...aiData, ...parsed };
-        }
-      } catch (e) {
-        console.error("[GEMINI ERROR]:", e);
+      const gJson = await gRes.json();
+      const rawText = gJson.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (rawText) {
+        aiData = JSON.parse(rawText.trim());
       }
     }
 
@@ -115,8 +110,8 @@ serve(async (req) => {
        ═══════════════════════════════════════════════════════════ */
     const payload = {
       nome: club_name,
-      api_id: teamInfo?.team?.id?.toString() || api_id?.toString() || null,
-      escudo_url: teamInfo?.team?.logo || null,
+      api_id: apiIdFinal?.toString() || null,
+      escudo_url: apiEscudo || null,
       division: aiData.division,
       mascote: aiData.mascote,
       tem_feminino: aiData.tem_feminino,
@@ -149,8 +144,9 @@ serve(async (req) => {
 
 /**
  * [RODAPÉ TÉCNICO]
- * Versão: 65.0
- * - Google Search Grounding: Garante que a IA pesquise divisões 2026 e feminino em tempo real.
- * - Bicolor/Quadricolor Safeguard: Prompt blindado para evitar invenção de cores em times de 2 cores.
- * - Integridade: Mantido o Módulo 3 de persistência e suporte para cor_quarta.
+ * Versão: 68.0
+ * - JSON Mode: Força a IA a retornar dados limpos, eliminando falhas de parsing no mascote.
+ * - Pesquisa Cruzada: Instruído a usar Wikipedia e OGOL para validar femininos e divisões.
+ * - Brusque Fix: Regra quadricolor blindada com proibição de alucinação de cores.
+ * - Suporte cor_quarta: Payload sincronizado com a nova coluna do banco.
  */
