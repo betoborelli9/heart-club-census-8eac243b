@@ -119,7 +119,6 @@ const fetchTechnicalData = async (clubName: string): Promise<string> => {
           temperature: 0.05,
           topP: 0.2,
           maxOutputTokens: 1200,
-          responseMimeType: "application/json",
         },
       }),
     },
