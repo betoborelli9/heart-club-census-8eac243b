@@ -1,170 +1,215 @@
 /**
- * [CAMINHO]&#58; src/pages/Admin/ClubColors.tsx
- * VERSÃO: 4.0 (FUNCIONANDO REAL)
+ * [CAMINHO]: src/pages/Admin/ClubColors.tsx
+ * [MÓDULO]: MASTER ADMIN — Bancada de Cores dos Clubes
+ * [STATUS]: PRODUÇÃO — v5.0 Google Search + Gemini via Edge Function
+ * [VERSÃO]: 5.0.0
  */
 
-import { useState, useEffect } from "react";
+/* ═══════════════════════════════════════════════════════════
+   IMPORTS
+═══════════════════════════════════════════════════════════ */
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, Palette, Loader2, Sparkles, CheckCircle2, XCircle, ArrowLeft } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Database, Loader2, Search, Shield, Sparkles, Users, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { ClubLogo } from "@/components/ClubLogo";
 import { useUser } from "@/contexts/UserContext";
+import { supabase } from "@/integrations/supabase/client";
 import { searchClubsWithFallback, type ClubSearchResult } from "@/lib/search-clubs";
 import { toast } from "sonner";
 
-// 🔑 SUA CHAVE AQUI
-const apiKey = "AIzaSyD9jqFr7is90UNvO8E4j45er_gRAu5x7_Q";
+/* ═══════════════════════════════════════════════════════════
+   TIPOS / CONSTANTES
+═══════════════════════════════════════════════════════════ */
+const MASTER_EMAIL = "betoborelli9@gmail.com";
+const apiKey = "";
 
-interface AIResult {
-  nome: string;
+type ClubIdentity = {
+  nome_confirmado: string;
+  cor_primaria: string;
+  cor_secundaria: string;
+  cor_terciaria: string | null;
+  cor_quarta: string | null;
+  mascote: string;
+  tem_feminino: boolean;
+  division: string;
+  estrutura: "BICOLOR" | "TRICOLOR" | "QUADRICOLOR";
   cores: string[];
-}
+};
 
+const emptyColumns = [0, 1, 2, 3];
+
+/* ═══════════════════════════════════════════════════════════
+   COMPONENTE PRINCIPAL
+═══════════════════════════════════════════════════════════ */
 const ClubColors = () => {
   const navigate = useNavigate();
   const { user, isLoading: userLoading } = useUser();
 
   const [query, setQuery] = useState("");
   const [suggestions, setSuggestions] = useState<ClubSearchResult[]>([]);
-  const [loadingSuggest, setLoadingSuggest] = useState(false);
-
+  const [loadingSuggestions, setLoadingSuggestions] = useState(false);
   const [selectedClub, setSelectedClub] = useState<ClubSearchResult | null>(null);
   const [investigating, setInvestigating] = useState(false);
-  const [result, setResult] = useState<AIResult | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [result, setResult] = useState<ClubIdentity | null>(null);
 
-  // 🔒 proteção
+  const visibleColors = useMemo(() => result?.cores?.slice(0, 4) || [], [result]);
+
+  /* ═══════════════════════════════════════════════════════════
+     ACESSO MASTER ADMIN
+  ═══════════════════════════════════════════════════════════ */
   useEffect(() => {
-    if (!userLoading && (!user || user.email !== "betoborelli9@gmail.com")) {
-      navigate("/");
+    if (!userLoading && (!user || user.email !== MASTER_EMAIL)) {
+      navigate("/", { replace: true });
     }
-  }, [user, userLoading, navigate]);
+  }, [navigate, user, userLoading]);
 
-  // 🔎 autocomplete (NÃO MEXI)
+  /* ═══════════════════════════════════════════════════════════
+     AUTOCOMPLETE — API FOOTBALL A PARTIR DE 3 LETRAS
+  ═══════════════════════════════════════════════════════════ */
   useEffect(() => {
-    const fetchSuggestions = async () => {
-      if (query.trim().length < 3) {
-        setSuggestions([]);
-        return;
-      }
+    const term = query.trim();
+    if (term.length < 3) {
+      setSuggestions([]);
+      return;
+    }
 
-      setLoadingSuggest(true);
-
+    const timer = window.setTimeout(async () => {
+      setLoadingSuggestions(true);
       try {
-        const clubs = await searchClubsWithFallback(query);
-        setSuggestions(clubs.slice(0, 8));
-      } catch (err) {
-        console.error(err);
+        const clubs = await searchClubsWithFallback(term, 10);
+        setSuggestions(clubs);
+      } catch (error) {
+        console.error("[ClubColors autocomplete]", error);
+        setSuggestions([]);
       } finally {
-        setLoadingSuggest(false);
+        setLoadingSuggestions(false);
       }
-    };
+    }, 350);
 
-    const debounce = setTimeout(fetchSuggestions, 400);
-    return () => clearTimeout(debounce);
+    return () => window.clearTimeout(timer);
   }, [query]);
 
-  // 🤖 GEMINI (CORRIGIDO)
-  const handleInvestigate = async (club: ClubSearchResult) => {
+  /* ═══════════════════════════════════════════════════════════
+     INVESTIGAÇÃO — GOOGLE SEARCH + GEMINI NO EDGE
+  ═══════════════════════════════════════════════════════════ */
+  const investigateClub = async (club: ClubSearchResult) => {
     setSelectedClub(club);
-    setSuggestions([]);
     setQuery(club.name);
-    setInvestigating(true);
+    setSuggestions([]);
     setResult(null);
+    setInvestigating(true);
 
     try {
-      const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            contents: [
-              {
-                parts: [
-                  {
-                    text: `
-Retorne APENAS JSON.
+      const { data, error } = await supabase.functions.invoke<ClubIdentity>("investigate-club-colors", {
+        body: { clubName: club.name, apiKey },
+      });
 
-Clube: ${club.name}
+      if (error) throw new Error(error.message || "Falha na investigação");
+      if (!data?.cores?.length) throw new Error("IA não retornou cores válidas");
 
-Me diga SOMENTE as cores principais do uniforme em HEX.
-
-Formato:
-{
-  "nome": "nome do clube",
-  "cores": ["#HEX", "#HEX", "#HEX"]
-}
-`,
-                  },
-                ],
-              },
-            ],
-          }),
-        },
-      );
-
-      const data = await response.json();
-
-      const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-
-      if (!text) throw new Error("Sem resposta da IA");
-
-      const clean = text.replace(/```json|```/g, "").trim();
-
-      const parsed = JSON.parse(clean);
-
-      setResult(parsed);
-      toast.success("Cores carregadas");
-    } catch (err: any) {
-      console.error(err);
-      toast.error("Erro na IA");
+      setResult(data);
+      toast.success("Dados investigados com Google + IA");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Erro desconhecido";
+      console.error("[ClubColors investigate]", message);
+      toast.error(message);
     } finally {
       setInvestigating(false);
     }
   };
 
-  return (
-    <div className="min-h-screen bg-[#0F0F0F] text-white p-6 md:p-12">
-      <div className="max-w-5xl mx-auto space-y-12">
-        {/* HEADER */}
-        <header className="flex justify-between items-center border-b border-white/10 pb-6">
-          <h1 className="text-4xl font-black italic">BANCADA DE CORES</h1>
+  /* ═══════════════════════════════════════════════════════════
+     PERSISTÊNCIA — CLUBES_CACHE
+  ═══════════════════════════════════════════════════════════ */
+  const saveToCache = async () => {
+    if (!result || !selectedClub) return;
+    setSaving(true);
 
-          <Button onClick={() => navigate("/dashboard")}>
-            <ArrowLeft /> Voltar
+    try {
+      const payload = {
+        nome: result.nome_confirmado,
+        nome_curto: selectedClub.shortName || result.nome_confirmado,
+        cidade: selectedClub.city || "Desconhecida",
+        pais: selectedClub.country || "Brasil",
+        escudo_url: selectedClub.logo || null,
+        api_id: selectedClub.api_id ? String(selectedClub.api_id) : null,
+        cor_primaria: result.cor_primaria,
+        cor_secundaria: result.cor_secundaria,
+        cor_terciaria: result.cor_terciaria,
+        cor_quarta: result.cor_quarta,
+        mascote: result.mascote,
+        tem_feminino: result.tem_feminino,
+        feminino: result.tem_feminino,
+        division: result.division,
+      };
+
+      const { error } = await supabase.from("clubes_cache").upsert(payload, { onConflict: "nome" });
+      if (error) throw error;
+
+      toast.success("Salvo no clubes_cache");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Erro ao salvar";
+      console.error("[ClubColors save]", message);
+      toast.error(message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  /* ═══════════════════════════════════════════════════════════
+     RENDER
+  ═══════════════════════════════════════════════════════════ */
+  return (
+    <main className="min-h-screen bg-background text-foreground px-4 py-6 md:px-10 md:py-10">
+      <div className="mx-auto flex w-full max-w-6xl flex-col gap-8">
+        <header className="flex flex-col gap-4 border-b border-border pb-6 md:flex-row md:items-end md:justify-between">
+          <div>
+            <p className="text-xs font-black uppercase italic tracking-[0.28em] text-primary">Master Admin</p>
+            <h1 className="mt-2 text-3xl font-black uppercase italic leading-none md:text-5xl">Bancada de Cores</h1>
+          </div>
+          <Button variant="outline" onClick={() => navigate("/dashboard")} className="w-fit gap-2 font-black italic">
+            <ArrowLeft size={16} /> Voltar
           </Button>
         </header>
 
-        {/* BUSCA */}
-        <section className="relative">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-orange-500" />
-
-          <Input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Digite o nome do clube..."
-            className="pl-12 h-14 text-lg"
-          />
-
-          {loadingSuggest && <Loader2 className="absolute right-4 top-1/2 -translate-y-1/2 animate-spin" />}
+        <section className="relative z-20">
+          <div className="relative">
+            <Search className="absolute left-4 top-1/2 z-10 -translate-y-1/2 text-primary" size={22} />
+            <Input
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Digite 3 letras para buscar na API Football..."
+              className="h-14 rounded-lg border-border bg-card pl-12 pr-12 text-base font-black italic uppercase"
+            />
+            {loadingSuggestions && (
+              <Loader2 className="absolute right-4 top-1/2 -translate-y-1/2 animate-spin text-primary" size={20} />
+            )}
+          </div>
 
           <AnimatePresence>
             {suggestions.length > 0 && (
               <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="absolute w-full bg-[#1A1A1A] mt-2 rounded-xl overflow-hidden"
+                initial={{ opacity: 0, y: -8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                className="absolute mt-2 w-full overflow-hidden rounded-lg border border-border bg-popover shadow-2xl"
               >
-                {suggestions.map((club, i) => (
+                {suggestions.map((club) => (
                   <button
-                    key={i}
-                    onClick={() => handleInvestigate(club)}
-                    className="w-full p-4 text-left hover:bg-white/5"
+                    key={`${club.source}-${club.id}-${club.name}`}
+                    onMouseDown={(event) => event.preventDefault()}
+                    onClick={() => investigateClub(club)}
+                    className="flex w-full items-center gap-3 border-b border-border px-4 py-3 text-left transition-colors hover:bg-muted"
                   >
-                    {club.name}
+                    <ClubLogo src={club.logo} alt={club.name} className="h-10 w-10 shrink-0 object-contain" />
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-black uppercase italic">{club.name}</p>
+                      <p className="truncate text-xs font-bold text-muted-foreground">{club.location || club.country}</p>
+                    </div>
                   </button>
                 ))}
               </motion.div>
@@ -172,29 +217,88 @@ Formato:
           </AnimatePresence>
         </section>
 
-        {/* RESULTADO */}
-        <section className="flex justify-center items-center min-h-[300px]">
+        <section className="grid min-h-[360px] place-items-center rounded-lg border border-border bg-card p-4 md:p-8">
           {investigating ? (
-            <div className="text-center">
-              <Sparkles className="animate-pulse mx-auto mb-4" size={40} />
-              Buscando cores...
+            <div className="flex flex-col items-center gap-4 text-center">
+              <Sparkles className="animate-pulse text-primary" size={48} />
+              <div>
+                <p className="text-2xl font-black uppercase italic">Consultando Google</p>
+                <p className="text-sm font-bold text-muted-foreground">Cores, feminino e competição principal do clube.</p>
+              </div>
             </div>
           ) : result ? (
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-              {result.cores.map((color, i) => (
-                <div key={i} className="text-center">
-                  <div className="w-32 h-32 rounded-xl mb-2 border" style={{ backgroundColor: color }} />
-                  <span className="font-mono">{color}</span>
+            <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="w-full space-y-8">
+              <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="grid h-20 w-20 place-items-center rounded-full bg-background p-3 shadow-xl">
+                    <ClubLogo src={selectedClub?.logo || ""} alt={result.nome_confirmado} className="h-full w-full object-contain" />
+                  </div>
+                  <div>
+                    <h2 className="text-2xl font-black uppercase italic leading-none md:text-4xl">{result.nome_confirmado}</h2>
+                    <div className="mt-3 flex flex-wrap gap-2 text-xs font-black uppercase italic">
+                      <span className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-muted-foreground">
+                        <Shield size={13} /> {result.mascote}
+                      </span>
+                      <span className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-muted-foreground">
+                        <Users size={13} /> Feminino: {result.tem_feminino ? "SIM" : "NÃO"}
+                      </span>
+                      <span className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-primary">
+                        <CheckCircle2 size={13} /> {result.division}
+                      </span>
+                    </div>
+                  </div>
                 </div>
-              ))}
-            </div>
+                <Button onClick={saveToCache} disabled={saving} className="gap-2 font-black uppercase italic">
+                  {saving ? <Loader2 className="animate-spin" size={16} /> : <Database size={16} />}
+                  Salvar no Cache
+                </Button>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+                {emptyColumns.map((column) => {
+                  const color = visibleColors[column];
+                  return (
+                    <div key={column} className="space-y-3 text-center">
+                      <div
+                        className="grid aspect-square place-items-center rounded-lg border border-border shadow-inner"
+                        style={{ backgroundColor: color || "hsl(var(--muted))" }}
+                      >
+                        {!color && <X className="text-muted-foreground" size={42} />}
+                      </div>
+                      <div
+                        className="mx-auto grid h-12 w-full max-w-36 place-items-center rounded-md border border-border text-xs font-black uppercase italic"
+                        style={{ backgroundColor: color || "hsl(var(--muted))" }}
+                      >
+                        <span className="rounded bg-background/80 px-2 py-1 text-foreground">{color || "X"}</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <p className="text-center text-xs font-black uppercase italic tracking-[0.24em] text-muted-foreground">
+                {result.estrutura} • {visibleColors.length} cores oficiais retornadas
+              </p>
+            </motion.div>
           ) : (
-            <div className="text-white/20">Digite um clube para buscar</div>
+            <div className="text-center text-muted-foreground">
+              <Search className="mx-auto mb-4 opacity-40" size={44} />
+              <p className="font-black uppercase italic">Busque um clube para investigar</p>
+            </div>
           )}
         </section>
       </div>
-    </div>
+    </main>
   );
 };
 
 export default ClubColors;
+
+/**
+ * [RODAPÉ TÉCNICO]
+ * v5.0.0 — Página independente de Master Admin.
+ * - Autocomplete usa searchClubsWithFallback/API Football a partir de 3 letras.
+ * - Front não consulta Gemini diretamente; chama a Edge Function investigate-club-colors.
+ * - Renderiza 4 colunas dinâmicas: bicolor ocupa 2, tricolor 3 e quadricolor 4.
+ * - Persiste cor_primaria, cor_secundaria, cor_terciaria, cor_quarta, mascote, tem_feminino e division em clubes_cache.
+ */
