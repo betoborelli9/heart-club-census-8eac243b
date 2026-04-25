@@ -1,10 +1,9 @@
 /**
  * [CAMINHO]: src/pages/Admin/ClubColors.tsx
- * [MÓDULO]: ADMIN — AUDITORIA DE CORES (DIRECT GEMINI API)
- * [STATUS]: PRODUÇÃO — VERSÃO 3.0 (ROBUST FETCH + GROUNDING)
+ * [MÓDULO]: ADMIN — AUDITORIA DE CORES (GEMINI 2.5 FLASH + SEARCH)
+ * [STATUS]: PRODUÇÃO — VERSÃO 3.5 (FIXED GROUNDING & PAYLOAD)
  * [DESCRIÇÃO]:
- * - Chamada direta ao Gemini 2.5 Flash com Exponential Backoff (5 retentativas).
- * - Google Search Grounding ativo para garantir busca na Wikipedia.
+ * - Chamada direta ao Gemini 2.5 Flash com Google Search Grounding.
  * - Wikipedia-First: Foco total em cores de tecido (Jersey).
  * - Visualização de 4 colunas com suporte a Bicolor/Tricolor/Quadricolor.
  */
@@ -84,12 +83,11 @@ const ClubColors = () => {
         body: JSON.stringify(payload),
       });
 
+      const data = await response.json();
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error?.message || `HTTP ${response.status}`);
+        throw new Error(data.error?.message || `HTTP ${response.status}`);
       }
-
-      return await response.json();
+      return data;
     } catch (error) {
       if (retries <= 0) throw error;
       await new Promise((resolve) => setTimeout(resolve, delay));
@@ -106,25 +104,23 @@ const ClubColors = () => {
     setResult(null);
 
     const systemPrompt =
-      "Você é um auditor sênior de dados de futebol. Sua fonte primária de verdade é a Wikipedia. Ignore cores de contorno ou detalhes decorativos do escudo. Responda estritamente em JSON puro.";
+      "Você é um auditor sênior de futebol brasileiro. Data Atual: 25 de Abril de 2026. Sua fonte primária é a Wikipedia. Retorne EXCLUSIVAMENTE um JSON puro.";
 
     const userPrompt = `
-      Investigue o clube: "${club.name}".
-      Data de Referência: Abril de 2026.
+      Investigue o clube brasileiro: "${club.name}".
       
-      TAREFA:
-      1. Use Google Search para ler a Wikipedia sobre as cores do uniforme/tecido titular (Jersey).
-      2. IGNORE PRETO/BRANCO/DOURADO se forem apenas bordas de escudo ou estrelas. 
-         Ex: Vila Nova-GO é Vermelho e Branco (Bicolor).
-         Ex: Brusque-SC é Amarelo, Verde, Vermelho e Branco (Quadricolor).
-      3. Identifique a competição nacional brasileira em Abril de 2026 (Série A, B, C, D).
+      TAREFAS:
+      1. Use o Google Search para verificar as cores oficiais do uniforme/tecido titular na Wikipedia.
+      2. IGNORE cores de contorno de escudo (ex: Vila Nova é Vermelho e Branco, ignore o preto).
+      3. Identifique a Divisão Nacional em Abril de 2026 (Série A, B, C ou D). Se não houver, indique a divisão estadual.
+      4. Identifique o Mascote Oficial.
 
-      FORMATO JSON:
+      ESTRUTURA DE RETORNO (JSON):
       {
-        "nome_confirmado": "Nome Oficial",
-        "mascote": "Mascote Oficial",
-        "divisao_2026": "Série X / Estadual X",
-        "quantidade_cores": 2|3|4,
+        "nome_confirmado": "Nome oficial",
+        "mascote": "Nome do mascote",
+        "divisao_2026": "Série X",
+        "quantidade_cores": 2, 3 ou 4,
         "cores": ["#HEX1", "#HEX2", ...]
       }
     `;
@@ -133,26 +129,35 @@ const ClubColors = () => {
       const payload = {
         contents: [{ parts: [{ text: userPrompt }] }],
         systemInstruction: { parts: [{ text: systemPrompt }] },
-        tools: [{ google_search: {} }], // Ativa Grounding (Busca real)
+        tools: [{ google_search: {} }],
         generationConfig: {
           responseMimeType: "application/json",
           temperature: 0.1,
+          responseSchema: {
+            type: "OBJECT",
+            properties: {
+              nome_confirmado: { type: "STRING" },
+              mascote: { type: "STRING" },
+              divisao_2026: { type: "STRING" },
+              quantidade_cores: { type: "NUMBER" },
+              cores: { type: "ARRAY", items: { type: "STRING" } },
+            },
+            required: ["nome_confirmado", "mascote", "divisao_2026", "quantidade_cores", "cores"],
+          },
         },
       };
 
       const resJson = await fetchGeminiWithRetry(payload);
       const rawText = resJson.candidates?.[0]?.content?.parts?.[0]?.text;
 
-      if (!rawText) throw new Error("A IA não retornou o conteúdo esperado.");
+      if (!rawText) throw new Error("IA não retornou dados.");
 
       const parsed: AIResult = JSON.parse(rawText);
       setResult(parsed);
-      toast.success("Investigação concluída!", { description: `Clube: ${parsed.nome_confirmado}` });
+      toast.success("Investigação concluída com sucesso!");
     } catch (err: any) {
       console.error("Erro Crítico Gemini:", err);
-      toast.error("Falha na Investigação", {
-        description: err.message || "Ocorreu um erro ao consultar o Gemini.",
-      });
+      toast.error("Erro na investigação", { description: err.message });
     } finally {
       setInvestigating(false);
     }
@@ -181,7 +186,7 @@ const ClubColors = () => {
       if (error) throw error;
       toast.success("Cache atualizado com sucesso!");
     } catch (err) {
-      toast.error("Erro ao salvar no Supabase.");
+      toast.error("Erro ao salvar no cache.");
     } finally {
       setSaving(false);
     }
@@ -201,7 +206,7 @@ const ClubColors = () => {
                 Bancada de <span className="text-orange-500">Cores</span>
               </h1>
               <p className="text-[10px] font-bold uppercase italic text-white/40 tracking-[0.3em] mt-1">
-                Grounding Wikipedia · Versão 3.0
+                Grounding Wikipedia · Versão 3.5
               </p>
             </div>
           </div>
@@ -221,7 +226,7 @@ const ClubColors = () => {
             <Input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Digite 3 letras do clube..."
+              placeholder="Digite o nome do clube..."
               className="h-16 pl-16 bg-white/5 border-white/10 rounded-2xl text-xl font-bold italic tracking-tighter focus:ring-2 ring-orange-500/50"
             />
             {loadingSuggest && (
@@ -261,7 +266,7 @@ const ClubColors = () => {
             <div className="flex flex-col items-center gap-6 mt-20">
               <Sparkles className="text-orange-500 w-16 h-16 animate-pulse" />
               <p className="font-black italic text-sm tracking-[0.4em] uppercase text-white/60">
-                A pesquisar Wikipedia (Abril 2026)...
+                A pesquisar Wikipedia em tempo real...
               </p>
             </div>
           ) : result ? (
@@ -335,7 +340,7 @@ const ClubColors = () => {
           ) : (
             <div className="flex flex-col items-center text-white/10 gap-6 mt-20">
               <Palette size={80} strokeWidth={1} className="opacity-20" />
-              <p className="font-black italic uppercase tracking-[0.5em] text-xs">Aguardando busca de clube...</p>
+              <p className="font-black italic uppercase tracking-[0.5em] text-xs">Selecione um clube para auditar</p>
             </div>
           )}
         </section>
@@ -349,8 +354,7 @@ export default ClubColors;
 /**
  * [RODAPÉ TÉCNICO]
  * - Ficheiro: src/pages/Admin/ClubColors.tsx
- * - Versão: 3.0
- * - Implementado: Exponential Backoff (retry) para evitar falhas de rede.
- * - Adicionado: google_search tool para habilitar a busca real na Wikipedia.
- * - Fix: Tratamento de erro detalhado com toast.
+ * - Versão: 3.5
+ * - Fixed: Payload do Gemini agora usa responseSchema e tools corretamente.
+ * - Grounding: Google Search ativado para precisão Wikipedia 2026.
  */
