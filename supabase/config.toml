@@ -11,3 +11,6 @@ verify_jwt = false
 
 [functions.enrich-club-colors]
 verify_jwt = false
+
+[functions.investigate-club-colors]
+verify_jwt = false
