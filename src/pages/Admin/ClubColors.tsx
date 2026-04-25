@@ -79,37 +79,17 @@ OUTPUT: Retorne EXCLUSIVAMENTE JSON puro (sem markdown, sem comentários):
 `.trim();
 
 /* ═══════════════════════════════════════════════════════════
-    MÓDULO: CHAMADA DIRETA AO GEMINI
+    MÓDULO: INVESTIGAÇÃO VIA EDGE FUNCTION (Lovable AI Gateway)
    ═══════════════════════════════════════════════════════════ */
-const apiKey = ""; // padrão do ambiente — chave injetada pelo runtime
-
 async function investigateWithGemini(clubName: string): Promise<AIResult> {
-  const url =
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+  const { data, error } = await supabase.functions.invoke(
+    "investigate-club-colors",
+    { body: { clubName } },
+  );
+  if (error) throw new Error(error.message);
+  if (!data || data.error) throw new Error(data?.error || "Falha desconhecida");
 
-  const body = {
-    contents: [{ parts: [{ text: buildPrompt(clubName) }] }],
-    generationConfig: { responseMimeType: "application/json", temperature: 0.2 },
-  };
-
-  const res = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
-
-  if (!res.ok) {
-    const txt = await res.text();
-    throw new Error(`Gemini ${res.status}: ${txt.slice(0, 200)}`);
-  }
-
-  const data = await res.json();
-  const raw = data?.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
-  const cleaned = raw.replace(/```json|```/g, "").trim();
-  const parsed = JSON.parse(cleaned);
-
-  // Normalização defensiva
-  const cores = (parsed.cores || [])
+  const cores: string[] = (data.cores || [])
     .map((c: string) => String(c).trim().toUpperCase())
     .filter((c: string) => /^#[0-9A-F]{6}$/.test(c));
 
@@ -117,9 +97,9 @@ async function investigateWithGemini(clubName: string): Promise<AIResult> {
     cores.length >= 4 ? "QUADRICOLOR" : cores.length === 3 ? "TRICOLOR" : "BICOLOR";
 
   return {
-    nome_confirmado: parsed.nome_confirmado || clubName,
-    mascote: parsed.mascote || "—",
-    divisao_2026: parsed.divisao_2026 || "—",
+    nome_confirmado: data.nome_confirmado || clubName,
+    mascote: data.mascote || "—",
+    divisao_2026: data.divisao_2026 || "—",
     estrutura,
     cores: cores.slice(0, 4),
   };
