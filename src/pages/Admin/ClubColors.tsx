@@ -82,12 +82,21 @@ OUTPUT: Retorne EXCLUSIVAMENTE JSON puro (sem markdown, sem comentários):
     MÓDULO: INVESTIGAÇÃO VIA EDGE FUNCTION (Lovable AI Gateway)
    ═══════════════════════════════════════════════════════════ */
 async function investigateWithGemini(clubName: string): Promise<AIResult> {
-  const { data, error } = await supabase.functions.invoke(
-    "investigate-club-colors",
-    { body: { clubName } },
-  );
-  if (error) throw new Error(error.message);
-  if (!data || data.error) throw new Error(data?.error || "Falha desconhecida");
+  const functionUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/investigate-club-colors`;
+  const res = await fetch(functionUrl, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+    },
+    body: JSON.stringify({ clubName }),
+  });
+
+  const data = await res.json().catch(() => null);
+  if (!res.ok || !data) {
+    throw new Error(data?.error || `Edge Function HTTP ${res.status}`);
+  }
+  if (data.error) throw new Error(data.error);
 
   const cores: string[] = (data.cores || [])
     .map((c: string) => String(c).trim().toUpperCase())
