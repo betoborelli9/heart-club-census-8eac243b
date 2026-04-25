@@ -1,114 +1,241 @@
-import { useState } from "react";
-import { Loader2, Search } from "lucide-react";
+/**
+ * [CAMINHO]&#58; src/pages/Admin/ClubColors.tsx
+ * [MÓDULO]&#58; ADMIN — AUDITORIA DE CORES (GEMINI FIXED)
+ * [STATUS]&#58; PRODUÇÃO — VERSÃO 3.6 (GEMINI FUNCIONANDO)
+ */
 
-const GEMINI_API_KEY = "SUA_CHAVE_AQUI";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
+import { Search, Palette, Loader2, Sparkles, Save, CheckCircle2, XCircle, ArrowLeft } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { useUser } from "@/contexts/UserContext";
+import { supabase } from "@/integrations/supabase/client";
+import { searchClubsWithFallback, type ClubSearchResult } from "@/lib/search-clubs";
+import { toast } from "sonner";
 
-interface ColorResult {
+// ✅ CORRIGIDO: usar variável de ambiente
+const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+
+interface AIResult {
+  nome_confirmado: string;
+  mascote: string;
+  divisao_2026: string;
+  quantidade_cores: number;
   cores: string[];
 }
 
-const ClubColorSearch = () => {
+const ClubColors = () => {
+  const navigate = useNavigate();
+  const { user, isLoading: userLoading } = useUser();
+
   const [query, setQuery] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [colors, setColors] = useState<string[]>([]);
+  const [suggestions, setSuggestions] = useState<ClubSearchResult[]>([]);
+  const [loadingSuggest, setLoadingSuggest] = useState(false);
 
-  const fetchColors = async () => {
-    if (!query || query.length < 3) return;
+  const [selectedClub, setSelectedClub] = useState<ClubSearchResult | null>(null);
+  const [investigating, setInvestigating] = useState(false);
+  const [result, setResult] = useState<AIResult | null>(null);
+  const [saving, setSaving] = useState(false);
 
-    setLoading(true);
-    setColors([]);
+  useEffect(() => {
+    if (!userLoading && (!user || user.email !== "betoborelli9@gmail.com")) {
+      navigate("/");
+    }
+  }, [user, userLoading, navigate]);
+
+  useEffect(() => {
+    const fetchSuggestions = async () => {
+      if (query.trim().length < 3) {
+        setSuggestions([]);
+        return;
+      }
+      setLoadingSuggest(true);
+      try {
+        const clubs = await searchClubsWithFallback(query);
+        setSuggestions(clubs.slice(0, 8));
+      } catch (err) {
+        console.error("Erro na busca API Football:", err);
+      } finally {
+        setLoadingSuggest(false);
+      }
+    };
+
+    const debounce = setTimeout(fetchSuggestions, 400);
+    return () => clearTimeout(debounce);
+  }, [query]);
+
+  // ✅ CORRIGIDO: modelo válido
+  const fetchGeminiWithRetry = async (payload: any, retries = 3, delay = 1000): Promise<any> => {
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
 
     try {
-      const res = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            contents: [
+      const response = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error?.message || `HTTP ${response.status}`);
+      }
+
+      return data;
+    } catch (error) {
+      if (retries <= 0) throw error;
+      await new Promise((resolve) => setTimeout(resolve, delay));
+      return fetchGeminiWithRetry(payload, retries - 1, delay * 2);
+    }
+  };
+
+  const handleInvestigate = async (club: ClubSearchResult) => {
+    setSelectedClub(club);
+    setSuggestions([]);
+    setQuery(club.name);
+    setInvestigating(true);
+    setResult(null);
+
+    try {
+      // ✅ CORRIGIDO: payload simples e funcional
+      const payload = {
+        contents: [
+          {
+            role: "user",
+            parts: [
               {
-                role: "user",
-                parts: [
-                  {
-                    text: `
-Retorne apenas JSON válido com as cores do uniforme principal do clube "${query}".
+                text: `
+Retorne apenas JSON com as cores do uniforme principal do clube "${club.name}".
 
 Formato:
 {
+  "nome_confirmado": "",
+  "mascote": "",
+  "divisao_2026": "",
+  "quantidade_cores": 3,
   "cores": ["#HEX", "#HEX", "#HEX"]
 }
 
 Regras:
 - Máximo 4 cores
-- Usar cores do uniforme principal (camisa)
-- Não incluir texto fora do JSON
+- Usar cores do uniforme principal
+- Ignorar cores de escudo
+- NÃO retornar texto fora do JSON
 `,
-                  },
-                ],
               },
             ],
-            generationConfig: {
-              responseMimeType: "application/json",
-              temperature: 0.2,
-            },
-          }),
+          },
+        ],
+        generationConfig: {
+          responseMimeType: "application/json",
+          temperature: 0.2,
         },
+      };
+
+      const resJson = await fetchGeminiWithRetry(payload);
+      const rawText = resJson.candidates?.[0]?.content?.parts?.[0]?.text;
+
+      if (!rawText) throw new Error("IA não retornou dados");
+
+      // ✅ CORRIGIDO: parse seguro
+      let parsed: AIResult;
+      try {
+        parsed = JSON.parse(rawText);
+      } catch {
+        console.error("Resposta inválida:", rawText);
+        throw new Error("JSON inválido da IA");
+      }
+
+      setResult(parsed);
+      toast.success("Investigação concluída!");
+    } catch (err: any) {
+      console.error("Erro Gemini:", err);
+      toast.error("Erro na investigação", { description: err.message });
+    } finally {
+      setInvestigating(false);
+    }
+  };
+
+  const handleSave = async () => {
+    if (!result || !selectedClub) return;
+    setSaving(true);
+
+    try {
+      const { error } = await supabase.from("clubes_cache").upsert(
+        {
+          nome: result.nome_confirmado,
+          api_id: selectedClub.api_id || null,
+          escudo_url: selectedClub.logo || null,
+          cor_primaria: result.cores[0] || null,
+          cor_secundaria: result.cores[1] || null,
+          cor_terciaria: result.cores[2] || null,
+          cor_quarta: result.cores[3] || null,
+          mascote: result.mascote,
+          division: result.divisao_2026,
+          atualizado_em: new Date().toISOString(),
+        },
+        { onConflict: "nome" },
       );
 
-      const data = await res.json();
-      const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (error) throw error;
 
-      if (!text) throw new Error("Sem resposta da IA");
-
-      const parsed: ColorResult = JSON.parse(text);
-      setColors(parsed.cores || []);
-    } catch (err) {
-      console.error(err);
-      alert("Erro ao buscar cores");
+      toast.success("Cache atualizado com sucesso!");
+    } catch {
+      toast.error("Erro ao salvar no cache.");
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center p-6">
-      <div className="w-full max-w-xl space-y-6">
-        <h1 className="text-3xl font-black italic text-center">BUSCAR CORES DO CLUBE</h1>
+    <div className="min-h-screen bg-[#0F0F0F] text-white p-6 md:p-12 font-sans">
+      <div className="max-w-5xl mx-auto space-y-12">
+        <header className="flex items-center justify-between border-b border-white/5 pb-8">
+          <h1 className="text-4xl font-black italic uppercase">Bancada de Cores</h1>
+          <Button onClick={() => navigate("/dashboard")}>
+            <ArrowLeft size={16} /> Voltar
+          </Button>
+        </header>
 
-        <div className="flex gap-3">
-          <input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Ex: Flamengo, Barcelona..."
-            className="flex-1 h-14 px-4 bg-white/5 border border-white/10 rounded-xl text-lg font-bold italic outline-none"
-          />
+        <section>
+          <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Digite o clube..." />
 
-          <button
-            onClick={fetchColors}
-            className="px-6 bg-orange-600 hover:bg-orange-500 rounded-xl flex items-center gap-2 font-bold"
-          >
-            {loading ? <Loader2 className="animate-spin" /> : <Search />}
-          </button>
-        </div>
+          {loadingSuggest && <Loader2 className="animate-spin mt-4" />}
 
-        {/* RESULTADO */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
-          {colors.map((color, i) => (
-            <div key={i} className="flex flex-col items-center gap-2">
-              <div
-                className="w-24 h-24 rounded-2xl border border-white/10 shadow-lg"
-                style={{ backgroundColor: color }}
-              />
-
-              <span className="text-xs font-mono font-bold">{color.toUpperCase()}</span>
-            </div>
+          {suggestions.map((club, i) => (
+            <button key={i} onClick={() => handleInvestigate(club)}>
+              {club.name}
+            </button>
           ))}
-        </div>
+        </section>
+
+        <section>
+          {investigating && <p>Buscando cores...</p>}
+
+          {result && (
+            <div>
+              <h2>{result.nome_confirmado}</h2>
+
+              <div className="grid grid-cols-4 gap-4 mt-6">
+                {result.cores.map((color, i) => (
+                  <div key={i}>
+                    <div className="w-20 h-20 rounded" style={{ backgroundColor: color }} />
+                    <p>{color}</p>
+                  </div>
+                ))}
+              </div>
+
+              <Button onClick={handleSave} disabled={saving}>
+                {saving ? "Salvando..." : "Salvar"}
+              </Button>
+            </div>
+          )}
+        </section>
       </div>
     </div>
   );
 };
 
-export default ClubColorSearch;
+export default ClubColors;
