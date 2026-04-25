@@ -1,5 +1,5 @@
-import { Webhook } from "@lovable.dev/webhooks-js";
-import { Resend } from "@lovable.dev/email-js";
+import { verifyWebhookRequest, type EmailWebhookPayload } from "@lovable.dev/webhooks-js";
+import { parseEmailWebhookPayload, sendLovableEmail } from "@lovable.dev/email-js";
 import { renderAsync } from "npm:@react-email/components@0.0.22";
 import SignupEmail from "../_shared/email-templates/signup.tsx";
 import MagicLinkEmail from "../_shared/email-templates/magic-link.tsx";
@@ -11,6 +11,11 @@ import ReauthenticationEmail from "../_shared/email-templates/reauthentication.t
 const SITE_NAME = "Heart Club";
 const SITE_URL = "https://www.heartclubapp.com";
 
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-lovable-signature, x-lovable-timestamp",
+};
+
 const subjectMap: Record<string, string> = {
   signup: "Confirme seu cadastro no Heart Club 🧡",
   magiclink: "Seu link de acesso ao Heart Club 🔑",
@@ -20,10 +25,7 @@ const subjectMap: Record<string, string> = {
   reauthentication: "Seu código de verificação — Heart Club 🔐",
 };
 
-function getEmailComponent(
-  type: string,
-  props: Record<string, string>
-) {
+function getEmailComponent(type: string, props: Record<string, string>) {
   const baseProps = { siteName: SITE_NAME, siteUrl: SITE_URL, ...props };
 
   switch (type) {
@@ -44,35 +46,69 @@ function getEmailComponent(
   }
 }
 
+function valueFromData(data: Record<string, unknown>, key: string): string {
+  const value = data[key];
+  return typeof value === "string" ? value : "";
+}
+
+function htmlToText(html: string): string {
+  return html
+    .replace(/<style[\s\S]*?<\/style>/gi, " ")
+    .replace(/<script[\s\S]*?<\/script>/gi, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: corsHeaders });
+  }
+
   try {
     const apiKey = Deno.env.get("LOVABLE_API_KEY");
     if (!apiKey) {
       return new Response(JSON.stringify({ error: "Missing LOVABLE_API_KEY" }), {
         status: 500,
-        headers: { "Content-Type": "application/json" },
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const rawBody = await req.text();
-    const webhook = new Webhook(apiKey);
-
-    let payload: Record<string, any>;
+    let verified;
     try {
-      payload = webhook.verify(rawBody, Object.fromEntries(req.headers.entries()));
-    } catch {
+      verified = await verifyWebhookRequest<EmailWebhookPayload>({
+        req,
+        secret: apiKey,
+        parser: parseEmailWebhookPayload,
+      });
+    } catch (error) {
+      console.error("Webhook verification error:", error);
       return new Response(JSON.stringify({ error: "Invalid signature" }), {
         status: 401,
-        headers: { "Content-Type": "application/json" },
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const emailType = payload.type || "signup";
-    const recipient = payload.email || payload.recipient || "";
-    const confirmationUrl = payload.confirmation_url || payload.action_link || "";
-    const token = payload.token || payload.otp || "";
-    const newEmail = payload.new_email || "";
-    const callbackUrl = payload.callback_url;
+    const payload = verified.payload;
+    const data = payload.data ?? {};
+    const emailType = valueFromData(data, "action_type") || payload.type || "signup";
+    const recipient = valueFromData(data, "email");
+    const confirmationUrl = valueFromData(data, "url");
+    const token = valueFromData(data, "token");
+    const newEmail = valueFromData(data, "new_email");
+    const callbackUrl = valueFromData(data, "callback_url");
+    const apiBaseUrl = valueFromData(data, "api_base_url");
+
+    if (!recipient) {
+      return new Response(JSON.stringify({ error: "Missing recipient" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     const component = getEmailComponent(emailType, {
       recipient,
@@ -82,33 +118,35 @@ Deno.serve(async (req) => {
     });
 
     const html = await renderAsync(component);
-    const subject = subjectMap[emailType] || `Heart Club — Verificação`;
+    const subject = subjectMap[emailType] || "Heart Club — Verificação";
 
-    const resend = new Resend(callbackUrl);
-    const { error } = await resend.emails.send({
-      from: `Heart Club <admin@heartclubapp.com>`,
-      to: [recipient],
-      subject,
-      html,
-    });
+    const result = await sendLovableEmail(
+      {
+        run_id: payload.run_id,
+        to: recipient,
+        from: "Heart Club <admin@heartclubapp.com>",
+        subject,
+        html,
+        text: htmlToText(html),
+        purpose: "auth",
+        idempotency_key: payload.run_id,
+      },
+      {
+        apiKey,
+        apiBaseUrl: apiBaseUrl || undefined,
+        sendUrl: callbackUrl || undefined,
+      },
+    );
 
-    if (error) {
-      console.error("Email send error:", error);
-      return new Response(JSON.stringify({ error: "Email delivery failed" }), {
-        status: 500,
-        headers: { "Content-Type": "application/json" },
-      });
-    }
-
-    return new Response(JSON.stringify({ success: true }), {
+    return new Response(JSON.stringify({ success: true, result }), {
       status: 200,
-      headers: { "Content-Type": "application/json" },
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {
     console.error("auth-email-hook error:", err);
     return new Response(JSON.stringify({ error: "Email service temporarily unavailable" }), {
       status: 500,
-      headers: { "Content-Type": "application/json" },
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
 });
