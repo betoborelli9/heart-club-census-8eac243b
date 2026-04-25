@@ -107,6 +107,7 @@ export type Database = {
           atualizado_em: string | null
           cidade: string
           cor_primaria: string | null
+          cor_quarta: string | null
           cor_secundaria: string | null
           cor_terciaria: string | null
           division: string | null
@@ -128,6 +129,7 @@ export type Database = {
           atualizado_em?: string | null
           cidade: string
           cor_primaria?: string | null
+          cor_quarta?: string | null
           cor_secundaria?: string | null
           cor_terciaria?: string | null
           division?: string | null
@@ -149,6 +151,7 @@ export type Database = {
           atualizado_em?: string | null
           cidade?: string
           cor_primaria?: string | null
+          cor_quarta?: string | null
           cor_secundaria?: string | null
           cor_terciaria?: string | null
           division?: string | null

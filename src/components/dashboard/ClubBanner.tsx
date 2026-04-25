@@ -30,6 +30,8 @@ interface ClubBannerProps {
   ambassadorLevel?: string | null;
   pageLabel?: string;
   showProfileInfo?: boolean;
+  clubData?: unknown;
+  theme?: unknown;
 }
 
 /* ═══════════════════════════════════════════════════════════
