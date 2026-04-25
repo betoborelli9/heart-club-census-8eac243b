@@ -1,12 +1,13 @@
 /**
  * [CAMINHO/ARQUIVO]: src/components/dashboard/ClubBanner.tsx
  * [MÓDULO]: BRANDING & DASHBOARD NAVIGATION
- * [STATUS]: VERSÃO 37.0 (BICOLOR TRIPLE-STRIPE PRECISION — SLIM PROFILE)
- * [DESCRIÇÃO]: Banner unificado com correção nas diagonais de clubes bicolores.
- * - Bicolores: Cor forte (ex: Vermelho/Verde) nas pontas e 3 faixas diagonais brancas centralizadas.
- * - Tricolores: Mantida lógica de alternância cromática nas diagonais.
+ * [STATUS]: VERSÃO 38.0 (UNIFIED STRIPE GEOMETRY — BICOLOR & TRICOLOR SYNC)
+ * [DESCRIÇÃO]: Banner unificado com geometria de 3 faixas diagonais para todos os clubes.
+ * - Bicolores: Cor Forte (Extremidades) + 3 Faixas da Cor Secundária (Centro).
+ * - Tricolores: Cor Forte (Extremidades) + 3 Faixas alternadas (C2 - C3 - C2).
+ * - Simetria: Medidas das faixas idênticas entre bicolores e tricolores.
  * - Perfil Slim: Altura de 240px e Emblema de 210px (Desktop) para elegância.
- * - Legibilidade: Mantido contorno 'enuviado' (soft shadow).
+ * - Legibilidade: Mantido contorno 'enuviado' (soft shadow) e lógica IS_MASTER.
  */
 
 /* ═══════════════════════════════════════════════════════════
@@ -96,35 +97,39 @@ const ClubBanner = ({
   }, [clubName]);
 
   /* ═══════════════════════════════════════════════════════════
-      MÓDULO: LARGURA DAS COLUNAS (DIAGONAIS SÓLIDAS)
+      MÓDULO: GEOMETRIA DAS COLUNAS (ALFAIATARIA VISUAL)
      ═══════════════════════════════════════════════════════════ */
   const buildFlagGradient = (): string => {
     const colors = [theme.cor_primaria, theme.cor_secundaria, theme.cor_terciaria].filter(Boolean);
     const sorted = [...colors].sort((a, b) => calculateLuminance(a) - calculateLuminance(b));
 
-    // TRICOLOR (São Paulo, Santa Cruz)
-    // Estrutura: Cor 1 | Cor 2 | Cor 3 | Cor 1 | Cor 2
+    const strong = sorted[0]; // Cor mais escura (Bordas)
+
+    // LÓGICA TRICOLOR (3 cores no cache)
     if (sorted.length === 3) {
+      const mid = sorted[1];
+      const light = sorted[2];
       return `linear-gradient(115deg, 
-        ${sorted[0]} 0%, ${sorted[0]} 34%, 
-        ${sorted[1]} 34%, ${sorted[1]} 38%, 
-        ${sorted[2]} 38%, ${sorted[2]} 42%, 
-        ${sorted[0]} 42%, ${sorted[0]} 46%, 
-        ${sorted[1]} 46%, ${sorted[1]} 100%)`;
+        ${strong} 0%, ${strong} 34%, 
+        ${mid} 34%, ${mid} 38%, 
+        ${strong} 38%, ${strong} 41%, 
+        ${light} 41%, ${light} 45%, 
+        ${strong} 45%, ${strong} 48%, 
+        ${mid} 48%, ${mid} 52%, 
+        ${strong} 52%, ${strong} 100%)`;
     }
 
-    // BICOLOR (Vila Nova, Palmeiras)
-    // Estrutura: Cor Forte | Faixa Fraca | Forte | Faixa Fraca | Forte | Faixa Fraca | Forte
-    const strong = sorted[0];
+    // LÓGICA BICOLOR (2 cores no cache - ex: Vila Nova, Palmeiras)
+    // Cores fortes nas pontas e 3 faixas diagonais da cor fraca no centro
     const light = sorted[1] || "#ffffff";
     return `linear-gradient(115deg, 
       ${strong} 0%, ${strong} 34%, 
       ${light} 34%, ${light} 38%, 
-      ${strong} 38%, ${strong} 39%, 
-      ${light} 39%, ${light} 43%, 
-      ${strong} 43%, ${strong} 44%, 
-      ${light} 44%, ${light} 48%, 
-      ${strong} 48%, ${strong} 100%)`;
+      ${strong} 38%, ${strong} 41%, 
+      ${light} 41%, ${light} 45%, 
+      ${strong} 45%, ${strong} 48%, 
+      ${light} 48%, ${light} 52%, 
+      ${strong} 52%, ${strong} 100%)`;
   };
 
   /* ═══════════════════════════════════════════════════════════
@@ -219,7 +224,7 @@ const ClubBanner = ({
             </div>
 
             <div className="flex-1 flex flex-col h-full items-end text-right py-4 md:py-6">
-              {/* PERFIL MOBILE */}
+              {/* PERFIL MOBILE (CENTRALIZADO VERTICALMENTE) */}
               {showProfileInfo && (
                 <div className="flex-1 md:hidden flex flex-col justify-center items-end text-white">
                   <h2
@@ -244,7 +249,7 @@ const ClubBanner = ({
                       style={textOutlineStyle}
                     >
                       <Trophy size={12} className={IS_MASTER ? "text-cyan-400 animate-pulse" : "text-orange-500"} />
-                      <span>EMBAIXADOR {ambassadorLevel || "BRONZE"}</span>
+                      <span>EMBAIXADOR {displayLevel}</span>
                     </div>
                   )}
                 </div>
@@ -298,9 +303,10 @@ export default ClubBanner;
 /**
  * [RODAPÉ TÉCNICO]
  * ARQUIVO: src/components/dashboard/ClubBanner.tsx
- * VERSÃO: 37.0
+ * VERSÃO: 38.0
  * CORREÇÕES:
- * - Lógica Bicolor: Ajustada para garantir cor forte nas extremidades e 3 listras brancas nítidas no centro (34% a 48%), separadas por finas linhas da cor principal.
- * - Alinhamento: Mantida a simetria com os clubes tricolores para consistência visual.
- * - Perfil Slim: Banner mantido em 240px para elegância.
+ * - Geometria de Faixas Unificada: Todos os clubes (Bicolor e Tricolor) agora utilizam a mesma cadência de 3 faixas diagonais centralizadas.
+ * - Lógica Bicolor: Garante a cor mais forte nas extremidades e a cor mais clara (branco/secundária) nas 3 faixas centrais.
+ * - Lógica Tricolor: Garante a cor mais forte nas extremidades e alterna as faixas com as cores secundária e terciária para equilíbrio visual.
+ * - Integridade: Mantido emblema de 210px, altura slim de 240px, contorno enuviado e status exclusivo para Beto Borelli.
  */
