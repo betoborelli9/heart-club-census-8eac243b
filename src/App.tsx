@@ -42,6 +42,7 @@ const App = () => (
             <Route path="/embaixadores" element={<Ambassadors />} />
             <Route path="/debug-api" element={<DebugApi />} />
             <Route path="/admin-ingestion" element={<AdminIngestion />} />
+            <Route path="/admin/cores" element={<ClubColors />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
