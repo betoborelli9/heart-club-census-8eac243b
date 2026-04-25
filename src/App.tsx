@@ -16,6 +16,7 @@ import Stats from "./pages/Stats";
 import Ambassadors from "./pages/Ambassadors";
 import DebugApi from "./pages/DebugApi";
 import AdminIngestion from "./pages/AdminIngestion";
+import ClubColors from "./pages/Admin/ClubColors";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
