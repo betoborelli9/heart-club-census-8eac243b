@@ -6,10 +6,24 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const STOPWORDS = new Set(["fc", "sc", "de", "do", "da", "dos", "das", "club", "clube", "esporte", "futebol", "sport"]);
+const STOPWORDS = new Set([
+  "fc",
+  "sc",
+  "de",
+  "do",
+  "da",
+  "dos",
+  "das",
+  "club",
+  "clube",
+  "esporte",
+  "futebol",
+  "sport",
+]);
 
 function normalize(s: string): string {
-  return s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+  return s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase()
+    .trim();
 }
 
 function extractSource(title: string): { cleanTitle: string; source: string } {
@@ -41,7 +55,8 @@ function isPortalLogoImage(url: string | null | undefined): boolean {
   const value = normalize(url);
 
   return (
-    (value.includes("s.glbimg.com") && value.includes("ge") && (value.includes("logo") || value.includes("favicon"))) ||
+    (value.includes("s.glbimg.com") && value.includes("ge") &&
+      (value.includes("logo") || value.includes("favicon"))) ||
     value.includes("logo-ge") ||
     (value.includes("ge.globo") && value.includes("favicon"))
   );
@@ -83,10 +98,15 @@ async function fetchOgImage(url: string): Promise<string | null> {
 
     const html = await res.text();
 
-    const ogMatch =
-      html.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i) ||
-      html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["']/i) ||
-      html.match(/<meta[^>]+name=["']twitter:image["'][^>]+content=["']([^"']+)["']/i);
+    const ogMatch = html.match(
+      /<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i,
+    ) ||
+      html.match(
+        /<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["']/i,
+      ) ||
+      html.match(
+        /<meta[^>]+name=["']twitter:image["'][^>]+content=["']([^"']+)["']/i,
+      );
 
     return ogMatch ? ogMatch[1] : null;
   } catch {
@@ -110,7 +130,8 @@ serve(async (req) => {
     }
 
     const query = encodeURIComponent(`"${clubName}" futebol`);
-    const rssUrl = `https://news.google.com/rss/search?q=${query}&hl=pt-BR&gl=BR&ceid=BR:pt-419`;
+    const rssUrl =
+      `https://news.google.com/rss/search?q=${query}&hl=pt-BR&gl=BR&ceid=BR:pt-419`;
 
     const rssResponse = await fetch(rssUrl, {
       headers: { "User-Agent": "HeartClub/1.0" },
@@ -134,7 +155,11 @@ serve(async (req) => {
       const block = match[1];
 
       const get = (tag: string) => {
-        const m = block.match(new RegExp(`<${tag}[^>]*><!\\[CDATA\\[([\\s\\S]*?)\\]\\]><\\/${tag}>|<${tag}[^>]*>([\\s\\S]*?)<\\/${tag}>`));
+        const m = block.match(
+          new RegExp(
+            `<${tag}[^>]*><!\\[CDATA\\[([\\s\\S]*?)\\]\\]><\\/${tag}>|<${tag}[^>]*>([\\s\\S]*?)<\\/${tag}>`,
+          ),
+        );
         return m ? (m[1] || m[2] || "").trim() : "";
       };
 

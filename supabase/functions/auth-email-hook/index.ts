@@ -1,5 +1,11 @@
-import { verifyWebhookRequest, type EmailWebhookPayload } from "@lovable.dev/webhooks-js";
-import { parseEmailWebhookPayload, sendLovableEmail } from "@lovable.dev/email-js";
+import {
+  type EmailWebhookPayload,
+  verifyWebhookRequest,
+} from "@lovable.dev/webhooks-js";
+import {
+  parseEmailWebhookPayload,
+  sendLovableEmail,
+} from "@lovable.dev/email-js";
 import { renderAsync } from "npm:@react-email/components@0.0.22";
 import SignupEmail from "../_shared/email-templates/signup.tsx";
 import MagicLinkEmail from "../_shared/email-templates/magic-link.tsx";
@@ -13,7 +19,8 @@ const SITE_URL = "https://www.heartclubapp.com";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-lovable-signature, x-lovable-timestamp",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type, x-lovable-signature, x-lovable-timestamp",
 };
 
 const subjectMap: Record<string, string> = {
@@ -72,10 +79,13 @@ Deno.serve(async (req) => {
   try {
     const apiKey = Deno.env.get("LOVABLE_API_KEY");
     if (!apiKey) {
-      return new Response(JSON.stringify({ error: "Missing LOVABLE_API_KEY" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return new Response(
+        JSON.stringify({ error: "Missing LOVABLE_API_KEY" }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
     }
 
     let verified;
@@ -95,7 +105,8 @@ Deno.serve(async (req) => {
 
     const payload = verified.payload;
     const data = payload.data ?? {};
-    const emailType = valueFromData(data, "action_type") || payload.type || "signup";
+    const emailType = valueFromData(data, "action_type") || payload.type ||
+      "signup";
     const recipient = valueFromData(data, "email");
     const confirmationUrl = valueFromData(data, "url");
     const token = valueFromData(data, "token");
@@ -144,9 +155,12 @@ Deno.serve(async (req) => {
     });
   } catch (err) {
     console.error("auth-email-hook error:", err);
-    return new Response(JSON.stringify({ error: "Email service temporarily unavailable" }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return new Response(
+      JSON.stringify({ error: "Email service temporarily unavailable" }),
+      {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      },
+    );
   }
 });

@@ -92,7 +92,10 @@ function normalizeName(value: string): string {
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
     .replace(/[^a-z0-9\s]/g, " ")
-    .replace(/\b(futebol|football|clube|club|esporte|sport|associacao|associação|fc|sc|ec|ac)\b/g, " ")
+    .replace(
+      /\b(futebol|football|clube|club|esporte|sport|associacao|associação|fc|sc|ec|ac)\b/g,
+      " ",
+    )
     .replace(/\s+/g, " ")
     .trim();
 }
@@ -122,7 +125,9 @@ function uniqueHex(colors: Array<unknown>): string[] {
 
 function asBoolean(value: unknown): boolean {
   if (typeof value === "boolean") return value;
-  if (typeof value === "string") return ["true", "sim", "yes", "1"].includes(value.toLowerCase().trim());
+  if (typeof value === "string") {
+    return ["true", "sim", "yes", "1"].includes(value.toLowerCase().trim());
+  }
   return false;
 }
 
@@ -141,23 +146,40 @@ function parseColorCount(value: unknown, colors: string[]): 2 | 3 | 4 {
   return 2;
 }
 
-function validateClubIdentity(requestedName: string, confirmedName: string | undefined): void {
+function validateClubIdentity(
+  requestedName: string,
+  confirmedName: string | undefined,
+): void {
   if (!confirmedName) return;
 
   const requested = normalizeName(requestedName);
   const confirmed = normalizeName(confirmedName);
   if (!requested || !confirmed) return;
 
-  const requestedTokens = requested.split(" ").filter((token) => token.length > 2);
-  const confirmedTokens = confirmed.split(" ").filter((token) => token.length > 2);
-  const shared = requestedTokens.filter((token) => confirmedTokens.includes(token));
+  const requestedTokens = requested.split(" ").filter((token) =>
+    token.length > 2
+  );
+  const confirmedTokens = confirmed.split(" ").filter((token) =>
+    token.length > 2
+  );
+  const shared = requestedTokens.filter((token) =>
+    confirmedTokens.includes(token)
+  );
 
-  if (shared.length === 0 && !confirmed.includes(requested) && !requested.includes(confirmed)) {
-    throw new Error(`Clube confirmado não corresponde ao solicitado: ${confirmedName}`);
+  if (
+    shared.length === 0 && !confirmed.includes(requested) &&
+    !requested.includes(confirmed)
+  ) {
+    throw new Error(
+      `Clube confirmado não corresponde ao solicitado: ${confirmedName}`,
+    );
   }
 }
 
-function buildEnrichmentFromRaw(requestedClubName: string, raw: AIInvestigationRaw): AIEnrichment {
+function buildEnrichmentFromRaw(
+  requestedClubName: string,
+  raw: AIInvestigationRaw,
+): AIEnrichment {
   validateClubIdentity(requestedClubName, raw.clube_confirmado);
 
   const colors = uniqueHex([
@@ -200,7 +222,8 @@ function buildEnrichmentFromRaw(requestedClubName: string, raw: AIInvestigationR
    melhor match pelo nome solicitado para evitar homônimos.
    ═══════════════════════════════════════════════════════════ */
 async function fetchTechnicalData(clubName: string): Promise<TechnicalData> {
-  const apiKey = Deno.env.get("API_FOOTBALL_KEY") || Deno.env.get("FOOTBALL_API_KEY");
+  const apiKey = Deno.env.get("API_FOOTBALL_KEY") ||
+    Deno.env.get("FOOTBALL_API_KEY");
   const fallback: TechnicalData = {
     api_id: null,
     escudo_url: null,
@@ -212,7 +235,9 @@ async function fetchTechnicalData(clubName: string): Promise<TechnicalData> {
   if (!apiKey) return fallback;
 
   try {
-    const url = `https://v3.football.api-sports.io/teams?search=${encodeURIComponent(clubName)}`;
+    const url = `https://v3.football.api-sports.io/teams?search=${
+      encodeURIComponent(clubName)
+    }`;
     const res = await fetch(url, { headers: { "x-apisports-key": apiKey } });
     if (!res.ok) return fallback;
 
@@ -226,11 +251,18 @@ async function fetchTechnicalData(clubName: string): Promise<TechnicalData> {
         const teamName = String(item?.team?.name ?? "");
         const normalized = normalizeName(teamName);
         const exact = normalized === requested ? 100 : 0;
-        const contains = normalized.includes(requested) || requested.includes(normalized) ? 50 : 0;
+        const contains =
+          normalized.includes(requested) || requested.includes(normalized)
+            ? 50
+            : 0;
         const tokenHits = requested
           .split(" ")
-          .filter((token) => token.length > 2 && normalized.includes(token)).length;
-        const brazilBoost = item?.team?.country === "Brazil" || item?.team?.country === "Brasil" ? 5 : 0;
+          .filter((token) => token.length > 2 && normalized.includes(token))
+          .length;
+        const brazilBoost =
+          item?.team?.country === "Brazil" || item?.team?.country === "Brasil"
+            ? 5
+            : 0;
         return { item, score: exact + contains + tokenHits * 10 + brazilBoost };
       })
       .sort((a: { score: number }, b: { score: number }) => b.score - a.score);
@@ -257,7 +289,10 @@ async function fetchTechnicalData(clubName: string): Promise<TechnicalData> {
    Search, com prompt rígido para não copiar cores de clube errado
    nem incluir borda/estrela/patrocínio como cor de tecido.
    ═══════════════════════════════════════════════════════════ */
-async function investigateClubWithAI(clubName: string, technical: TechnicalData): Promise<AIEnrichment> {
+async function investigateClubWithAI(
+  clubName: string,
+  technical: TechnicalData,
+): Promise<AIEnrichment> {
   const geminiKey = Deno.env.get("GEMINI_API_KEY");
   if (!geminiKey) {
     throw new Error("GEMINI_API_KEY ausente");
@@ -267,7 +302,8 @@ async function investigateClubWithAI(clubName: string, technical: TechnicalData)
   const officialName = technical.official_name ?? clubName;
   const city = technical.cidade ?? "cidade não informada";
 
-  const systemPrompt = `Você é um auditor sênior de dados de futebol. Responda somente JSON válido, sem markdown.
+  const systemPrompt =
+    `Você é um auditor sênior de dados de futebol. Responda somente JSON válido, sem markdown.
 Nunca misture clubes homônimos. Nunca copie cores de rival ou de outro estado. Se houver ambiguidade, use o clube cujo nome oficial, cidade, país e escudo batem com o alvo.`;
 
   const userPrompt = `
@@ -319,7 +355,8 @@ RETORNE EXCLUSIVAMENTE JSON PURO NESTE FORMATO:
   "division": "Série X ou Estadual Xª Divisão"
 }`.trim();
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${geminiKey}`;
+  const url =
+    `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${geminiKey}`;
   const res = await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -342,10 +379,9 @@ RETORNE EXCLUSIVAMENTE JSON PURO NESTE FORMATO:
   }
 
   const json = await res.json();
-  const text =
-    json?.candidates?.[0]?.content?.parts
-      ?.map((part: { text?: string }) => part.text ?? "")
-      .join("") ?? "";
+  const text = json?.candidates?.[0]?.content?.parts
+    ?.map((part: { text?: string }) => part.text ?? "")
+    .join("") ?? "";
 
   const match = text.match(/\{[\s\S]*\}/);
   if (!match) {
@@ -361,7 +397,11 @@ RETORNE EXCLUSIVAMENTE JSON PURO NESTE FORMATO:
    UPSERT em clubes_cache, preservando nome/campos técnicos e
    preenchendo exatamente as colunas de cores conforme quantidade.
    ═══════════════════════════════════════════════════════════ */
-async function persistClubData(clubName: string, technical: TechnicalData, ai: AIEnrichment): Promise<PersistedClub> {
+async function persistClubData(
+  clubName: string,
+  technical: TechnicalData,
+  ai: AIEnrichment,
+): Promise<PersistedClub> {
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
   const serviceRole = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
@@ -386,7 +426,9 @@ async function persistClubData(clubName: string, technical: TechnicalData, ai: A
     atualizado_em: new Date().toISOString(),
   };
 
-  const { error } = await supabase.from("clubes_cache").upsert(payload, { onConflict: "nome" });
+  const { error } = await supabase.from("clubes_cache").upsert(payload, {
+    onConflict: "nome",
+  });
   if (error) {
     throw new Error(`Persistência falhou: ${error.message}`);
   }
@@ -404,8 +446,11 @@ Deno.serve(async (req: Request) => {
 
   try {
     const body = await req.json().catch(() => ({}));
-    const clubName = typeof body?.club_name === "string" ? body.club_name.trim() :
-      typeof body?.clubName === "string" ? body.clubName.trim() : "";
+    const clubName = typeof body?.club_name === "string"
+      ? body.club_name.trim()
+      : typeof body?.clubName === "string"
+      ? body.clubName.trim()
+      : "";
 
     if (clubName.length < 2 || clubName.length > 120) {
       return jsonResponse({ error: "club_name inválido" }, 400);
@@ -418,12 +463,14 @@ Deno.serve(async (req: Request) => {
     const persisted = await persistClubData(clubName, technical, ai);
 
     console.info(
-      `[enrich] Salvo: ${clubName} | cores=${[
-        persisted.cor_primaria,
-        persisted.cor_secundaria,
-        persisted.cor_terciaria,
-        persisted.cor_quarta,
-      ].filter(Boolean).length}`,
+      `[enrich] Salvo: ${clubName} | cores=${
+        [
+          persisted.cor_primaria,
+          persisted.cor_secundaria,
+          persisted.cor_terciaria,
+          persisted.cor_quarta,
+        ].filter(Boolean).length
+      }`,
     );
 
     return jsonResponse({ success: true, club: clubName, data: persisted });
