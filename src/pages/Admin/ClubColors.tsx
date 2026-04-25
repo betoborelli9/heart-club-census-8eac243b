@@ -1,12 +1,11 @@
 /**
  * [CAMINHO]: src/pages/Admin/ClubColors.tsx
  * [MÓDULO]: ADMIN — AUDITORIA DE CORES (GEMINI 2.5 FLASH + SEARCH)
- * [STATUS]: PRODUÇÃO — VERSÃO 5.0 (VISUAL V4 + INTELIGÊNCIA V3.5)
+ * [STATUS]: PRODUÇÃO — VERSÃO 6.0 (ENV KEY SYNC + ROBUST FETCH)
  * [DESCRIÇÃO]:
- * - Chamada direta ao Gemini 2.5 Flash com Google Search Grounding.
- * - Wikipedia-First: Foco total em cores de tecido (Jersey).
- * - Visualização de 4 colunas (Bicolor, Tricolor, Quadricolor).
- * - Persistência direta na tabela clubes_cache.
+ * - Busca a GEMINI_API_KEY via variáveis de ambiente do Supabase/Lovable.
+ * - Wikipedia-First: Foco total em cores de tecido (Jersey) via Grounding.
+ * - Visualização dinâmica de 4 colunas e persistência no banco.
  */
 
 import { useState, useEffect } from "react";
@@ -20,8 +19,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { searchClubsWithFallback, type ClubSearchResult } from "@/lib/search-clubs";
 import { toast } from "sonner";
 
-// Chave injetada pelo ambiente ou sua chave manual
-const apiKey = "";
+// Tenta carregar a chave das variáveis de ambiente do Supabase/Vite
+const apiKey = import.meta.env.VITE_GEMINI_API_KEY || "";
 
 interface AIResult {
   nome_confirmado: string;
@@ -44,14 +43,14 @@ const ClubColors = () => {
   const [result, setResult] = useState<AIResult | null>(null);
   const [saving, setSaving] = useState(false);
 
-  // 🔒 Proteção de Acesso
+  // 🔒 Proteção de Acesso Master
   useEffect(() => {
     if (!userLoading && (!user || user.email !== "betoborelli9@gmail.com")) {
       navigate("/");
     }
   }, [user, userLoading, navigate]);
 
-  // 🔎 Autocomplete (API Football)
+  // 🔎 Autocomplete
   useEffect(() => {
     const fetchSuggestions = async () => {
       if (query.trim().length < 3) {
@@ -63,7 +62,7 @@ const ClubColors = () => {
         const clubs = await searchClubsWithFallback(query);
         setSuggestions(clubs.slice(0, 8));
       } catch (err) {
-        console.error(err);
+        console.error("Autocomplete error:", err);
       } finally {
         setLoadingSuggest(false);
       }
@@ -72,8 +71,13 @@ const ClubColors = () => {
     return () => clearTimeout(debounce);
   }, [query]);
 
-  // 🤖 Investigação Gemini (Wikipedia-First + Grounding)
+  // 🤖 Investigação Gemini com Wikipedia-First
   const handleInvestigate = async (club: ClubSearchResult) => {
+    if (!apiKey) {
+      toast.error("Erro de Configuração", { description: "VITE_GEMINI_API_KEY não encontrada no Supabase." });
+      return;
+    }
+
     setSelectedClub(club);
     setSuggestions([]);
     setQuery(club.name);
@@ -125,20 +129,20 @@ const ClubColors = () => {
       const data = await response.json();
       const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text;
 
-      if (!rawText) throw new Error("IA não retornou dados.");
+      if (!rawText) throw new Error("A IA não retornou conteúdo. Verifique sua cota ou chave.");
       const parsed: AIResult = JSON.parse(rawText);
 
       setResult(parsed);
       toast.success("Cores investigadas via Wikipedia");
     } catch (err: any) {
-      console.error(err);
-      toast.error("Erro na investigação IA", { description: "Verifique a chave da API ou o nome do clube." });
+      console.error("Gemini Error:", err);
+      toast.error("Erro na investigação IA", { description: err.message });
     } finally {
       setInvestigating(false);
     }
   };
 
-  // 💾 Salvar no Supabase
+  // 💾 Persistência
   const handleSave = async () => {
     if (!result || !selectedClub) return;
     setSaving(true);
@@ -162,6 +166,7 @@ const ClubColors = () => {
       if (error) throw error;
       toast.success("Cache atualizado com sucesso!");
     } catch (err) {
+      console.error("Save error:", err);
       toast.error("Erro ao salvar no banco.");
     } finally {
       setSaving(false);
@@ -182,14 +187,14 @@ const ClubColors = () => {
                 Bancada de <span className="text-orange-500">Cores</span>
               </h1>
               <p className="text-[10px] font-bold uppercase italic text-white/40 tracking-[0.3em] mt-1">
-                Wikipedia-First Grounding · Versão 5.0
+                Wikipedia-First Grounding · Versão 6.0
               </p>
             </div>
           </div>
           <Button
             variant="ghost"
             onClick={() => navigate("/dashboard")}
-            className="font-black italic text-xs border border-white/10 h-12 px-6"
+            className="font-black italic text-xs border border-white/10 h-12 px-6 hover:bg-white/5"
           >
             <ArrowLeft className="mr-2" size={16} /> VOLTAR
           </Button>
@@ -202,8 +207,8 @@ const ClubColors = () => {
             <Input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Digite 3 letras do clube..."
-              className="h-16 pl-16 bg-white/5 border-white/10 rounded-2xl text-xl font-bold italic tracking-tighter focus:ring-2 ring-orange-500/50"
+              placeholder="Pesquisar clube para investigar..."
+              className="h-16 pl-16 bg-white/5 border-white/10 rounded-2xl text-xl font-bold italic tracking-tighter focus:ring-2 ring-orange-500/50 transition-all"
             />
             {loadingSuggest && (
               <Loader2 className="absolute right-5 top-1/2 -translate-y-1/2 animate-spin text-white/20" />
@@ -242,14 +247,16 @@ const ClubColors = () => {
             <div className="flex flex-col items-center gap-6 mt-20">
               <Sparkles className="text-orange-500 w-16 h-16 animate-pulse" />
               <p className="font-black italic text-sm tracking-[0.4em] uppercase text-white/60">
-                Pesquisando Wikipedia em tempo real...
+                Investigando na Wikipedia...
               </p>
             </div>
           ) : result ? (
             <div className="w-full flex flex-col items-center gap-16">
-              <div className="w-full flex flex-col md:flex-row items-center gap-10 bg-white/[0.03] p-10 rounded-[4rem] border border-white/10 shadow-2xl">
-                <img src={selectedClub?.logo || ""} className="w-40 h-40 object-contain drop-shadow-2xl" alt="" />
-                <div className="flex-1 text-center md:text-left">
+              <div className="w-full flex flex-col md:flex-row items-center gap-10 bg-white/[0.03] p-10 rounded-[4rem] border border-white/10 shadow-2xl relative overflow-hidden group">
+                <div className="absolute inset-0 bg-gradient-to-r from-orange-500/[0.02] to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+
+                <img src={selectedClub?.logo || ""} className="w-40 h-40 object-contain drop-shadow-2xl z-10" alt="" />
+                <div className="flex-1 text-center md:text-left z-10">
                   <h2 className="text-5xl md:text-7xl font-black italic uppercase tracking-tighter text-white leading-[0.9]">
                     {result.nome_confirmado}
                   </h2>
@@ -265,7 +272,7 @@ const ClubColors = () => {
                 <Button
                   onClick={handleSave}
                   disabled={saving}
-                  className="h-24 px-14 rounded-[2.5rem] bg-orange-600 hover:bg-orange-500 font-black italic uppercase text-lg shadow-xl shadow-orange-500/20"
+                  className="h-24 px-14 rounded-[2.5rem] bg-orange-600 hover:bg-orange-500 font-black italic uppercase text-lg shadow-xl shadow-orange-500/20 z-10"
                 >
                   {saving ? (
                     <Loader2 className="animate-spin" />
@@ -316,7 +323,9 @@ const ClubColors = () => {
           ) : (
             <div className="flex flex-col items-center text-white/10 gap-6 mt-20">
               <Palette size={80} strokeWidth={1} className="opacity-20" />
-              <p className="font-black italic uppercase tracking-[0.5em] text-xs">Aguardando busca de clube...</p>
+              <p className="font-black italic uppercase tracking-[0.5em] text-xs">
+                Busque um clube para iniciar a auditoria
+              </p>
             </div>
           )}
         </section>
@@ -330,7 +339,7 @@ export default ClubColors;
 /**
  * [RODAPÉ TÉCNICO]
  * - Ficheiro: src/pages/Admin/ClubColors.tsx
- * - Versão: 5.0
- * - Grounding: Google Search ativo para resolver Real Madrid e 2026.
- * - Visual: Preservado o layout V4 com botões de persistência V3.
+ * - Versão: 6.0
+ * - Chave: Agora utiliza a variável de ambiente VITE_GEMINI_API_KEY.
+ * - Fix: Resolvido erro de "chave não encontrada" ou chamada sem autorização.
  */
