@@ -7,7 +7,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, Loader2, ArrowLeft, CheckCircle2, XCircle, Venus } from "lucide-react";
+import { Search, Loader2, ArrowLeft, CheckCircle2, XCircle, Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useUser } from "@/contexts/UserContext";
@@ -110,7 +110,7 @@ const ClubFeminino = () => {
         </button>
 
         <div className="flex items-center gap-3 mb-2">
-          <Venus className="w-7 h-7 text-pink-400" />
+          <Heart className="w-7 h-7 text-pink-400" fill="currentColor" />
           <h1 className="text-3xl font-bold italic" style={{ fontFamily: "Verdana" }}>
             Futebol Feminino
           </h1>
