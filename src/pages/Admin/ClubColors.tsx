@@ -1,11 +1,11 @@
 /**
  * [CAMINHO]: src/pages/Admin/ClubColors.tsx
- * [MÓDULO]: ADMIN — AUDITORIA DE CORES (GEMINI 2.5 FLASH + SEARCH)
- * [STATUS]: PRODUÇÃO — VERSÃO 7.1 (SYNTAX FIX · VERCEL READY)
+ * [MÓDULO]: ADMIN — AUDITORIA DE CORES (EDGE FUNCTION + GOOGLE SEARCH)
+ * [STATUS]: PRODUÇÃO — VERSÃO 7.2 (FRONT SEM CHAVE DIRETA)
  * [DESCRIÇÃO]:
  * - Correção de erro de compilação (Unterminated string literal).
- * - Chamada direta ao Gemini 2.5 Flash (A chave é injetada automaticamente).
- * - Wikipedia-First: Investigação profunda em cores de tecido (Jersey).
+ * - Chamada segura via Edge Function investigate-club-colors.
+ * - Consulta focada somente nas cores oficiais do clube.
  * - Suporte visual para 2, 3 e 4 cores com estados "NULL" protegidos.
  */
 
@@ -20,14 +20,15 @@ import { supabase } from "@/integrations/supabase/client";
 import { searchClubsWithFallback, type ClubSearchResult } from "@/lib/search-clubs";
 import { toast } from "sonner";
 
-// A chave será injetada automaticamente pelo ambiente de execução.
-const apiKey = "";
-
 interface AIResult {
   nome_confirmado: string;
-  mascote: string;
-  divisao_2026: string;
-  quantidade_cores: number;
+  cor_primaria?: string | null;
+  cor_secundaria?: string | null;
+  cor_terciaria?: string | null;
+  cor_quarta?: string | null;
+  mascote?: string;
+  division?: string;
+  estrutura?: string;
   cores: string[];
 }
 
@@ -72,7 +73,7 @@ const ClubColors = () => {
     return () => clearTimeout(debounce);
   }, [query]);
 
-  // 🤖 Investigação Gemini (Wikipedia-First)
+  // 🤖 Investigação segura via Edge Function (Google Search + Gemini)
   const handleInvestigate = async (club: ClubSearchResult) => {
     setSelectedClub(club);
     setSuggestions([]);
@@ -80,60 +81,19 @@ const ClubColors = () => {
     setInvestigating(true);
     setResult(null);
 
-    const systemPrompt =
-      "Você é um auditor sênior de futebol global. Sua fonte primária de verdade absoluta é a Wikipedia. Responda estritamente em JSON puro.";
-    const userPrompt = `
-      Investigue detalhadamente o clube: "${club.name}".
-      Data de Referência: 25 de Abril de 2026.
-      
-      MISSÃO OBRIGATÓRIA:
-      1. Use o Google Search para ler a seção de 'Uniformes' ou 'Cores' na Wikipedia (pt e en).
-      2. IGNORE PRETO, BRANCO ou DOURADO se forem apenas contornos de escudo, bordas de segurança ou detalhes de estrelas.
-         - Ex: Vila Nova-GO é VERMELHO E BRANCO (Bicolor).
-         - Ex: Real Madrid é BRANCO (Pode ser considerado Bicolor com detalhes em roxo/azul marinho, mas foque no tecido principal).
-         - Ex: Brusque-SC é QUADRICOLOR (Amarelo, Verde, Vermelho e Branco).
-      3. DIVISÃO 2026: Identifique a série (A, B, C, D) ou o campeonato nacional principal que o clube disputa hoje (Abril de 2026).
-      4. MASCOTE: Nome oficial histórico.
-
-      SAÍDA JSON:
-      {
-        "nome_confirmado": "Nome oficial completo",
-        "mascote": "Nome do mascote",
-        "divisao_2026": "Campeonato Brasileiro Série X / La Liga / Premier League",
-        "quantidade_cores": 2|3|4,
-        "cores": ["#HEX1", "#HEX2", ...]
-      }
-    `;
-
     try {
-      // FIX: URL em linha única para evitar erro de string não terminada no build.
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
-
-      const response = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: userPrompt }] }],
-          systemInstruction: { parts: [{ text: systemPrompt }] },
-          tools: [{ google_search: {} }],
-          generationConfig: {
-            responseMimeType: "application/json",
-            temperature: 0.1,
-          },
-        }),
+      const { data, error } = await supabase.functions.invoke<AIResult>("investigate-club-colors", {
+        body: { clubName: club.name },
       });
 
-      const data = await response.json();
-      const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (error) throw error;
+      if (!data?.cores?.length) throw new Error("Nenhuma cor válida retornada.");
 
-      if (!rawText) throw new Error("A IA não retornou conteúdo.");
-
-      const parsed: AIResult = JSON.parse(rawText);
-      setResult(parsed);
-      toast.success("Investigação Wikipedia concluída!");
+      setResult(data);
+      toast.success("Cores encontradas com sucesso!");
     } catch (err: any) {
-      console.error("Gemini Error:", err);
-      toast.error("Falha na Investigação IA", { description: "O servidor pode estar ocupado. Tente outro clube." });
+      console.error("Investigate colors error:", err);
+      toast.error("Falha ao buscar cores", { description: "A consulta não retornou cores válidas. Tente novamente." });
     } finally {
       setInvestigating(false);
     }
@@ -155,8 +115,8 @@ const ClubColors = () => {
           cor_secundaria: result.cores[1] || null,
           cor_terciaria: result.cores[2] || null,
           cor_quarta: result.cores[3] || null,
-          mascote: result.mascote,
-          division: result.divisao_2026,
+          mascote: result.mascote || "Não identificado",
+          division: result.division || "Não identificado",
           atualizado_em: new Date().toISOString(),
         },
         { onConflict: "nome" },
@@ -258,10 +218,10 @@ const ClubColors = () => {
                   </h2>
                   <div className="flex flex-wrap justify-center md:justify-start gap-4 mt-4">
                     <span className="bg-orange-500/20 text-orange-500 text-[10px] font-black px-3 py-1 rounded-full uppercase italic">
-                      Mascote: {result.mascote}
+                      Mascote: {result.mascote || "Não identificado"}
                     </span>
                     <span className="bg-white/5 text-white/60 text-[10px] font-black px-3 py-1 rounded-full uppercase italic border border-white/10">
-                      {result.divisao_2026}
+                      {result.division || "Não identificado"}
                     </span>
                   </div>
                 </div>
@@ -283,7 +243,7 @@ const ClubColors = () => {
               {/* Grid de 4 Colunas Rígidas */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-8 w-full max-w-4xl">
                 {[0, 1, 2, 3].map((i) => {
-                  const active = i < result.quantidade_cores;
+                  const active = i < result.cores.length;
                   const hex = result.cores[i];
                   return (
                     <motion.div
