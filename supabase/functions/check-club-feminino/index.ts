@@ -1,7 +1,7 @@
 /**
  * [CAMINHO]: supabase/functions/check-club-feminino/index.ts
- * [MÓDULO]: Verificação de existência de time FEMININO via Gemini + Google Search
- * [STATUS]: PRODUÇÃO — v1.0
+ * [MÓDULO]: Verificação de existência de time FEMININO via Lovable AI Gateway
+ * [STATUS]: PRODUÇÃO — v2.0 (Lovable AI - sem quota gratuita estourada)
  */
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
@@ -18,32 +18,16 @@ const json = (payload: unknown, status = 200) =>
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 
-const buildPrompt = (clubName: string) => `
-Você é um pesquisador de futebol. Use Google Search para responder COM PRECISÃO.
-
-PERGUNTA: O clube "${clubName}" possui equipe de FUTEBOL FEMININO PROFISSIONAL OU SEMI-PROFISSIONAL ATIVA atualmente (temporada vigente)?
+const SYSTEM_PROMPT = `Você é um pesquisador especialista em futebol mundial. Sua missão é responder com PRECISÃO ABSOLUTA se um clube possui equipe de futebol FEMININO PROFISSIONAL ATIVA na temporada vigente.
 
 REGRAS:
-- Considere "SIM" apenas se houver elenco feminino ativo disputando alguma competição oficial (Brasileirão Feminino A1/A2/A3, Paulista Feminino, Copa do Brasil Feminino, ligas estrangeiras femininas, etc.).
-- Considere "NÃO" se o clube não possui departamento feminino ou está inativo.
-- Se houver categoria de base feminina apenas (sub-17/sub-20) sem time principal, marque como "NÃO".
+- "tem_feminino: true" APENAS se o clube tem elenco feminino principal ativo em competição oficial (Brasileirão Feminino A1/A2/A3, Paulista, Copa do Brasil Feminino, NWSL, WSL, Liga F, Champions Feminina, etc.).
+- "tem_feminino: false" se o clube não possui departamento feminino, está inativo, ou tem apenas categorias de base (sub-17/sub-20).
+- Use seu conhecimento atualizado sobre o futebol mundial.
+- Seja honesto: se não tiver certeza, marque false e explique na observação.`;
 
-Responda APENAS em JSON puro (sem \`\`\`json):
-{
-  "nome_confirmado": "Nome oficial do clube",
-  "tem_feminino": true | false,
-  "competicao_principal": "Nome da principal competição feminina disputada (ou null)",
-  "fonte": "Breve menção da fonte (site oficial, CBF, FIFA, etc.)",
-  "observacao": "1 frase curta com contexto (ex: campeão 2023, recém-criado em 2024, descontinuado em 2019, etc.)"
-}
-`.trim();
-
-const extractJson = (text: string): any => {
-  const cleaned = text.replace(/```json|```/g, "").trim();
-  const match = cleaned.match(/\{[\s\S]*\}/);
-  if (!match) throw new Error("JSON não encontrado");
-  return JSON.parse(match[0].replace(/,(\s*[}\]])/g, "$1"));
-};
+const buildUserPrompt = (clubName: string) =>
+  `Pesquise sobre o clube "${clubName}" e responda: ele possui equipe de futebol feminino profissional ativa atualmente?`;
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
@@ -54,36 +38,95 @@ serve(async (req) => {
       return json({ error: "clubName inválido" }, 400);
     }
 
-    const apiKey = Deno.env.get("GEMINI_API_KEY") || Deno.env.get("LOVABLE_API_KEY");
-    if (!apiKey) return json({ error: "GEMINI_API_KEY ausente" }, 500);
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    if (!LOVABLE_API_KEY) return json({ error: "LOVABLE_API_KEY ausente" }, 500);
 
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
-
-    const res = await fetch(url, {
+    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        "Content-Type": "application/json",
+      },
       body: JSON.stringify({
-        contents: [{ parts: [{ text: buildPrompt(clubName.trim()) }] }],
-        tools: [{ google_search: {} }],
-        generationConfig: { temperature: 0.1 },
+        model: "google/gemini-2.5-flash",
+        messages: [
+          { role: "system", content: SYSTEM_PROMPT },
+          { role: "user", content: buildUserPrompt(clubName.trim()) },
+        ],
+        tools: [
+          {
+            type: "function",
+            function: {
+              name: "responder_futebol_feminino",
+              description: "Retorna se o clube possui equipe feminina ativa.",
+              parameters: {
+                type: "object",
+                properties: {
+                  nome_confirmado: {
+                    type: "string",
+                    description: "Nome oficial completo do clube",
+                  },
+                  tem_feminino: {
+                    type: "boolean",
+                    description: "true se possui time feminino profissional ativo",
+                  },
+                  competicao_principal: {
+                    type: "string",
+                    description: "Principal competição feminina disputada (ex: Brasileirão Feminino A1). Use 'Nenhuma' se não tiver.",
+                  },
+                  observacao: {
+                    type: "string",
+                    description: "1-2 frases curtas com contexto (ano de fundação do dep. feminino, títulos, status atual, etc.)",
+                  },
+                  fonte: {
+                    type: "string",
+                    description: "Breve menção da fonte do conhecimento (CBF, site oficial, FIFA, etc.)",
+                  },
+                },
+                required: [
+                  "nome_confirmado",
+                  "tem_feminino",
+                  "competicao_principal",
+                  "observacao",
+                  "fonte",
+                ],
+                additionalProperties: false,
+              },
+            },
+          },
+        ],
+        tool_choice: {
+          type: "function",
+          function: { name: "responder_futebol_feminino" },
+        },
       }),
     });
 
+    if (res.status === 429) {
+      return json({ error: "Limite de uso atingido. Tente novamente em alguns minutos." }, 429);
+    }
+    if (res.status === 402) {
+      return json({ error: "Créditos esgotados. Adicione fundos no workspace Lovable AI." }, 402);
+    }
     if (!res.ok) {
       const errText = await res.text();
-      console.error("Gemini error:", errText);
-      return json({ error: "Falha na consulta Gemini", detail: errText.slice(0, 300) }, 502);
+      console.error("Lovable AI error:", res.status, errText);
+      return json({ error: "Falha na consulta IA", detail: errText.slice(0, 300) }, 502);
     }
 
     const data = await res.json();
-    const text = data?.candidates?.[0]?.content?.parts?.map((p: any) => p.text).filter(Boolean).join("\n") ?? "";
+    const toolCall = data?.choices?.[0]?.message?.tool_calls?.[0];
 
-    if (!text) return json({ error: "Resposta vazia do modelo" }, 502);
+    if (!toolCall?.function?.arguments) {
+      console.error("Resposta sem tool_call:", JSON.stringify(data).slice(0, 500));
+      return json({ error: "Resposta inesperada do modelo" }, 502);
+    }
 
-    const parsed = extractJson(text);
+    const parsed = JSON.parse(toolCall.function.arguments);
     return json(parsed);
   } catch (err) {
     const message = err instanceof Error ? err.message : "Erro desconhecido";
+    console.error("check-club-feminino error:", message);
     return json({ error: message }, 500);
   }
 });
