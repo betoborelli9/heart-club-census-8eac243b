@@ -214,7 +214,7 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
-    const geminiKey = Deno.env.get("GEMINI_API_KEY")!;
+    const lovableKey = Deno.env.get("LOVABLE_API_KEY")!;
     const footballKey = Deno.env.get("API_FOOTBALL_KEY") || Deno.env.get("FOOTBALL_API_KEY") || "";
 
     const { club_name, api_id } = await req.json();
