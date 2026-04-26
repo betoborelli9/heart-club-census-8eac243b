@@ -249,6 +249,15 @@ const ClubColors = () => {
                     <span className="bg-white/5 text-white/60 text-[10px] font-black px-3 py-1 rounded-full uppercase italic border border-white/10">
                       {result.division || "Não identificado"}
                     </span>
+                    <span
+                      className={`text-[10px] font-black px-3 py-1 rounded-full uppercase italic border ${
+                        result.tem_feminino
+                          ? "bg-pink-500/20 text-pink-400 border-pink-500/30"
+                          : "bg-white/5 text-white/40 border-white/10"
+                      }`}
+                    >
+                      Feminino: {result.tem_feminino ? "Ativo" : "Não"}
+                    </span>
                   </div>
                 </div>
                 <Button
