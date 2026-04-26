@@ -235,8 +235,17 @@ serve(async (req) => {
     const femFromRss = detectFemininoFromHits(femHits);
     const tem_feminino = femFromRss === true ? true : Boolean(aiData.tem_feminino);
 
+    // Preserva pais/cidade existentes (NOT NULL na tabela). Default = Brasil.
+    const { data: existing } = await supabase
+      .from("clubes_cache")
+      .select("pais, cidade")
+      .eq("nome", club_name)
+      .maybeSingle();
+
     const payload = {
       nome: club_name,
+      pais: existing?.pais || technical?.team?.country || "Brasil",
+      cidade: existing?.cidade || technical?.venue?.city || "Não informada",
       api_id: technical?.team?.id?.toString() || api_id?.toString() || null,
       escudo_url: technical?.team?.logo || null,
       division: aiData.division ?? null,
