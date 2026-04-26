@@ -189,6 +189,11 @@ serve(async (req) => {
     if (!clubName || typeof clubName !== "string" || clubName.trim().length < 2) {
       return json({ error: "clubName inválido" }, 400);
     }
+    const cleanClubName = clubName.trim().replace(/\s+/g, " ");
+
+    const newsHits = await fetchGoogleNewsHits(cleanClubName);
+    const searchResult = resultFromSearchHits(cleanClubName, newsHits);
+    if (searchResult) return json(searchResult);
 
     const apiKey = Deno.env.get("GEMINI_API_KEY");
     if (!apiKey) return json({ error: "GEMINI_API_KEY não configurada" }, 500);
@@ -199,7 +204,7 @@ serve(async (req) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        contents: [{ role: "user", parts: [{ text: buildPrompt(clubName.trim()) }] }],
+        contents: [{ role: "user", parts: [{ text: buildPrompt(cleanClubName) }] }],
         tools: [{ google_search: {} }],
         generationConfig: {
           temperature: 0.05,
@@ -226,7 +231,7 @@ serve(async (req) => {
     if (!text) return json({ error: "Gemini não retornou conteúdo" }, 502);
 
     const parsed = extractJson(text);
-    return json(normalizeResult(parsed, clubName.trim()));
+    return json(normalizeResult(parsed, cleanClubName));
   } catch (err) {
     const message = err instanceof Error ? err.message : "Erro desconhecido";
     console.error("check-club-feminino error:", message);
