@@ -14,7 +14,7 @@
    ═══════════════════════════════════════════════════════════ */
 import { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { Flame, BarChart3, Crown, Users, MapPin, Trophy, ShieldAlert, Vote, Bug, Palette } from "lucide-react";
+import { Flame, BarChart3, Crown, Users, MapPin, Trophy, ShieldAlert, Vote, Bug, Palette, Heart } from "lucide-react";
 import { ClubLogo } from "@/components/ClubLogo";
 import { useUser } from "@/contexts/UserContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -287,6 +287,7 @@ const ClubBanner = ({
             <>
               <NavItem icon={Bug} label="DEBUG API" path="/debug-api" />
               <NavItem icon={Palette} label="CORES" path="/admin/cores" variant="orange" />
+              <NavItem icon={Heart} label="FEMININO" path="/admin/feminino" variant="orange" />
               <NavItem icon={ShieldAlert} label="PAINEL MASTER" path="/admin" variant="danger" />
             </>
           )}
