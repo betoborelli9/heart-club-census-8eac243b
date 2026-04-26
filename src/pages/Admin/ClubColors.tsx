@@ -115,8 +115,8 @@ const ClubColors = () => {
           cor_secundaria: result.cores[1] || null,
           cor_terciaria: result.cores[2] || null,
           cor_quarta: result.cores[3] || null,
-          mascote: result.mascote,
-          division: result.divisao_2026,
+          mascote: result.mascote || "Não identificado",
+          division: result.division || "Não identificado",
           atualizado_em: new Date().toISOString(),
         },
         { onConflict: "nome" },
@@ -218,10 +218,10 @@ const ClubColors = () => {
                   </h2>
                   <div className="flex flex-wrap justify-center md:justify-start gap-4 mt-4">
                     <span className="bg-orange-500/20 text-orange-500 text-[10px] font-black px-3 py-1 rounded-full uppercase italic">
-                      Mascote: {result.mascote}
+                      Mascote: {result.mascote || "Não identificado"}
                     </span>
                     <span className="bg-white/5 text-white/60 text-[10px] font-black px-3 py-1 rounded-full uppercase italic border border-white/10">
-                      {result.divisao_2026}
+                      {result.division || "Não identificado"}
                     </span>
                   </div>
                 </div>
@@ -243,7 +243,7 @@ const ClubColors = () => {
               {/* Grid de 4 Colunas Rígidas */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-8 w-full max-w-4xl">
                 {[0, 1, 2, 3].map((i) => {
-                  const active = i < result.quantidade_cores;
+                  const active = i < result.cores.length;
                   const hex = result.cores[i];
                   return (
                     <motion.div
