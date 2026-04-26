@@ -126,10 +126,17 @@ const fetchTechnicalData = async (clubName: string): Promise<string> => {
    PARSE / NORMALIZAÇÃO / BLINDAGEM
 ═══════════════════════════════════════════════════════════ */
 const extractJson = (text: string): Record<string, unknown> => {
-  const clean = text.replace(/```json|```/gi, "").trim();
-  const match = clean.match(/\{[\s\S]*\}/);
-  if (!match) throw new Error("Resposta da IA sem JSON");
-  return JSON.parse(match[0]);
+  let clean = text.replace(/```json\s*/gi, "").replace(/```/g, "").trim();
+  const start = clean.indexOf("{");
+  const end = clean.lastIndexOf("}");
+  if (start === -1 || end === -1 || end <= start) throw new Error("Resposta da IA sem JSON");
+  clean = clean.slice(start, end + 1);
+
+  try {
+    return JSON.parse(clean);
+  } catch {
+    return JSON.parse(clean.replace(/,\s*}/g, "}").replace(/,\s*]/g, "]").replace(/[\x00-\x1F\x7F]/g, ""));
+  }
 };
 
 const normalizeHex = (value: unknown): string | null => {
@@ -167,9 +174,6 @@ const normalizeIdentity = (raw: Record<string, unknown>, fallbackName: string): 
     cor_secundaria: cores[1],
     cor_terciaria: cores[2] || null,
     cor_quarta: cores[3] || null,
-    mascote: typeof raw.mascote === "string" && raw.mascote.trim() ? raw.mascote.trim() : "Não identificado",
-    tem_feminino: raw.tem_feminino === true,
-    division: typeof raw.division === "string" && raw.division.trim() ? raw.division.trim() : "Não identificado",
     estrutura,
     cores,
   };
