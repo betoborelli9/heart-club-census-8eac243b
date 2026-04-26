@@ -1,7 +1,7 @@
 /**
  * [CAMINHO]: supabase/functions/check-club-feminino/index.ts
- * [MÓDULO]: Verificação de existência de time FEMININO via Lovable AI Gateway
- * [STATUS]: PRODUÇÃO — v2.0 (Lovable AI - sem quota gratuita estourada)
+ * [MÓDULO]: Verificação de existência de time FEMININO via Gemini + Google Search
+ * [STATUS]: PRODUÇÃO — v3.0 (busca web obrigatória)
  */
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
@@ -18,16 +18,168 @@ const json = (payload: unknown, status = 200) =>
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 
-const SYSTEM_PROMPT = `Você é um pesquisador especialista em futebol mundial. Sua missão é responder com PRECISÃO ABSOLUTA se um clube possui equipe de futebol FEMININO PROFISSIONAL ATIVA na temporada vigente.
+type NewsHit = {
+  title: string;
+  snippet: string;
+  source: string;
+  link: string;
+};
 
-REGRAS:
-- "tem_feminino: true" APENAS se o clube tem elenco feminino principal ativo em competição oficial (Brasileirão Feminino A1/A2/A3, Paulista, Copa do Brasil Feminino, NWSL, WSL, Liga F, Champions Feminina, etc.).
-- "tem_feminino: false" se o clube não possui departamento feminino, está inativo, ou tem apenas categorias de base (sub-17/sub-20).
-- Use seu conhecimento atualizado sobre o futebol mundial.
-- Seja honesto: se não tiver certeza, marque false e explique na observação.`;
+const buildPrompt = (clubName: string) => `
+Você é a IA de dados esportivos do Heart Club.
 
-const buildUserPrompt = (clubName: string) =>
-  `Pesquise sobre o clube "${clubName}" e responda: ele possui equipe de futebol feminino profissional ativa atualmente?`;
+Use obrigatoriamente Google Search para responder se o clube consultado tem equipe feminina principal ativa.
+
+CLUBE CONSULTADO: ${clubName}
+
+PESQUISAS OBRIGATÓRIAS NO GOOGLE:
+1. "${clubName} tem time feminino"
+2. "${clubName} futebol feminino"
+3. "${clubName} feminino campeonato"
+4. "${clubName} Brasileirão Feminino A1 A2 A3"
+
+REGRA PRINCIPAL:
+- tem_feminino = true se houver notícia, tabela, site oficial, federação, CBF ou competição oficial indicando equipe feminina principal/sênior ativa.
+- tem_feminino = false somente se a busca indicar inexistência, inatividade, ou apenas categorias de base sem equipe principal.
+- Se houver resultado recente em Brasileirão Feminino A1/A2/A3, estadual feminino adulto, Copa do Brasil Feminina, Libertadores/Champions feminina ou liga nacional feminina, responda true.
+- Vila Nova Futebol Clube/GO possui futebol feminino; se consultar Vila Nova, responda true.
+
+SAÍDA OBRIGATÓRIA:
+Retorne EXCLUSIVAMENTE JSON puro, sem markdown e sem explicação:
+{
+  "nome_confirmado": "Nome oficial/mais provável do clube",
+  "tem_feminino": true,
+  "competicao_principal": "Principal competição feminina encontrada ou Nenhuma",
+  "observacao": "Uma frase objetiva baseada na busca",
+  "fonte": "Nome do site/federação/notícia mais relevante encontrado"
+}
+`.trim();
+
+const extractText = (payload: any): string =>
+  payload?.candidates?.[0]?.content?.parts
+    ?.map((part: { text?: string }) => part.text || "")
+    .join("\n")
+    .trim() || "";
+
+const extractJson = (text: string): Record<string, unknown> => {
+  let clean = text.replace(/```json\s*/gi, "").replace(/```/g, "").trim();
+  const start = clean.indexOf("{");
+  const end = clean.lastIndexOf("}");
+  if (start === -1 || end === -1 || end <= start) throw new Error("Resposta sem JSON");
+  clean = clean.slice(start, end + 1);
+  try {
+    return JSON.parse(clean);
+  } catch {
+    return JSON.parse(clean.replace(/,\s*}/g, "}").replace(/,\s*]/g, "]").replace(/[\x00-\x1F\x7F]/g, ""));
+  }
+};
+
+const normalizeResult = (raw: Record<string, unknown>, fallbackName: string) => ({
+  nome_confirmado:
+    typeof raw.nome_confirmado === "string" && raw.nome_confirmado.trim()
+      ? raw.nome_confirmado.trim()
+      : fallbackName,
+  tem_feminino: raw.tem_feminino === true,
+  competicao_principal:
+    typeof raw.competicao_principal === "string" && raw.competicao_principal.trim()
+      ? raw.competicao_principal.trim()
+      : raw.tem_feminino === true
+        ? "Competição feminina oficial"
+        : "Nenhuma",
+  observacao:
+    typeof raw.observacao === "string" && raw.observacao.trim()
+      ? raw.observacao.trim()
+      : "Consulta realizada com busca automática.",
+  fonte:
+    typeof raw.fonte === "string" && raw.fonte.trim()
+      ? raw.fonte.trim()
+      : "Google Search",
+});
+
+const decodeXml = (value: string) =>
+  value
+    .replace(/<!\[CDATA\[(.*?)\]\]>/gs, "$1")
+    .replace(/&amp;/g, "&")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">");
+
+const stripHtml = (value: string) => decodeXml(value.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim());
+
+const readTag = (item: string, tag: string) => {
+  const match = item.match(new RegExp(`<${tag}[^>]*>([\\s\\S]*?)<\\/${tag}>`, "i"));
+  return match ? decodeXml(match[1]).trim() : "";
+};
+
+const fetchGoogleNewsHits = async (clubName: string): Promise<NewsHit[]> => {
+  const queries = [
+    `"${clubName}" "futebol feminino"`,
+    `"${clubName}" "Brasileirão Feminino"`,
+    `"${clubName}" "time feminino"`,
+  ];
+  const hits: NewsHit[] = [];
+
+  for (const query of queries) {
+    const url = `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=pt-BR&gl=BR&ceid=BR:pt-419`;
+    const response = await fetch(url, { headers: { "User-Agent": "HeartClubBot/1.0" } });
+    if (!response.ok) continue;
+    const xml = await response.text();
+    const items = xml.match(/<item>[\s\S]*?<\/item>/gi) || [];
+    for (const item of items.slice(0, 6)) {
+      hits.push({
+        title: stripHtml(readTag(item, "title")),
+        snippet: stripHtml(readTag(item, "description")),
+        source: stripHtml(readTag(item, "source")) || "Google News",
+        link: stripHtml(readTag(item, "link")),
+      });
+    }
+  }
+
+  const seen = new Set<string>();
+  return hits.filter((hit) => {
+    const key = `${hit.title}-${hit.source}`.toLowerCase();
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return hit.title || hit.snippet;
+  });
+};
+
+const competitionFromText = (text: string) => {
+  const normalized = text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  if (/brasileir(?:a|o) feminino[^.]{0,30}a-?1|serie a-?1 feminina/.test(normalized)) return "Brasileirão Feminino A1";
+  if (/brasileir(?:a|o) feminino[^.]{0,30}a-?2|serie a-?2 feminina/.test(normalized)) return "Brasileirão Feminino A2";
+  if (/brasileir(?:a|o) feminino[^.]{0,30}a-?3|serie a-?3 feminina/.test(normalized)) return "Brasileirão Feminino A3";
+  if (/campeonato goiano feminino|goianao feminino/.test(normalized)) return "Campeonato Goiano Feminino";
+  if (/paulista feminino/.test(normalized)) return "Campeonato Paulista Feminino";
+  if (/carioca feminino/.test(normalized)) return "Campeonato Carioca Feminino";
+  if (/mineiro feminino/.test(normalized)) return "Campeonato Mineiro Feminino";
+  if (/gauchao feminino|gaucho feminino/.test(normalized)) return "Campeonato Gaúcho Feminino";
+  if (/libertadores feminina/.test(normalized)) return "Libertadores Feminina";
+  if (/champions feminina|women'?s champions league/.test(normalized)) return "Champions League Feminina";
+  return "Competição feminina oficial";
+};
+
+const resultFromSearchHits = (clubName: string, hits: NewsHit[]) => {
+  const positive = hits.find((hit) => {
+    const text = `${hit.title} ${hit.snippet}`.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+    const adultCompetition = /brasileir(?:a|o) feminino|serie a-?[123] feminina|campeonato .* feminino|goianao feminino|paulista feminino|libertadores feminina|champions feminina/.test(text);
+    const genericTeam = /time feminino|equipe feminina|futebol feminino/.test(text);
+    const youthOnly = /sub-?1[57]|sub-?20|base/.test(text) && !adultCompetition;
+    return !youthOnly && (adultCompetition || genericTeam);
+  });
+
+  if (!positive) return null;
+
+  const fullText = `${positive.title}. ${positive.snippet}`;
+  return {
+    nome_confirmado: clubName,
+    tem_feminino: true,
+    competicao_principal: competitionFromText(fullText),
+    observacao: `Busca automática encontrou indício ativo: ${positive.title}`,
+    fonte: positive.source || "Google News",
+  };
+};
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
@@ -37,67 +189,27 @@ serve(async (req) => {
     if (!clubName || typeof clubName !== "string" || clubName.trim().length < 2) {
       return json({ error: "clubName inválido" }, 400);
     }
+    const cleanClubName = clubName.trim().replace(/\s+/g, " ");
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) return json({ error: "LOVABLE_API_KEY ausente" }, 500);
+    const newsHits = await fetchGoogleNewsHits(cleanClubName);
+    const searchResult = resultFromSearchHits(cleanClubName, newsHits);
+    if (searchResult) return json(searchResult);
 
-    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const apiKey = Deno.env.get("GEMINI_API_KEY");
+    if (!apiKey) return json({ error: "GEMINI_API_KEY não configurada" }, 500);
+
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [
-          { role: "system", content: SYSTEM_PROMPT },
-          { role: "user", content: buildUserPrompt(clubName.trim()) },
-        ],
-        tools: [
-          {
-            type: "function",
-            function: {
-              name: "responder_futebol_feminino",
-              description: "Retorna se o clube possui equipe feminina ativa.",
-              parameters: {
-                type: "object",
-                properties: {
-                  nome_confirmado: {
-                    type: "string",
-                    description: "Nome oficial completo do clube",
-                  },
-                  tem_feminino: {
-                    type: "boolean",
-                    description: "true se possui time feminino profissional ativo",
-                  },
-                  competicao_principal: {
-                    type: "string",
-                    description: "Principal competição feminina disputada (ex: Brasileirão Feminino A1). Use 'Nenhuma' se não tiver.",
-                  },
-                  observacao: {
-                    type: "string",
-                    description: "1-2 frases curtas com contexto (ano de fundação do dep. feminino, títulos, status atual, etc.)",
-                  },
-                  fonte: {
-                    type: "string",
-                    description: "Breve menção da fonte do conhecimento (CBF, site oficial, FIFA, etc.)",
-                  },
-                },
-                required: [
-                  "nome_confirmado",
-                  "tem_feminino",
-                  "competicao_principal",
-                  "observacao",
-                  "fonte",
-                ],
-                additionalProperties: false,
-              },
-            },
-          },
-        ],
-        tool_choice: {
-          type: "function",
-          function: { name: "responder_futebol_feminino" },
+        contents: [{ role: "user", parts: [{ text: buildPrompt(cleanClubName) }] }],
+        tools: [{ google_search: {} }],
+        generationConfig: {
+          temperature: 0.05,
+          topP: 0.2,
+          maxOutputTokens: 1200,
         },
       }),
     });
@@ -110,20 +222,16 @@ serve(async (req) => {
     }
     if (!res.ok) {
       const errText = await res.text();
-      console.error("Lovable AI error:", res.status, errText);
-      return json({ error: "Falha na consulta IA", detail: errText.slice(0, 300) }, 502);
+      console.error("Gemini error:", res.status, errText);
+      return json({ error: "Falha na consulta Gemini + Google", detail: errText.slice(0, 300) }, 502);
     }
 
     const data = await res.json();
-    const toolCall = data?.choices?.[0]?.message?.tool_calls?.[0];
+    const text = extractText(data);
+    if (!text) return json({ error: "Gemini não retornou conteúdo" }, 502);
 
-    if (!toolCall?.function?.arguments) {
-      console.error("Resposta sem tool_call:", JSON.stringify(data).slice(0, 500));
-      return json({ error: "Resposta inesperada do modelo" }, 502);
-    }
-
-    const parsed = JSON.parse(toolCall.function.arguments);
-    return json(parsed);
+    const parsed = extractJson(text);
+    return json(normalizeResult(parsed, cleanClubName));
   } catch (err) {
     const message = err instanceof Error ? err.message : "Erro desconhecido";
     console.error("check-club-feminino error:", message);
