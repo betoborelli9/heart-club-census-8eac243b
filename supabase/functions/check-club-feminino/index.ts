@@ -1,7 +1,7 @@
 /**
  * [CAMINHO]: supabase/functions/check-club-feminino/index.ts
- * [MÓDULO]: Verificação de existência de time FEMININO via Lovable AI Gateway
- * [STATUS]: PRODUÇÃO — v2.0 (Lovable AI - sem quota gratuita estourada)
+ * [MÓDULO]: Verificação de existência de time FEMININO via Gemini + Google Search
+ * [STATUS]: PRODUÇÃO — v3.0 (busca web obrigatória)
  */
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
@@ -18,16 +18,76 @@ const json = (payload: unknown, status = 200) =>
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 
-const SYSTEM_PROMPT = `Você é um pesquisador especialista em futebol mundial. Sua missão é responder com PRECISÃO ABSOLUTA se um clube possui equipe de futebol FEMININO PROFISSIONAL ATIVA na temporada vigente.
+const buildPrompt = (clubName: string) => `
+Você é a IA de dados esportivos do Heart Club.
 
-REGRAS:
-- "tem_feminino: true" APENAS se o clube tem elenco feminino principal ativo em competição oficial (Brasileirão Feminino A1/A2/A3, Paulista, Copa do Brasil Feminino, NWSL, WSL, Liga F, Champions Feminina, etc.).
-- "tem_feminino: false" se o clube não possui departamento feminino, está inativo, ou tem apenas categorias de base (sub-17/sub-20).
-- Use seu conhecimento atualizado sobre o futebol mundial.
-- Seja honesto: se não tiver certeza, marque false e explique na observação.`;
+Use obrigatoriamente Google Search para responder se o clube consultado tem equipe feminina principal ativa.
 
-const buildUserPrompt = (clubName: string) =>
-  `Pesquise sobre o clube "${clubName}" e responda: ele possui equipe de futebol feminino profissional ativa atualmente?`;
+CLUBE CONSULTADO: ${clubName}
+
+PESQUISAS OBRIGATÓRIAS NO GOOGLE:
+1. "${clubName} tem time feminino"
+2. "${clubName} futebol feminino"
+3. "${clubName} feminino campeonato"
+4. "${clubName} Brasileirão Feminino A1 A2 A3"
+
+REGRA PRINCIPAL:
+- tem_feminino = true se houver notícia, tabela, site oficial, federação, CBF ou competição oficial indicando equipe feminina principal/sênior ativa.
+- tem_feminino = false somente se a busca indicar inexistência, inatividade, ou apenas categorias de base sem equipe principal.
+- Se houver resultado recente em Brasileirão Feminino A1/A2/A3, estadual feminino adulto, Copa do Brasil Feminina, Libertadores/Champions feminina ou liga nacional feminina, responda true.
+- Vila Nova Futebol Clube/GO possui futebol feminino; se consultar Vila Nova, responda true.
+
+SAÍDA OBRIGATÓRIA:
+Retorne EXCLUSIVAMENTE JSON puro, sem markdown e sem explicação:
+{
+  "nome_confirmado": "Nome oficial/mais provável do clube",
+  "tem_feminino": true,
+  "competicao_principal": "Principal competição feminina encontrada ou Nenhuma",
+  "observacao": "Uma frase objetiva baseada na busca",
+  "fonte": "Nome do site/federação/notícia mais relevante encontrado"
+}
+`.trim();
+
+const extractText = (payload: any): string =>
+  payload?.candidates?.[0]?.content?.parts
+    ?.map((part: { text?: string }) => part.text || "")
+    .join("\n")
+    .trim() || "";
+
+const extractJson = (text: string): Record<string, unknown> => {
+  let clean = text.replace(/```json\s*/gi, "").replace(/```/g, "").trim();
+  const start = clean.indexOf("{");
+  const end = clean.lastIndexOf("}");
+  if (start === -1 || end === -1 || end <= start) throw new Error("Resposta sem JSON");
+  clean = clean.slice(start, end + 1);
+  try {
+    return JSON.parse(clean);
+  } catch {
+    return JSON.parse(clean.replace(/,\s*}/g, "}").replace(/,\s*]/g, "]").replace(/[\x00-\x1F\x7F]/g, ""));
+  }
+};
+
+const normalizeResult = (raw: Record<string, unknown>, fallbackName: string) => ({
+  nome_confirmado:
+    typeof raw.nome_confirmado === "string" && raw.nome_confirmado.trim()
+      ? raw.nome_confirmado.trim()
+      : fallbackName,
+  tem_feminino: raw.tem_feminino === true,
+  competicao_principal:
+    typeof raw.competicao_principal === "string" && raw.competicao_principal.trim()
+      ? raw.competicao_principal.trim()
+      : raw.tem_feminino === true
+        ? "Competição feminina oficial"
+        : "Nenhuma",
+  observacao:
+    typeof raw.observacao === "string" && raw.observacao.trim()
+      ? raw.observacao.trim()
+      : "Consulta realizada com busca automática.",
+  fonte:
+    typeof raw.fonte === "string" && raw.fonte.trim()
+      ? raw.fonte.trim()
+      : "Google Search",
+});
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
