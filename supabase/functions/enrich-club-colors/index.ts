@@ -225,7 +225,7 @@ serve(async (req) => {
     // Execução paralela: técnico + IA + RSS feminino
     const [technical, aiData, femHits] = await Promise.all([
       footballKey ? fetchTechnicalData(club_name, api_id, footballKey) : Promise.resolve(null),
-      investigateClubWithAI(club_name, geminiKey),
+      investigateClubWithAI(club_name, lovableKey),
       fetchFemininoHits(club_name),
     ]);
 
