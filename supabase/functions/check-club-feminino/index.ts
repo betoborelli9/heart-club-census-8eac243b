@@ -98,66 +98,21 @@ serve(async (req) => {
       return json({ error: "clubName inválido" }, 400);
     }
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) return json({ error: "LOVABLE_API_KEY ausente" }, 500);
+    const apiKey = Deno.env.get("GEMINI_API_KEY");
+    if (!apiKey) return json({ error: "GEMINI_API_KEY não configurada" }, 500);
 
-    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [
-          { role: "system", content: SYSTEM_PROMPT },
-          { role: "user", content: buildUserPrompt(clubName.trim()) },
-        ],
-        tools: [
-          {
-            type: "function",
-            function: {
-              name: "responder_futebol_feminino",
-              description: "Retorna se o clube possui equipe feminina ativa.",
-              parameters: {
-                type: "object",
-                properties: {
-                  nome_confirmado: {
-                    type: "string",
-                    description: "Nome oficial completo do clube",
-                  },
-                  tem_feminino: {
-                    type: "boolean",
-                    description: "true se possui time feminino profissional ativo",
-                  },
-                  competicao_principal: {
-                    type: "string",
-                    description: "Principal competição feminina disputada (ex: Brasileirão Feminino A1). Use 'Nenhuma' se não tiver.",
-                  },
-                  observacao: {
-                    type: "string",
-                    description: "1-2 frases curtas com contexto (ano de fundação do dep. feminino, títulos, status atual, etc.)",
-                  },
-                  fonte: {
-                    type: "string",
-                    description: "Breve menção da fonte do conhecimento (CBF, site oficial, FIFA, etc.)",
-                  },
-                },
-                required: [
-                  "nome_confirmado",
-                  "tem_feminino",
-                  "competicao_principal",
-                  "observacao",
-                  "fonte",
-                ],
-                additionalProperties: false,
-              },
-            },
-          },
-        ],
-        tool_choice: {
-          type: "function",
-          function: { name: "responder_futebol_feminino" },
+        contents: [{ role: "user", parts: [{ text: buildPrompt(clubName.trim()) }] }],
+        tools: [{ google_search: {} }],
+        generationConfig: {
+          temperature: 0.05,
+          topP: 0.2,
+          maxOutputTokens: 1200,
         },
       }),
     });
@@ -170,20 +125,16 @@ serve(async (req) => {
     }
     if (!res.ok) {
       const errText = await res.text();
-      console.error("Lovable AI error:", res.status, errText);
-      return json({ error: "Falha na consulta IA", detail: errText.slice(0, 300) }, 502);
+      console.error("Gemini error:", res.status, errText);
+      return json({ error: "Falha na consulta Gemini + Google", detail: errText.slice(0, 300) }, 502);
     }
 
     const data = await res.json();
-    const toolCall = data?.choices?.[0]?.message?.tool_calls?.[0];
+    const text = extractText(data);
+    if (!text) return json({ error: "Gemini não retornou conteúdo" }, 502);
 
-    if (!toolCall?.function?.arguments) {
-      console.error("Resposta sem tool_call:", JSON.stringify(data).slice(0, 500));
-      return json({ error: "Resposta inesperada do modelo" }, 502);
-    }
-
-    const parsed = JSON.parse(toolCall.function.arguments);
-    return json(parsed);
+    const parsed = extractJson(text);
+    return json(normalizeResult(parsed, clubName.trim()));
   } catch (err) {
     const message = err instanceof Error ? err.message : "Erro desconhecido";
     console.error("check-club-feminino error:", message);
