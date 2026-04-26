@@ -14,3 +14,6 @@ verify_jwt = false
 
 [functions.investigate-club-colors]
 verify_jwt = false
+
+[functions.check-club-feminino]
+verify_jwt = false
