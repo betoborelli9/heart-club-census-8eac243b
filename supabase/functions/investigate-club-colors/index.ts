@@ -1,8 +1,8 @@
 /**
  * [CAMINHO]: supabase/functions/investigate-club-colors/index.ts
- * [MÓDULO]: Investigação Google + Gemini para identidade de clubes
- * [STATUS]: PRODUÇÃO — v5.0 GOOGLE SEARCH SIMPLE QUESTIONS
- * [VERSÃO]: 5.0.0
+ * [MÓDULO]: Investigação Google + Gemini para cores oficiais de clubes
+ * [STATUS]: PRODUÇÃO — v5.1 CORES APENAS
+ * [VERSÃO]: 5.1.0
  */
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
@@ -22,9 +22,6 @@ type ClubIdentity = {
   cor_secundaria: string;
   cor_terciaria: string | null;
   cor_quarta: string | null;
-  mascote: string;
-  tem_feminino: boolean;
-  division: string;
   estrutura: "BICOLOR" | "TRICOLOR" | "QUADRICOLOR";
   cores: string[];
 };
@@ -48,20 +45,19 @@ const validateClubName = (value: unknown): string => {
 };
 
 /* ═══════════════════════════════════════════════════════════
-   PROMPT — CONSULTA SIMPLES NO GOOGLE
+   PROMPT — CONSULTA SIMPLES NO GOOGLE SOMENTE PARA CORES
 ═══════════════════════════════════════════════════════════ */
 const buildPrompt = (clubName: string) => `
 Você é a IA de dados esportivos do Heart Club.
 
-Use a ferramenta Google Search para responder perguntas simples sobre o clube consultado:
+Use obrigatoriamente a ferramenta Google Search e responda somente as cores oficiais/tradicionais do clube consultado.
 
 CLUBE CONSULTADO: ${clubName}
 
 PERGUNTAS OBRIGATÓRIAS PARA PESQUISAR NO GOOGLE:
 1. "quais são as cores do clube ${clubName}"
 2. "${clubName} cores oficiais uniforme futebol"
-3. "${clubName} tem time feminino futebol"
-4. "${clubName} competições 2026 futebol"
+3. "${clubName} official club colors football"
 
 REGRAS DE CORES:
 - Use as cores oficiais/tradicionais do clube e do uniforme principal.
@@ -69,22 +65,12 @@ REGRAS DE CORES:
 - Se o clube for BICOLOR, retorne exatamente 2 cores: cor_primaria e cor_secundaria.
 - Se for TRICOLOR, retorne exatamente 3 cores: cor_primaria, cor_secundaria e cor_terciaria.
 - Se for QUADRICOLOR, retorne exatamente 4 cores: cor_primaria, cor_secundaria, cor_terciaria e cor_quarta.
+- Se a fonte disser apenas uma cor principal, use branco ou preto somente quando fizer parte real do uniforme/tradição.
 - Vila Nova-GO é Vermelho e Branco; NÃO inclua preto do contorno.
+- Palmeiras é Verde e Branco.
+- Real Madrid é Branco e Dourado.
 - Santa Cruz-PE é Vermelho, Preto e Branco.
 - Brusque-SC é Amarelo, Verde, Vermelho e Branco.
-
-REGRAS DE COMPETIÇÃO MAIS IMPORTANTE EM ABRIL/2026:
-- Brasil: Série A > Série B > Série C > Série D > Copa do Brasil > Estadual.
-- Europa: Champions League > Liga Europa > Conference League > Liga nacional principal > copas nacionais > regionais.
-- Outros países: competição continental > liga nacional principal > copa nacional > estadual/regional.
-- O campo division deve conter a competição mais importante encontrada, por exemplo: "Série B", "Série D", "Campeonato Goiano", "Premier League", "Champions League".
-
-FUTEBOL FEMININO:
-- tem_feminino deve ser true se existir equipe feminina profissional ou base ativa confirmada em site oficial, OGOL, Soccerway, Wikipedia ou fonte jornalística confiável.
-- Caso não encontre confirmação, retorne false.
-
-MASCOTE:
-- Retorne o mascote conhecido do clube. Se não houver fonte clara, use "Não identificado".
 
 SAÍDA OBRIGATÓRIA:
 Retorne EXCLUSIVAMENTE JSON puro, sem markdown e sem explicação:
@@ -93,10 +79,7 @@ Retorne EXCLUSIVAMENTE JSON puro, sem markdown e sem explicação:
   "cor_primaria": "#HEX",
   "cor_secundaria": "#HEX",
   "cor_terciaria": "#HEX ou null",
-  "cor_quarta": "#HEX ou null",
-  "mascote": "NOME",
-  "tem_feminino": true,
-  "division": "Competição principal 2026"
+  "cor_quarta": "#HEX ou null"
 }
 `.trim();
 
