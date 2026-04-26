@@ -20,16 +20,33 @@ import { supabase } from "@/integrations/supabase/client";
 import { searchClubsWithFallback, type ClubSearchResult } from "@/lib/search-clubs";
 import { toast } from "sonner";
 
+interface ClubeCacheRow {
+  nome: string;
+  cor_primaria: string | null;
+  cor_secundaria: string | null;
+  cor_terciaria: string | null;
+  cor_quarta: string | null;
+  mascote: string | null;
+  division: string | null;
+  tem_feminino: boolean | null;
+  escudo_url: string | null;
+  pais: string | null;
+  cidade: string | null;
+}
+
 interface AIResult {
   nome_confirmado: string;
-  cor_primaria?: string | null;
-  cor_secundaria?: string | null;
-  cor_terciaria?: string | null;
-  cor_quarta?: string | null;
-  mascote?: string;
-  division?: string;
-  estrutura?: string;
+  mascote?: string | null;
+  division?: string | null;
+  tem_feminino?: boolean | null;
   cores: string[];
+}
+
+interface EnrichResponse {
+  success: boolean;
+  club: ClubeCacheRow;
+  feminino_source?: string;
+  error?: string;
 }
 
 const ClubColors = () => {
@@ -73,7 +90,7 @@ const ClubColors = () => {
     return () => clearTimeout(debounce);
   }, [query]);
 
-  // 🤖 Investigação segura via Edge Function (Google Search + Gemini)
+  // 🤖 Pipeline unificado: cores HEX + mascote + divisão + feminino + persistência automática.
   const handleInvestigate = async (club: ClubSearchResult) => {
     setSelectedClub(club);
     setSuggestions([]);
@@ -82,50 +99,59 @@ const ClubColors = () => {
     setResult(null);
 
     try {
-      const { data, error } = await supabase.functions.invoke<AIResult>("investigate-club-colors", {
-        body: { clubName: club.name },
+      const { data, error } = await supabase.functions.invoke<EnrichResponse>("enrich-club-colors", {
+        body: {
+          club_name: club.name,
+          api_id: club.api_id ? String(club.api_id) : null,
+        },
       });
 
       if (error) throw error;
-      if (!data?.cores?.length) throw new Error("Nenhuma cor válida retornada.");
+      if (!data?.success || !data.club) throw new Error(data?.error || "Resposta inválida da IA.");
 
-      setResult(data);
-      toast.success("Cores encontradas com sucesso!");
+      const row = data.club;
+      const cores = [row.cor_primaria, row.cor_secundaria, row.cor_terciaria, row.cor_quarta]
+        .filter((c): c is string => Boolean(c));
+
+      if (!cores.length) throw new Error("Nenhuma cor HEX válida retornada.");
+
+      setResult({
+        nome_confirmado: row.nome,
+        mascote: row.mascote,
+        division: row.division,
+        tem_feminino: row.tem_feminino,
+        cores,
+      });
+
+      toast.success("Clube enriquecido e salvo no cache!", {
+        description: `Feminino: ${row.tem_feminino ? "Sim" : "Não"} · ${cores.length} cores HEX`,
+      });
     } catch (err: any) {
-      console.error("Investigate colors error:", err);
-      toast.error("Falha ao buscar cores", { description: "A consulta não retornou cores válidas. Tente novamente." });
+      console.error("Enrich club error:", err);
+      toast.error("Falha ao enriquecer clube", {
+        description: err?.message || "A consulta automática falhou. Tente novamente.",
+      });
     } finally {
       setInvestigating(false);
     }
   };
 
-  // 💾 Persistência na Tabela clubes_cache
+  // 💾 Re-sincroniza cache (já salvo automaticamente, mas permite re-execução manual)
   const handleSave = async () => {
-    if (!result || !selectedClub) return;
+    if (!selectedClub) return;
     setSaving(true);
     try {
-      const { error } = await supabase.from("clubes_cache").upsert(
-        {
-          nome: result.nome_confirmado,
-          cidade: selectedClub.city || "Desconhecida",
-          pais: selectedClub.country || "Brasil",
+      const { data, error } = await supabase.functions.invoke<EnrichResponse>("enrich-club-colors", {
+        body: {
+          club_name: selectedClub.name,
           api_id: selectedClub.api_id ? String(selectedClub.api_id) : null,
-          escudo_url: selectedClub.logo || null,
-          cor_primaria: result.cores[0] || null,
-          cor_secundaria: result.cores[1] || null,
-          cor_terciaria: result.cores[2] || null,
-          cor_quarta: result.cores[3] || null,
-          mascote: result.mascote || "Não identificado",
-          division: result.division || "Não identificado",
-          atualizado_em: new Date().toISOString(),
         },
-        { onConflict: "nome" },
-      );
-
+      });
       if (error) throw error;
-      toast.success("Cache sincronizado com sucesso!");
-    } catch (err) {
-      toast.error("Erro ao salvar dados no Supabase.");
+      if (!data?.success) throw new Error(data?.error || "Falha ao re-sincronizar.");
+      toast.success("Cache re-sincronizado com sucesso!");
+    } catch (err: any) {
+      toast.error("Erro ao salvar dados no Supabase.", { description: err?.message });
     } finally {
       setSaving(false);
     }
