@@ -72,44 +72,68 @@ async function fetchTechnicalData(club_name: string, api_id: string | null, apiK
 /* ═══════════════════════════════════════════════════════════
     MÓDULO 3: INVESTIGAÇÃO IA — CORES + DADOS GERAIS
    ═══════════════════════════════════════════════════════════ */
-async function investigateClubWithAI(club_name: string, geminiKey: string) {
+async function investigateClubWithAI(club_name: string, lovableKey: string) {
   const CURRENT_DATE = "Abril de 2026";
 
   const systemPrompt =
-    "Você é um auditor sênior de branding de futebol. Sua fonte absoluta é a Wikipedia e sites oficiais. Responda apenas JSON puro.";
+    "Você é um auditor sênior de branding de futebol. Sua fonte absoluta é a Wikipedia e sites oficiais. Responda APENAS JSON puro, sem markdown.";
 
   const userPrompt = `
   Investigue o clube "${club_name}" com foco na temporada de ${CURRENT_DATE}.
 
-  REGRAS DE CORES (DESIGN DE TECIDO — APENAS HEX):
+  REGRAS DE CORES (DESIGN DE TECIDO — APENAS HEX #RRGGBB):
   1. IGNORE cores de contorno de escudo, bordas pretas de segurança ou dourado de estrelas.
   2. CLASSIFICAÇÃO:
      - BICOLOR (Vila Nova, Palmeiras): cor_terciaria e cor_quarta DEVEM ser null.
      - TRICOLOR (São Paulo, Santa Cruz): cor_quarta DEVE ser null.
      - QUADRICOLOR (Brusque): Amarelo, Verde, Vermelho e Branco (Obrigatórios).
   3. COR_PRIMARIA: Cor identitária de força. JAMAIS use Preto se o clube não for Alvinegro.
-  4. Use EXCLUSIVAMENTE códigos HEX (#RRGGBB). Nada de RGB, HSL ou nomes.
+  4. Use EXCLUSIVAMENTE códigos HEX. Nada de RGB, HSL ou nomes.
 
   REGRAS DE NEGÓCIO:
-  5. DIVISÃO 2026: Verifique a série nacional (A, B, C ou D) em Abril/2026.
+  5. DIVISÃO 2026: Verifique a série nacional (A, B, C ou D).
   6. FEMININO: true se houver time profissional/sênior ativo (Brasileirão A1/A2/A3, estaduais adultos, Libertadores Feminina).
   7. MASCOTE: Nome oficial histórico.
 
-  RETORNE JSON: {"cor_primaria": "#HEX", "cor_secundaria": "#HEX", "cor_terciaria": "#HEX ou null", "cor_quarta": "#HEX ou null", "mascote": "NOME", "tem_feminino": boolean, "division": "Série X"}`;
+  RETORNE JSON puro: {"cor_primaria":"#HEX","cor_secundaria":"#HEX","cor_terciaria":"#HEX ou null","cor_quarta":"#HEX ou null","mascote":"NOME","tem_feminino":true|false,"division":"Série X"}`;
 
-  const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiKey}`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: userPrompt }] }],
-        systemInstruction: { parts: [{ text: systemPrompt }] },
-        tools: [{ google_search: {} }],
-        generationConfig: { temperature: 0.1 },
-      }),
+  const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${lovableKey}`,
     },
-  );
+    body: JSON.stringify({
+      model: "google/gemini-2.5-flash",
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt },
+      ],
+      tools: [
+        {
+          type: "function",
+          function: {
+            name: "registrar_clube",
+            description: "Registra dados oficiais do clube",
+            parameters: {
+              type: "object",
+              properties: {
+                cor_primaria: { type: "string", description: "HEX #RRGGBB" },
+                cor_secundaria: { type: "string", description: "HEX #RRGGBB" },
+                cor_terciaria: { type: ["string", "null"], description: "HEX #RRGGBB ou null" },
+                cor_quarta: { type: ["string", "null"], description: "HEX #RRGGBB ou null" },
+                mascote: { type: ["string", "null"] },
+                tem_feminino: { type: "boolean" },
+                division: { type: ["string", "null"] },
+              },
+              required: ["cor_primaria", "cor_secundaria", "tem_feminino"],
+            },
+          },
+        },
+      ],
+      tool_choice: { type: "function", function: { name: "registrar_clube" } },
+    }),
+  });
 
   if (!res.ok) {
     const errTxt = await res.text();
@@ -117,20 +141,14 @@ async function investigateClubWithAI(club_name: string, geminiKey: string) {
     return null;
   }
   const json = await res.json();
-  const text = json.candidates?.[0]?.content?.parts
-    ?.map((p: { text?: string }) => p.text || "")
-    .join("\n") || "";
-  console.log("[IA RAW]:", text.slice(0, 400));
-  if (!text) return null;
-  const cleaned = cleanResponse(text);
-  const start = cleaned.indexOf("{");
-  const end = cleaned.lastIndexOf("}");
-  if (start === -1 || end === -1) {
-    console.error("[IA]: sem JSON na resposta");
+  const toolCall = json.choices?.[0]?.message?.tool_calls?.[0];
+  const args = toolCall?.function?.arguments;
+  if (!args) {
+    console.error("[IA]: sem tool_call", JSON.stringify(json).slice(0, 300));
     return null;
   }
   try {
-    return JSON.parse(cleaned.slice(start, end + 1));
+    return typeof args === "string" ? JSON.parse(args) : args;
   } catch (e) {
     console.error("[IA]: parse falhou", e);
     return null;
