@@ -18,6 +18,13 @@ const json = (payload: unknown, status = 200) =>
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 
+type NewsHit = {
+  title: string;
+  snippet: string;
+  source: string;
+  link: string;
+};
+
 const buildPrompt = (clubName: string) => `
 Você é a IA de dados esportivos do Heart Club.
 
@@ -88,6 +95,91 @@ const normalizeResult = (raw: Record<string, unknown>, fallbackName: string) => 
       ? raw.fonte.trim()
       : "Google Search",
 });
+
+const decodeXml = (value: string) =>
+  value
+    .replace(/<!\[CDATA\[(.*?)\]\]>/gs, "$1")
+    .replace(/&amp;/g, "&")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">");
+
+const stripHtml = (value: string) => decodeXml(value.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim());
+
+const readTag = (item: string, tag: string) => {
+  const match = item.match(new RegExp(`<${tag}[^>]*>([\\s\\S]*?)<\\/${tag}>`, "i"));
+  return match ? decodeXml(match[1]).trim() : "";
+};
+
+const fetchGoogleNewsHits = async (clubName: string): Promise<NewsHit[]> => {
+  const queries = [
+    `"${clubName}" "futebol feminino"`,
+    `"${clubName}" "Brasileirão Feminino"`,
+    `"${clubName}" "time feminino"`,
+  ];
+  const hits: NewsHit[] = [];
+
+  for (const query of queries) {
+    const url = `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=pt-BR&gl=BR&ceid=BR:pt-419`;
+    const response = await fetch(url, { headers: { "User-Agent": "HeartClubBot/1.0" } });
+    if (!response.ok) continue;
+    const xml = await response.text();
+    const items = xml.match(/<item>[\s\S]*?<\/item>/gi) || [];
+    for (const item of items.slice(0, 6)) {
+      hits.push({
+        title: stripHtml(readTag(item, "title")),
+        snippet: stripHtml(readTag(item, "description")),
+        source: stripHtml(readTag(item, "source")) || "Google News",
+        link: stripHtml(readTag(item, "link")),
+      });
+    }
+  }
+
+  const seen = new Set<string>();
+  return hits.filter((hit) => {
+    const key = `${hit.title}-${hit.source}`.toLowerCase();
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return hit.title || hit.snippet;
+  });
+};
+
+const competitionFromText = (text: string) => {
+  const normalized = text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  if (/brasileir(?:a|o) feminino[^.]{0,30}a-?1|serie a-?1 feminina/.test(normalized)) return "Brasileirão Feminino A1";
+  if (/brasileir(?:a|o) feminino[^.]{0,30}a-?2|serie a-?2 feminina/.test(normalized)) return "Brasileirão Feminino A2";
+  if (/brasileir(?:a|o) feminino[^.]{0,30}a-?3|serie a-?3 feminina/.test(normalized)) return "Brasileirão Feminino A3";
+  if (/campeonato goiano feminino|goianao feminino/.test(normalized)) return "Campeonato Goiano Feminino";
+  if (/paulista feminino/.test(normalized)) return "Campeonato Paulista Feminino";
+  if (/carioca feminino/.test(normalized)) return "Campeonato Carioca Feminino";
+  if (/mineiro feminino/.test(normalized)) return "Campeonato Mineiro Feminino";
+  if (/gauchao feminino|gaucho feminino/.test(normalized)) return "Campeonato Gaúcho Feminino";
+  if (/libertadores feminina/.test(normalized)) return "Libertadores Feminina";
+  if (/champions feminina|women'?s champions league/.test(normalized)) return "Champions League Feminina";
+  return "Competição feminina oficial";
+};
+
+const resultFromSearchHits = (clubName: string, hits: NewsHit[]) => {
+  const positive = hits.find((hit) => {
+    const text = `${hit.title} ${hit.snippet}`.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+    const adultCompetition = /brasileir(?:a|o) feminino|serie a-?[123] feminina|campeonato .* feminino|goianao feminino|paulista feminino|libertadores feminina|champions feminina/.test(text);
+    const genericTeam = /time feminino|equipe feminina|futebol feminino/.test(text);
+    const youthOnly = /sub-?1[57]|sub-?20|base/.test(text) && !adultCompetition;
+    return !youthOnly && (adultCompetition || genericTeam);
+  });
+
+  if (!positive) return null;
+
+  const fullText = `${positive.title}. ${positive.snippet}`;
+  return {
+    nome_confirmado: clubName,
+    tem_feminino: true,
+    competicao_principal: competitionFromText(fullText),
+    observacao: `Busca automática encontrou indício ativo: ${positive.title}`,
+    fonte: positive.source || "Google News",
+  };
+};
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
