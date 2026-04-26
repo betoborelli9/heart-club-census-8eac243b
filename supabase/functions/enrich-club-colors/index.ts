@@ -111,15 +111,28 @@ async function investigateClubWithAI(club_name: string, geminiKey: string) {
     },
   );
 
+  if (!res.ok) {
+    const errTxt = await res.text();
+    console.error("[IA]: HTTP", res.status, errTxt.slice(0, 300));
+    return null;
+  }
   const json = await res.json();
   const text = json.candidates?.[0]?.content?.parts
     ?.map((p: { text?: string }) => p.text || "")
     .join("\n") || "";
+  console.log("[IA RAW]:", text.slice(0, 400));
   if (!text) return null;
+  const cleaned = cleanResponse(text);
+  const start = cleaned.indexOf("{");
+  const end = cleaned.lastIndexOf("}");
+  if (start === -1 || end === -1) {
+    console.error("[IA]: sem JSON na resposta");
+    return null;
+  }
   try {
-    return JSON.parse(cleanResponse(text).slice(cleanResponse(text).indexOf("{"), cleanResponse(text).lastIndexOf("}") + 1));
+    return JSON.parse(cleaned.slice(start, end + 1));
   } catch (e) {
-    console.error("[IA]: parse falhou", e, text.slice(0, 200));
+    console.error("[IA]: parse falhou", e);
     return null;
   }
 }
