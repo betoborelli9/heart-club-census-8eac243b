@@ -165,7 +165,7 @@ const ClubBanner = ({
                   - Mobile: 110px x 110px (Restaurado)
                   - Desktop: 120px x 120px (Excelente)
                  ═══════════════════════════════════════════════════════════ */}
-              <div className="w-[110px] h-[110px] md:w-[150px] md:h-[150px] rounded-full bg-white flex items-center justify-center shrink-0 shadow-xl border-4 border-white/10 transition-all duration-500">
+              <div className="w-[110px] h-[110px] md:w-[120px] md:h-[120px] rounded-full bg-white flex items-center justify-center shrink-0 shadow-xl border-4 border-white/10 transition-all duration-500">
                 {/* ═══════════════════════════════════════════════════════════
                     MÓDULO: TAMANHO DO EMBLEMA (PIXELS)
                     - Mobile: 90px (Equivalente a 82% de 110px)
