@@ -195,6 +195,15 @@ function colorsFromNames(fragment: string): string[] {
   return uniqHex(found.sort((a, b) => a.index - b.index).map((item) => item.hex)).slice(0, 4);
 }
 
+function colorsFromNamesList(names: unknown): string[] {
+  if (!Array.isArray(names)) return [];
+  return uniqHex(names.map((name) => {
+    if (typeof name !== "string") return null;
+    const key = stripAccents(name).toLowerCase().trim();
+    return CANONICAL_HEX[key] || colorsFromNames(name)[0] || null;
+  })).slice(0, 4);
+}
+
 function extractOfficialColorPhrase(text: string): string | null {
   const patterns = [
     /(cores\s+oficiais|official\s+colou?rs|team\s+colou?rs|club\s+colou?rs)\s*[:\-–]?\s*([^.;\n]{3,180})/i,
