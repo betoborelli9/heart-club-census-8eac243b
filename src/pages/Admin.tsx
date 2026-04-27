@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import AdminAuditTable from "@/components/admin/AdminAuditTable";
 import AdminBIStats from "@/components/admin/AdminBIStats";
+import AdminCorrectionsTable from "@/components/admin/AdminCorrectionsTable";
 import logo from "@/assets/logo.png";
 
 const Admin = () => {
@@ -79,6 +80,9 @@ const Admin = () => {
             <TabsTrigger value="bi" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               📊 BI & Estatísticas
             </TabsTrigger>
+            <TabsTrigger value="corrections" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              📝 Correções
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="audit">
@@ -87,6 +91,10 @@ const Admin = () => {
 
           <TabsContent value="bi">
             <AdminBIStats />
+          </TabsContent>
+
+          <TabsContent value="corrections">
+            <AdminCorrectionsTable />
           </TabsContent>
         </Tabs>
       </main>

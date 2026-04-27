@@ -18,6 +18,7 @@ import DebugApi from "./pages/DebugApi";
 import AdminIngestion from "./pages/AdminIngestion";
 import ClubColors from "./pages/Admin/ClubColors";
 import ClubFeminino from "./pages/Admin/ClubFeminino";
+import Correcao from "./pages/Correcao";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -45,6 +46,7 @@ const App = () => (
             <Route path="/admin-ingestion" element={<AdminIngestion />} />
             <Route path="/admin/cores" element={<ClubColors />} />
             <Route path="/admin/feminino" element={<ClubFeminino />} />
+            <Route path="/correcao" element={<Correcao />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

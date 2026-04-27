@@ -67,6 +67,7 @@ const ClubBanner = ({
     cor_primaria: "#1a1a1a",
     cor_secundaria: "#ffffff",
     cor_terciaria: "",
+    cor_quarta: "",
     escudo_url: "",
   });
 
@@ -81,7 +82,7 @@ const ClubBanner = ({
     const fetchTheme = async () => {
       const { data } = await supabase
         .from("clubes_cache")
-        .select("cor_primaria, cor_secundaria, cor_terciaria, escudo_url")
+        .select("cor_primaria, cor_secundaria, cor_terciaria, cor_quarta, escudo_url")
         .ilike("nome", `%${clubName}%`)
         .maybeSingle();
 
@@ -90,6 +91,7 @@ const ClubBanner = ({
           cor_primaria: data.cor_primaria || "#1a1a1a",
           cor_secundaria: data.cor_secundaria || "#ffffff",
           cor_terciaria: data.cor_terciaria || "",
+          cor_quarta: (data as any).cor_quarta || "",
           escudo_url: data.escudo_url || "",
         });
       }
@@ -101,11 +103,22 @@ const ClubBanner = ({
       MÓDULO: LARGURA DAS COLUNAS (DIAGONAIS SÓLIDAS)
      ═══════════════════════════════════════════════════════════ */
   const buildFlagGradient = (): string => {
-    const colors = [theme.cor_primaria, theme.cor_secundaria, theme.cor_terciaria].filter(Boolean);
+    const colors = [theme.cor_primaria, theme.cor_secundaria, theme.cor_terciaria, theme.cor_quarta].filter(Boolean);
     const sorted = [...colors].sort((a, b) => calculateLuminance(a) - calculateLuminance(b));
 
+    // QUADRICOLOR (Brusque, etc) — 4 faixas distribuídas + 2 listras de contraste
+    if (sorted.length === 4) {
+      return `linear-gradient(115deg,
+        ${sorted[0]} 0%, ${sorted[0]} 22%,
+        ${sorted[1]} 22%, ${sorted[1]} 26%,
+        ${sorted[2]} 26%, ${sorted[2]} 44%,
+        ${sorted[3]} 44%, ${sorted[3]} 48%,
+        ${sorted[0]} 48%, ${sorted[0]} 66%,
+        ${sorted[1]} 66%, ${sorted[1]} 70%,
+        ${sorted[2]} 70%, ${sorted[2]} 100%)`;
+    }
+
     // TRICOLOR (São Paulo, Santa Cruz)
-    // Estrutura: Cor 1 | Cor 2 | Cor 3 | Cor 1 | Cor 2
     if (sorted.length === 3) {
       return `linear-gradient(115deg, 
         ${sorted[0]} 0%, ${sorted[0]} 34%, 
@@ -116,7 +129,6 @@ const ClubBanner = ({
     }
 
     // BICOLOR (Vila Nova, Palmeiras)
-    // Estrutura: Cor Forte | Faixa Fraca | Forte | Faixa Fraca | Forte | Faixa Fraca | Forte
     const strong = sorted[0];
     const light = sorted[1] || "#ffffff";
     return `linear-gradient(115deg, 
