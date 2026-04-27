@@ -1,13 +1,12 @@
 /**
  * ═══════════════════════════════════════════════════════════════════
  * [CAMINHO]: supabase/functions/enrich-club-colors/index.ts
- * [MÓDULO]: ENRIQUECIMENTO AUTOMÁTICO DE CLUBES (AI DATA MINING)
- * [STATUS]: PRODUÇÃO — VERSÃO 76.0 (FULL SYNC + TECHNICAL MAPPING)
+ * [MÓDULO]: ENRIQUECIMENTO DE CLUBES (RESTORE STABLE)
+ * [STATUS]: PRODUÇÃO — VERSÃO 77.0 (ROLLBACK & CLEAN SYNC)
  * [DESCRIÇÃO]:
- * - Integração Total: API Football (Dados Técnicos) + Gemini 2.5 Flash (IA).
- * - Google Search Grounding: Busca obrigatória na Wikipedia para cores de tecido.
- * - Mapeamento Completo: Preenchimento de estádio, fundação, cidade e país.
- * - Suporte Quadricolor: Persistência da cor_quarta.
+ * - Recuperação da lógica estável pré-complexidade.
+ * - Mapeamento técnico rigoroso: Fundação, Estádio e Logo via API Sports.
+ * - Inteligência Gemini: Foco em Cores de Tecido, Mascote e Feminino.
  * ═══════════════════════════════════════════════════════════════════
  */
 
@@ -19,113 +18,114 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-/* ═══════════════════════════════════════════════════════════
-    MÓDULO 1: UTILITÁRIOS E LIMPEZA
-   ═══════════════════════════════════════════════════════════ */
-function cleanResponse(text: string): string {
+function cleanGeminiResponse(text: string): string {
   return text.replace(/```json|```/g, "").trim();
 }
 
-async function fetchTechnicalData(club_name: string, api_id: string | null, apiKey: string) {
-  try {
-    const url = api_id
-      ? `https://v3.football.api-sports.io/teams?id=${api_id}`
-      : `https://v3.football.api-sports.io/teams?search=${encodeURIComponent(club_name)}`;
-
-    const res = await fetch(url, { headers: { "x-apisports-key": apiKey } });
-    const json = await res.json();
-    return json.response?.[0] || null;
-  } catch (e) {
-    console.error("[TÉCNICO]: Falha na API Football", e);
-    return null;
-  }
-}
-
-/* ═══════════════════════════════════════════════════════════
-    MÓDULO 2: INVESTIGAÇÃO IA (WIKIPEDIA GROUNDING)
-   ═══════════════════════════════════════════════════════════ */
-async function investigateClubWithAI(club_name: string, geminiKey: string) {
-  const CURRENT_DATE = "Abril de 2026";
-  const systemPrompt =
-    "Você é um auditor sênior de branding de futebol. Sua fonte absoluta de verdade é a Wikipedia. Responda estritamente em JSON puro, sem comentários.";
-
-  const userPrompt = `
-  Investigue o clube "${club_name}" com foco total na temporada de ${CURRENT_DATE}.
-  
-  REGRAS DE CORES (IDENTIDADE DE TECIDO):
-  1. IGNORE cores que aparecem apenas no contorno do escudo, bordas pretas de segurança ou dourado de estrelas.
-  2. CLASSIFICAÇÃO RÍGIDA:
-     - BICOLOR: cor_terciaria e cor_quarta DEVEM ser null.
-     - TRICOLOR: cor_quarta DEVE ser null.
-     - QUADRICOLOR (Brusque): Amarelo, Verde, Vermelho e Branco (Obrigatórios).
-  
-  REGRAS DE NEGÓCIO:
-  3. DIVISÃO 2026: Verifique a série nacional (A, B, C ou D) em Abril/2026.
-  4. FEMININO: Verifique se há time profissional ou base federada ativa em 2026.
-  5. MASCOTE: Nome oficial histórico.
-
-  RETORNE APENAS JSON: {"cor_primaria": "#HEX", "cor_secundaria": "#HEX", "cor_terciaria": "#HEX ou null", "cor_quarta": "#HEX ou null", "mascote": "NOME", "tem_feminino": boolean, "division": "Série X"}`;
-
-  const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${geminiKey}`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: userPrompt }] }],
-        systemInstruction: { parts: [{ text: systemPrompt }] },
-        tools: [{ google_search: {} }],
-        generationConfig: { responseMimeType: "application/json", temperature: 0.1 },
-      }),
-    },
-  );
-
-  const json = await res.json();
-  const text = json.candidates?.[0]?.content?.parts?.[0]?.text;
-  return text ? JSON.parse(cleanResponse(text)) : null;
-}
-
-/* ═══════════════════════════════════════════════════════════
-    MÓDULO 3: ORQUESTRAÇÃO E PERSISTÊNCIA
-   ═══════════════════════════════════════════════════════════ */
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   try {
     const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
-    const geminiKey = Deno.env.get("GEMINI_API_KEY")!;
-    const footballKey = "3b4a0ec2c5f513b9aa1e43c4adbae7aa";
+
+    const geminiKey = Deno.env.get("GEMINI_API_KEY");
+    const apiKeyFootball = "3b4a0ec2c5f513b9aa1e43c4adbae7aa";
 
     const { club_name, api_id } = await req.json();
     if (!club_name) throw new Error("Nome do clube é obrigatório");
 
-    console.log(`[LOG]: Sincronizando dados para ${club_name}...`);
+    console.log(`[ROLLBACK SYNC]: Investigando ${club_name}...`);
 
-    // 1. Dados Técnicos (API Football)
-    const tech = await fetchTechnicalData(club_name, api_id, footballKey);
+    /* ═══════════════════════════════════════════════════════════
+        MÓDULO 1: DADOS TÉCNICOS (API FOOTBALL)
+       ═══════════════════════════════════════════════════════════ */
+    let teamInfo: any = null;
+    let division = "Série Não Identificada";
 
-    // 2. Dados de Inteligência (Gemini Search)
-    const ai = await investigateClubWithAI(club_name, geminiKey);
-    if (!ai) throw new Error("IA falhou na investigação");
+    const teamRes = await fetch(
+      api_id
+        ? `https://v3.football.api-sports.io/teams?id=${api_id}`
+        : `https://v3.football.api-sports.io/teams?search=${encodeURIComponent(club_name)}`,
+      { headers: { "x-apisports-key": apiKeyFootball } },
+    );
+    const teamJson = await teamRes.json();
+    teamInfo = teamJson.response?.[0];
 
-    // 3. Montagem do Payload (Mapeamento Completo)
+    if (teamInfo?.team?.id) {
+      const leagueRes = await fetch(`https://v3.football.api-sports.io/leagues?team=${teamInfo.team.id}&current=true`, {
+        headers: { "x-apisports-key": apiKeyFootball },
+      });
+      const leagueJson = await leagueRes.json();
+      const leagues = leagueJson.response || [];
+
+      const tiers = ["Série A", "Série B", "Série C", "Série D", "Brasileirão", "Premier League", "La Liga"];
+      const mainLeague = leagues.find((l: any) => tiers.some((tier) => l.league.name.includes(tier))) || leagues[0];
+      if (mainLeague) division = mainLeague.league.name;
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+        MÓDULO 2: INTELIGÊNCIA IA (GEMINI 1.5 FLASH STABLE)
+       ═══════════════════════════════════════════════════════════ */
+    let aiData = {
+      cor_primaria: "#000000",
+      cor_secundaria: "#FFFFFF",
+      cor_terciaria: null as string | null,
+      cor_quarta: null as string | null,
+      mascote: "Não Identificado",
+      tem_feminino: false,
+    };
+
+    if (geminiKey) {
+      const prompt = `Retorne APENAS um JSON puro para o clube "${club_name}". 
+      REGRAS: 
+      1. Cores do tecido da camisa titular (Jersey). Ignore contornos de escudo.
+      2. Se Vila Nova-GO: Vermelho e Branco (Bicolor).
+      3. Se Brusque: Amarelo, Verde, Vermelho, Branco (Quadricolor).
+      4. Mascote oficial histórico.
+      5. "tem_feminino": boolean (Se há time profissional ativo).
+
+      JSON: {"cor_primaria": "#HEX", "cor_secundaria": "#HEX", "cor_terciaria": "#HEX ou null", "cor_quarta": "#HEX ou null", "mascote": "NOME", "tem_feminino": boolean}`;
+
+      const gRes = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiKey}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }],
+            generationConfig: { responseMimeType: "application/json", temperature: 0.1 },
+          }),
+        },
+      );
+
+      const gJson = await gRes.json();
+      const rawText = gJson.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (rawText) {
+        const parsed = JSON.parse(cleanGeminiResponse(rawText));
+        aiData = { ...aiData, ...parsed };
+      }
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+        MÓDULO 3: PERSISTÊNCIA (UPSERT FINAL)
+       ═══════════════════════════════════════════════════════════ */
     const payload = {
       nome: club_name,
-      api_id: tech?.team?.id?.toString() || api_id?.toString() || null,
-      escudo_url: tech?.team?.logo || null,
-      fundado: tech?.team?.founded || null,
-      cidade: tech?.venue?.city || tech?.team?.country || "Brasil",
-      pais: tech?.team?.country || "Brasil",
-      estadio_nome: tech?.venue?.name || null,
-      estadio_cidade: tech?.venue?.city || null,
-      estadio_capacidade: tech?.venue?.capacity || null,
-      division: ai.division,
-      mascote: ai.mascote,
-      tem_feminino: ai.tem_feminino,
-      cor_primaria: ai.cor_primaria,
-      cor_secundaria: ai.cor_secundaria,
-      cor_terciaria: ai.cor_terciaria,
-      cor_quarta: ai.cor_quarta,
+      api_id: teamInfo?.team?.id?.toString() || api_id?.toString() || null,
+      escudo_url: teamInfo?.team?.logo || null,
+      fundado: teamInfo?.team?.founded || null,
+      cidade: teamInfo?.venue?.city || teamInfo?.team?.country || "Brasil",
+      pais: teamInfo?.team?.country || "Brasil",
+      estadio_nome: teamInfo?.venue?.name || null,
+      estadio_cidade: teamInfo?.venue?.city || null,
+      estadio_capacidade: teamInfo?.venue?.capacity || null,
+      division: division,
+      mascote: aiData.mascote,
+      tem_feminino: aiData.tem_feminino,
+      cor_primaria: aiData.cor_primaria,
+      cor_secundaria: aiData.cor_secundaria,
+      cor_terciaria: aiData.cor_terciaria,
+      cor_quarta: aiData.cor_quarta,
       atualizado_em: new Date().toISOString(),
     };
 
@@ -141,7 +141,7 @@ serve(async (req) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {
-    console.error("[CRITICAL]:", err);
+    console.error("[CRITICAL ERROR]:", err);
     return new Response(JSON.stringify({ error: (err as Error).message }), {
       status: 500,
       headers: corsHeaders,
