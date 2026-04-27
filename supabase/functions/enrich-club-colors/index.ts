@@ -112,6 +112,16 @@ type ColorEvidence = {
   confidence: number;
 };
 
+const CANONICAL_HEX: Record<string, string> = {
+  azul: "#006EB6", blue: "#006EB6", "azul-marinho": "#001F5B", navy: "#001F5B",
+  branco: "#FFFFFF", white: "#FFFFFF", preto: "#000000", black: "#000000",
+  vermelho: "#E30613", red: "#E30613", verde: "#009640", green: "#009640",
+  amarelo: "#FFDD00", yellow: "#FFDD00", dourado: "#D4AF37", gold: "#D4AF37",
+  grená: "#7A0019", grena: "#7A0019", vinho: "#7A0019", bordo: "#7A0019", bordeaux: "#7A0019",
+  laranja: "#FF6600", orange: "#FF6600", roxo: "#552583", purple: "#552583",
+  celeste: "#87CEEB", cinza: "#808080", gray: "#808080", grey: "#808080", rosa: "#FF69B4", pink: "#FF69B4",
+};
+
 const COLOR_NAME_HEX: Array<[string, string]> = [
   ["azul-marinho", "#001F5B"], ["navy", "#001F5B"], ["azul", "#006EB6"], ["blue", "#006EB6"],
   ["branco", "#FFFFFF"], ["white", "#FFFFFF"],
