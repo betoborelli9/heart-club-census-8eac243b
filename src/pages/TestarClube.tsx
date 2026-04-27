@@ -21,14 +21,14 @@ import { FlaskConical, X } from "lucide-react";
 const MASTER_EMAIL = "betoborelli9@gmail.com";
 
 export default function TestarClube() {
-  const { user, loading } = useUser();
+  const { user } = useUser();
   const [selected, setSelected] = useState<ClubSearchResult | null>(null);
 
   useEffect(() => {
     document.title = "Testar Clube • Heart Club";
   }, []);
 
-  if (loading) {
+  if (!user) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center text-white/60 italic">
         Carregando…
@@ -36,7 +36,7 @@ export default function TestarClube() {
     );
   }
 
-  if (!user || user.email !== MASTER_EMAIL) {
+  if (user.email !== MASTER_EMAIL) {
     return <Navigate to="/dashboard" replace />;
   }
 
