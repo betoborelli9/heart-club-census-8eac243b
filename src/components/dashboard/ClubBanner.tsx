@@ -1,12 +1,11 @@
 /**
  * [CAMINHO/ARQUIVO]: src/components/dashboard/ClubBanner.tsx
  * [MÓDULO]: BRANDING & DASHBOARD NAVIGATION
- * [STATUS]: VERSÃO 37.0 (BICOLOR TRIPLE-STRIPE PRECISION — SLIM PROFILE)
- * [DESCRIÇÃO]: Banner unificado com correção nas diagonais de clubes bicolores.
- * - Bicolores: Cor forte (ex: Vermelho/Verde) nas pontas e 3 faixas diagonais brancas centralizadas.
- * - Tricolores: Mantida lógica de alternância cromática nas diagonais.
- * - Perfil Slim: Altura de 240px e Emblema de 210px (Desktop) para elegância.
- * - Legibilidade: Mantido contorno 'enuviado' (soft shadow).
+ * [STATUS]: VERSÃO 38.0 (PIXEL-PERFECT BADGE & ULTRA-SLIM PROFILE)
+ * [DESCRIÇÃO]:
+ * - Ajuste de dimensões fixas: Emblema agora usa Pixels em vez de Percentual.
+ * - Perfil Ultra-Slim: Altura reduzida de 210px para 180px.
+ * - Módulo de Medidas: Centralizado para fácil manutenção cirúrgica.
  */
 
 /* ═══════════════════════════════════════════════════════════
@@ -35,7 +34,7 @@ interface ClubBannerProps {
 }
 
 /* ═══════════════════════════════════════════════════════════
-    MÓDULO: UTILITÁRIOS (LUMINÂNCIA PARA ORDENAÇÃO)
+    MÓDULO: UTILITÁRIOS
    ═══════════════════════════════════════════════════════════ */
 const calculateLuminance = (hex: string): number => {
   if (!hex) return 1;
@@ -56,7 +55,6 @@ const ClubBanner = ({
   profileCity = "",
   profileState = "",
   ambassadorLevel = null,
-  pageLabel,
   showProfileInfo = false,
 }: ClubBannerProps) => {
   const navigate = useNavigate();
@@ -72,7 +70,6 @@ const ClubBanner = ({
   });
 
   const IS_MASTER = user?.email === "betoborelli9@gmail.com";
-
   const hasLevel = ambassadorLevel && ambassadorLevel.toUpperCase() !== "NONE";
   const canSeeAmbassador = hasLevel || IS_MASTER;
   const displayLevel = IS_MASTER ? "DIAMANTE" : ambassadorLevel || "BRONZE";
@@ -99,49 +96,23 @@ const ClubBanner = ({
     fetchTheme();
   }, [clubName]);
 
-  /* ═══════════════════════════════════════════════════════════
-      MÓDULO: LARGURA DAS COLUNAS (DIAGONAIS SÓLIDAS)
-     ═══════════════════════════════════════════════════════════ */
   const buildFlagGradient = (): string => {
     const colors = [theme.cor_primaria, theme.cor_secundaria, theme.cor_terciaria, theme.cor_quarta].filter(Boolean);
     const sorted = [...colors].sort((a, b) => calculateLuminance(a) - calculateLuminance(b));
 
-    // QUADRICOLOR (Brusque, etc) — mesmo padrão tricolor com 4 faixas centrais juntinhas
     if (sorted.length === 4) {
-      return `linear-gradient(115deg,
-        ${sorted[0]} 0%, ${sorted[0]} 34%,
-        ${sorted[1]} 34%, ${sorted[1]} 38%,
-        ${sorted[2]} 38%, ${sorted[2]} 42%,
-        ${sorted[3]} 42%, ${sorted[3]} 46%,
-        ${sorted[0]} 46%, ${sorted[0]} 100%)`;
+      return `linear-gradient(115deg, ${sorted[0]} 0%, ${sorted[0]} 34%, ${sorted[1]} 34%, ${sorted[1]} 38%, ${sorted[2]} 38%, ${sorted[2]} 42%, ${sorted[3]} 42%, ${sorted[3]} 46%, ${sorted[0]} 46%, ${sorted[0]} 100%)`;
     }
 
-    // TRICOLOR (São Paulo, Santa Cruz)
     if (sorted.length === 3) {
-      return `linear-gradient(115deg, 
-        ${sorted[0]} 0%, ${sorted[0]} 34%, 
-        ${sorted[1]} 34%, ${sorted[1]} 38%, 
-        ${sorted[2]} 38%, ${sorted[2]} 42%, 
-        ${sorted[0]} 42%, ${sorted[0]} 46%, 
-        ${sorted[1]} 46%, ${sorted[1]} 100%)`;
+      return `linear-gradient(115deg, ${sorted[0]} 0%, ${sorted[0]} 34%, ${sorted[1]} 34%, ${sorted[1]} 38%, ${sorted[2]} 38%, ${sorted[2]} 42%, ${sorted[0]} 42%, ${sorted[0]} 46%, ${sorted[1]} 46%, ${sorted[1]} 100%)`;
     }
 
-    // BICOLOR (Vila Nova, Palmeiras)
     const strong = sorted[0];
     const light = sorted[1] || "#ffffff";
-    return `linear-gradient(115deg, 
-      ${strong} 0%, ${strong} 34%, 
-      ${light} 34%, ${light} 38%, 
-      ${strong} 38%, ${strong} 39%, 
-      ${light} 39%, ${light} 43%, 
-      ${strong} 43%, ${strong} 44%, 
-      ${light} 44%, ${light} 48%, 
-      ${strong} 48%, ${strong} 100%)`;
+    return `linear-gradient(115deg, ${strong} 0%, ${strong} 34%, ${light} 34%, ${light} 38%, ${strong} 38%, ${strong} 39%, ${light} 39%, ${light} 43%, ${strong} 43%, ${strong} 44%, ${light} 44%, ${light} 48%, ${strong} 48%, ${strong} 100%)`;
   };
 
-  /* ═══════════════════════════════════════════════════════════
-      MÓDULO: NAVBAR (ESTRUTURA PRESERVADA)
-     ═══════════════════════════════════════════════════════════ */
   const isActive = (path: string) => location.pathname === path || location.pathname + location.hash === path;
 
   const NavItem = ({ icon: Icon, label, path, active, variant }: any) => (
@@ -176,9 +147,11 @@ const ClubBanner = ({
       `}</style>
 
       <div className="overflow-hidden rounded-[2.5rem] border border-[#1a1a1a] shadow-2xl flex flex-col">
-        {/* TOPO DO BANNER - ALTURA SLIM (210px) */}
+        {/* ═══════════════════════════════════════════════════════════
+            MÓDULO: DIMENSÕES DO BANNER (ALTURA: 180px)
+           ═══════════════════════════════════════════════════════════ */}
         <section
-          className="relative h-[210px] md:h-[210px] w-full flex items-center overflow-hidden"
+          className="relative h-[180px] md:h-[180px] w-full flex items-center overflow-hidden"
           style={{
             background: buildFlagGradient(),
             backgroundSize: "200% 200%",
@@ -189,16 +162,20 @@ const ClubBanner = ({
 
           <div className="relative z-10 h-full w-full flex flex-row items-center justify-between px-6 md:px-16">
             <div className="flex items-center h-full shrink-0">
-              {/* EMBLEMA EQUILIBRADO (210px) */}
-              <div className="w-[100px] h-[100px] md:w-[190px] md:h-[190px] rounded-full bg-white flex items-center justify-center shrink-0 shadow-xl border-4 border-white/10">
+              {/* ═══════════════════════════════════════════════════════════
+                  MÓDULO: TAMANHO DO CÍRCULO (BADGE)
+                 ═══════════════════════════════════════════════════════════ */}
+              <div className="w-[100px] h-[100px] md:w-[150px] h-[150px] rounded-full bg-white flex items-center justify-center shrink-0 shadow-xl border-4 border-white/10">
+                {/* ═══════════════════════════════════════════════════════════
+                    MÓDULO: TAMANHO DO EMBLEMA (PIXELS FIXOS)
+                   ═══════════════════════════════════════════════════════════ */}
                 <ClubLogo
                   src={theme.escudo_url}
                   alt={clubName}
-                  className="w-[90%] h-[90%] object-contain drop-shadow-md"
+                  className="w-[75px] h-[75px] md:w-[115px] md:h-[115px] object-contain drop-shadow-md"
                 />
               </div>
 
-              {/* PERFIL DESKTOP (CENTRALIZADO VERTICALMENTE) */}
               {showProfileInfo && (
                 <div className="hidden md:flex flex-col text-white ml-8 h-full justify-center">
                   <h2
@@ -231,7 +208,6 @@ const ClubBanner = ({
             </div>
 
             <div className="flex-1 flex flex-col h-full items-end text-right py-4 md:py-6">
-              {/* PERFIL MOBILE */}
               {showProfileInfo && (
                 <div className="flex-1 md:hidden flex flex-col justify-center items-end text-white">
                   <h2
@@ -262,7 +238,6 @@ const ClubBanner = ({
                 </div>
               )}
 
-              {/* CLUBE DO CORAÇÃO (ANCORADO NA BASE) */}
               <div className="flex flex-col items-end justify-end text-white mt-auto">
                 <span
                   className="text-[8px] md:text-[9px] font-black uppercase italic opacity-70 tracking-[0.3em] mb-[-4px]"
@@ -308,13 +283,3 @@ const ClubBanner = ({
 };
 
 export default ClubBanner;
-
-/**
- * [RODAPÉ TÉCNICO]
- * ARQUIVO: src/components/dashboard/ClubBanner.tsx
- * VERSÃO: 37.0
- * CORREÇÕES:
- * - Lógica Bicolor: Ajustada para garantir cor forte nas extremidades e 3 listras brancas nítidas no centro (34% a 48%), separadas por finas linhas da cor principal.
- * - Alinhamento: Mantida a simetria com os clubes tricolores para consistência visual.
- * - Perfil Slim: Banner mantido em 240px para elegância.
- */
