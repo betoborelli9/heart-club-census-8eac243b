@@ -8,7 +8,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { Heart, Loader2, X, Search, Sparkles, ShieldCheck, PlusCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useUser } from "@/contexts/UserContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -26,10 +26,13 @@ const MAX_SYMPATHY_CLUBS = 4;
 
 const Voting = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { user, profile, refreshProfile } = useUser();
   const { toast } = useToast();
 
   const IS_MASTER_ADMIN = user?.email === "betoborelli9@gmail.com";
+  // Modo TESTE: master abre /voting?test=1 — fluxo idêntico, mas NÃO grava votos.
+  const TEST_MODE = IS_MASTER_ADMIN && searchParams.get("test") === "1";
 
   const [heartSearch, setHeartSearch] = useState("");
   const [heartResults, setHeartResults] = useState<ClubResult[]>([]);
@@ -127,26 +130,28 @@ const Voting = () => {
     if (!heartClub || !user || !profile) return;
     setSubmitting(true);
     try {
-      if (IS_MASTER_ADMIN) {
-        await supabase.from("votos").delete().eq("user_id", user.id);
-      }
-
       const allSelected = [{ club: heartClub, main: true }, ...sympathyClubs.map((c) => ({ club: c, main: false }))];
 
-      const votesToInsert = allSelected.map((v) => ({
-        user_id: user.id,
-        clube_nome: v.club.name,
-        cidade: profile.cidade || "",
-        estado: profile.estado || "",
-        pais: profile.pais || "BR",
-        is_original_vote: v.main,
-        fingerprint: fingerprint || "web-client",
-      }));
+      if (!TEST_MODE) {
+        if (IS_MASTER_ADMIN) {
+          await supabase.from("votos").delete().eq("user_id", user.id);
+        }
 
-      const { error: voteError } = await supabase.from("votos").insert(votesToInsert);
-      if (voteError) throw voteError;
+        const votesToInsert = allSelected.map((v) => ({
+          user_id: user.id,
+          clube_nome: v.club.name,
+          cidade: profile.cidade || "",
+          estado: profile.estado || "",
+          pais: profile.pais || "BR",
+          is_original_vote: v.main,
+          fingerprint: fingerprint || "web-client",
+        }));
 
-      // 1. Salva base técnica no cache
+        const { error: voteError } = await supabase.from("votos").insert(votesToInsert);
+        if (voteError) throw voteError;
+      }
+
+      // 1. Salva base técnica no cache (sempre — popula clubes_cache também em modo teste)
       await persistClubsIfMissing(allSelected.map((v) => v.club));
 
       // 2. INVESTIGAÇÃO SEQUENCIAL: Obrigatório await para garantir Gemini antes do redirecionamento
@@ -164,9 +169,14 @@ const Voting = () => {
         }
       }
 
-      await refreshProfile();
-      toast({ title: "Lealdade registada com sucesso! 🏟️" });
-      navigate("/dashboard");
+      if (TEST_MODE) {
+        toast({ title: "Modo teste — voto não contabilizado 🧪" });
+        navigate(`/testar-clube?club=${encodeURIComponent(heartClub.name)}`);
+      } else {
+        await refreshProfile();
+        toast({ title: "Lealdade registada com sucesso! 🏟️" });
+        navigate("/dashboard");
+      }
     } catch (err) {
       toast({ variant: "destructive", title: "Erro ao processar votos" });
     } finally {
