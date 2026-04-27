@@ -224,6 +224,8 @@ function evidenceFromText(text: string, source: string, preferHex: boolean): Col
   const phrase = extractOfficialColorPhrase(section);
   const sourceConfidence = source.includes("site oficial do clube")
     ? 99
+    : source.includes("Wikipedia")
+      ? 98
     : source.includes("Federação") || source.includes("oficial")
       ? 97
       : source.includes("teamcolorcodes.com")
@@ -274,6 +276,38 @@ async function officialClubSiteEvidence(siteUrl: string, clubName: string): Prom
   return null;
 }
 
+async function wikipediaEvidence(clubName: string): Promise<ColorEvidence | null> {
+  const languages = ["pt", "en", "es"];
+  const queries = [`${clubName} futebol clube`, `${clubName} football club`, clubName];
+
+  for (const lang of languages) {
+    for (const query of queries) {
+      const searchUrl = `https://${lang}.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&format=json&origin=*`;
+      const searchText = await fetchText(searchUrl);
+      if (!searchText) continue;
+
+      const searchJson = JSON.parse(searchText || "{}");
+      const titles = (searchJson?.query?.search || [])
+        .map((item: { title?: string }) => item.title)
+        .filter((title: unknown): title is string => typeof title === "string")
+        .slice(0, 3);
+
+      for (const title of titles) {
+        const extractUrl = `https://${lang}.wikipedia.org/w/api.php?action=query&prop=extracts&explaintext=1&titles=${encodeURIComponent(title)}&format=json&origin=*`;
+        const extractText = await fetchText(extractUrl);
+        if (!extractText) continue;
+
+        const extractJson = JSON.parse(extractText || "{}");
+        const pages = Object.values(extractJson?.query?.pages || {}) as Array<{ extract?: string }>;
+        const extract = pages.map((page) => page.extract || "").join("\n");
+        const evidence = evidenceFromText(extract, `Wikipedia ${lang}: ${title}`, false);
+        if (evidence?.colors.length) return evidence;
+      }
+    }
+  }
+  return null;
+}
+
 async function researchColorsFromWeb(clubName: string, country: string | null): Promise<ColorEvidence | null> {
   const base = slugify(clubName);
   const compact = base.replace(/-(fc|sc|ec|cf|cd|ac)$/i, "");
@@ -286,11 +320,15 @@ async function researchColorsFromWeb(clubName: string, country: string | null): 
     `https://www.brandcolorcode.com/${compact}-fc`,
   ])];
 
-  const pages = await Promise.all(candidates.map(async (url) => ({ url, text: await fetchText(url) })));
+  const [wikiEvidence, pages] = await Promise.all([
+    wikipediaEvidence(clubName),
+    Promise.all(candidates.map(async (url) => ({ url, text: await fetchText(url) }))),
+  ]);
   const evidences = pages
     .filter((page): page is { url: string; text: string } => !!page.text)
     .map((page) => evidenceFromText(page.text, page.url, true))
     .filter((item): item is ColorEvidence => !!item);
+  if (wikiEvidence) evidences.push(wikiEvidence);
 
   if (country && /brazil|brasil/i.test(country)) {
     const fcfText = await fetchText("https://fcf.com.br/clubes-filiados/");
