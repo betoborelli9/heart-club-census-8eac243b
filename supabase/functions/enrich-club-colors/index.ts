@@ -90,6 +90,51 @@ async function checkFemininoViaNews(name: string): Promise<boolean> {
 
 /* ─────────────── Lovable AI (Gemini + Google Search) ─────────────── */
 
+/**
+ * Busca DEDICADA de cores via Wikipedia (alta precisão para clubes mundiais).
+ * Faz parsing do infobox procurando por hex codes nas seções de uniforme.
+ */
+async function fetchWikipediaColors(clubName: string): Promise<string[]> {
+  const tryFetch = async (lang: string, title: string): Promise<string | null> => {
+    try {
+      const r = await fetch(
+        `https://${lang}.wikipedia.org/w/api.php?action=parse&page=${encodeURIComponent(title)}&prop=wikitext&format=json&origin=*`,
+      );
+      if (!r.ok) return null;
+      const j = await r.json();
+      return j?.parse?.wikitext?.["*"] || null;
+    } catch {
+      return null;
+    }
+  };
+
+  const candidates = [
+    ["pt", clubName],
+    ["en", clubName],
+    ["pt", `${clubName} Esporte Clube`],
+    ["pt", `${clubName} Futebol Clube`],
+  ];
+
+  for (const [lang, title] of candidates) {
+    const wiki = await tryFetch(lang, title);
+    if (!wiki) continue;
+    // Captura hex codes próximos a palavras de uniforme
+    const hexes: string[] = [];
+    const re = /#([0-9a-fA-F]{6})\b/g;
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(wiki)) !== null) {
+      hexes.push(`#${m[1].toUpperCase()}`);
+      if (hexes.length >= 12) break;
+    }
+    if (hexes.length >= 2) {
+      // dedup mantendo ordem
+      const seen = new Set<string>();
+      return hexes.filter((h) => (seen.has(h) ? false : (seen.add(h), true)));
+    }
+  }
+  return [];
+}
+
 async function aiEnrich(clubName: string, country: string | null): Promise<{
   cor_primaria: string | null;
   cor_secundaria: string | null;
@@ -108,38 +153,53 @@ async function aiEnrich(clubName: string, country: string | null): Promise<{
     return empty;
   }
 
+  // 1) Tenta extrair cores reais via Wikipedia primeiro (fonte verificável)
+  const wikiColors = await fetchWikipediaColors(clubName);
+  console.log(`[WIKI COLORS] ${clubName} →`, wikiColors.slice(0, 6));
+
   const sys =
-    "Você é um pesquisador especialista em clubes de futebol. Use buscas na web (Wikipedia, site oficial, Google) para responder com EXATIDÃO. Cores devem ser do UNIFORME TITULAR (tecido), em HEX #RRGGBB. NUNCA invente. Se não souber com certeza, retorne null.";
+    "Você é um pesquisador especialista em uniformes de clubes de futebol mundiais. Sua tarefa é retornar APENAS as cores OFICIAIS do uniforme TITULAR (camisa principal) do clube, em HEX #RRGGBB. Você DEVE pensar em cada cor visível na camisa titular: faixas, listras, gola, mangas, detalhes oficiais. Inclua TODAS as cores do tecido — clubes como Fluminense (verde/branco/grená/preto), São Paulo (branco/vermelho/preto/cinza), Brusque (vermelho/branco/azul/verde) podem ter 3 ou 4 cores. NÃO retorne cores de escudo isoladas, estrelas, ou patrocínios. Se houver dúvida sobre uma cor, ainda assim a inclua se ela aparece visivelmente na camisa principal histórica.";
 
-  const userMsg = `Clube: "${clubName}"${country ? ` (${country})` : ""}.
+  const wikiHint = wikiColors.length
+    ? `\n\nCores HEX encontradas na Wikipedia do clube (use como referência principal, filtre as que pertencem ao uniforme titular): ${wikiColors.slice(0, 10).join(", ")}`
+    : "";
 
-Preciso de:
-1. cor_primaria, cor_secundaria, cor_terciaria, cor_quarta — cores OFICIAIS do uniforme titular em HEX (#RRGGBB). Ignore contornos de escudo, estrelas e enfeites. Se houver menos de 4 cores, devolva null nas restantes.
-2. mascote — nome oficial do mascote (ex: "Tigre", "Porco", "Mengão"). Se não houver, null.
-3. tem_feminino — true se o clube possui time PROFISSIONAL FEMININO ATIVO em competições oficiais (Brasileirão A1/A2/A3, estaduais femininos, WSL, NWSL, Liga F, etc.). Categorias de base (sub-17/sub-20) não contam.
-4. nome_curto — apelido popular curto (ex: "Vila", "Galo", "Timão"). Se não houver, null.
+  const userMsg = `Clube: "${clubName}"${country ? ` (${country})` : ""}.${wikiHint}
 
-Use Google Search para confirmar.`;
+Retorne via tool call:
+1. cor_primaria — cor DOMINANTE da camisa titular (HEX #RRGGBB, obrigatório).
+2. cor_secundaria — segunda cor da camisa titular (HEX, obrigatório se houver).
+3. cor_terciaria — terceira cor visível (faixa, gola, detalhe). null se não houver.
+4. cor_quarta — quarta cor visível. null se não houver. Clubes tricolores/quadricolores DEVEM preencher.
+5. mascote — apelido/mascote oficial (ex: "Tigre", "Porco", "Quadricolor"). null se não houver.
+6. tem_feminino — true se possui time PROFISSIONAL FEMININO ATIVO em competições oficiais (Brasileirão A1/A2/A3, estaduais, WSL, NWSL, Liga F). Sub-17/sub-20 NÃO contam.
+7. nome_curto — apelido popular curto (ex: "Vila", "Galo", "Quadricolor"). null se não houver.
+
+REGRAS DE COR:
+- Use SEMPRE #RRGGBB (6 dígitos hex).
+- Branco = #FFFFFF, Preto = #000000, Vermelho típico = #E30613 ou #CC0000, Verde Brusque = #008542, Azul Brusque = #003C7F.
+- NUNCA omita uma cor presente na camisa só porque é faixa estreita.`;
 
   const body = {
-    model: "google/gemini-2.5-flash",
+    model: "google/gemini-2.5-pro",
     messages: [
       { role: "system", content: sys },
       { role: "user", content: userMsg },
     ],
+    max_tokens: 1500,
     tools: [
       {
         type: "function",
         function: {
           name: "registrar_clube",
-          description: "Registra os dados verificados do clube",
+          description: "Registra os dados verificados do clube com TODAS as cores do uniforme titular",
           parameters: {
             type: "object",
             properties: {
-              cor_primaria: { type: ["string", "null"] },
-              cor_secundaria: { type: ["string", "null"] },
-              cor_terciaria: { type: ["string", "null"] },
-              cor_quarta: { type: ["string", "null"] },
+              cor_primaria: { type: ["string", "null"], description: "HEX #RRGGBB cor dominante" },
+              cor_secundaria: { type: ["string", "null"], description: "HEX #RRGGBB segunda cor" },
+              cor_terciaria: { type: ["string", "null"], description: "HEX #RRGGBB terceira cor (faixa/detalhe)" },
+              cor_quarta: { type: ["string", "null"], description: "HEX #RRGGBB quarta cor" },
               mascote: { type: ["string", "null"] },
               tem_feminino: { type: ["boolean", "null"] },
               nome_curto: { type: ["string", "null"] },
@@ -165,13 +225,27 @@ Use Google Search para confirmar.`;
     if (!res.ok) {
       const t = await res.text();
       console.error(`[AI] ${res.status} → ${t.slice(0, 300)}`);
+      // fallback: usa apenas cores da Wikipedia se a IA falhar
+      if (wikiColors.length >= 2) {
+        return {
+          ...empty,
+          cor_primaria: wikiColors[0] || null,
+          cor_secundaria: wikiColors[1] || null,
+          cor_terciaria: wikiColors[2] || null,
+          cor_quarta: wikiColors[3] || null,
+        };
+      }
       return empty;
     }
     const json = await res.json();
     const call = json.choices?.[0]?.message?.tool_calls?.[0];
     const args = call?.function?.arguments;
-    if (!args) return empty;
+    if (!args) {
+      console.warn("[AI] sem tool_call retornado");
+      return empty;
+    }
     const parsed = typeof args === "string" ? JSON.parse(args) : args;
+    console.log(`[AI RAW] ${clubName} →`, JSON.stringify(parsed));
     return {
       cor_primaria: normalizeHex(parsed.cor_primaria),
       cor_secundaria: normalizeHex(parsed.cor_secundaria),
