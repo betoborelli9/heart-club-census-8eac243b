@@ -101,6 +101,51 @@ export type Database = {
         }
         Relationships: []
       }
+      club_corrections: {
+        Row: {
+          ai_reasoning: string | null
+          ai_verdict: string | null
+          applied_value: string | null
+          clube_nome: string
+          created_at: string
+          field_name: string
+          id: string
+          old_value: string | null
+          status: string
+          suggested_value: string | null
+          user_display_name: string | null
+          user_id: string
+        }
+        Insert: {
+          ai_reasoning?: string | null
+          ai_verdict?: string | null
+          applied_value?: string | null
+          clube_nome: string
+          created_at?: string
+          field_name: string
+          id?: string
+          old_value?: string | null
+          status?: string
+          suggested_value?: string | null
+          user_display_name?: string | null
+          user_id: string
+        }
+        Update: {
+          ai_reasoning?: string | null
+          ai_verdict?: string | null
+          applied_value?: string | null
+          clube_nome?: string
+          created_at?: string
+          field_name?: string
+          id?: string
+          old_value?: string | null
+          status?: string
+          suggested_value?: string | null
+          user_display_name?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       clubes_cache: {
         Row: {
           api_id: string | null
