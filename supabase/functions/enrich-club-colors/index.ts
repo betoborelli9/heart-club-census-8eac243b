@@ -24,7 +24,6 @@ const corsHeaders = {
 
 const API_FOOTBALL = Deno.env.get("API_FOOTBALL_KEY") || Deno.env.get("FOOTBALL_API_KEY") || "";
 const GEMINI_KEY = Deno.env.get("GEMINI_API_KEY") || "";
-const LOVABLE_KEY = Deno.env.get("LOVABLE_API_KEY") || "";
 
 /* ─────────────── helpers ─────────────── */
 
