@@ -7,8 +7,8 @@
  *   1. API-Football: nome, nome_curto, país, cidade, fundado, escudo,
  *      estádio (nome/cidade/capacidade), divisão atual.
  *   2. API-Football (women search): detecta time feminino oficial.
- *   3. Lovable AI Gateway (Gemini 2.5 Flash) com Google Search grounding:
- *      cores HEX exatas (até 4), mascote e confirmação de feminino.
+ *   3. Gemini direto com Google Search + fontes públicas:
+ *      cores HEX oficiais/tradicionais (até 4), sem custo Lovable no bloco de cores.
  *   4. Fallback Google News RSS para feminino.
  *   5. Persistência em clubes_cache (todas as colunas).
  * ═══════════════════════════════════════════════════════════════════
@@ -23,7 +23,7 @@ const corsHeaders = {
 };
 
 const API_FOOTBALL = Deno.env.get("API_FOOTBALL_KEY") || Deno.env.get("FOOTBALL_API_KEY") || "";
-const LOVABLE_KEY = Deno.env.get("LOVABLE_API_KEY") || "";
+const GEMINI_KEY = Deno.env.get("GEMINI_API_KEY") || "";
 
 /* ─────────────── helpers ─────────────── */
 
@@ -88,7 +88,7 @@ async function checkFemininoViaNews(name: string): Promise<boolean> {
   }
 }
 
-/* ─────────────── Lovable AI (Gemini) + bloco confiável de cores ─────────────── */
+/* ─────────────── Gemini direto + bloco confiável de cores ─────────────── */
 
 type AIResult = {
   cor_primaria: string | null;
@@ -109,6 +109,16 @@ type ColorEvidence = {
   colors: string[];
   source: string;
   confidence: number;
+};
+
+const CANONICAL_HEX: Record<string, string> = {
+  azul: "#006EB6", blue: "#006EB6", "azul-marinho": "#001F5B", navy: "#001F5B",
+  branco: "#FFFFFF", white: "#FFFFFF", preto: "#000000", black: "#000000",
+  vermelho: "#E30613", red: "#E30613", verde: "#009640", green: "#009640",
+  amarelo: "#FFDD00", yellow: "#FFDD00", dourado: "#D4AF37", gold: "#D4AF37",
+  grená: "#7A0019", grena: "#7A0019", vinho: "#7A0019", bordo: "#7A0019", bordeaux: "#7A0019",
+  laranja: "#FF6600", orange: "#FF6600", roxo: "#552583", purple: "#552583",
+  celeste: "#87CEEB", cinza: "#808080", gray: "#808080", grey: "#808080", rosa: "#FF69B4", pink: "#FF69B4",
 };
 
 const COLOR_NAME_HEX: Array<[string, string]> = [
@@ -184,6 +194,16 @@ function colorsFromNames(fragment: string): string[] {
   return uniqHex(found.sort((a, b) => a.index - b.index).map((item) => item.hex)).slice(0, 4);
 }
 
+function colorsFromNamesList(names: unknown): string[] {
+  if (!Array.isArray(names)) return [];
+  const expanded = names.flatMap((name) => {
+    if (typeof name !== "string") return null;
+    const key = stripAccents(name).toLowerCase().trim();
+    return CANONICAL_HEX[key] || colorsFromNames(name);
+  });
+  return uniqHex(expanded).slice(0, 4);
+}
+
 function extractOfficialColorPhrase(text: string): string | null {
   const patterns = [
     /(cores\s+oficiais|official\s+colou?rs|team\s+colou?rs|club\s+colou?rs)\s*[:\-–]?\s*([^.;\n]{3,180})/i,
@@ -204,6 +224,8 @@ function evidenceFromText(text: string, source: string, preferHex: boolean): Col
   const phrase = extractOfficialColorPhrase(section);
   const sourceConfidence = source.includes("site oficial do clube")
     ? 99
+    : source.includes("Wikipedia")
+      ? 98
     : source.includes("Federação") || source.includes("oficial")
       ? 97
       : source.includes("teamcolorcodes.com")
@@ -254,6 +276,42 @@ async function officialClubSiteEvidence(siteUrl: string, clubName: string): Prom
   return null;
 }
 
+async function wikipediaEvidence(clubName: string): Promise<ColorEvidence | null> {
+  const languages = ["pt", "en", "es"];
+  const queries = [`${clubName} futebol clube`, `${clubName} football club`, clubName];
+
+  try {
+    for (const lang of languages) {
+      for (const query of queries) {
+        const searchUrl = `https://${lang}.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&format=json&origin=*`;
+        const searchText = await fetchText(searchUrl);
+        if (!searchText) continue;
+
+        const searchJson = JSON.parse(searchText || "{}");
+        const titles = (searchJson?.query?.search || [])
+          .map((item: { title?: string }) => item.title)
+          .filter((title: unknown): title is string => typeof title === "string")
+          .slice(0, 3);
+
+        for (const title of titles) {
+          const extractUrl = `https://${lang}.wikipedia.org/w/api.php?action=query&prop=extracts&explaintext=1&titles=${encodeURIComponent(title)}&format=json&origin=*`;
+          const extractText = await fetchText(extractUrl);
+          if (!extractText) continue;
+
+          const extractJson = JSON.parse(extractText || "{}");
+          const pages = Object.values(extractJson?.query?.pages || {}) as Array<{ extract?: string }>;
+          const extract = pages.map((page) => page.extract || "").join("\n");
+          const evidence = evidenceFromText(extract, `Wikipedia ${lang}: ${title}`, false);
+          if (evidence?.colors.length) return evidence;
+        }
+      }
+    }
+  } catch (e) {
+    console.warn(`[WIKIPEDIA COLOR ERROR] ${clubName}`, e);
+  }
+  return null;
+}
+
 async function researchColorsFromWeb(clubName: string, country: string | null): Promise<ColorEvidence | null> {
   const base = slugify(clubName);
   const compact = base.replace(/-(fc|sc|ec|cf|cd|ac)$/i, "");
@@ -266,11 +324,15 @@ async function researchColorsFromWeb(clubName: string, country: string | null): 
     `https://www.brandcolorcode.com/${compact}-fc`,
   ])];
 
-  const pages = await Promise.all(candidates.map(async (url) => ({ url, text: await fetchText(url) })));
+  const [wikiEvidence, pages] = await Promise.all([
+    wikipediaEvidence(clubName),
+    Promise.all(candidates.map(async (url) => ({ url, text: await fetchText(url) }))),
+  ]);
   const evidences = pages
     .filter((page): page is { url: string; text: string } => !!page.text)
     .map((page) => evidenceFromText(page.text, page.url, true))
     .filter((item): item is ColorEvidence => !!item);
+  if (wikiEvidence) evidences.push(wikiEvidence);
 
   if (country && /brazil|brasil/i.test(country)) {
     const fcfText = await fetchText("https://fcf.com.br/clubes-filiados/");
@@ -287,102 +349,69 @@ async function researchColorsFromWeb(clubName: string, country: string | null): 
   return best;
 }
 
-function buildAIBody(model: string, clubName: string, country: string | null) {
-  const sys =
-    "Você é um pesquisador especialista em identidade visual oficial de clubes de futebol mundiais. Retorne SOMENTE cores oficiais do clube ou do uniforme titular principal, em HEX #RRGGBB. Não invente cores de contorno, sombra, brasão, estrelas, patrocínio ou detalhes decorativos. Se houver fonte oficial/federação/base confiável com nomes das cores, respeite essas cores e converta para HEX. Clubes podem ter 1, 2, 3 ou 4 cores oficiais; nunca omita a terceira ou quarta cor quando a identidade do clube for tricolor ou quadricolor.";
+function buildGeminiPrompt(clubName: string, country: string | null): string {
+  return `Você é a IA de dados esportivos do Heart Club. Use Google Search obrigatoriamente para pesquisar as cores oficiais/tradicionais do clube consultado.
 
-  const userMsg = `Clube: "${clubName}"${country ? ` (país: ${country})` : ""}.
+CLUBE: ${clubName}${country ? `\nPAÍS: ${country}` : ""}
 
-Pesquise e liste TODAS as cores oficiais do clube/uniforme TITULAR atual em HEX #RRGGBB:
+Faça pesquisas equivalentes a:
+1. "quais são as cores do clube ${clubName}"
+2. "${clubName} cores oficiais futebol"
+3. "${clubName} official club colours football"
+4. "${clubName} home kit colors"
 
-- cor_primaria: cor predominante (obrigatória)
-- cor_secundaria: segunda cor (obrigatória se houver mais de uma)
-- cor_terciaria: terceira cor visível na camisa (faixa, listra, gola, mangas) — PREENCHA se existir
-- cor_quarta: quarta cor visível na camisa — PREENCHA se for quadricolor (ex: Brusque tem 4 cores)
-- mascote: nome do mascote/símbolo (ex: "Tigre", "Quadricolor", "Galo")
-- tem_feminino: true se possui time profissional feminino ATIVO (Brasileirão A1/A2/A3, estadual feminino, WSL, NWSL, Liga F). Sub-17/sub-20 NÃO conta.
-- nome_curto: apelido popular (ex: "Vila", "Galo", "Quadricolor")
+Regras críticas:
+- Priorize site oficial, federação/liga, Wikipedia/Wikidata e resultados diretos do Google sobre memória interna.
+- Retorne TODAS as cores oficiais/tradicionais do clube ou do uniforme titular principal, até 4 cores.
+- Se o clube for conhecido como bicolor, retorne 2; tricolor, 3; quadricolor, 4.
+- Não use cores de contorno do escudo, estrela, sombra, letra, patrocínio, fabricante, goleiro ou uniforme alternativo.
+- Não omita branco/preto quando fizerem parte real da camisa/tradição do clube.
+- O HEX pode ser aproximado canônico da cor quando a fonte informa apenas o nome da cor.
 
-IMPORTANTE: Retorne preto, cinza, dourado ou outras cores extras somente se elas forem cores oficiais do clube/uniforme, não por aparecerem em bordas do escudo ou elementos decorativos.`;
-
-  return {
-    model,
-    messages: [
-      { role: "system", content: sys },
-      { role: "user", content: userMsg },
-    ],
-    max_tokens: 2048,
-    tools: [
-      {
-        type: "function",
-        function: {
-          name: "registrar_clube",
-          description: "Registra TODAS as cores oficiais do uniforme titular (até 4) e metadados do clube",
-          parameters: {
-            type: "object",
-            properties: {
-              cor_primaria: { type: ["string", "null"], description: "HEX #RRGGBB cor dominante" },
-              cor_secundaria: { type: ["string", "null"], description: "HEX #RRGGBB segunda cor" },
-              cor_terciaria: { type: ["string", "null"], description: "HEX #RRGGBB terceira cor (preencha se clube é tricolor)" },
-              cor_quarta: { type: ["string", "null"], description: "HEX #RRGGBB quarta cor (preencha se clube é quadricolor como Brusque)" },
-              mascote: { type: ["string", "null"] },
-              tem_feminino: { type: ["boolean", "null"] },
-              nome_curto: { type: ["string", "null"] },
-            },
-            required: ["cor_primaria", "cor_secundaria", "cor_terciaria", "cor_quarta", "tem_feminino"],
-            additionalProperties: false,
-          },
-        },
-      },
-    ],
-    tool_choice: { type: "function", function: { name: "registrar_clube" } },
-  };
+Retorne EXCLUSIVAMENTE JSON puro:
+{
+  "cor_primaria": "#RRGGBB ou null",
+  "cor_secundaria": "#RRGGBB ou null",
+  "cor_terciaria": "#RRGGBB ou null",
+  "cor_quarta": "#RRGGBB ou null",
+  "nomes_cores": ["nome das cores oficiais na ordem encontrada"],
+  "mascote": "string ou null",
+  "tem_feminino": true,
+  "nome_curto": "string ou null"
+}`;
 }
 
-async function callAI(body: unknown): Promise<AIResult | null> {
-  const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${LOVABLE_KEY}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(body),
-  });
-  if (!res.ok) {
-    const t = await res.text();
-    console.error(`[AI HTTP ${res.status}] ${t.slice(0, 400)}`);
-    return null;
-  }
-  const json = await res.json();
-  const msg = json.choices?.[0]?.message;
-  const call = msg?.tool_calls?.[0];
-  let parsed: any = null;
-
-  if (call?.function?.arguments) {
-    const args = call.function.arguments;
+function extractJsonObject(text: string): Record<string, unknown> | null {
+  const clean = text.replace(/```json\s*/gi, "").replace(/```/g, "").trim();
+  const start = clean.indexOf("{");
+  const end = clean.lastIndexOf("}");
+  if (start < 0 || end <= start) return null;
+  try {
+    return JSON.parse(clean.slice(start, end + 1));
+  } catch {
     try {
-      parsed = typeof args === "string" ? JSON.parse(args) : args;
-    } catch (e) {
-      console.error("[AI JSON PARSE]", e, args);
-    }
-  } else if (typeof msg?.content === "string") {
-    // fallback: tenta extrair JSON do conteúdo textual
-    const m = msg.content.match(/\{[\s\S]*\}/);
-    if (m) {
-      try { parsed = JSON.parse(m[0]); } catch { /* ignore */ }
+      return JSON.parse(clean.slice(start, end + 1).replace(/,\s*}/g, "}").replace(/,\s*]/g, "]"));
+    } catch {
+      return null;
     }
   }
+}
 
-  if (!parsed) {
-    console.warn("[AI] sem tool_call e sem JSON no content. finish_reason=", json.choices?.[0]?.finish_reason);
-    return null;
-  }
+function normalizeAIResult(parsed: Record<string, unknown>): AIResult {
+  const namedColors = colorsFromNamesList(parsed.nomes_cores);
+  const hexColors = uniqHex([
+    normalizeHex(parsed.cor_primaria),
+    normalizeHex(parsed.cor_secundaria),
+    normalizeHex(parsed.cor_terciaria),
+    normalizeHex(parsed.cor_quarta),
+  ]);
+  const colors = namedColors.length >= hexColors.length ? namedColors : hexColors;
 
   return {
-    cor_primaria: normalizeHex(parsed.cor_primaria),
-    cor_secundaria: normalizeHex(parsed.cor_secundaria),
-    cor_terciaria: normalizeHex(parsed.cor_terciaria),
-    cor_quarta: normalizeHex(parsed.cor_quarta),
+    cor_primaria: colors[0] || null,
+    cor_secundaria: colors[1] || null,
+    cor_terciaria: colors[2] || null,
+    cor_quarta: colors[3] || null,
     mascote:
       parsed.mascote && String(parsed.mascote).trim() && !/^null$/i.test(String(parsed.mascote).trim())
         ? String(parsed.mascote).trim()
@@ -392,42 +421,69 @@ async function callAI(body: unknown): Promise<AIResult | null> {
   };
 }
 
-async function aiEnrich(clubName: string, country: string | null): Promise<AIResult> {
-  if (!LOVABLE_KEY) {
-    console.warn("[AI] LOVABLE_API_KEY ausente — pulando IA");
-    return EMPTY_AI;
-  }
+async function callGeminiGroundedColors(model: string, clubName: string, country: string | null): Promise<AIResult | null> {
+  if (!GEMINI_KEY) return null;
+  try {
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_KEY}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ role: "user", parts: [{ text: buildGeminiPrompt(clubName, country) }] }],
+        tools: [{ google_search: {} }],
+        generationConfig: { temperature: 0.05, topP: 0.2, maxOutputTokens: 1600 },
+      }),
+    });
 
-  // Tentativa 1: Gemini + fontes públicas confiáveis em paralelo.
+    const payload = await res.json().catch(() => null);
+    if (!res.ok) {
+      console.error(`[GEMINI ${model} ${res.status}]`, JSON.stringify(payload).slice(0, 500));
+      return null;
+    }
+
+    const text = payload?.candidates?.[0]?.content?.parts
+      ?.map((part: { text?: string }) => part.text || "")
+      .join("\n")
+      .trim();
+    const parsed = text ? extractJsonObject(text) : null;
+    return parsed ? normalizeAIResult(parsed) : null;
+  } catch (e) {
+    console.error(`[GEMINI ${model} ERROR]`, e);
+    return null;
+  }
+}
+
+async function aiEnrich(clubName: string, country: string | null): Promise<AIResult> {
   const [flash, sourceColors] = await Promise.all([
-    callAI(buildAIBody("google/gemini-2.5-flash", clubName, country)),
+    callGeminiGroundedColors("gemini-2.5-flash", clubName, country),
     researchColorsFromWeb(clubName, country),
   ]);
   let result = flash;
-  console.log(`[AI flash] ${clubName} →`, JSON.stringify(result));
+  console.log(`[GEMINI flash] ${clubName} →`, JSON.stringify(result));
 
-  // Se cores ausentes e nenhuma fonte externa resolveu, tenta upgrade para Gemini Pro.
-  const colorCount = result
+  const flashCount = result
     ? [result.cor_primaria, result.cor_secundaria, result.cor_terciaria, result.cor_quarta].filter(Boolean).length
     : 0;
+  const sourceCount = sourceColors?.colors.length || 0;
 
-  if ((!result || colorCount < 2) && !sourceColors) {
-    console.log(`[AI] flash retornou ${colorCount} cores — tentando gemini-2.5-pro`);
-    const pro = await callAI(buildAIBody("google/gemini-2.5-pro", clubName, country));
-    console.log(`[AI pro] ${clubName} →`, JSON.stringify(pro));
-    if (pro) {
-      const proCount = [pro.cor_primaria, pro.cor_secundaria, pro.cor_terciaria, pro.cor_quarta].filter(Boolean).length;
-      if (proCount >= colorCount) result = pro;
-    }
+  if (!result || flashCount < 2 || flashCount < sourceCount) {
+    const pro = await callGeminiGroundedColors("gemini-2.5-pro", clubName, country);
+    console.log(`[GEMINI pro] ${clubName} →`, JSON.stringify(pro));
+    const proCount = pro ? [pro.cor_primaria, pro.cor_secundaria, pro.cor_terciaria, pro.cor_quarta].filter(Boolean).length : 0;
+    if (pro && proCount >= flashCount) result = pro;
   }
 
   const merged = result || { ...EMPTY_AI };
-  if (sourceColors?.colors.length) {
-    const [primary, secondary, tertiary, fourth] = sourceColors.colors;
-    merged.cor_primaria = primary || null;
-    merged.cor_secundaria = secondary || null;
-    merged.cor_terciaria = tertiary || null;
-    merged.cor_quarta = fourth || null;
+  const aiColors = uniqHex([merged.cor_primaria, merged.cor_secundaria, merged.cor_terciaria, merged.cor_quarta]);
+  const trustedColors = sourceColors?.colors.length ? sourceColors.colors : [];
+  const finalColors = uniqHex([...trustedColors, ...aiColors]).slice(0, 4);
+
+  if (finalColors.length) {
+    [merged.cor_primaria, merged.cor_secundaria, merged.cor_terciaria, merged.cor_quarta] = [
+      finalColors[0] || null,
+      finalColors[1] || null,
+      finalColors[2] || null,
+      finalColors[3] || null,
+    ];
   }
 
   return merged;
@@ -563,7 +619,7 @@ serve(async (req) => {
         club: data,
         sources: {
           api_football: !!teamInfo,
-          ai: !!LOVABLE_KEY,
+          ai: !!GEMINI_KEY,
           feminino_api: femApi,
           feminino_news: femNews,
         },
