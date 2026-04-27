@@ -88,7 +88,7 @@ async function checkFemininoViaNews(name: string): Promise<boolean> {
   }
 }
 
-/* ─────────────── Lovable AI (Gemini) ─────────────── */
+/* ─────────────── Lovable AI (Gemini) + bloco confiável de cores ─────────────── */
 
 type AIResult = {
   cor_primaria: string | null;
@@ -105,13 +105,160 @@ const EMPTY_AI: AIResult = {
   mascote: null, tem_feminino: null, nome_curto: null,
 };
 
+type ColorEvidence = {
+  colors: string[];
+  source: string;
+  confidence: number;
+};
+
+const COLOR_NAME_HEX: Array<[string, string]> = [
+  ["azul-marinho", "#001F5B"], ["navy", "#001F5B"], ["azul", "#006EB6"], ["blue", "#006EB6"],
+  ["branco", "#FFFFFF"], ["white", "#FFFFFF"],
+  ["preto", "#000000"], ["black", "#000000"],
+  ["vermelho", "#E30613"], ["red", "#E30613"],
+  ["verde", "#009640"], ["green", "#009640"],
+  ["amarelo", "#FFDD00"], ["yellow", "#FFDD00"],
+  ["dourado", "#D4AF37"], ["gold", "#D4AF37"], ["golden", "#D4AF37"],
+  ["grená", "#7A0019"], ["grena", "#7A0019"], ["vinho", "#7A0019"], ["bordô", "#7A0019"], ["bordeaux", "#7A0019"], ["burgundy", "#7A0019"], ["maroon", "#7A0019"], ["claret", "#7A0019"],
+  ["laranja", "#FF6600"], ["orange", "#FF6600"],
+  ["roxo", "#552583"], ["purple", "#552583"],
+  ["celeste", "#87CEEB"], ["sky blue", "#87CEEB"], ["sky-blue", "#87CEEB"],
+  ["cinza", "#808080"], ["gray", "#808080"], ["grey", "#808080"],
+  ["rosa", "#FF69B4"], ["pink", "#FF69B4"],
+];
+
+function stripAccents(value: string): string {
+  return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+}
+
+function slugify(value: string): string {
+  return stripAccents(value)
+    .toLowerCase()
+    .replace(/\b(futebol clube|football club|esporte clube|sport club|soccer club)\b/g, "")
+    .replace(/\b(fc|f\.c\.|sc|s\.c\.|ec|e\.c\.|afc|cf|cd|ac)\b/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+function plainText(html: string): string {
+  return html
+    .replace(/<script[\s\S]*?<\/script>/gi, " ")
+    .replace(/<style[\s\S]*?<\/style>/gi, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&#8211;|&ndash;/gi, "-")
+    .replace(/&#8212;|&mdash;/gi, "-")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+async function fetchText(url: string): Promise<string | null> {
+  try {
+    const res = await fetch(url, {
+      headers: { "User-Agent": "HeartClubBot/1.0 club-color-verification" },
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!res.ok) return null;
+    return await res.text();
+  } catch {
+    return null;
+  }
+}
+
+function extractHexColors(text: string): string[] {
+  return uniqHex([...(text.matchAll(/#[0-9a-fA-F]{6}/g))].map((m) => m[0])).slice(0, 4);
+}
+
+function colorsFromNames(fragment: string): string[] {
+  const normalized = stripAccents(fragment).toLowerCase();
+  const found: Array<{ index: number; hex: string }> = [];
+
+  for (const [name, hex] of COLOR_NAME_HEX) {
+    const safeName = stripAccents(name).toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const re = new RegExp(`(^|[^a-z0-9])${safeName}([^a-z0-9]|$)`, "i");
+    const match = normalized.match(re);
+    if (match?.index !== undefined) found.push({ index: match.index, hex });
+  }
+
+  return uniqHex(found.sort((a, b) => a.index - b.index).map((item) => item.hex)).slice(0, 4);
+}
+
+function extractOfficialColorPhrase(text: string): string | null {
+  const patterns = [
+    /(cores\s+oficiais|official\s+colou?rs|team\s+colou?rs|club\s+colou?rs)\s*[:\-–]?\s*([^.;\n]{3,180})/i,
+    /(cores\s+do\s+clube|quatro\s+cores\s+do\s+clube|tr[eê]s\s+cores\s+do\s+clube)\s*[:\-–]?\s*([^.;\n]{3,180})/i,
+    /(colou?rs\s+are|colors\s+are|cores\s+s[aã]o)\s*([^.;\n]{3,180})/i,
+  ];
+
+  for (const pattern of patterns) {
+    const match = text.match(pattern);
+    if (match?.[2]) return match[2];
+  }
+  return null;
+}
+
+function evidenceFromText(text: string, source: string, preferHex: boolean): ColorEvidence | null {
+  const clean = plainText(text);
+  const section = clean.slice(0, 6000);
+  const hexes = preferHex ? extractHexColors(section) : [];
+  if (hexes.length) return { colors: hexes, source, confidence: 95 };
+
+  const phrase = extractOfficialColorPhrase(section);
+  if (!phrase) return null;
+
+  const named = colorsFromNames(phrase);
+  if (!named.length) return null;
+  return { colors: named, source, confidence: source.includes("oficial") ? 90 : 80 };
+}
+
+function clubSection(text: string, clubName: string): string | null {
+  const clean = plainText(text);
+  const normalized = stripAccents(clean).toLowerCase();
+  const needle = stripAccents(clubName).toLowerCase();
+  const firstWord = needle.split(/\s+/).find((w) => w.length > 3) || needle;
+  const index = normalized.indexOf(needle) >= 0 ? normalized.indexOf(needle) : normalized.indexOf(firstWord);
+  if (index < 0) return null;
+  return clean.slice(index, index + 2200);
+}
+
+async function researchColorsFromWeb(clubName: string, country: string | null): Promise<ColorEvidence | null> {
+  const base = slugify(clubName);
+  const compact = base.replace(/-(fc|sc|ec|cf|cd|ac)$/i, "");
+  const candidates = [...new Set([
+    `https://teamcolorcodes.com/${base}-color-codes/`,
+    `https://teamcolorcodes.com/${compact}-color-codes/`,
+    `https://www.brandcolorcode.com/${base}`,
+    `https://www.brandcolorcode.com/${compact}`,
+    `https://www.brandcolorcode.com/${base}-fc`,
+    `https://www.brandcolorcode.com/${compact}-fc`,
+  ])];
+
+  const pages = await Promise.all(candidates.map(async (url) => ({ url, text: await fetchText(url) })));
+  const evidences = pages
+    .filter((page): page is { url: string; text: string } => !!page.text)
+    .map((page) => evidenceFromText(page.text, page.url, true))
+    .filter((item): item is ColorEvidence => !!item);
+
+  if (country && /brazil|brasil/i.test(country)) {
+    const fcfText = await fetchText("https://fcf.com.br/clubes-filiados/");
+    const section = fcfText ? clubSection(fcfText, clubName) : null;
+    const fcfEvidence = section ? evidenceFromText(section, "FCF - Federação Catarinense de Futebol (oficial)", false) : null;
+    if (fcfEvidence) evidences.push(fcfEvidence);
+  }
+
+  const best = evidences.sort((a, b) => b.confidence - a.confidence || b.colors.length - a.colors.length)[0] || null;
+  if (best) console.log(`[COLOR SOURCE] ${clubName} → ${best.colors.join(", ")} (${best.source})`);
+  return best;
+}
+
 function buildAIBody(model: string, clubName: string, country: string | null) {
   const sys =
-    "Você é um pesquisador especialista em uniformes oficiais de clubes de futebol mundiais (Brasil, Europa, América, Ásia, África). Você conhece as cores HEX EXATAS do uniforme TITULAR (camisa principal) de cada clube. Clubes podem ter 1, 2, 3 ou 4 cores oficiais visíveis na camisa titular. Exemplos: Brusque-SC = vermelho/branco/azul/verde (quadricolor). Fluminense = grená/branco/verde. São Paulo = branco/vermelho/preto. Real Madrid = branco. Barcelona = azul/grená. Boca Juniors = azul/amarelo. SEMPRE preencha cor_terciaria e cor_quarta se o clube tiver essas cores no uniforme titular. NUNCA omita uma cor real. Use HEX #RRGGBB.";
+    "Você é um pesquisador especialista em identidade visual oficial de clubes de futebol mundiais. Retorne SOMENTE cores oficiais do clube ou do uniforme titular principal, em HEX #RRGGBB. Não invente cores de contorno, sombra, brasão, estrelas, patrocínio ou detalhes decorativos. Se houver fonte oficial/federação/base confiável com nomes das cores, respeite essas cores e converta para HEX. Clubes podem ter 1, 2, 3 ou 4 cores oficiais; nunca omita a terceira ou quarta cor quando a identidade do clube for tricolor ou quadricolor.";
 
   const userMsg = `Clube: "${clubName}"${country ? ` (país: ${country})` : ""}.
 
-Liste TODAS as cores oficiais do uniforme TITULAR atual em HEX #RRGGBB:
+Pesquise e liste TODAS as cores oficiais do clube/uniforme TITULAR atual em HEX #RRGGBB:
 
 - cor_primaria: cor predominante (obrigatória)
 - cor_secundaria: segunda cor (obrigatória se houver mais de uma)
@@ -121,7 +268,7 @@ Liste TODAS as cores oficiais do uniforme TITULAR atual em HEX #RRGGBB:
 - tem_feminino: true se possui time profissional feminino ATIVO (Brasileirão A1/A2/A3, estadual feminino, WSL, NWSL, Liga F). Sub-17/sub-20 NÃO conta.
 - nome_curto: apelido popular (ex: "Vila", "Galo", "Quadricolor")
 
-IMPORTANTE: Se o clube é tricolor ou quadricolor, você DEVE retornar 3 ou 4 cores. Não retorne null para terciária/quarta se elas existem.`;
+IMPORTANTE: Retorne preto, cinza, dourado ou outras cores extras somente se elas forem cores oficiais do clube/uniforme, não por aparecerem em bordas do escudo ou elementos decorativos.`;
 
   return {
     model,
@@ -216,16 +363,20 @@ async function aiEnrich(clubName: string, country: string | null): Promise<AIRes
     return EMPTY_AI;
   }
 
-  // Tentativa 1: gemini-2.5-flash (rápido, bom com tool_calls)
-  let result = await callAI(buildAIBody("google/gemini-2.5-flash", clubName, country));
+  // Tentativa 1: Gemini + fontes públicas confiáveis em paralelo.
+  const [flash, sourceColors] = await Promise.all([
+    callAI(buildAIBody("google/gemini-2.5-flash", clubName, country)),
+    researchColorsFromWeb(clubName, country),
+  ]);
+  let result = flash;
   console.log(`[AI flash] ${clubName} →`, JSON.stringify(result));
 
-  // Se cores ausentes ou apenas 1-2 cores, tenta upgrade para gemini-2.5-pro
+  // Se cores ausentes e nenhuma fonte externa resolveu, tenta upgrade para Gemini Pro.
   const colorCount = result
     ? [result.cor_primaria, result.cor_secundaria, result.cor_terciaria, result.cor_quarta].filter(Boolean).length
     : 0;
 
-  if (!result || colorCount < 2) {
+  if ((!result || colorCount < 2) && !sourceColors) {
     console.log(`[AI] flash retornou ${colorCount} cores — tentando gemini-2.5-pro`);
     const pro = await callAI(buildAIBody("google/gemini-2.5-pro", clubName, country));
     console.log(`[AI pro] ${clubName} →`, JSON.stringify(pro));
@@ -235,7 +386,16 @@ async function aiEnrich(clubName: string, country: string | null): Promise<AIRes
     }
   }
 
-  return result || EMPTY_AI;
+  const merged = result || { ...EMPTY_AI };
+  if (sourceColors?.colors.length) {
+    const [primary, secondary, tertiary, fourth] = sourceColors.colors;
+    merged.cor_primaria = primary || null;
+    merged.cor_secundaria = secondary || null;
+    merged.cor_terciaria = tertiary || null;
+    merged.cor_quarta = fourth || null;
+  }
+
+  return merged;
 }
 
 
