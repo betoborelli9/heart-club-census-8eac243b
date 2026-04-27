@@ -7,8 +7,8 @@
  *   1. API-Football: nome, nome_curto, país, cidade, fundado, escudo,
  *      estádio (nome/cidade/capacidade), divisão atual.
  *   2. API-Football (women search): detecta time feminino oficial.
- *   3. Lovable AI Gateway (Gemini 2.5 Flash) com Google Search grounding:
- *      cores HEX exatas (até 4), mascote e confirmação de feminino.
+ *   3. Gemini direto com Google Search + fontes públicas:
+ *      cores HEX oficiais/tradicionais (até 4), sem custo Lovable no bloco de cores.
  *   4. Fallback Google News RSS para feminino.
  *   5. Persistência em clubes_cache (todas as colunas).
  * ═══════════════════════════════════════════════════════════════════
@@ -23,6 +23,7 @@ const corsHeaders = {
 };
 
 const API_FOOTBALL = Deno.env.get("API_FOOTBALL_KEY") || Deno.env.get("FOOTBALL_API_KEY") || "";
+const GEMINI_KEY = Deno.env.get("GEMINI_API_KEY") || "";
 const LOVABLE_KEY = Deno.env.get("LOVABLE_API_KEY") || "";
 
 /* ─────────────── helpers ─────────────── */
