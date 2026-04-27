@@ -272,7 +272,7 @@ const ClubBanner = ({
           <NavItem icon={Vote} label="VOTAÇÃO" path="/voting" variant="orange" />
           {IS_MASTER && (
             <>
-              <NavItem icon={FlaskConical} label="TESTAR CLUBE" path="/testar-clube" variant="orange" />
+              <NavItem icon={FlaskConical} label="TESTAR CLUBE" path="/voting?test=1" variant="orange" />
               <NavItem icon={ShieldAlert} label="PAINEL MASTER" path="/admin" variant="danger" />
             </>
           )}
