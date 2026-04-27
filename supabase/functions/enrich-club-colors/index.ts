@@ -2,11 +2,12 @@
  * ═══════════════════════════════════════════════════════════════════
  * [CAMINHO]: supabase/functions/enrich-club-colors/index.ts
  * [MÓDULO]: ENRIQUECIMENTO DE CLUBES (STABLE FINAL)
- * [STATUS]: PRODUÇÃO — VERSÃO 78.0 (FIX: JSON PARSING & MAPPING)
+ * [STATUS]: PRODUÇÃO — VERSÃO 80.0 (FIX: TOTAL MAPPING & AI SCHEMA)
  * [DESCRIÇÃO]:
- * - Correção definitiva do erro de parsing do Mascote.
- * - Mapeamento técnico completo: Fundação, Estádio e Capacidade.
- * - Inteligência Gemini 2.5 Flash com Grounding (Wikipedia-First).
+ * - Mapeamento técnico exato da API Football (Fundação, Estádio, Capacidade).
+ * - Inteligência Gemini 2.5 Flash com Schema JSON rigoroso.
+ * - Wikipedia-First Grounding para cores de tecido e mascote.
+ * - Veto de cores de contorno de escudo (Vila Nova Fix).
  * ═══════════════════════════════════════════════════════════════════
  */
 
@@ -19,11 +20,16 @@ const corsHeaders = {
 };
 
 /**
- * Limpa a resposta da IA para garantir que seja um JSON válido.
- * Remove blocos de código markdown (```json ... ```) se existirem.
+ * Limpa e valida o JSON retornado pela IA.
  */
-function sanitizeJson(text: string): string {
-  return text.replace(/```json|```/g, "").trim();
+function sanitizeJson(text: string): any {
+  try {
+    const clean = text.replace(/```json|```/g, "").trim();
+    return JSON.parse(clean);
+  } catch (e) {
+    console.error("[ERRO_SANITIZE]: Falha ao parsear JSON da IA", e);
+    return null;
+  }
 }
 
 serve(async (req) => {
@@ -38,7 +44,7 @@ serve(async (req) => {
     const { club_name, api_id } = await req.json();
     if (!club_name) throw new Error("Nome do clube é obrigatório");
 
-    console.log(`[STABLE SYNC]: Investigando ${club_name}...`);
+    console.log(`[SYNC 80.0]: Investigando ${club_name}...`);
 
     /* ═══════════════════════════════════════════════════════════
         MÓDULO 1: DADOS TÉCNICOS (API FOOTBALL)
@@ -46,49 +52,46 @@ serve(async (req) => {
     let teamInfo: any = null;
     let division = "Série Não Identificada";
 
-    const teamRes = await fetch(
-      api_id
-        ? `https://v3.football.api-sports.io/teams?id=${api_id}`
-        : `https://v3.football.api-sports.io/teams?search=${encodeURIComponent(club_name)}`,
-      { headers: { "x-apisports-key": apiKeyFootball } },
-    );
+    const teamUrl = api_id
+      ? `https://v3.football.api-sports.io/teams?id=${api_id}`
+      : `https://v3.football.api-sports.io/teams?search=${encodeURIComponent(club_name)}`;
+
+    const teamRes = await fetch(teamUrl, { headers: { "x-apisports-key": apiKeyFootball } });
     const teamJson = await teamRes.json();
     teamInfo = teamJson.response?.[0];
 
+    // Busca Divisão Atual/2026
     if (teamInfo?.team?.id) {
       const leagueRes = await fetch(`https://v3.football.api-sports.io/leagues?team=${teamInfo.team.id}&current=true`, {
         headers: { "x-apisports-key": apiKeyFootball },
       });
       const leagueJson = await leagueRes.json();
       const leagues = leagueJson.response || [];
-
       const tiers = ["Série A", "Série B", "Série C", "Série D", "Brasileirão", "Premier League", "La Liga"];
       const mainLeague = leagues.find((l: any) => tiers.some((tier) => l.league.name.includes(tier))) || leagues[0];
       if (mainLeague) division = mainLeague.league.name;
     }
 
     /* ═══════════════════════════════════════════════════════════
-        MÓDULO 2: INTELIGÊNCIA IA (GEMINI 2.5 FLASH + SEARCH)
+        MÓDULO 2: INTELIGÊNCIA IA (GEMINI 2.5 FLASH + GROUNDING)
        ═══════════════════════════════════════════════════════════ */
-    let aiData = {
+    let aiData: any = {
       cor_primaria: "#000000",
       cor_secundaria: "#FFFFFF",
-      cor_terciaria: null as string | null,
-      cor_quarta: null as string | null,
+      cor_terciaria: null,
+      cor_quarta: null,
       mascote: "Não Identificado",
       tem_feminino: false,
     };
 
     if (geminiKey) {
-      const prompt = `Investigue o clube "${club_name}". 
+      const prompt = `Investigue o clube "${club_name}". Use Wikipedia e Search.
       REGRAS: 
-      1. Cores do TECIDO da camisa titular na Wikipedia. Ignore contornos de escudo.
-      2. Vila Nova-GO: Vermelho e Branco (Bicolor).
-      3. Brusque-SC: Amarelo, Verde, Vermelho, Branco (Quadricolor).
-      4. Verifique se há time feminino ativo (profissional/base).
-      
-      Retorne APENAS um JSON puro: 
-      {"cor_primaria": "#HEX", "cor_secundaria": "#HEX", "cor_terciaria": "#HEX ou null", "cor_quarta": "#HEX ou null", "mascote": "NOME", "tem_feminino": boolean}`;
+      1. CORES: Use as cores do TECIDO titular. Vila Nova = Vermelho/Branco. Brusque = Quadricolor.
+      2. VETO: Ignore contornos de escudo e estrelas.
+      3. FEMININO: Verifique se há time profissional ativo em 2026.
+      4. MASCOTE: Nome oficial.
+      Retorne APENAS o JSON.`;
 
       const gRes = await fetch(
         `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${geminiKey}`,
@@ -101,6 +104,17 @@ serve(async (req) => {
             generationConfig: {
               responseMimeType: "application/json",
               temperature: 0.1,
+              responseSchema: {
+                type: "OBJECT",
+                properties: {
+                  cor_primaria: { type: "STRING" },
+                  cor_secundaria: { type: "STRING" },
+                  cor_terciaria: { type: "STRING" },
+                  cor_quarta: { type: "STRING" },
+                  mascote: { type: "STRING" },
+                  tem_feminino: { type: "BOOLEAN" },
+                },
+              },
             },
           }),
         },
@@ -108,37 +122,30 @@ serve(async (req) => {
 
       const gJson = await gRes.json();
       const rawText = gJson.candidates?.[0]?.content?.parts?.[0]?.text;
-
-      if (rawText) {
-        try {
-          const parsed = JSON.parse(sanitizeJson(rawText));
-          aiData = { ...aiData, ...parsed };
-        } catch (parseError) {
-          console.error("[PARSE ERROR]: Falha ao processar JSON da IA", parseError);
-        }
-      }
+      const parsed = sanitizeJson(rawText);
+      if (parsed) aiData = { ...aiData, ...parsed };
     }
 
     /* ═══════════════════════════════════════════════════════════
-        MÓDULO 3: PERSISTÊNCIA (MAPEAMENTO TÉCNICO COMPLETO)
+        MÓDULO 3: PERSISTÊNCIA (MAPEAMENTO RIGOROSO DE COLUNAS)
        ═══════════════════════════════════════════════════════════ */
     const payload = {
       nome: club_name,
       api_id: teamInfo?.team?.id?.toString() || api_id?.toString() || null,
       escudo_url: teamInfo?.team?.logo || null,
-      fundado: teamInfo?.team?.founded || null,
-      cidade: teamInfo?.venue?.city || teamInfo?.team?.country || "Brasil",
-      pais: teamInfo?.team?.country || "Brasil",
-      estadio_nome: teamInfo?.venue?.name || null,
-      estadio_cidade: teamInfo?.venue?.city || null,
-      estadio_capacidade: teamInfo?.venue?.capacity || null,
+      fundado: teamInfo?.team?.founded || null, // API FOOTBALL
+      cidade: teamInfo?.venue?.city || teamInfo?.team?.country || "Brasil", // API FOOTBALL
+      pais: teamInfo?.team?.country || "Brasil", // API FOOTBALL
+      estadio_nome: teamInfo?.venue?.name || null, // API FOOTBALL
+      estadio_cidade: teamInfo?.venue?.city || null, // API FOOTBALL
+      estadio_capacidade: teamInfo?.venue?.capacity || null, // API FOOTBALL
       division: division,
       mascote: aiData.mascote,
       tem_feminino: aiData.tem_feminino,
       cor_primaria: aiData.cor_primaria,
       cor_secundaria: aiData.cor_secundaria,
-      cor_terciaria: aiData.cor_terciaria,
-      cor_quarta: aiData.cor_quarta,
+      cor_terciaria: aiData.cor_terciaria === "null" ? null : aiData.cor_terciaria,
+      cor_quarta: aiData.cor_quarta === "null" ? null : aiData.cor_quarta,
       atualizado_em: new Date().toISOString(),
     };
 
@@ -161,3 +168,11 @@ serve(async (req) => {
     });
   }
 });
+
+/**
+ * [RODAPÉ TÉCNICO]
+ * Versão: 80.0
+ * - Mapeamento: founded, venue.name, venue.city e venue.capacity mapeados diretamente da API Football.
+ * - IA: Forçado uso de responseSchema para evitar alucinações de texto e garantir Mascote limpo.
+ * - Fix: Tratamento de strings "null" vindas da IA para garantir persistência correta no banco.
+ */
