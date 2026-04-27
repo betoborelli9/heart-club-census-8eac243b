@@ -176,9 +176,9 @@ const ClubBanner = ({
       `}</style>
 
       <div className="overflow-hidden rounded-[2.5rem] border border-[#1a1a1a] shadow-2xl flex flex-col">
-        {/* TOPO DO BANNER - ALTURA SLIM (240px) */}
+        {/* TOPO DO BANNER - ALTURA SLIM (210px) */}
         <section
-          className="relative h-[240px] md:h-[240px] w-full flex items-center overflow-hidden"
+          className="relative h-[210px] md:h-[210px] w-full flex items-center overflow-hidden"
           style={{
             background: buildFlagGradient(),
             backgroundSize: "200% 200%",
@@ -190,11 +190,11 @@ const ClubBanner = ({
           <div className="relative z-10 h-full w-full flex flex-row items-center justify-between px-6 md:px-16">
             <div className="flex items-center h-full shrink-0">
               {/* EMBLEMA EQUILIBRADO (210px) */}
-              <div className="w-[110px] h-[110px] md:w-[210px] md:h-[210px] rounded-full bg-white flex items-center justify-center shrink-0 shadow-xl border-4 border-white/10">
+              <div className="w-[100px] h-[100px] md:w-[190px] md:h-[190px] rounded-full bg-white flex items-center justify-center shrink-0 shadow-xl border-4 border-white/10">
                 <ClubLogo
                   src={theme.escudo_url}
                   alt={clubName}
-                  className="w-[82%] h-[82%] object-contain drop-shadow-md"
+                  className="w-[90%] h-[90%] object-contain drop-shadow-md"
                 />
               </div>
 
