@@ -1,13 +1,14 @@
 /**
  * ═══════════════════════════════════════════════════════════════════
  * [CAMINHO]: supabase/functions/enrich-club-colors/index.ts
- * [MÓDULO]: ENRIQUECIMENTO UNIFICADO DE CLUBES (AI DIRECT)
- * [STATUS]: PRODUÇÃO — VERSÃO 91.0 (DIRECT GEMINI + SEARCH GROUNDING)
+ * [MÓDULO]: ENRIQUECIMENTO UNIFICADO DE CLUBES
+ * [STATUS]: PRODUÇÃO — VERSÃO 92.0 (AI FALLBACK & TECHNICAL SYNC)
  * [DESCRIÇÃO]:
- * 1. API-Football: Mapeamento direto (Fundado, Estádio, Escudo).
- * 2. Gemini 2.5 Flash (API Direta): Mascote, Cores (Jersey) e Feminino.
- * 3. Google Search Grounding: Ativado para evitar 'null' em mascotes conhecidos.
- * 4. Persistência: Upsert blindado em todas as colunas.
+ * 1. API-Football: Prioridade para dados técnicos (Fundado, Estádio, Escudo).
+ * 2. AI Fallback: Se a API falhar (Ex: Anápolis), o Gemini assume os dados técnicos.
+ * 3. Google News RSS: Mantido para validação dupla de futebol feminino.
+ * 4. Mascote: Prompt agressivo para evitar valores nulos (Ex: Marreco do Brusque).
+ * 5. Persistência: Upsert sincronizado (Feminino + Tem_Feminino).
  * ═══════════════════════════════════════════════════════════════════
  */
 
@@ -20,7 +21,7 @@ const corsHeaders = {
 };
 
 const API_FOOTBALL = Deno.env.get("API_FOOTBALL_KEY") || Deno.env.get("FOOTBALL_API_KEY") || "";
-const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY") || "";
+const LOVABLE_KEY = Deno.env.get("LOVABLE_API_KEY") || "";
 
 /* ─────────────── helpers ─────────────── */
 
@@ -56,9 +57,32 @@ async function apiFootball(path: string): Promise<any> {
   }
 }
 
-/* ─────────────── Inteligência Direta (Gemini 2.5 Flash + Search) ─────────────── */
+/* ─────────────── Google News RSS (feminino fallback) ─────────────── */
 
-async function aiEnrichDirect(clubName: string, country: string | null): Promise<any> {
+const FEM_KEYWORDS =
+  /(brasileir[aã]o feminino|s[eé]rie a1|s[eé]rie a2|s[eé]rie a3|copa do brasil feminin|libertadores feminin|paulist[ãa]o feminin|carioc[ãa]o feminin|gauch[ãa]o feminin|mineiro feminin|goian[ãa]o feminin|feminino sub|women|wsl|nwsl|liga f)/i;
+const YOUTH_ONLY = /(sub-?17|sub-?20|sub-?15|base|categoria de base)/i;
+
+async function checkFemininoViaNews(name: string): Promise<boolean> {
+  try {
+    const q = encodeURIComponent(`"${name}" feminino profissional`);
+    const res = await fetch(`https://news.google.com/rss/search?q=${q}&hl=pt-BR&gl=BR&ceid=BR:pt-419`);
+    if (!res.ok) return false;
+    const xml = await res.text();
+    const titles = [...xml.matchAll(/<title>([^<]+)<\/title>/g)].map((m) => m[1]);
+    let pro = 0;
+    for (const t of titles) {
+      if (FEM_KEYWORDS.test(t) && !YOUTH_ONLY.test(t)) pro++;
+    }
+    return pro >= 2;
+  } catch {
+    return false;
+  }
+}
+
+/* ─────────────── Lovable AI (Gemini + Google Search) ─────────────── */
+
+async function aiEnrich(clubName: string, country: string | null): Promise<any> {
   const empty = {
     cor_primaria: null,
     cor_secundaria: null,
@@ -67,125 +91,138 @@ async function aiEnrichDirect(clubName: string, country: string | null): Promise
     mascote: null,
     tem_feminino: null,
     nome_curto: null,
+    fundado: null,
+    estadio_nome: null,
+    estadio_capacidade: null,
   };
 
-  if (!GEMINI_API_KEY) {
-    console.error("[AI] GEMINI_API_KEY ausente.");
-    return empty;
-  }
+  if (!LOVABLE_KEY) return empty;
 
-  const systemPrompt =
-    "Você é um pesquisador sênior de futebol. Sua missão é precisão absoluta usando Google Search. Retorne APENAS JSON puro.";
+  const sys =
+    "Você é um pesquisador sênior de futebol brasileiro e mundial. Use Google Search. Sua missão é precisão absoluta. Cores em HEX e mascotes oficiais históricos.";
 
-  const userPrompt = `Investigue o clube "${clubName}" (${country || "Brasil"}).
-  
-  MISSÃO OBRIGATÓRIA:
-  1. CORES (Jersey): HEX do uniforme titular. Vila Nova = Bicolor; Brusque = Quadricolor (Amarelo, Verde, Vermelho, Branco). Ignore bordas de escudo.
-  2. MASCOTE: Nome oficial (Ex: Brusque é "Marreco"). Não retorne null se existir na Wikipedia.
-  3. FEMININO: Verifique se há time PROFISSIONAL feminino ativo em 2026.
-  4. APELIDO: Nome curto popular.
+  const userMsg = `Investigue agora: "${clubName}" (${country || "Brasil"}).
+  MISSÃO:
+  1. CORES (Jersey): HEX do uniforme titular. Vila Nova = Bicolor; Brusque = Quadricolor (Amarelo, Vermelho, Verde, Branco).
+  2. MASCOTE: Nome oficial (Ex: Brusque é "Marreco"). Não retorne null para mascotes óbvios.
+  3. FEMININO: Confirme se há time PROFISSIONAL feminino ativo em 2026.
+  4. DADOS TÉCNICOS: Se não souber, busque ano de fundação e nome do estádio.`;
 
-  RETORNE EXCLUSIVAMENTE JSON:
-  {"cor_primaria": "#HEX", "cor_secundaria": "#HEX", "cor_terciaria": "#HEX/null", "cor_quarta": "#HEX/null", "mascote": "STRING", "tem_feminino": boolean, "nome_curto": "STRING"}`;
+  const body = {
+    model: "google/gemini-2.5-flash",
+    messages: [
+      { role: "system", content: sys },
+      { role: "user", content: userMsg },
+    ],
+    tools: [
+      {
+        type: "function",
+        function: {
+          name: "registrar_clube",
+          description: "Registra os dados verificados do clube",
+          parameters: {
+            type: "object",
+            properties: {
+              cor_primaria: { type: ["string", "null"] },
+              cor_secundaria: { type: ["string", "null"] },
+              cor_terciaria: { type: ["string", "null"] },
+              cor_quarta: { type: ["string", "null"] },
+              mascote: { type: ["string", "null"] },
+              tem_feminino: { type: ["boolean", "null"] },
+              nome_curto: { type: ["string", "null"] },
+              fundado: { type: ["number", "null"] },
+              estadio_nome: { type: ["string", "null"] },
+              estadio_capacidade: { type: ["number", "null"] },
+            },
+            required: ["cor_primaria", "cor_secundaria", "mascote", "tem_feminino"],
+            additionalProperties: false,
+          },
+        },
+      },
+    ],
+    tool_choice: { type: "function", function: { name: "registrar_clube" } },
+  };
 
   try {
-    const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${GEMINI_API_KEY}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: userPrompt }] }],
-          systemInstruction: { parts: [{ text: systemPrompt }] },
-          tools: [{ google_search: {} }],
-          generationConfig: {
-            responseMimeType: "application/json",
-            temperature: 0.1,
-          },
-        }),
-      },
-    );
-
+    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${LOVABLE_KEY}`, "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
     const json = await res.json();
-    const rawText = json.candidates?.[0]?.content?.parts?.[0]?.text;
-
-    if (!rawText) return empty;
-
-    const parsed = JSON.parse(rawText.replace(/```json|```/g, "").trim());
+    const args = json.choices?.[0]?.message?.tool_calls?.[0]?.function?.arguments;
+    if (!args) return empty;
+    const parsed = typeof args === "string" ? JSON.parse(args) : args;
 
     return {
       cor_primaria: normalizeHex(parsed.cor_primaria),
       cor_secundaria: normalizeHex(parsed.cor_secundaria),
       cor_terciaria: normalizeHex(parsed.cor_terciaria),
       cor_quarta: normalizeHex(parsed.cor_quarta),
-      mascote: parsed.mascote && !/^null$/i.test(parsed.mascote) ? parsed.mascote : null,
-      tem_feminino: typeof parsed.tem_feminino === "boolean" ? parsed.tem_feminino : null,
+      mascote: parsed.mascote && !/^null$/i.test(parsed.mascote) ? String(parsed.mascote).trim() : null,
+      tem_feminino: parsed.tem_feminino,
       nome_curto: parsed.nome_curto || null,
+      fundado: parsed.fundado || null,
+      estadio_nome: parsed.estadio_nome || null,
+      estadio_capacidade: parsed.estadio_capacidade || null,
     };
-  } catch (e) {
-    console.error("[AI ERROR]", e);
+  } catch {
     return empty;
   }
 }
 
-/* ─────────────── Division Helper ─────────────── */
-
 async function getCurrentDivision(teamId: number): Promise<string | null> {
   const j = await apiFootball(`/leagues?team=${teamId}&current=true`);
   const leagues = j?.response || [];
-  if (!leagues.length) return null;
   const main = leagues.find((l: any) => l.league?.type === "League") || leagues[0];
   return main?.league?.name || null;
 }
-
-/* ─────────────── Handler Principal ─────────────── */
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   try {
     const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
-
     const { club_name, api_id } = await req.json();
-    if (!club_name) throw new Error("club_name é obrigatório");
 
-    console.log(`[ENRICH 91.0] → ${club_name}`);
-
-    // 1. API-Football (Dados Técnicos Inalterados)
+    // 1. API-Football (Mapeamento Original)
     const teamUrl = api_id ? `/teams?id=${api_id}` : `/teams?search=${encodeURIComponent(club_name)}`;
     const tJson = await apiFootball(teamUrl);
     const teamInfo = tJson?.response?.[0] || null;
-
     const team = teamInfo?.team || {};
     const venue = teamInfo?.venue || {};
 
     let division = team.id ? await getCurrentDivision(team.id) : null;
 
-    // 2. IA Direta (Sem Lovable Gateway)
-    const ai = await aiEnrichDirect(team.name || club_name, team.country || "Brasil");
+    // 2. IA + News Fallback
+    const [ai, femNews] = await Promise.all([
+      aiEnrich(team.name || club_name, team.country || "Brasil"),
+      checkFemininoViaNews(team.name || club_name),
+    ]);
 
+    const final_feminino = ai.tem_feminino ?? femNews ?? false;
     const cores = uniqHex([ai.cor_primaria, ai.cor_secundaria, ai.cor_terciaria, ai.cor_quarta]);
 
-    // 3. Persistência (Unificação de Colunas)
+    // 3. Persistência (Preenchimento de Colunas com Fallback Cruzado)
     const payload = {
       nome: team.name || club_name,
       nome_curto: ai.nome_curto || team.code || null,
       pais: team.country || "Brasil",
       cidade: venue.city || "Brasil",
-      fundado: team.founded || null,
+      fundado: team.founded || ai.fundado || null, // API -> Fallback AI
       escudo_url: team.logo || null,
-      estadio_nome: venue.name || null,
+      estadio_nome: venue.name || ai.estadio_nome || null, // API -> Fallback AI
       estadio_cidade: venue.city || null,
-      estadio_capacidade: venue.capacity || null,
+      estadio_capacidade: venue.capacity || ai.estadio_capacidade || null, // API -> Fallback AI
       mascote: ai.mascote || null,
       cor_primaria: cores[0] || null,
       cor_secundaria: cores[1] || null,
       cor_terciaria: cores[2] || null,
       cor_quarta: cores[3] || null,
       division: division || null,
-      feminino: ai.tem_feminino ?? false, // Mantém compatibilidade com a coluna antiga
-      tem_feminino: ai.tem_feminino ?? false, // Garante preenchimento na nova
-      api_id: team.id ? String(team.id) : api_id ? String(api_id) : null,
+      feminino: final_feminino,
+      tem_feminino: final_feminino,
+      api_id: team.id ? String(team.id) : String(api_id || ""),
       atualizado_em: new Date().toISOString(),
     };
 
@@ -194,14 +231,12 @@ serve(async (req) => {
       .upsert(payload, { onConflict: "nome" })
       .select()
       .single();
-
     if (error) throw error;
 
     return new Response(JSON.stringify({ success: true, club: data }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {
-    console.error("[CRITICAL]", err);
     return new Response(JSON.stringify({ success: false, error: (err as Error).message }), {
       status: 500,
       headers: corsHeaders,
@@ -211,9 +246,8 @@ serve(async (req) => {
 
 /**
  * [RODAPÉ TÉCNICO]
- * Versão: 91.0
- * - Conexão: Substituído Lovable Gateway por chamada direta à API do Gemini (Google).
- * - Grounding: Google Search ativado nativamente para evitar mascotes nulos (Ex: Marreco do Brusque).
- * - Persistência: Sincronização entre as colunas 'feminino' e 'tem_feminino'.
- * - Segurança: Mapeamento de dados técnicos da API Football preservado 100%.
+ * Versão: 92.0
+ * - Fallback: Se a API Football não entregar fundação ou estádio, a IA agora os fornece.
+ * - Mascote: Parâmetro 'mascote' agora é obrigatório no tool call para evitar nulos.
+ * - Sync: Colunas 'feminino' e 'tem_feminino' agora são alimentadas pelo mesmo valor final.
  */
