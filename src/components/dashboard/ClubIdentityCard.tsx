@@ -34,8 +34,13 @@ interface CacheRow {
 
 const ColorChip = ({ hex }: { hex: string }) => (
   <div
-    className="w-5 h-5 rounded-md border border-white/15 shadow-sm"
-    style={{ background: hex }}
+    className="w-5 h-5 rounded-full shadow-sm"
+    style={{
+      background: hex,
+      // contorno duplo: anel externo claro + anel interno escuro = destaca preto/branco
+      boxShadow:
+        "0 0 0 1px rgba(255,255,255,0.65), 0 0 0 2px rgba(0,0,0,0.55), 0 1px 2px rgba(0,0,0,0.4)",
+    }}
     title={hex.toUpperCase()}
   />
 );
