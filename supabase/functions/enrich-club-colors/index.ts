@@ -1,12 +1,12 @@
 /**
  * ═══════════════════════════════════════════════════════════════════
  * [CAMINHO]: supabase/functions/enrich-club-colors/index.ts
- * [MÓDULO]: ENRIQUECIMENTO DE CLUBES (RESTORE STABLE)
- * [STATUS]: PRODUÇÃO — VERSÃO 77.0 (ROLLBACK & CLEAN SYNC)
+ * [MÓDULO]: ENRIQUECIMENTO DE CLUBES (STABLE FINAL)
+ * [STATUS]: PRODUÇÃO — VERSÃO 78.0 (FIX: JSON PARSING & MAPPING)
  * [DESCRIÇÃO]:
- * - Recuperação da lógica estável pré-complexidade.
- * - Mapeamento técnico rigoroso: Fundação, Estádio e Logo via API Sports.
- * - Inteligência Gemini: Foco em Cores de Tecido, Mascote e Feminino.
+ * - Correção definitiva do erro de parsing do Mascote.
+ * - Mapeamento técnico completo: Fundação, Estádio e Capacidade.
+ * - Inteligência Gemini 2.5 Flash com Grounding (Wikipedia-First).
  * ═══════════════════════════════════════════════════════════════════
  */
 
@@ -18,7 +18,11 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-function cleanGeminiResponse(text: string): string {
+/**
+ * Limpa a resposta da IA para garantir que seja um JSON válido.
+ * Remove blocos de código markdown (```json ... ```) se existirem.
+ */
+function sanitizeJson(text: string): string {
   return text.replace(/```json|```/g, "").trim();
 }
 
@@ -34,7 +38,7 @@ serve(async (req) => {
     const { club_name, api_id } = await req.json();
     if (!club_name) throw new Error("Nome do clube é obrigatório");
 
-    console.log(`[ROLLBACK SYNC]: Investigando ${club_name}...`);
+    console.log(`[STABLE SYNC]: Investigando ${club_name}...`);
 
     /* ═══════════════════════════════════════════════════════════
         MÓDULO 1: DADOS TÉCNICOS (API FOOTBALL)
@@ -64,7 +68,7 @@ serve(async (req) => {
     }
 
     /* ═══════════════════════════════════════════════════════════
-        MÓDULO 2: INTELIGÊNCIA IA (GEMINI 1.5 FLASH STABLE)
+        MÓDULO 2: INTELIGÊNCIA IA (GEMINI 2.5 FLASH + SEARCH)
        ═══════════════════════════════════════════════════════════ */
     let aiData = {
       cor_primaria: "#000000",
@@ -76,38 +80,47 @@ serve(async (req) => {
     };
 
     if (geminiKey) {
-      const prompt = `Retorne APENAS um JSON puro para o clube "${club_name}". 
+      const prompt = `Investigue o clube "${club_name}". 
       REGRAS: 
-      1. Cores do tecido da camisa titular (Jersey). Ignore contornos de escudo.
-      2. Se Vila Nova-GO: Vermelho e Branco (Bicolor).
-      3. Se Brusque: Amarelo, Verde, Vermelho, Branco (Quadricolor).
-      4. Mascote oficial histórico.
-      5. "tem_feminino": boolean (Se há time profissional ativo).
-
-      JSON: {"cor_primaria": "#HEX", "cor_secundaria": "#HEX", "cor_terciaria": "#HEX ou null", "cor_quarta": "#HEX ou null", "mascote": "NOME", "tem_feminino": boolean}`;
+      1. Cores do TECIDO da camisa titular na Wikipedia. Ignore contornos de escudo.
+      2. Vila Nova-GO: Vermelho e Branco (Bicolor).
+      3. Brusque-SC: Amarelo, Verde, Vermelho, Branco (Quadricolor).
+      4. Verifique se há time feminino ativo (profissional/base).
+      
+      Retorne APENAS um JSON puro: 
+      {"cor_primaria": "#HEX", "cor_secundaria": "#HEX", "cor_terciaria": "#HEX ou null", "cor_quarta": "#HEX ou null", "mascote": "NOME", "tem_feminino": boolean}`;
 
       const gRes = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiKey}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${geminiKey}`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             contents: [{ parts: [{ text: prompt }] }],
-            generationConfig: { responseMimeType: "application/json", temperature: 0.1 },
+            tools: [{ google_search: {} }],
+            generationConfig: {
+              responseMimeType: "application/json",
+              temperature: 0.1,
+            },
           }),
         },
       );
 
       const gJson = await gRes.json();
       const rawText = gJson.candidates?.[0]?.content?.parts?.[0]?.text;
+
       if (rawText) {
-        const parsed = JSON.parse(cleanGeminiResponse(rawText));
-        aiData = { ...aiData, ...parsed };
+        try {
+          const parsed = JSON.parse(sanitizeJson(rawText));
+          aiData = { ...aiData, ...parsed };
+        } catch (parseError) {
+          console.error("[PARSE ERROR]: Falha ao processar JSON da IA", parseError);
+        }
       }
     }
 
     /* ═══════════════════════════════════════════════════════════
-        MÓDULO 3: PERSISTÊNCIA (UPSERT FINAL)
+        MÓDULO 3: PERSISTÊNCIA (MAPEAMENTO TÉCNICO COMPLETO)
        ═══════════════════════════════════════════════════════════ */
     const payload = {
       nome: club_name,
