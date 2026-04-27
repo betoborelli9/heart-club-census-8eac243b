@@ -1,11 +1,11 @@
 /**
  * [CAMINHO/ARQUIVO]: src/components/dashboard/ClubBanner.tsx
  * [MÓDULO]: BRANDING & DASHBOARD NAVIGATION
- * [STATUS]: VERSÃO 38.0 (PIXEL-PERFECT BADGE & ULTRA-SLIM PROFILE)
+ * [STATUS]: VERSÃO 39.0 (HYBRID FIXED MEASURES — RESPONSIVE)
  * [DESCRIÇÃO]:
- * - Ajuste de dimensões fixas: Emblema agora usa Pixels em vez de Percentual.
- * - Perfil Ultra-Slim: Altura reduzida de 210px para 180px.
- * - Módulo de Medidas: Centralizado para fácil manutenção cirúrgica.
+ * - Desktop: Mantido em 150px (Círculo) e 115px (Emblema).
+ * - Mobile: Restaurado para 110px (Círculo) e 90px (Emblema) para manter a forma redonda.
+ * - Correção: Adicionado prefixo md: na altura para evitar achatamento no celular.
  */
 
 /* ═══════════════════════════════════════════════════════════
@@ -147,9 +147,7 @@ const ClubBanner = ({
       `}</style>
 
       <div className="overflow-hidden rounded-[2.5rem] border border-[#1a1a1a] shadow-2xl flex flex-col">
-        {/* ═══════════════════════════════════════════════════════════
-            MÓDULO: DIMENSÕES DO BANNER (ALTURA: 180px)
-           ═══════════════════════════════════════════════════════════ */}
+        {/* BANNER (ALTURA 180px) */}
         <section
           className="relative h-[180px] md:h-[180px] w-full flex items-center overflow-hidden"
           style={{
@@ -164,15 +162,19 @@ const ClubBanner = ({
             <div className="flex items-center h-full shrink-0">
               {/* ═══════════════════════════════════════════════════════════
                   MÓDULO: TAMANHO DO CÍRCULO (BADGE)
+                  - Mobile: 110px x 110px (Restaurado)
+                  - Desktop: 150px x 150px (Excelente)
                  ═══════════════════════════════════════════════════════════ */}
-              <div className="w-[100px] h-[100px] md:w-[150px] h-[150px] rounded-full bg-white flex items-center justify-center shrink-0 shadow-xl border-4 border-white/10">
+              <div className="w-[110px] h-[110px] md:w-[150px] md:h-[150px] rounded-full bg-white flex items-center justify-center shrink-0 shadow-xl border-4 border-white/10 transition-all duration-500">
                 {/* ═══════════════════════════════════════════════════════════
-                    MÓDULO: TAMANHO DO EMBLEMA (PIXELS FIXOS)
+                    MÓDULO: TAMANHO DO EMBLEMA (PIXELS)
+                    - Mobile: 90px (Equivalente a 82% de 110px)
+                    - Desktop: 115px (Excelente)
                    ═══════════════════════════════════════════════════════════ */}
                 <ClubLogo
                   src={theme.escudo_url}
                   alt={clubName}
-                  className="w-[75px] h-[75px] md:w-[115px] md:h-[115px] object-contain drop-shadow-md"
+                  className="w-[90px] h-[90px] md:w-[115px] md:h-[115px] object-contain drop-shadow-md"
                 />
               </div>
 
