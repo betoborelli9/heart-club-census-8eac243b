@@ -236,7 +236,7 @@ serve(async (req) => {
       nome: finalName,
       nome_curto: team.code || finalName.split(" ")[0],
       pais: country,
-      cidade: venue.city || team.city || null,
+      cidade: venue.city || team.city || "Não informado",
       fundado: team.founded || null,
       escudo_url: team.logo || null,
       estadio_nome: venue.name || null,
