@@ -2,13 +2,12 @@
  * ═══════════════════════════════════════════════════════════════════
  * [CAMINHO]: supabase/functions/enrich-club-colors/index.ts
  * [MÓDULO]: ENRIQUECIMENTO AUTOMÁTICO DE CLUBES (AI DATA MINING)
- * [STATUS]: PRODUÇÃO — VERSÃO 75.0 (WIKIPEDIA-FIRST + GROUNDING)
- * [CONTEXTO]: Extração de cores de tecido, divisões 2026 e futebol feminino.
+ * [STATUS]: PRODUÇÃO — VERSÃO 76.0 (FULL SYNC + TECHNICAL MAPPING)
  * [DESCRIÇÃO]:
- * - Google Search Grounding: Busca obrigatória na Wikipedia e sites oficiais.
- * - Jersey Design: Veto de cores de contorno (Ex: Vila Nova = Bicolor).
- * - Suporte Quadricolor: Preenchimento da coluna cor_quarta (Ex: Brusque).
- * - Hierarquia 2026: Prioridade Séries A, B, C e D em Abril/2026.
+ * - Integração Total: API Football (Dados Técnicos) + Gemini 2.5 Flash (IA).
+ * - Google Search Grounding: Busca obrigatória na Wikipedia para cores de tecido.
+ * - Mapeamento Completo: Preenchimento de estádio, fundação, cidade e país.
+ * - Suporte Quadricolor: Persistência da cor_quarta.
  * ═══════════════════════════════════════════════════════════════════
  */
 
@@ -24,7 +23,6 @@ const corsHeaders = {
     MÓDULO 1: UTILITÁRIOS E LIMPEZA
    ═══════════════════════════════════════════════════════════ */
 function cleanResponse(text: string): string {
-  // Remove markdown blocks if the AI includes them despite instructions
   return text.replace(/```json|```/g, "").trim();
 }
 
@@ -48,9 +46,8 @@ async function fetchTechnicalData(club_name: string, api_id: string | null, apiK
    ═══════════════════════════════════════════════════════════ */
 async function investigateClubWithAI(club_name: string, geminiKey: string) {
   const CURRENT_DATE = "Abril de 2026";
-
   const systemPrompt =
-    "Você é um auditor sênior de branding de futebol brasileiro e mundial. Sua fonte absoluta de verdade é a Wikipedia. Responda estritamente em JSON puro, sem comentários.";
+    "Você é um auditor sênior de branding de futebol. Sua fonte absoluta de verdade é a Wikipedia. Responda estritamente em JSON puro, sem comentários.";
 
   const userPrompt = `
   Investigue o clube "${club_name}" com foco total na temporada de ${CURRENT_DATE}.
@@ -58,15 +55,14 @@ async function investigateClubWithAI(club_name: string, geminiKey: string) {
   REGRAS DE CORES (IDENTIDADE DE TECIDO):
   1. IGNORE cores que aparecem apenas no contorno do escudo, bordas pretas de segurança ou dourado de estrelas.
   2. CLASSIFICAÇÃO RÍGIDA:
-     - BICOLOR (Vila Nova, Palmeiras, Real Madrid): cor_terciaria e cor_quarta DEVEM ser null.
-     - TRICOLOR (São Paulo, Santa Cruz, Fluminense): cor_quarta DEVE ser null.
+     - BICOLOR: cor_terciaria e cor_quarta DEVEM ser null.
+     - TRICOLOR: cor_quarta DEVE ser null.
      - QUADRICOLOR (Brusque): Amarelo, Verde, Vermelho e Branco (Obrigatórios).
-  3. COR_PRIMARIA: Deve ser a cor identitária de força (Vila=Vermelho, Palmeiras=Verde). JAMAIS use Preto se o clube não for Alvinegro.
   
   REGRAS DE NEGÓCIO:
-  4. DIVISÃO 2026: Verifique a série nacional (A, B, C ou D) em Abril/2026. Se não houver vaga nacional, indique a divisão estadual ativa.
-  5. FEMININO: Verifique no OGOL/Wikipedia/Site Oficial se há time profissional ou base federada ativa em 2026.
-  6. MASCOTE: Nome oficial histórico.
+  3. DIVISÃO 2026: Verifique a série nacional (A, B, C ou D) em Abril/2026.
+  4. FEMININO: Verifique se há time profissional ou base federada ativa em 2026.
+  5. MASCOTE: Nome oficial histórico.
 
   RETORNE APENAS JSON: {"cor_primaria": "#HEX", "cor_secundaria": "#HEX", "cor_terciaria": "#HEX ou null", "cor_quarta": "#HEX ou null", "mascote": "NOME", "tem_feminino": boolean, "division": "Série X"}`;
 
@@ -78,11 +74,8 @@ async function investigateClubWithAI(club_name: string, geminiKey: string) {
       body: JSON.stringify({
         contents: [{ parts: [{ text: userPrompt }] }],
         systemInstruction: { parts: [{ text: systemPrompt }] },
-        tools: [{ google_search: {} }], // Grounding ativo para Wikipedia real
-        generationConfig: {
-          responseMimeType: "application/json",
-          temperature: 0.1,
-        },
+        tools: [{ google_search: {} }],
+        generationConfig: { responseMimeType: "application/json", temperature: 0.1 },
       }),
     },
   );
@@ -93,7 +86,7 @@ async function investigateClubWithAI(club_name: string, geminiKey: string) {
 }
 
 /* ═══════════════════════════════════════════════════════════
-    MÓDULO 3: SERVIÇO PRINCIPAL (ORQUESTRAÇÃO)
+    MÓDULO 3: ORQUESTRAÇÃO E PERSISTÊNCIA
    ═══════════════════════════════════════════════════════════ */
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
@@ -106,28 +99,33 @@ serve(async (req) => {
     const { club_name, api_id } = await req.json();
     if (!club_name) throw new Error("Nome do clube é obrigatório");
 
-    console.log(`[ORQUESTRAÇÃO 75.0]: Iniciando investigação para ${club_name}...`);
+    console.log(`[LOG]: Sincronizando dados para ${club_name}...`);
 
-    // 1. Busca Dados Técnicos na API-Sports (Logo/ID oficial)
-    const technical = await fetchTechnicalData(club_name, api_id, footballKey);
+    // 1. Dados Técnicos (API Football)
+    const tech = await fetchTechnicalData(club_name, api_id, footballKey);
 
-    // 2. Investigação IA profunda com Wikipedia Grounding (Cores/Divisão/Mascote)
-    const aiData = await investigateClubWithAI(club_name, geminiKey);
+    // 2. Dados de Inteligência (Gemini Search)
+    const ai = await investigateClubWithAI(club_name, geminiKey);
+    if (!ai) throw new Error("IA falhou na investigação");
 
-    if (!aiData) throw new Error("IA falhou na investigação");
-
-    // 3. Persistência de Dados (Upsert)
+    // 3. Montagem do Payload (Mapeamento Completo)
     const payload = {
       nome: club_name,
-      api_id: technical?.team?.id?.toString() || api_id?.toString() || null,
-      escudo_url: technical?.team?.logo || null,
-      division: aiData.division,
-      mascote: aiData.mascote,
-      tem_feminino: aiData.tem_feminino,
-      cor_primaria: aiData.cor_primaria,
-      cor_secundaria: aiData.cor_secundaria,
-      cor_terciaria: aiData.cor_terciaria,
-      cor_quarta: aiData.cor_quarta, // Suporte para Quadricolores como o Brusque
+      api_id: tech?.team?.id?.toString() || api_id?.toString() || null,
+      escudo_url: tech?.team?.logo || null,
+      fundado: tech?.team?.founded || null,
+      cidade: tech?.venue?.city || tech?.team?.country || "Brasil",
+      pais: tech?.team?.country || "Brasil",
+      estadio_nome: tech?.venue?.name || null,
+      estadio_cidade: tech?.venue?.city || null,
+      estadio_capacidade: tech?.venue?.capacity || null,
+      division: ai.division,
+      mascote: ai.mascote,
+      tem_feminino: ai.tem_feminino,
+      cor_primaria: ai.cor_primaria,
+      cor_secundaria: ai.cor_secundaria,
+      cor_terciaria: ai.cor_terciaria,
+      cor_quarta: ai.cor_quarta,
       atualizado_em: new Date().toISOString(),
     };
 
@@ -143,20 +141,10 @@ serve(async (req) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {
-    console.error("[ERRO CRÍTICO]:", err);
+    console.error("[CRITICAL]:", err);
     return new Response(JSON.stringify({ error: (err as Error).message }), {
       status: 500,
       headers: corsHeaders,
     });
   }
 });
-
-/**
- * [RODAPÉ TÉCNICO]
- * VERSÃO: 75.0
- * MODIFICAÇÕES:
- * - Upgrade para Gemini 2.5 Flash + Google Search Grounding.
- * - Wikipedia-First: Prompt força consulta textual para evitar erros cromáticos de escudo.
- * - Veto de Contorno: Regra rígida para impedir cor preta de borda no Vila Nova.
- * - Suporte Quadricolor: Persistência garantida para a coluna 'cor_quarta'.
- */
