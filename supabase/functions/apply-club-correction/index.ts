@@ -91,7 +91,7 @@ async function aiValidateField(
     estadio_cidade: "cidade onde fica o estádio",
     estadio_capacidade: "capacidade do estádio (apenas número inteiro)",
     nome_curto: "nome/abreviação curta do clube",
-    division: "divisão atual em que disputa (ex.: Série A, Série B)",
+    division: `divisão/competição que o clube DISPUTA NO MOMENTO (ano corrente ${new Date().getFullYear()}). Pesquise no Google a competição vigente OU a próxima imediata do calendário do clube. Para clubes brasileiros use exatamente: "Série A", "Série B", "Série C", "Série D", "Estadual" ou "Sem calendário" (se estiver fora de competição agora). Para estaduais regionais (ex.: Campeonato Goiano, Catarinense) use "Estadual - <UF>" (ex.: "Estadual - SC"). Nunca invente; se não houver competição ativa, responda "Sem calendário"`,
   };
 
   const desc = fieldDescriptions[field] || field;
