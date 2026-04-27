@@ -177,7 +177,10 @@ Use Google Search para confirmar.`;
       cor_secundaria: normalizeHex(parsed.cor_secundaria),
       cor_terciaria: normalizeHex(parsed.cor_terciaria),
       cor_quarta: normalizeHex(parsed.cor_quarta),
-      mascote: parsed.mascote && String(parsed.mascote).trim() ? String(parsed.mascote).trim() : null,
+      mascote:
+        parsed.mascote && String(parsed.mascote).trim() && !/^null$/i.test(String(parsed.mascote).trim())
+          ? String(parsed.mascote).trim()
+          : null,
       tem_feminino: typeof parsed.tem_feminino === "boolean" ? parsed.tem_feminino : null,
       nome_curto: parsed.nome_curto && String(parsed.nome_curto).trim() ? String(parsed.nome_curto).trim() : null,
     };
