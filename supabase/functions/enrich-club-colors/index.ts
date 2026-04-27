@@ -88,9 +88,9 @@ async function checkFemininoViaNews(name: string): Promise<boolean> {
   }
 }
 
-/* ─────────────── Lovable AI (Gemini + Google Search) ─────────────── */
+/* ─────────────── Lovable AI (Gemini) ─────────────── */
 
-async function aiEnrich(clubName: string, country: string | null): Promise<{
+type AIResult = {
   cor_primaria: string | null;
   cor_secundaria: string | null;
   cor_terciaria: string | null;
@@ -98,53 +98,56 @@ async function aiEnrich(clubName: string, country: string | null): Promise<{
   mascote: string | null;
   tem_feminino: boolean | null;
   nome_curto: string | null;
-}> {
-  const empty = {
-    cor_primaria: null, cor_secundaria: null, cor_terciaria: null, cor_quarta: null,
-    mascote: null, tem_feminino: null, nome_curto: null,
-  };
-  if (!LOVABLE_KEY) {
-    console.warn("[AI] LOVABLE_API_KEY ausente — pulando IA");
-    return empty;
-  }
+};
 
+const EMPTY_AI: AIResult = {
+  cor_primaria: null, cor_secundaria: null, cor_terciaria: null, cor_quarta: null,
+  mascote: null, tem_feminino: null, nome_curto: null,
+};
+
+function buildAIBody(model: string, clubName: string, country: string | null) {
   const sys =
-    "Você é um pesquisador especialista em clubes de futebol. Use buscas na web (Wikipedia, site oficial, Google) para responder com EXATIDÃO. Cores devem ser do UNIFORME TITULAR (tecido), em HEX #RRGGBB. NUNCA invente. Se não souber com certeza, retorne null.";
+    "Você é um pesquisador especialista em uniformes oficiais de clubes de futebol mundiais (Brasil, Europa, América, Ásia, África). Você conhece as cores HEX EXATAS do uniforme TITULAR (camisa principal) de cada clube. Clubes podem ter 1, 2, 3 ou 4 cores oficiais visíveis na camisa titular. Exemplos: Brusque-SC = vermelho/branco/azul/verde (quadricolor). Fluminense = grená/branco/verde. São Paulo = branco/vermelho/preto. Real Madrid = branco. Barcelona = azul/grená. Boca Juniors = azul/amarelo. SEMPRE preencha cor_terciaria e cor_quarta se o clube tiver essas cores no uniforme titular. NUNCA omita uma cor real. Use HEX #RRGGBB.";
 
-  const userMsg = `Clube: "${clubName}"${country ? ` (${country})` : ""}.
+  const userMsg = `Clube: "${clubName}"${country ? ` (país: ${country})` : ""}.
 
-Preciso de:
-1. cor_primaria, cor_secundaria, cor_terciaria, cor_quarta — cores OFICIAIS do uniforme titular em HEX (#RRGGBB). Ignore contornos de escudo, estrelas e enfeites. Se houver menos de 4 cores, devolva null nas restantes.
-2. mascote — nome oficial do mascote (ex: "Tigre", "Porco", "Mengão"). Se não houver, null.
-3. tem_feminino — true se o clube possui time PROFISSIONAL FEMININO ATIVO em competições oficiais (Brasileirão A1/A2/A3, estaduais femininos, WSL, NWSL, Liga F, etc.). Categorias de base (sub-17/sub-20) não contam.
-4. nome_curto — apelido popular curto (ex: "Vila", "Galo", "Timão"). Se não houver, null.
+Liste TODAS as cores oficiais do uniforme TITULAR atual em HEX #RRGGBB:
 
-Use Google Search para confirmar.`;
+- cor_primaria: cor predominante (obrigatória)
+- cor_secundaria: segunda cor (obrigatória se houver mais de uma)
+- cor_terciaria: terceira cor visível na camisa (faixa, listra, gola, mangas) — PREENCHA se existir
+- cor_quarta: quarta cor visível na camisa — PREENCHA se for quadricolor (ex: Brusque tem 4 cores)
+- mascote: nome do mascote/símbolo (ex: "Tigre", "Quadricolor", "Galo")
+- tem_feminino: true se possui time profissional feminino ATIVO (Brasileirão A1/A2/A3, estadual feminino, WSL, NWSL, Liga F). Sub-17/sub-20 NÃO conta.
+- nome_curto: apelido popular (ex: "Vila", "Galo", "Quadricolor")
 
-  const body = {
-    model: "google/gemini-2.5-flash",
+IMPORTANTE: Se o clube é tricolor ou quadricolor, você DEVE retornar 3 ou 4 cores. Não retorne null para terciária/quarta se elas existem.`;
+
+  return {
+    model,
     messages: [
       { role: "system", content: sys },
       { role: "user", content: userMsg },
     ],
+    max_tokens: 2048,
     tools: [
       {
         type: "function",
         function: {
           name: "registrar_clube",
-          description: "Registra os dados verificados do clube",
+          description: "Registra TODAS as cores oficiais do uniforme titular (até 4) e metadados do clube",
           parameters: {
             type: "object",
             properties: {
-              cor_primaria: { type: ["string", "null"] },
-              cor_secundaria: { type: ["string", "null"] },
-              cor_terciaria: { type: ["string", "null"] },
-              cor_quarta: { type: ["string", "null"] },
+              cor_primaria: { type: ["string", "null"], description: "HEX #RRGGBB cor dominante" },
+              cor_secundaria: { type: ["string", "null"], description: "HEX #RRGGBB segunda cor" },
+              cor_terciaria: { type: ["string", "null"], description: "HEX #RRGGBB terceira cor (preencha se clube é tricolor)" },
+              cor_quarta: { type: ["string", "null"], description: "HEX #RRGGBB quarta cor (preencha se clube é quadricolor como Brusque)" },
               mascote: { type: ["string", "null"] },
               tem_feminino: { type: ["boolean", "null"] },
               nome_curto: { type: ["string", "null"] },
             },
-            required: ["cor_primaria", "cor_secundaria", "tem_feminino"],
+            required: ["cor_primaria", "cor_secundaria", "cor_terciaria", "cor_quarta", "tem_feminino"],
             additionalProperties: false,
           },
         },
@@ -152,43 +155,89 @@ Use Google Search para confirmar.`;
     ],
     tool_choice: { type: "function", function: { name: "registrar_clube" } },
   };
-
-  try {
-    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(body),
-    });
-    if (!res.ok) {
-      const t = await res.text();
-      console.error(`[AI] ${res.status} → ${t.slice(0, 300)}`);
-      return empty;
-    }
-    const json = await res.json();
-    const call = json.choices?.[0]?.message?.tool_calls?.[0];
-    const args = call?.function?.arguments;
-    if (!args) return empty;
-    const parsed = typeof args === "string" ? JSON.parse(args) : args;
-    return {
-      cor_primaria: normalizeHex(parsed.cor_primaria),
-      cor_secundaria: normalizeHex(parsed.cor_secundaria),
-      cor_terciaria: normalizeHex(parsed.cor_terciaria),
-      cor_quarta: normalizeHex(parsed.cor_quarta),
-      mascote:
-        parsed.mascote && String(parsed.mascote).trim() && !/^null$/i.test(String(parsed.mascote).trim())
-          ? String(parsed.mascote).trim()
-          : null,
-      tem_feminino: typeof parsed.tem_feminino === "boolean" ? parsed.tem_feminino : null,
-      nome_curto: parsed.nome_curto && String(parsed.nome_curto).trim() ? String(parsed.nome_curto).trim() : null,
-    };
-  } catch (e) {
-    console.error("[AI ERROR]", e);
-    return empty;
-  }
 }
+
+async function callAI(body: unknown): Promise<AIResult | null> {
+  const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${LOVABLE_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    const t = await res.text();
+    console.error(`[AI HTTP ${res.status}] ${t.slice(0, 400)}`);
+    return null;
+  }
+  const json = await res.json();
+  const msg = json.choices?.[0]?.message;
+  const call = msg?.tool_calls?.[0];
+  let parsed: any = null;
+
+  if (call?.function?.arguments) {
+    const args = call.function.arguments;
+    try {
+      parsed = typeof args === "string" ? JSON.parse(args) : args;
+    } catch (e) {
+      console.error("[AI JSON PARSE]", e, args);
+    }
+  } else if (typeof msg?.content === "string") {
+    // fallback: tenta extrair JSON do conteúdo textual
+    const m = msg.content.match(/\{[\s\S]*\}/);
+    if (m) {
+      try { parsed = JSON.parse(m[0]); } catch { /* ignore */ }
+    }
+  }
+
+  if (!parsed) {
+    console.warn("[AI] sem tool_call e sem JSON no content. finish_reason=", json.choices?.[0]?.finish_reason);
+    return null;
+  }
+
+  return {
+    cor_primaria: normalizeHex(parsed.cor_primaria),
+    cor_secundaria: normalizeHex(parsed.cor_secundaria),
+    cor_terciaria: normalizeHex(parsed.cor_terciaria),
+    cor_quarta: normalizeHex(parsed.cor_quarta),
+    mascote:
+      parsed.mascote && String(parsed.mascote).trim() && !/^null$/i.test(String(parsed.mascote).trim())
+        ? String(parsed.mascote).trim()
+        : null,
+    tem_feminino: typeof parsed.tem_feminino === "boolean" ? parsed.tem_feminino : null,
+    nome_curto: parsed.nome_curto && String(parsed.nome_curto).trim() ? String(parsed.nome_curto).trim() : null,
+  };
+}
+
+async function aiEnrich(clubName: string, country: string | null): Promise<AIResult> {
+  if (!LOVABLE_KEY) {
+    console.warn("[AI] LOVABLE_API_KEY ausente — pulando IA");
+    return EMPTY_AI;
+  }
+
+  // Tentativa 1: gemini-2.5-flash (rápido, bom com tool_calls)
+  let result = await callAI(buildAIBody("google/gemini-2.5-flash", clubName, country));
+  console.log(`[AI flash] ${clubName} →`, JSON.stringify(result));
+
+  // Se cores ausentes ou apenas 1-2 cores, tenta upgrade para gemini-2.5-pro
+  const colorCount = result
+    ? [result.cor_primaria, result.cor_secundaria, result.cor_terciaria, result.cor_quarta].filter(Boolean).length
+    : 0;
+
+  if (!result || colorCount < 2) {
+    console.log(`[AI] flash retornou ${colorCount} cores — tentando gemini-2.5-pro`);
+    const pro = await callAI(buildAIBody("google/gemini-2.5-pro", clubName, country));
+    console.log(`[AI pro] ${clubName} →`, JSON.stringify(pro));
+    if (pro) {
+      const proCount = [pro.cor_primaria, pro.cor_secundaria, pro.cor_terciaria, pro.cor_quarta].filter(Boolean).length;
+      if (proCount >= colorCount) result = pro;
+    }
+  }
+
+  return result || EMPTY_AI;
+}
+
 
 /* ─────────────── divisão atual ─────────────── */
 
