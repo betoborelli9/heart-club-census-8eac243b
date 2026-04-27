@@ -24,7 +24,6 @@ const corsHeaders = {
 
 const API_FOOTBALL = Deno.env.get("API_FOOTBALL_KEY") || Deno.env.get("FOOTBALL_API_KEY") || "";
 const GEMINI_KEY = Deno.env.get("GEMINI_API_KEY") || "";
-const LOVABLE_KEY = Deno.env.get("LOVABLE_API_KEY") || "";
 
 /* ─────────────── helpers ─────────────── */
 
@@ -197,11 +196,12 @@ function colorsFromNames(fragment: string): string[] {
 
 function colorsFromNamesList(names: unknown): string[] {
   if (!Array.isArray(names)) return [];
-  return uniqHex(names.map((name) => {
+  const expanded = names.flatMap((name) => {
     if (typeof name !== "string") return null;
     const key = stripAccents(name).toLowerCase().trim();
-    return CANONICAL_HEX[key] || colorsFromNames(name)[0] || null;
-  })).slice(0, 4);
+    return CANONICAL_HEX[key] || colorsFromNames(name);
+  });
+  return uniqHex(expanded).slice(0, 4);
 }
 
 function extractOfficialColorPhrase(text: string): string | null {
