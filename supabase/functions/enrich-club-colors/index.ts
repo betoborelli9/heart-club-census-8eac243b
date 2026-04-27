@@ -577,7 +577,7 @@ serve(async (req) => {
         club: data,
         sources: {
           api_football: !!teamInfo,
-          ai: !!LOVABLE_KEY,
+          ai: !!GEMINI_KEY,
           feminino_api: femApi,
           feminino_news: femNews,
         },
