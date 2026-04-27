@@ -88,7 +88,7 @@ async function checkFemininoViaNews(name: string): Promise<boolean> {
   }
 }
 
-/* ─────────────── Lovable AI (Gemini) + bloco confiável de cores ─────────────── */
+/* ─────────────── Gemini direto + bloco confiável de cores ─────────────── */
 
 type AIResult = {
   cor_primaria: string | null;
