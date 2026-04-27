@@ -106,16 +106,14 @@ const ClubBanner = ({
     const colors = [theme.cor_primaria, theme.cor_secundaria, theme.cor_terciaria, theme.cor_quarta].filter(Boolean);
     const sorted = [...colors].sort((a, b) => calculateLuminance(a) - calculateLuminance(b));
 
-    // QUADRICOLOR (Brusque, etc) — 4 faixas distribuídas + 2 listras de contraste
+    // QUADRICOLOR (Brusque, etc) — mesmo padrão tricolor com 4 faixas centrais juntinhas
     if (sorted.length === 4) {
       return `linear-gradient(115deg,
-        ${sorted[0]} 0%, ${sorted[0]} 22%,
-        ${sorted[1]} 22%, ${sorted[1]} 26%,
-        ${sorted[2]} 26%, ${sorted[2]} 44%,
-        ${sorted[3]} 44%, ${sorted[3]} 48%,
-        ${sorted[0]} 48%, ${sorted[0]} 66%,
-        ${sorted[1]} 66%, ${sorted[1]} 70%,
-        ${sorted[2]} 70%, ${sorted[2]} 100%)`;
+        ${sorted[0]} 0%, ${sorted[0]} 34%,
+        ${sorted[1]} 34%, ${sorted[1]} 38%,
+        ${sorted[2]} 38%, ${sorted[2]} 42%,
+        ${sorted[3]} 42%, ${sorted[3]} 46%,
+        ${sorted[0]} 46%, ${sorted[0]} 100%)`;
     }
 
     // TRICOLOR (São Paulo, Santa Cruz)
