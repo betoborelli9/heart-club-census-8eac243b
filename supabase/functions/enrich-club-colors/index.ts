@@ -280,30 +280,34 @@ async function wikipediaEvidence(clubName: string): Promise<ColorEvidence | null
   const languages = ["pt", "en", "es"];
   const queries = [`${clubName} futebol clube`, `${clubName} football club`, clubName];
 
-  for (const lang of languages) {
-    for (const query of queries) {
-      const searchUrl = `https://${lang}.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&format=json&origin=*`;
-      const searchText = await fetchText(searchUrl);
-      if (!searchText) continue;
+  try {
+    for (const lang of languages) {
+      for (const query of queries) {
+        const searchUrl = `https://${lang}.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&format=json&origin=*`;
+        const searchText = await fetchText(searchUrl);
+        if (!searchText) continue;
 
-      const searchJson = JSON.parse(searchText || "{}");
-      const titles = (searchJson?.query?.search || [])
-        .map((item: { title?: string }) => item.title)
-        .filter((title: unknown): title is string => typeof title === "string")
-        .slice(0, 3);
+        const searchJson = JSON.parse(searchText || "{}");
+        const titles = (searchJson?.query?.search || [])
+          .map((item: { title?: string }) => item.title)
+          .filter((title: unknown): title is string => typeof title === "string")
+          .slice(0, 3);
 
-      for (const title of titles) {
-        const extractUrl = `https://${lang}.wikipedia.org/w/api.php?action=query&prop=extracts&explaintext=1&titles=${encodeURIComponent(title)}&format=json&origin=*`;
-        const extractText = await fetchText(extractUrl);
-        if (!extractText) continue;
+        for (const title of titles) {
+          const extractUrl = `https://${lang}.wikipedia.org/w/api.php?action=query&prop=extracts&explaintext=1&titles=${encodeURIComponent(title)}&format=json&origin=*`;
+          const extractText = await fetchText(extractUrl);
+          if (!extractText) continue;
 
-        const extractJson = JSON.parse(extractText || "{}");
-        const pages = Object.values(extractJson?.query?.pages || {}) as Array<{ extract?: string }>;
-        const extract = pages.map((page) => page.extract || "").join("\n");
-        const evidence = evidenceFromText(extract, `Wikipedia ${lang}: ${title}`, false);
-        if (evidence?.colors.length) return evidence;
+          const extractJson = JSON.parse(extractText || "{}");
+          const pages = Object.values(extractJson?.query?.pages || {}) as Array<{ extract?: string }>;
+          const extract = pages.map((page) => page.extract || "").join("\n");
+          const evidence = evidenceFromText(extract, `Wikipedia ${lang}: ${title}`, false);
+          if (evidence?.colors.length) return evidence;
+        }
       }
     }
+  } catch (e) {
+    console.warn(`[WIKIPEDIA COLOR ERROR] ${clubName}`, e);
   }
   return null;
 }
