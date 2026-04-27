@@ -1,16 +1,17 @@
 /**
  * [CAMINHO/ARQUIVO]: src/components/dashboard/ClubIdentityCard.tsx
  * [MÓDULO]: DASHBOARD — IDENTIDADE DO CLUBE DO CORAÇÃO
- * [DESCRIÇÃO]: Cartão com cores (2/3/4 quadradinhos), mascote, fundação,
- *              cidade, estádio, time feminino e divisão.
- *              Exibido SOMENTE para o clube do coração do torcedor.
- *              Inclui link "Corrigir dados" -> /correcao.
+ * [DESCRIÇÃO]: Cartão delicado em DUAS LINHAS FINAS e simétricas.
+ *   Linha 1: quadradinhos de cores (2/3/4) centralizados.
+ *   Linha 2: mascote • fundação • cidade • estádio • feminino • divisão.
+ *   Exibido SOMENTE para o clube do coração do torcedor.
+ *   Inclui link discreto "Corrigir dados" -> /correcao.
  */
 
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { Calendar, MapPin, Trophy, Heart, Building2, Pencil } from "lucide-react";
+import { Calendar, MapPin, Trophy, Heart, Building2, Pencil, PawPrint } from "lucide-react";
 
 interface Props {
   clubName: string;
@@ -26,39 +27,24 @@ interface CacheRow {
   cidade: string | null;
   pais: string | null;
   estadio_nome: string | null;
-  estadio_cidade: string | null;
   estadio_capacidade: number | null;
   tem_feminino: boolean | null;
   division: string | null;
 }
 
 const ColorChip = ({ hex }: { hex: string }) => (
-  <div className="flex flex-col items-center gap-1">
-    <div
-      className="w-12 h-12 md:w-14 md:h-14 rounded-lg border border-white/10 shadow-md"
-      style={{ background: hex }}
-      title={hex}
-    />
-    <span className="text-[9px] font-mono text-white/60 uppercase tracking-wider">{hex}</span>
-  </div>
+  <div
+    className="w-5 h-5 rounded-md border border-white/15 shadow-sm"
+    style={{ background: hex }}
+    title={hex.toUpperCase()}
+  />
 );
 
-const InfoCell = ({
-  icon: Icon,
-  label,
-  value,
-}: {
-  icon: any;
-  label: string;
-  value: string;
-}) => (
-  <div className="flex items-start gap-2.5 bg-white/5 border border-white/5 rounded-xl px-3 py-2.5">
-    <Icon className="w-4 h-4 text-[#ff6200] shrink-0 mt-0.5" />
-    <div className="min-w-0">
-      <div className="text-[9px] font-black uppercase tracking-widest text-white/50 italic">{label}</div>
-      <div className="text-sm font-bold text-white truncate">{value}</div>
-    </div>
-  </div>
+const Pill = ({ icon: Icon, children }: { icon: any; children: React.ReactNode }) => (
+  <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-white/80 italic whitespace-nowrap">
+    <Icon className="w-3.5 h-3.5 text-[#ff6200] shrink-0" />
+    {children}
+  </span>
 );
 
 export default function ClubIdentityCard({ clubName }: Props) {
@@ -73,7 +59,7 @@ export default function ClubIdentityCard({ clubName }: Props) {
       const { data } = await supabase
         .from("clubes_cache")
         .select(
-          "cor_primaria, cor_secundaria, cor_terciaria, cor_quarta, mascote, fundado, cidade, pais, estadio_nome, estadio_cidade, estadio_capacidade, tem_feminino, division",
+          "cor_primaria, cor_secundaria, cor_terciaria, cor_quarta, mascote, fundado, cidade, pais, estadio_nome, estadio_capacidade, tem_feminino, division",
         )
         .ilike("nome", clubName)
         .maybeSingle();
@@ -89,8 +75,8 @@ export default function ClubIdentityCard({ clubName }: Props) {
 
   if (loading) {
     return (
-      <div className="w-full max-w-7xl mx-auto px-4 mt-4">
-        <div className="rounded-2xl border border-white/5 bg-white/[0.02] h-32 animate-pulse" />
+      <div className="w-full max-w-7xl mx-auto px-4 mt-3">
+        <div className="rounded-xl border border-white/5 bg-white/[0.02] h-16 animate-pulse" />
       </div>
     );
   }
@@ -102,69 +88,40 @@ export default function ClubIdentityCard({ clubName }: Props) {
     .filter(Boolean) as string[];
 
   return (
-    <div className="w-full max-w-7xl mx-auto px-4 mt-4">
-      <div className="rounded-2xl border border-white/5 bg-gradient-to-br from-white/[0.04] to-white/[0.01] p-5 md:p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-xs md:text-sm font-black italic uppercase tracking-[0.25em] text-white/80">
-            Identidade do Clube
-          </h3>
-          <Link
-            to="/correcao"
-            className="flex items-center gap-1.5 text-[10px] md:text-xs font-bold uppercase italic text-[#ff6200] hover:text-orange-400 transition"
-          >
-            <Pencil className="w-3.5 h-3.5" />
-            Corrigir dados
-          </Link>
+    <div className="w-full max-w-7xl mx-auto px-4 mt-3">
+      <div className="relative rounded-xl border border-white/5 bg-white/[0.025] px-4 py-2.5">
+        {/* LINHA 1 — CORES (centralizadas) */}
+        <div className="flex items-center justify-center gap-2 mb-2">
+          {colors.map((c, i) => (
+            <ColorChip key={`${c}-${i}`} hex={c} />
+          ))}
         </div>
 
-        {/* LINHA 1 — CORES */}
-        {colors.length > 0 && (
-          <div className="mb-5">
-            <div className="text-[9px] font-black uppercase tracking-widest text-white/50 italic mb-2">
-              Cores oficiais ({colors.length})
-            </div>
-            <div className="flex flex-wrap gap-3">
-              {colors.map((c, i) => (
-                <ColorChip key={`${c}-${i}`} hex={c} />
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* LINHA 2 — DADOS */}
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-2.5">
-          {data.mascote && <InfoCell icon={Trophy} label="Mascote" value={data.mascote} />}
-          {data.fundado && <InfoCell icon={Calendar} label="Fundação" value={String(data.fundado)} />}
+        {/* LINHA 2 — DADOS (centralizados, separados por bullet) */}
+        <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1.5">
+          {data.mascote && <Pill icon={PawPrint}>{data.mascote}</Pill>}
+          {data.fundado && <Pill icon={Calendar}>Fundado em {data.fundado}</Pill>}
           {(data.cidade || data.pais) && (
-            <InfoCell
-              icon={MapPin}
-              label="Sede"
-              value={[data.cidade, data.pais].filter(Boolean).join(", ")}
-            />
+            <Pill icon={MapPin}>{[data.cidade, data.pais].filter(Boolean).join(", ")}</Pill>
           )}
           {data.estadio_nome && (
-            <InfoCell
-              icon={Building2}
-              label="Estádio"
-              value={
-                data.estadio_capacidade
-                  ? `${data.estadio_nome} (${data.estadio_capacidade.toLocaleString("pt-BR")})`
-                  : data.estadio_nome
-              }
-            />
+            <Pill icon={Building2}>
+              {data.estadio_nome}
+              {data.estadio_capacidade ? ` · ${data.estadio_capacidade.toLocaleString("pt-BR")}` : ""}
+            </Pill>
           )}
-          {data.division && <InfoCell icon={Trophy} label="Divisão" value={data.division} />}
-          <InfoCell
-            icon={Heart}
-            label="Time feminino"
-            value={data.tem_feminino ? "Sim" : "Não"}
-          />
+          {data.division && <Pill icon={Trophy}>{data.division}</Pill>}
+          <Pill icon={Heart}>Feminino: {data.tem_feminino ? "Sim" : "Não"}</Pill>
         </div>
 
-        <p className="mt-4 text-[10px] md:text-[11px] italic text-white/40 leading-relaxed">
-          Encontrou algum erro nas cores, mascote, fundação ou em outro dado do seu clube?
-          Clique em <span className="text-[#ff6200] font-bold">Corrigir dados</span> e nosso sistema irá conferir e ajustar.
-        </p>
+        {/* LINK DISCRETO — Corrigir dados */}
+        <Link
+          to="/correcao"
+          className="absolute top-2 right-3 inline-flex items-center gap-1 text-[10px] font-bold uppercase italic text-white/40 hover:text-[#ff6200] transition"
+        >
+          <Pencil className="w-3 h-3" />
+          Corrigir
+        </Link>
       </div>
     </div>
   );
