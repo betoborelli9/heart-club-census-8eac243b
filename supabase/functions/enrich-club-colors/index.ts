@@ -234,9 +234,11 @@ function clubSection(text: string, clubName: string): string | null {
 }
 
 function officialSiteFromSection(section: string): string | null {
-  const match = section.match(/https?:\/\/[^\s)\]]+/i) || section.match(/www\.[^\s)\]]+/i);
-  if (!match?.[0]) return null;
-  const url = match[0].replace(/[.,;]+$/g, "");
+  const siteMatch = section.match(/Site:\s*(?:\[[^\]]+\]\()?((?:https?:\/\/|www\.)[^\s)\]]+)/i);
+  const links = [...section.matchAll(/(?:https?:\/\/|www\.)[^\s)\]]+/gi)].map((m) => m[0]);
+  const raw = siteMatch?.[1] || links.find((link) => !/\.(png|jpe?g|webp|gif|svg)(\?|$)/i.test(link));
+  if (!raw) return null;
+  const url = raw.replace(/[.,;]+$/g, "");
   return url.startsWith("http") ? url : `https://${url}`;
 }
 
