@@ -201,15 +201,26 @@ function extractOfficialColorPhrase(text: string): string | null {
 function evidenceFromText(text: string, source: string, preferHex: boolean): ColorEvidence | null {
   const clean = plainText(text);
   const section = clean.slice(0, 6000);
-  const hexes = preferHex ? extractHexColors(section) : [];
-  if (hexes.length) return { colors: hexes, source, confidence: 95 };
-
   const phrase = extractOfficialColorPhrase(section);
-  if (!phrase) return null;
+  const sourceConfidence = source.includes("site oficial do clube")
+    ? 99
+    : source.includes("Federação") || source.includes("oficial")
+      ? 97
+      : source.includes("teamcolorcodes.com")
+        ? 94
+        : source.includes("brandcolorcode.com")
+          ? 82
+          : 76;
 
-  const named = colorsFromNames(phrase);
-  if (!named.length) return null;
-  return { colors: named, source, confidence: source.includes("oficial") ? 90 : 80 };
+  if (phrase) {
+    const named = colorsFromNames(phrase);
+    if (named.length) return { colors: named, source, confidence: sourceConfidence };
+  }
+
+  const hexes = preferHex ? extractHexColors(section) : [];
+  if (hexes.length) return { colors: hexes, source, confidence: sourceConfidence };
+
+  return null;
 }
 
 function clubSection(text: string, clubName: string): string | null {
@@ -220,6 +231,25 @@ function clubSection(text: string, clubName: string): string | null {
   const index = normalized.indexOf(needle) >= 0 ? normalized.indexOf(needle) : normalized.indexOf(firstWord);
   if (index < 0) return null;
   return clean.slice(index, index + 2200);
+}
+
+function officialSiteFromSection(section: string): string | null {
+  const match = section.match(/https?:\/\/[^\s)\]]+/i) || section.match(/www\.[^\s)\]]+/i);
+  if (!match?.[0]) return null;
+  const url = match[0].replace(/[.,;]+$/g, "");
+  return url.startsWith("http") ? url : `https://${url}`;
+}
+
+async function officialClubSiteEvidence(siteUrl: string, clubName: string): Promise<ColorEvidence | null> {
+  const root = siteUrl.replace(/\/$/, "");
+  const urls = [...new Set([root, `${root}/o-clube/`, `${root}/clube/`, `${root}/historia/`, `${root}/historia-do-clube/`])];
+  for (const url of urls) {
+    const text = await fetchText(url);
+    if (!text) continue;
+    const evidence = evidenceFromText(text, `${url} (site oficial do clube)`, false);
+    if (evidence?.colors.length) return evidence;
+  }
+  return null;
 }
 
 async function researchColorsFromWeb(clubName: string, country: string | null): Promise<ColorEvidence | null> {
@@ -243,6 +273,9 @@ async function researchColorsFromWeb(clubName: string, country: string | null): 
   if (country && /brazil|brasil/i.test(country)) {
     const fcfText = await fetchText("https://fcf.com.br/clubes-filiados/");
     const section = fcfText ? clubSection(fcfText, clubName) : null;
+    const officialSite = section ? officialSiteFromSection(section) : null;
+    const siteEvidence = officialSite ? await officialClubSiteEvidence(officialSite, clubName) : null;
+    if (siteEvidence) evidences.push(siteEvidence);
     const fcfEvidence = section ? evidenceFromText(section, "FCF - Federação Catarinense de Futebol (oficial)", false) : null;
     if (fcfEvidence) evidences.push(fcfEvidence);
   }
