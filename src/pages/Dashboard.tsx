@@ -15,6 +15,7 @@ import { CLUBS_DATA } from "@/clubes-data";
 import { ClubSearch } from "@/components/dashboard/ClubSearch";
 import NewsCarousel from "@/components/dashboard/NewsCarousel";
 import ClubBanner from "@/components/dashboard/ClubBanner";
+import ClubIdentityCard from "@/components/dashboard/ClubIdentityCard";
 import { useClubTheme } from "@/hooks/useClubTheme";
 import logo from "@/assets/logo.png";
 
@@ -90,6 +91,9 @@ const Dashboard = () => {
           ambassadorLevel={profile.nivel_embaixador || "BRONZE"}
           showProfileInfo={true} // ATIVA O LAYOUT PROFISSIONAL COM FAIXAS E INFO
         />
+
+        {/* [MÓDULO: IDENTIDADE DO CLUBE — APENAS PARA O CLUBE DO CORAÇÃO] */}
+        {clubeName && <ClubIdentityCard clubName={clubeName} />}
 
         {/* [MÓDULO: RADAR DE NOTÍCIAS] */}
         <div className="pt-6">
