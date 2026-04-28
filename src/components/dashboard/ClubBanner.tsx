@@ -61,13 +61,15 @@ const ClubBanner = ({
   const location = useLocation();
   const { user } = useUser();
 
-  const [theme, setTheme] = useState({
-    cor_primaria: "#1a1a1a",
-    cor_secundaria: "#ffffff",
-    cor_terciaria: "",
+  // Fallback oficial: NUNCA cinza. Camisa Vermelho/Preto/Branco.
+  const FALLBACK_THEME = {
+    cor_primaria: "#e11d48",
+    cor_secundaria: "#000000",
+    cor_terciaria: "#ffffff",
     cor_quarta: "",
     escudo_url: "",
-  });
+  };
+  const [theme, setTheme] = useState(FALLBACK_THEME);
 
   const IS_MASTER = user?.email === "betoborelli9@gmail.com";
   const hasLevel = ambassadorLevel && ambassadorLevel.toUpperCase() !== "NONE";
