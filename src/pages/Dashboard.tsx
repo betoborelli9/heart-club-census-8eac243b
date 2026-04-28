@@ -99,7 +99,7 @@ const Dashboard = () => {
         <div className="pt-14 md:pt-20">
           <EditorialNews
             teamName={queriedTeam?.name || clubeName || null}
-            primaryColor={theme?.primary || "#ff6200"}
+            primaryColor={theme?.primaryHex || "#ff6200"}
           />
         </div>
 
