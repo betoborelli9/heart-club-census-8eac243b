@@ -52,7 +52,7 @@ export default function RivalsRadar({ excludeClub }: Props) {
             const meta = CLUBS_DATA.find((c) => c.nome.toLowerCase() === nome.toLowerCase());
             // crescimento determinístico baseado em volume (placeholder visual estável)
             const growth = Math.min(48, Math.round((count % 12) * 3 + 4));
-            return { nome, slug: meta?.slug, logo: (meta as any)?.logoUrl, growth };
+            return { nome, slug: (meta as any)?.slug, logo: (meta as any)?.logoUrl, growth };
           });
         setRivals(top);
       } else {
