@@ -143,29 +143,30 @@ export default function EditorialNews({ teamName, primaryColor = "#ff6200" }: Pr
 
       {/* Lista editorial */}
       {!loading && news.length > 0 && (
-        <ul className="divide-y divide-white/[0.03]">
+        <ul className="divide-y divide-white/[0.04]">
           {news.map((item, i) => (
             <li key={`${item.guid}-${i}`}>
               <a
                 href={item.link}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="group flex gap-5 py-6 transition-all duration-300 hover:pl-1"
+                className="group flex gap-6 py-8 md:py-9 transition-all duration-300 hover:pl-2"
               >
-                {/* Quote bar vertical */}
+                {/* Borda lateral fina (2px) na cor do clube */}
                 <div
-                  className="w-[2px] rounded-full shrink-0 transition-all duration-300 group-hover:w-[3px]"
+                  className="w-[2px] rounded-full shrink-0 transition-all duration-300 group-hover:w-[3px] group-hover:shadow-[0_0_18px_var(--club-primary)]"
                   style={{
                     background: primaryColor,
-                    boxShadow: `0 0 12px ${primaryColor}40`,
+                    ['--club-primary' as any]: primaryColor,
+                    boxShadow: `0 0 10px ${primaryColor}33`,
                   }}
                 />
 
                 <div className="flex-1 min-w-0">
                   {/* Fonte + tempo */}
-                  <div className="flex items-center gap-3 mb-2">
+                  <div className="flex items-center gap-3 mb-3">
                     <span
-                      className="text-[9px] font-black uppercase italic tracking-[0.18em]"
+                      className="text-[9px] font-black uppercase italic tracking-[0.22em]"
                       style={{ color: primaryColor }}
                     >
                       {item.source}
@@ -176,7 +177,7 @@ export default function EditorialNews({ teamName, primaryColor = "#ff6200" }: Pr
                   </div>
 
                   {/* Título editorial */}
-                  <h3 className="text-base font-black italic uppercase tracking-tighter text-white leading-snug transition-opacity group-hover:opacity-80">
+                  <h3 className="text-base md:text-lg font-black italic uppercase tracking-tighter text-white leading-snug transition-opacity duration-300 group-hover:opacity-90">
                     {item.title}
                   </h3>
                 </div>
