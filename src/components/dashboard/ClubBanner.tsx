@@ -79,20 +79,44 @@ const ClubBanner = ({
   useEffect(() => {
     if (!clubName) return;
     const fetchTheme = async () => {
-      const { data } = await supabase
+      const term = clubName.trim();
+      console.log("[ClubBanner] Clube pesquisado:", term);
+
+      // Busca tolerante a maiúsculas/minúsculas e sufixos (FC, EC, etc.)
+      let { data, error } = await supabase
         .from("clubes_cache")
-        .select("cor_primaria, cor_secundaria, cor_terciaria, cor_quarta, escudo_url")
-        .ilike("nome", `%${clubName}%`)
+        .select("cor_primaria, cor_secundaria, cor_terciaria, cor_quarta, escudo_url, nome")
+        .ilike("nome", `%${term}%`)
+        .order("nome", { ascending: true })
+        .limit(1)
         .maybeSingle();
+
+      // Fallback: tenta primeira palavra (ex: "Vila Nova FC" -> "Vila")
+      if ((!data || error) && term.includes(" ")) {
+        const firstWord = term.split(" ")[0];
+        const retry = await supabase
+          .from("clubes_cache")
+          .select("cor_primaria, cor_secundaria, cor_terciaria, cor_quarta, escudo_url, nome")
+          .ilike("nome", `%${firstWord}%`)
+          .limit(1)
+          .maybeSingle();
+        data = retry.data;
+        error = retry.error;
+      }
+
+      console.log("[ClubBanner] Dados retornados:", { data, error });
 
       if (data) {
         setTheme({
-          cor_primaria: data.cor_primaria || "#1a1a1a",
-          cor_secundaria: data.cor_secundaria || "#ffffff",
-          cor_terciaria: data.cor_terciaria || "",
+          cor_primaria: data.cor_primaria || FALLBACK_THEME.cor_primaria,
+          cor_secundaria: data.cor_secundaria || FALLBACK_THEME.cor_secundaria,
+          cor_terciaria: data.cor_terciaria || FALLBACK_THEME.cor_terciaria,
           cor_quarta: (data as any).cor_quarta || "",
           escudo_url: data.escudo_url || "",
         });
+      } else {
+        // Sem dado: aplica fallback jersey vermelho/preto/branco (nunca cinza)
+        setTheme(FALLBACK_THEME);
       }
     };
     fetchTheme();
