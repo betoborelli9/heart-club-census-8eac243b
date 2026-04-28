@@ -61,13 +61,15 @@ const ClubBanner = ({
   const location = useLocation();
   const { user } = useUser();
 
-  const [theme, setTheme] = useState({
-    cor_primaria: "#1a1a1a",
-    cor_secundaria: "#ffffff",
-    cor_terciaria: "",
+  // Fallback oficial: NUNCA cinza. Camisa Vermelho/Preto/Branco.
+  const FALLBACK_THEME = {
+    cor_primaria: "#e11d48",
+    cor_secundaria: "#000000",
+    cor_terciaria: "#ffffff",
     cor_quarta: "",
     escudo_url: "",
-  });
+  };
+  const [theme, setTheme] = useState(FALLBACK_THEME);
 
   const IS_MASTER = user?.email === "betoborelli9@gmail.com";
   const hasLevel = ambassadorLevel && ambassadorLevel.toUpperCase() !== "NONE";
@@ -77,20 +79,44 @@ const ClubBanner = ({
   useEffect(() => {
     if (!clubName) return;
     const fetchTheme = async () => {
-      const { data } = await supabase
+      const term = clubName.trim();
+      console.log("[ClubBanner] Clube pesquisado:", term);
+
+      // Busca tolerante a maiúsculas/minúsculas e sufixos (FC, EC, etc.)
+      let { data, error } = await supabase
         .from("clubes_cache")
-        .select("cor_primaria, cor_secundaria, cor_terciaria, cor_quarta, escudo_url")
-        .ilike("nome", `%${clubName}%`)
+        .select("cor_primaria, cor_secundaria, cor_terciaria, cor_quarta, escudo_url, nome")
+        .ilike("nome", `%${term}%`)
+        .order("nome", { ascending: true })
+        .limit(1)
         .maybeSingle();
+
+      // Fallback: tenta primeira palavra (ex: "Vila Nova FC" -> "Vila")
+      if ((!data || error) && term.includes(" ")) {
+        const firstWord = term.split(" ")[0];
+        const retry = await supabase
+          .from("clubes_cache")
+          .select("cor_primaria, cor_secundaria, cor_terciaria, cor_quarta, escudo_url, nome")
+          .ilike("nome", `%${firstWord}%`)
+          .limit(1)
+          .maybeSingle();
+        data = retry.data;
+        error = retry.error;
+      }
+
+      console.log("[ClubBanner] Dados retornados:", { data, error });
 
       if (data) {
         setTheme({
-          cor_primaria: data.cor_primaria || "#1a1a1a",
-          cor_secundaria: data.cor_secundaria || "#ffffff",
-          cor_terciaria: data.cor_terciaria || "",
+          cor_primaria: data.cor_primaria || FALLBACK_THEME.cor_primaria,
+          cor_secundaria: data.cor_secundaria || FALLBACK_THEME.cor_secundaria,
+          cor_terciaria: data.cor_terciaria || FALLBACK_THEME.cor_terciaria,
           cor_quarta: (data as any).cor_quarta || "",
           escudo_url: data.escudo_url || "",
         });
+      } else {
+        // Sem dado: aplica fallback jersey vermelho/preto/branco (nunca cinza)
+        setTheme(FALLBACK_THEME);
       }
     };
     fetchTheme();
