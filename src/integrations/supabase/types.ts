@@ -355,9 +355,15 @@ export type Database = {
           ip_address: string | null
           is_fraud_attempt: boolean
           is_original_vote: boolean
+          is_residente: boolean | null
           is_suspicious: boolean | null
           pais: string
+          status_integridade: string | null
           user_id: string
+          voto_cidade: string | null
+          voto_continente: string | null
+          voto_ip: string | null
+          voto_pais: string | null
         }
         Insert: {
           cidade: string
@@ -369,9 +375,15 @@ export type Database = {
           ip_address?: string | null
           is_fraud_attempt?: boolean
           is_original_vote?: boolean
+          is_residente?: boolean | null
           is_suspicious?: boolean | null
           pais: string
+          status_integridade?: string | null
           user_id: string
+          voto_cidade?: string | null
+          voto_continente?: string | null
+          voto_ip?: string | null
+          voto_pais?: string | null
         }
         Update: {
           cidade?: string
@@ -383,9 +395,15 @@ export type Database = {
           ip_address?: string | null
           is_fraud_attempt?: boolean
           is_original_vote?: boolean
+          is_residente?: boolean | null
           is_suspicious?: boolean | null
           pais?: string
+          status_integridade?: string | null
           user_id?: string
+          voto_cidade?: string | null
+          voto_continente?: string | null
+          voto_ip?: string | null
+          voto_pais?: string | null
         }
         Relationships: []
       }
