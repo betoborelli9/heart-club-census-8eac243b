@@ -2,17 +2,17 @@
  * ═══════════════════════════════════════════════════════════════════
  * [CAMINHO]: src/components/dashboard/ClubBanner.tsx
  * [MÓDULO]: BRANDING & NAVIGATION
- * [STATUS]: PRODUÇÃO — VERSÃO 40.0 (PREMIUM RESTORATION)
+ * [STATUS]: PRODUÇÃO — VERSÃO 41.0 (ULTRA PREMIUM RESTORATION)
  * [DESCRIÇÃO]:
- * - Restauração do visual de "Camisa" com gradientes diagonais nítidos.
- * - Correção da lógica de cores: Fallbacks robustos para evitar o cinza.
- * - Navbar flutuante integrada com estilos específicos (Orange Glow / Red Pulse).
+ * - Reconstrução do visual "Jersey" com faixas sólidas (Zero Blending).
+ * - Filtro de textura de tecido avançado (Rugosidade & Dobras).
+ * - Lógica de cores blindada: busca exata no 'clubes_cache'.
  * ═══════════════════════════════════════════════════════════════════
  */
 
 import { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { Flame, BarChart3, Crown, Users, MapPin, Trophy, ShieldAlert, Vote, Settings, Heart } from "lucide-react";
+import { Flame, BarChart3, Crown, MapPin, Trophy, Vote, Settings, Activity } from "lucide-react";
 import { ClubLogo } from "@/components/ClubLogo";
 import { useUser } from "@/contexts/UserContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -23,7 +23,6 @@ interface ClubBannerProps {
   profileCity?: string;
   profileState?: string;
   ambassadorLevel?: string | null;
-  showProfileInfo?: boolean;
 }
 
 const ClubBanner = ({
@@ -32,22 +31,21 @@ const ClubBanner = ({
   profileCity = "Goiânia",
   profileState = "GO",
   ambassadorLevel = "BRONZE",
-  showProfileInfo = true,
 }: ClubBannerProps) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useUser();
 
   const [theme, setTheme] = useState({
-    cor_primaria: "#e11d48", // Vermelho padrão
-    cor_secundaria: "#ffffff", // Branco
-    cor_terciaria: "#000000", // Preto
+    cor_primaria: "#000000",
+    cor_secundaria: "#e11d48",
+    cor_terciaria: "#ffffff",
     escudo_url: "",
+    loading: true,
   });
 
   const IS_MASTER = user?.email === "betoborelli9@gmail.com";
 
-  // Busca de Cores e Escudo no Banco
   useEffect(() => {
     if (!clubName) return;
     const fetchTheme = async () => {
@@ -59,111 +57,138 @@ const ClubBanner = ({
 
       if (data) {
         setTheme({
-          cor_primaria: data.cor_primaria || "#e11d48",
-          cor_secundaria: data.cor_secundaria || "#ffffff",
-          cor_terciaria: data.cor_terciaria || "#000000",
+          cor_primaria: data.cor_primaria || "#000000",
+          cor_secundaria: data.cor_secundaria || "#e11d48",
+          cor_terciaria: data.cor_terciaria || "#ffffff",
           escudo_url: data.escudo_url || "",
+          loading: false,
         });
       }
     };
     fetchTheme();
   }, [clubName]);
 
-  // Lógica de Gradiente Diagonal (Stripe Jersey Style)
+  /**
+   * [ENGENHARIA DE CORES - JERSEY STRIPES]
+   * Aplica 5 faixas sólidas sem transição (Hard Stops).
+   */
   const buildBannerGradient = () => {
-    const p = theme.cor_primaria;
-    const s = theme.cor_secundaria;
-    const t = theme.cor_terciaria;
-    // Hard stops para garantir que as cores não se misturem (Estética Imagem 233df1)
-    return `linear-gradient(115deg, ${t} 0%, ${t} 35%, ${s} 35%, ${s} 42%, ${p} 42%, ${p} 100%)`;
+    const cp = theme.cor_primaria; // Fundo Escudo (Lado esquerdo)
+    const ct = theme.cor_terciaria; // Faixa Central
+    const cs = theme.cor_secundaria; // Cor Principal (Lado direito)
+
+    return `linear-gradient(110deg, 
+      ${cp} 0%, ${cp} 25%, 
+      ${ct} 25%, ${ct} 32%, 
+      ${cs} 32%, ${cs} 70%, 
+      ${cp} 70%, ${cp} 75%, 
+      ${cs} 75%, ${cs} 100%
+    )`;
   };
 
   const textOutline = {
-    textShadow: "0 4px 10px rgba(0,0,0,0.5), 0 0 20px rgba(0,0,0,0.3)",
+    textShadow: "0 10px 20px rgba(0,0,0,0.6), 0 0 40px rgba(0,0,0,0.4)",
   };
 
   return (
-    <div className="w-full max-w-7xl mx-auto p-4 animate-in fade-in duration-700">
+    <div className="w-full max-w-7xl mx-auto p-4 animate-in fade-in zoom-in duration-1000">
       <div
-        className="relative h-[420px] w-full rounded-[64px] overflow-hidden shadow-[0_35px_60px_-15px_rgba(0,0,0,0.7)] border border-white/10 group"
+        className="relative h-[450px] w-full rounded-[64px] overflow-hidden shadow-[0_45px_100px_-20px_rgba(0,0,0,0.8)] border border-white/10 group transition-all duration-700"
         style={{ background: buildBannerGradient() }}
       >
-        {/* Camada de Textura de Tecido */}
-        <div className="absolute inset-0 opacity-20 pointer-events-none mix-blend-overlay bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]" />
+        {/* Camada 1: Filtro de Tecido (Rugosidade) */}
+        <div className="absolute inset-0 opacity-30 pointer-events-none mix-blend-overlay">
+          <svg width="100%" height="100%">
+            <filter id="jerseyTexture">
+              <feTurbulence type="fractalNoise" baseFrequency="0.6" numOctaves="3" stitchTiles="stitch" />
+              <feColorMatrix type="saturate" values="0" />
+              <feComponentTransfer>
+                <feFuncR type="linear" slope="0.3" />
+                <feFuncG type="linear" slope="0.3" />
+                <feFuncB type="linear" slope="0.3" />
+              </feComponentTransfer>
+            </filter>
+            <rect width="100%" height="100%" filter="url(#jerseyTexture)" />
+          </svg>
+        </div>
 
-        <div className="relative z-10 h-full w-full flex flex-col md:flex-row items-center justify-between px-10 md:px-20 py-12">
-          {/* Lado Esquerdo: Badge do Escudo */}
+        {/* Camada 2: Textura de Fibra de Carbono */}
+        <div className="absolute inset-0 opacity-15 pointer-events-none mix-blend-multiply bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]" />
+
+        {/* Conteúdo Principal */}
+        <div className="relative z-10 h-full w-full flex flex-col md:flex-row items-center justify-between px-10 md:px-24 py-12">
+          {/* Badge do Escudo (Círculo Branco Perfeito) */}
           <div className="flex items-center justify-center shrink-0">
-            <div className="w-48 h-48 md:w-64 md:h-64 rounded-full bg-white flex items-center justify-center shadow-2xl border-8 border-black/5 group-hover:scale-105 transition-transform duration-500">
+            <div className="w-56 h-56 md:w-72 md:h-72 rounded-full bg-white flex items-center justify-center shadow-[0_20px_50px_rgba(0,0,0,0.5)] border-[12px] border-black/5 group-hover:scale-105 transition-transform duration-700">
               <ClubLogo
                 src={theme.escudo_url}
                 alt={clubName}
-                className="w-[75%] h-[75%] object-contain drop-shadow-2xl"
+                className="w-[78%] h-[78%] object-contain drop-shadow-[0_15px_15px_rgba(0,0,0,0.3)]"
               />
             </div>
           </div>
 
-          {/* Centro: Identidade Visual */}
+          {/* Identidade do Torcedor */}
           <div className="flex flex-col items-center md:items-start text-white text-center md:text-left gap-1">
             <h2
-              className="text-4xl md:text-7xl font-black italic uppercase tracking-tighter leading-none"
+              className="text-5xl md:text-8xl font-black italic uppercase tracking-tighter leading-none"
               style={textOutline}
             >
               {profileName}
             </h2>
             <div
-              className="flex flex-col md:flex-row items-center gap-2 md:gap-6 text-sm font-bold uppercase italic opacity-90"
+              className="flex flex-col md:flex-row items-center gap-2 md:gap-8 text-sm font-bold uppercase italic opacity-90 mt-2"
               style={textOutline}
             >
-              <span className="flex items-center gap-1.5">
-                <MapPin size={16} className="text-white" />
+              <span className="flex items-center gap-2">
+                <MapPin size={18} className="text-white" />
                 {profileCity}, {profileState}
               </span>
-              <span className="flex items-center gap-1.5 text-orange-400">
-                <Trophy size={16} />
+              <span className="flex items-center gap-2 text-orange-400">
+                <Trophy size={18} />
                 Embaixador {IS_MASTER ? "DIAMANTE" : ambassadorLevel}
               </span>
             </div>
           </div>
 
-          {/* Lado Direito: Nome do Clube */}
-          <div className="hidden lg:flex flex-col items-end text-white text-right">
+          {/* Branding do Clube */}
+          <div className="hidden xl:flex flex-col items-end text-white text-right">
             <span
-              className="text-xs font-black uppercase italic opacity-70 tracking-[0.3em] mb-[-4px]"
+              className="text-sm font-black uppercase italic opacity-60 tracking-[0.4em] mb-[-8px]"
               style={textOutline}
             >
-              Clube do Coração
+              Manto Sagrado
             </span>
             <h1
-              className="text-6xl xl:text-8xl font-black italic uppercase tracking-tighter leading-none"
+              className="text-7xl xl:text-9xl font-black italic uppercase tracking-tighter leading-none"
               style={textOutline}
             >
-              {clubName || "SELECIONE"}
+              {clubName || "LEALDADE"}
             </h1>
           </div>
         </div>
 
-        {/* Floating Navigation Pill */}
-        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 w-max max-w-[95vw]">
-          <nav className="flex items-center justify-center gap-2 md:gap-4 p-2 bg-black/60 backdrop-blur-3xl rounded-[2rem] border border-white/10 shadow-2xl overflow-x-auto no-scrollbar">
+        {/* Barra de Navegação (The Master Pill) */}
+        <div className="absolute bottom-10 left-1/2 -translate-x-1/2 w-max max-w-[95vw] z-[100]">
+          <nav className="flex items-center justify-center gap-2 md:gap-6 p-2.5 bg-black/80 backdrop-blur-3xl rounded-[2.5rem] border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
             <NavItem
-              icon={<Flame size={18} />}
+              icon={<Flame size={20} />}
               label="Mapa de Calor"
               active={location.pathname === "/mapa-calor"}
               onClick={() => navigate("/mapa-calor")}
             />
             <NavItem
-              icon={<BarChart3 size={18} />}
+              icon={<BarChart3 size={20} />}
               label="Estatísticas"
               active={location.pathname === "/estatisticas"}
               onClick={() => navigate("/estatisticas")}
             />
-            <NavItem icon={<Crown size={18} />} label="Ranking" onClick={() => navigate("/estatisticas#ranking")} />
-            <NavItem icon={<Vote size={18} />} label="Votação" variant="orange" onClick={() => navigate("/voting")} />
+            <NavItem icon={<Crown size={20} />} label="Ranking" onClick={() => navigate("/estatisticas#ranking")} />
+            <NavItem icon={<Vote size={20} />} label="Votar" variant="orange" onClick={() => navigate("/voting")} />
             {IS_MASTER && (
               <NavItem
-                icon={<Settings size={18} />}
-                label="Painel Master"
+                icon={<Settings size={20} />}
+                label="Master"
                 variant="danger"
                 onClick={() => navigate("/admin/global")}
               />
@@ -179,20 +204,20 @@ const NavItem = ({ icon, label, active, variant, onClick }: any) => (
   <button
     onClick={onClick}
     className={`
-      flex items-center gap-2 px-5 py-3 rounded-2xl transition-all duration-300 whitespace-nowrap
+      flex items-center gap-2.5 px-6 py-3.5 rounded-[1.5rem] transition-all duration-500 whitespace-nowrap group/nav
       ${
         variant === "orange"
-          ? "text-[#ff6200] border border-[#ff6200]/30 hover:bg-[#ff6200]/10"
+          ? "text-[#ff6200] border border-[#ff6200]/40 shadow-[0_0_15px_rgba(255,98,0,0.2)] hover:bg-[#ff6200]/10"
           : variant === "danger"
-            ? "bg-red-600 text-white animate-pulse"
+            ? "bg-red-600 text-white shadow-[0_0_20px_rgba(220,38,38,0.4)] animate-pulse"
             : active
               ? "bg-white/10 text-white border border-white/20"
               : "text-white/40 hover:text-white hover:bg-white/5"
       }
     `}
   >
-    {icon}
-    <span className="text-[10px] font-black italic uppercase tracking-widest hidden md:block">{label}</span>
+    <span className="group-hover/nav:scale-110 transition-transform">{icon}</span>
+    <span className="text-[11px] font-black italic uppercase tracking-[0.2em] hidden lg:block">{label}</span>
   </button>
 );
 
