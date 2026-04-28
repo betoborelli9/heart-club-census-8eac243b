@@ -77,26 +77,45 @@ const ClubBanner = ({
   const displayLevel = IS_MASTER ? "DIAMANTE" : ambassadorLevel || "BRONZE";
 
   useEffect(() => {
-    if (!clubName) return;
+    if (!clubName || clubName === "SELECIONE SEU CLUBE") {
+      setTheme(FALLBACK_THEME);
+      return;
+    }
+    let cancelled = false;
+
+    const SELECT = "cor_primaria, cor_secundaria, cor_terciaria, cor_quarta, escudo_url, nome, nome_curto";
+
     const fetchTheme = async () => {
       const term = clubName.trim();
-      console.log("[ClubBanner] Clube pesquisado:", term);
+      console.log("[ClubBanner] Buscando clube:", term);
 
-      // Busca tolerante a maiúsculas/minúsculas e sufixos (FC, EC, etc.)
+      // 1) Match exato case-insensitive em `nome` ou `nome_curto`
       let { data, error } = await supabase
         .from("clubes_cache")
-        .select("cor_primaria, cor_secundaria, cor_terciaria, cor_quarta, escudo_url, nome")
-        .ilike("nome", `%${term}%`)
-        .order("nome", { ascending: true })
+        .select(SELECT)
+        .or(`nome.ilike.${term},nome_curto.ilike.${term}`)
         .limit(1)
         .maybeSingle();
 
-      // Fallback: tenta primeira palavra (ex: "Vila Nova FC" -> "Vila")
-      if ((!data || error) && term.includes(" ")) {
-        const firstWord = term.split(" ")[0];
+      // 2) Match parcial com wildcards (cobre "Vila Nova FC" vs "Vila Nova")
+      if (!data) {
+        const partial = await supabase
+          .from("clubes_cache")
+          .select(SELECT)
+          .ilike("nome", `%${term}%`)
+          .order("nome", { ascending: true })
+          .limit(1)
+          .maybeSingle();
+        data = partial.data;
+        error = partial.error;
+      }
+
+      // 3) Última tentativa: primeira palavra significativa
+      if (!data && term.includes(" ")) {
+        const firstWord = term.split(" ").find((w) => w.length > 2) ?? term.split(" ")[0];
         const retry = await supabase
           .from("clubes_cache")
-          .select("cor_primaria, cor_secundaria, cor_terciaria, cor_quarta, escudo_url, nome")
+          .select(SELECT)
           .ilike("nome", `%${firstWord}%`)
           .limit(1)
           .maybeSingle();
@@ -104,7 +123,8 @@ const ClubBanner = ({
         error = retry.error;
       }
 
-      console.log("[ClubBanner] Dados retornados:", { data, error });
+      console.log("[ClubBanner] Retorno do Supabase:", { data, error });
+      if (cancelled) return;
 
       if (data) {
         setTheme({
@@ -115,11 +135,12 @@ const ClubBanner = ({
           escudo_url: data.escudo_url || "",
         });
       } else {
-        // Sem dado: aplica fallback jersey vermelho/preto/branco (nunca cinza)
         setTheme(FALLBACK_THEME);
       }
     };
+
     fetchTheme();
+    return () => { cancelled = true; };
   }, [clubName]);
 
   const buildFlagGradient = (): string => {
