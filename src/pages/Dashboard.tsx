@@ -13,7 +13,9 @@ import { useUser } from "@/contexts/UserContext";
 import { supabase } from "@/integrations/supabase/client";
 import { CLUBS_DATA } from "@/clubes-data";
 import { ClubSearch } from "@/components/dashboard/ClubSearch";
-import NewsCarousel from "@/components/dashboard/NewsCarousel";
+import EditorialNews from "@/components/dashboard/EditorialNews";
+import RivalsRadar from "@/components/dashboard/RivalsRadar";
+import GeoLoyalty from "@/components/dashboard/GeoLoyalty";
 import ClubBanner from "@/components/dashboard/ClubBanner";
 import ClubIdentityCard from "@/components/dashboard/ClubIdentityCard";
 import { useClubTheme } from "@/hooks/useClubTheme";
@@ -78,9 +80,7 @@ const Dashboard = () => {
 
       {/* [MÓDULO: CONTEÚDO PRINCIPAL] */}
       <main className="max-w-6xl mx-auto px-2 md:px-4 py-6 space-y-0">
-        {/* [MÓDULO: BANNER MESTRE IMUTÁVEL] 
-            Nota: As propriedades abaixo garantem a identidade visual idêntica em todas as páginas.
-        */}
+        {/* [MÓDULO: BANNER MESTRE IMUTÁVEL — NÃO ALTERAR] */}
         <ClubBanner
           clubName={clubeName || "SELECIONE SEU CLUBE"}
           clubData={activeClub}
@@ -89,19 +89,28 @@ const Dashboard = () => {
           profileCity={profile.cidade || "BRASIL"}
           profileState={profile.estado || ""}
           ambassadorLevel={profile.nivel_embaixador || "BRONZE"}
-          showProfileInfo={true} // ATIVA O LAYOUT PROFISSIONAL COM FAIXAS E INFO
+          showProfileInfo={true}
         />
 
-        {/* [MÓDULO: IDENTIDADE DO CLUBE — APENAS PARA O CLUBE DO CORAÇÃO] */}
+        {/* [MÓDULO: IDENTIDADE DO CLUBE — NÃO ALTERAR] */}
         {clubeName && <ClubIdentityCard clubName={clubeName} />}
 
-        {/* [MÓDULO: RADAR DE NOTÍCIAS] */}
-        <div className="pt-6">
-          <NewsCarousel
+        {/* [MÓDULO: FEED EDITORIAL — radar de notícias clean] */}
+        <div className="pt-14 md:pt-20">
+          <EditorialNews
             teamName={queriedTeam?.name || clubeName || null}
-            clubLogo={queriedTeam?.logo || activeClub?.logoUrl || activeClub?.logo}
+            primaryColor={theme?.primaryHex || "#ff6200"}
           />
         </div>
+
+        {/* [MÓDULO: INTELIGÊNCIA — Rivais + Geografia] */}
+        <div className="pt-16 md:pt-24 grid grid-cols-1 md:grid-cols-2 gap-12 md:gap-16">
+          <RivalsRadar excludeClub={clubeName} />
+          <GeoLoyalty clubName={clubeName} />
+        </div>
+
+        {/* [MÓDULO: RESPIRO INFERIOR] */}
+        <div className="h-24" />
       </main>
     </div>
   );
