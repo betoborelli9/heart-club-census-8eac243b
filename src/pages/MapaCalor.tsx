@@ -327,7 +327,7 @@ async function fetchAdminSubdivisions(
     const areaSelector = scope?.areaId
       ? `area(${scope.areaId})->.a;`
       : scope?.countryIso2
-        ? `area["ISO3166-1"="${scope.countryIso2}"]["admin_level"="2"]->.a;`
+        ? `area["ISO3166-1"="${scope.countryIso2}"]["boundary"="administrative"]->.a;`
         : "";
     const relationSelector = areaSelector
       ? `relation(area.a)["boundary"="administrative"]["admin_level"="${lv}"];`
@@ -377,7 +377,7 @@ type ViewLevel = "world" | "country" | "state" | "city";
 interface HeatEntry { region: string; votes: number; }
 interface ClubVote { club: string; votes: number; }
 interface Crumb { label: string; level: ViewLevel; value?: string; }
-interface CityHit { city: string; state: string; votes: number; }
+interface CityHit { city: string; state: string; country?: string; votes: number; }
 interface TerritoryScope { countryIso2?: string | null; areaId?: number | null; }
 interface ClubCompareData {
   name: string; info: any; totalVotes: number;
@@ -391,7 +391,8 @@ function FlyController({ center, zoom, bbox }: { center: [number, number]; zoom:
     if (bbox) {
       // bbox Nominatim = [southLat, northLat, westLon, eastLon]
       const [s, n, w, e] = bbox;
-      map.flyToBounds([[s, w], [n, e]], { duration: 1.2, maxZoom: 14 });
+      const fitZoom = zoom > 0 ? Math.max(2, Math.min(zoom, 13)) : 13;
+      map.flyToBounds([[s, w], [n, e]], { duration: 1.2, maxZoom: fitZoom });
     } else {
       map.flyTo(center, zoom, { duration: 1.2 });
     }
