@@ -897,7 +897,7 @@ const MapaCalor = () => {
                       {citySearchResults.map((c, i) => (
                         <button
                           key={`${c.city}-${c.state}-${i}`}
-                          onClick={() => goCity(c.city, c.state)}
+                          onClick={() => openCityResultTerritory(c)}
                           className="w-full flex justify-between items-center text-[10px] p-2 rounded-lg bg-white/5 hover:bg-primary/20 transition-colors"
                         >
                           <span className="font-black italic uppercase truncate text-left">
