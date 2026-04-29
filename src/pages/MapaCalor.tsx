@@ -617,17 +617,18 @@ const MapaCalor = () => {
         l.setStyle({ weight: 0.8, color: "#333333", opacity: 0.9 });
       },
       click: () => {
+        const featureBbox = getFeatureBounds(feature);
         if (viewMode === "world") {
           const dbName = COUNTRY_GEO_TO_DB[name] || name;
-          goCountry(dbName);
+          goCountry(dbName, featureBbox);
         } else if (viewMode === "country") {
-          goState(name);
+          goState(name, featureBbox);
         } else if (viewMode === "state") {
-          goCity(name);
+          goCity(name, activeState || undefined, featureBbox);
         }
       },
     });
-  }, [lookupVotesForFeature, viewMode, goCountry, goState, goCity]);
+  }, [lookupVotesForFeature, viewMode, activeState, goCountry, goState, goCity]);
 
   /* Key força re-render do GeoJSON quando style/data muda */
   const geoKey = useMemo(
