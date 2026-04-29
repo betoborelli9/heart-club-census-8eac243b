@@ -578,19 +578,94 @@ const MapaCalor = () => {
                 )}
               </div>
 
+              {/* CARDS COMPARATIVOS — Heart club (sempre) + Compare (se houver) */}
               {activeClubName && (
-                <div className="flex items-center gap-3 mt-3 p-3 rounded-xl bg-white/5 border border-white/5">
-                  <div className="w-10 h-10 bg-white rounded-full p-1 flex items-center justify-center shrink-0">
-                    <ClubLogo src={activeClubInfo?.logoUrl} alt={activeClubName} size="sm" />
+                <div className={`mt-3 grid gap-2 ${compareData ? "grid-cols-2" : "grid-cols-1"}`}>
+                  {/* Heart card */}
+                  <div className="p-3 rounded-xl bg-white/5 border border-primary/30">
+                    <div className="flex items-center gap-2 mb-1">
+                      <div className="w-8 h-8 bg-white rounded-full p-1 flex items-center justify-center shrink-0">
+                        <ClubLogo src={(heartCompareData?.info || activeClubInfo)?.logoUrl} alt={activeClubName} size="sm" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-[7px] text-primary font-black uppercase tracking-widest">❤️ Coração</p>
+                        <h3 className="text-[10px] font-black italic uppercase truncate leading-tight">{activeClubName}</h3>
+                      </div>
+                    </div>
+                    <p className="text-[9px] text-muted-foreground font-black uppercase">Total visível</p>
+                    <p className="text-sm text-primary font-black italic">{formatVotes(heartCompareData?.totalVotes ?? totalVotes)}</p>
+                    {heartCompareData?.topRegion && (
+                      <p className="text-[8px] text-muted-foreground mt-1 truncate">
+                        Top: <span className="font-black uppercase">{heartCompareData.topRegion.region}</span> ({formatVotes(heartCompareData.topRegion.votes)})
+                      </p>
+                    )}
                   </div>
-                  <div className="min-w-0">
-                    <p className="text-[8px] text-muted-foreground font-black uppercase tracking-widest">Exibindo</p>
-                    <h3 className="text-xs font-black italic uppercase truncate">{activeClubName}</h3>
-                    <p className="text-[10px] text-primary font-bold">{formatVotes(totalVotes)} votos</p>
-                  </div>
+
+                  {/* Compare card */}
+                  {compareData && (
+                    <div className="p-3 rounded-xl bg-white/5 border border-white/10 relative">
+                      <button onClick={clearCompare} className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/40 flex items-center justify-center hover:bg-primary/30">
+                        <X className="w-3 h-3" />
+                      </button>
+                      <div className="flex items-center gap-2 mb-1">
+                        <div className="w-8 h-8 bg-white rounded-full p-1 flex items-center justify-center shrink-0">
+                          <ClubLogo src={compareData.info?.logoUrl} alt={compareData.name} size="sm" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-[7px] text-muted-foreground font-black uppercase tracking-widest">⚔️ vs</p>
+                          <h3 className="text-[10px] font-black italic uppercase truncate leading-tight">{compareData.name}</h3>
+                        </div>
+                      </div>
+                      <p className="text-[9px] text-muted-foreground font-black uppercase">Total visível</p>
+                      <p className="text-sm font-black italic" style={{ color: CHOROPLETH[2] }}>{formatVotes(compareData.totalVotes)}</p>
+                      {compareData.topRegion && (
+                        <p className="text-[8px] text-muted-foreground mt-1 truncate">
+                          Top: <span className="font-black uppercase">{compareData.topRegion.region}</span> ({formatVotes(compareData.topRegion.votes)})
+                        </p>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
-            </div>
+
+              {/* BUSCA POR CIDADE — votos do clube ativo em uma cidade específica */}
+              {activeClubName && (
+                <div className="mt-3">
+                  <div className="relative">
+                    <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input
+                      value={citySearchQuery}
+                      placeholder={`Votos de ${activeClubName} em uma cidade...`}
+                      className="pl-10 bg-secondary/50 border-white/5 text-xs"
+                      onChange={(e) => handleCitySearch(e.target.value)}
+                    />
+                    {citySearchLoading && (
+                      <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-primary animate-spin" />
+                    )}
+                  </div>
+                  {citySearchResults.length > 0 && (
+                    <div className="mt-2 space-y-1 max-h-48 overflow-y-auto pr-1">
+                      {citySearchResults.map((c, i) => (
+                        <button
+                          key={`${c.city}-${c.state}-${i}`}
+                          onClick={() => goCity(c.city)}
+                          className="w-full flex justify-between items-center text-[10px] p-2 rounded-lg bg-white/5 hover:bg-primary/20 transition-colors"
+                        >
+                          <span className="font-black italic uppercase truncate text-left">
+                            {c.city} <span className="text-muted-foreground font-normal">/ {c.state}</span>
+                          </span>
+                          <span className="font-black text-primary shrink-0">{formatVotes(Number(c.votes))}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  {citySearchQuery.length >= 2 && !citySearchLoading && citySearchResults.length === 0 && (
+                    <p className="text-[10px] italic text-muted-foreground text-center py-2">
+                      Nenhum voto encontrado para "{citySearchQuery}".
+                    </p>
+                  )}
+                </div>
+              )}
 
             {/* Ranking lateral */}
             <div className="rounded-[24px] bg-black/40 backdrop-blur-xl border border-white/5 p-4">
