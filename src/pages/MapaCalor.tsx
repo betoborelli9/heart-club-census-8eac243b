@@ -366,6 +366,66 @@ const MapaCalor = () => {
     if (activeClubName) run(activeClubName, setHeartCompareData);
   }, [compareClubName, activeClubName, viewMode, activeCountry, activeState]);
 
+  /* ---------- Carrega bairros via OSM (Overpass) ao entrar em uma cidade ---------- */
+  useEffect(() => {
+    if (viewMode !== "city" || !activeCity) {
+      setCityBairrosGeo(null); setCityCenter(null); return;
+    }
+    let cancelled = false;
+    const run = async () => {
+      setBairrosLoading(true);
+      try {
+        // 1) Geocode da cidade via Nominatim → bbox + center
+        const q = encodeURIComponent(`${activeCity}, ${activeState || ""}, Brasil`);
+        const geo = await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${q}`, {
+          headers: { "Accept-Language": "pt-BR" },
+        }).then(r => r.json()).catch(() => []);
+        if (cancelled || !geo?.[0]) { setBairrosLoading(false); return; }
+        const lat = parseFloat(geo[0].lat); const lon = parseFloat(geo[0].lon);
+        const bb = geo[0].boundingbox?.map(parseFloat); // [s,n,w,e]
+        setCityCenter([lon, lat]);
+        if (!bb) { setBairrosLoading(false); return; }
+
+        // 2) Overpass: bairros (admin_level=10 OU place=suburb/neighbourhood) na bbox
+        const overpassQ = `[out:json][timeout:25];
+          (
+            relation["boundary"="administrative"]["admin_level"="10"](${bb[0]},${bb[2]},${bb[1]},${bb[3]});
+            way["place"~"suburb|neighbourhood|quarter"](${bb[0]},${bb[2]},${bb[1]},${bb[3]});
+          );
+          out geom;`;
+        const op = await fetch("https://overpass-api.de/api/interpreter", {
+          method: "POST", body: overpassQ,
+        }).then(r => r.json()).catch(() => null);
+        if (cancelled || !op?.elements) { setBairrosLoading(false); return; }
+
+        // 3) Converter para GeoJSON FeatureCollection
+        const features: any[] = [];
+        for (const el of op.elements) {
+          const name = el.tags?.name; if (!name) continue;
+          if (el.type === "relation" && el.members) {
+            const rings: number[][][] = [];
+            const ways = el.members.filter((m: any) => m.type === "way" && m.geometry);
+            for (const w of ways) rings.push(w.geometry.map((p: any) => [p.lon, p.lat]));
+            if (rings.length) features.push({
+              type: "Feature", properties: { name },
+              geometry: { type: "MultiPolygon", coordinates: [rings.map(r => r)] },
+            });
+          } else if (el.type === "way" && el.geometry && el.geometry.length > 2) {
+            features.push({
+              type: "Feature", properties: { name },
+              geometry: { type: "Polygon", coordinates: [el.geometry.map((p: any) => [p.lon, p.lat])] },
+            });
+          }
+        }
+        if (!cancelled) setCityBairrosGeo({ type: "FeatureCollection", features });
+      } finally {
+        if (!cancelled) setBairrosLoading(false);
+      }
+    };
+    run();
+    return () => { cancelled = true; };
+  }, [viewMode, activeCity, activeState]);
+
 
   /* ---------- Render map by level ---------- */
   const projectionConfig = useMemo(() => {
