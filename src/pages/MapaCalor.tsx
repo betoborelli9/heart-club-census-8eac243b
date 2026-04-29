@@ -605,8 +605,8 @@ const MapaCalor = () => {
 
           {/* MAP — 60% (3 of 5) */}
           <main className="lg:col-span-3">
-            <div className="relative rounded-[32px] bg-black/40 backdrop-blur-xl border border-white/5 overflow-hidden"
-              style={{ maxHeight: 600, height: 600 }}>
+            <div className="relative rounded-[32px] bg-black/40 backdrop-blur-xl border border-white/5 overflow-hidden h-[380px] sm:h-[480px] lg:h-[600px]">
+            
               {loading && (
                 <div className="absolute inset-0 flex items-center justify-center z-20 bg-black/40 backdrop-blur-sm">
                   <Loader2 className="w-7 h-7 animate-spin text-primary" />
