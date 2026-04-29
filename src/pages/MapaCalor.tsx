@@ -546,6 +546,13 @@ const MapaCalor = () => {
     }
     return map;
   }, [heatData]);
+  const regionNameByKey = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const e of heatData) {
+      for (const key of regionLookupKeys(e.region)) map.set(key, e.region);
+    }
+    return map;
+  }, [heatData]);
   const maxVotes = useMemo(() => heatData.reduce((m, e) => Math.max(m, Number(e.votes)), 0), [heatData]);
 
   /** Resolve voto de uma feature (qualquer propriedade comum de nome). */
@@ -564,18 +571,18 @@ const MapaCalor = () => {
     for (const c of candidates) {
       for (const key of regionLookupKeys(c)) {
         const v = votesByRegion.get(key);
-        if (v) return { name: display, votes: v };
+        if (v) return { name: regionNameByKey.get(key) || display, votes: v };
       }
       const dbName = COUNTRY_GEO_TO_DB[c];
       if (dbName) {
         for (const key of regionLookupKeys(dbName)) {
           const v2 = votesByRegion.get(key);
-          if (v2) return { name: display, votes: v2 };
+          if (v2) return { name: regionNameByKey.get(key) || display, votes: v2 };
         }
       }
     }
     return { name: display, votes: 0 };
-  }, [votesByRegion]);
+  }, [votesByRegion, regionNameByKey]);
 
   /* ---------- Ranking ---------- */
   const ranking = useMemo(
