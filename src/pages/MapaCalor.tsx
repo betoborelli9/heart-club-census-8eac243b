@@ -644,13 +644,14 @@ const MapaCalor = () => {
       },
       click: () => {
         const featureBbox = getFeatureBounds(feature);
+        const featureScope = getFeatureScope(feature?.properties);
         if (viewMode === "world") {
           const dbName = COUNTRY_GEO_TO_DB[name] || name;
-          goCountry(dbName, featureBbox);
+          goCountry(dbName, featureBbox, featureScope);
         } else if (viewMode === "country") {
-          goState(name, featureBbox);
+          goState(name, featureBbox, featureScope);
         } else if (viewMode === "state") {
-          goCity(name, activeState || undefined, featureBbox);
+          goCity(name, activeState || undefined, featureBbox, featureScope);
         }
       },
     });
