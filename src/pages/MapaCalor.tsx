@@ -33,6 +33,62 @@ function normalize(v: string): string {
   return (v || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
 }
 
+const REGION_ALIASES: Record<string, string[]> = {
+  "riade": ["riyadh", "riyadh region", "riyadh province", "ar riyad", "al riyadh"],
+  "riyadh": ["riade", "riyadh region", "riyadh province", "ar riyad", "al riyadh"],
+  "riyadh region": ["riyadh", "riade", "ar riyad"],
+  "riyadh province": ["riyadh", "riade", "ar riyad"],
+  "ar riyad": ["riyadh", "riade"],
+  "al riyadh": ["riyadh", "riade"],
+  "arabia saudita": ["saudi arabia", "kingdom of saudi arabia"],
+  "saudi arabia": ["arabia saudita", "kingdom of saudi arabia"],
+  "brasil": ["brazil", "br"],
+  "brazil": ["brasil", "br"],
+  "estados unidos": ["usa", "united states", "united states of america"],
+  "united states of america": ["usa", "united states", "estados unidos"],
+  "reino unido": ["united kingdom", "england"],
+  "united kingdom": ["reino unido", "england"],
+};
+
+const COUNTRY_NAME_TO_ISO2: Record<string, string> = {
+  "saudi arabia": "SA",
+  "arabia saudita": "SA",
+  "brazil": "BR",
+  "brasil": "BR",
+  "united states of america": "US",
+  "united states": "US",
+  "usa": "US",
+  "egypt": "EG",
+  "egito": "EG",
+};
+
+const REGION_SUFFIXES = [
+  " region", " province", " state", " governorate", " emirate", " administrative region",
+  " regiao", " provincia", " estado", " governadoria", " municipio", " municipality",
+];
+
+function regionLookupKeys(value: string): string[] {
+  const base = normalize(value);
+  const keys = new Set<string>();
+  const add = (v?: string | null) => {
+    const n = normalize(v || "");
+    if (n) keys.add(n);
+  };
+  add(base);
+  REGION_ALIASES[base]?.forEach(add);
+  for (const suffix of REGION_SUFFIXES) {
+    if (base.endsWith(suffix)) add(base.slice(0, -suffix.length));
+  }
+  return [...keys];
+}
+
+function countryIso2FromName(country: string): string | null {
+  for (const key of regionLookupKeys(country)) {
+    if (COUNTRY_NAME_TO_ISO2[key]) return COUNTRY_NAME_TO_ISO2[key];
+  }
+  return null;
+}
+
 /* Paleta War Room (laranja → vermelho profundo) */
 const HEAT_PALETTE = [
   "#3a1a05", // muito baixo (quase preto-laranja)
@@ -117,33 +173,55 @@ function leafletBoundsToBbox(bounds: L.LatLngBounds): GeoBbox {
 
 /* ---------- Geocode (apenas para flyTo de cidades) ---------- */
 const NOMINATIM_CACHE_KEY = "mapacalor_nominatim_v2";
-function loadNomCache(): Record<string, [number, number, GeoBbox?]> {
+interface GeocodeResult { center: [number, number]; bbox?: GeoBbox; country?: string; countryCode?: string; state?: string; city?: string; }
+function loadNomCache(): Record<string, any> {
   try { return JSON.parse(localStorage.getItem(NOMINATIM_CACHE_KEY) || "{}"); } catch { return {}; }
 }
 const nomCache = loadNomCache();
-async function geocodeBounds(query: string): Promise<{ center: [number, number]; bbox?: GeoBbox } | null> {
-  const key = normalize(query);
-  if (nomCache[key]) {
-    const [lat, lng, bbox] = nomCache[key];
+function readCachedGeocode(value: any): GeocodeResult | null {
+  if (!value) return null;
+  if (Array.isArray(value)) {
+    const [lat, lng, bbox] = value;
     return { center: [lat, lng], bbox };
   }
+  return value;
+}
+async function geocodePlace(query: string): Promise<GeocodeResult | null> {
+  const key = normalize(`place:${query}`);
+  const legacyKey = normalize(query);
+  const cached = readCachedGeocode(nomCache[key] || nomCache[legacyKey]);
+  if (cached) return cached;
   try {
     const res = await fetch(
-      `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(query)}`,
-      { headers: { "Accept-Language": "pt-BR" } }
+      `https://nominatim.openstreetmap.org/search?format=json&limit=1&addressdetails=1&namedetails=1&q=${encodeURIComponent(query)}`,
+      { headers: { "Accept-Language": "pt-BR,en" } }
     );
     const data = await res.json();
     if (data?.[0]) {
-      const lat = parseFloat(data[0].lat);
-      const lng = parseFloat(data[0].lon);
-      const bb = data[0].boundingbox?.map(parseFloat) as number[] | undefined;
+      const item = data[0];
+      const lat = parseFloat(item.lat);
+      const lng = parseFloat(item.lon);
+      const bb = item.boundingbox?.map(parseFloat) as number[] | undefined;
       const bbox: GeoBbox | undefined = bb ? [bb[0], bb[1], bb[2], bb[3]] : undefined;
-      nomCache[key] = [lat, lng, bbox];
+      const address = item.address || {};
+      const result: GeocodeResult = {
+        center: [lat, lng],
+        bbox,
+        country: address.country,
+        countryCode: address.country_code ? String(address.country_code).toUpperCase() : undefined,
+        state: address.state || address.region || address.province || address.state_district,
+        city: address.city || address.town || address.village || address.municipality || address.county,
+      };
+      nomCache[key] = result;
       try { localStorage.setItem(NOMINATIM_CACHE_KEY, JSON.stringify(nomCache)); } catch {}
-      return { center: [lat, lng], bbox };
+      return result;
     }
   } catch {}
   return null;
+}
+async function geocodeBounds(query: string): Promise<{ center: [number, number]; bbox?: GeoBbox } | null> {
+  const r = await geocodePlace(query);
+  return r ? { center: r.center, bbox: r.bbox } : null;
 }
 
 /* ---------- Subdivisões via Overpass (OSM) — funciona p/ QUALQUER país ----------
@@ -154,7 +232,7 @@ const OVERPASS_ENDPOINTS = [
   "https://overpass.kumi.systems/api/interpreter",
   "https://overpass.openstreetmap.ru/api/interpreter",
 ];
-const OVERPASS_CACHE_KEY = "mapacalor_overpass_v1";
+const OVERPASS_CACHE_KEY = "mapacalor_overpass_v2";
 function loadOvCache(): Record<string, any> {
   try { return JSON.parse(localStorage.getItem(OVERPASS_CACHE_KEY) || "{}"); } catch { return {}; }
 }
@@ -189,6 +267,7 @@ function assembleRings(ways: { id: number; geometry: { lat: number; lon: number 
 
 function relationToFeature(el: any): any | null {
   if (!el.members) return null;
+  const tags = el.tags || {};
   const outers = el.members.filter((m: any) => m.role === "outer" && m.geometry);
   const inners = el.members.filter((m: any) => m.role === "inner" && m.geometry);
   if (!outers.length) return null;
@@ -202,8 +281,17 @@ function relationToFeature(el: any): any | null {
   return {
     type: "Feature",
     properties: {
-      name: el.tags?.["name:pt"] || el.tags?.name || el.tags?.["name:en"] || "—",
-      admin_level: el.tags?.admin_level,
+      name: tags["name:en"] || tags.name || tags["name:pt"] || "—",
+      name_en: tags["name:en"],
+      name_pt: tags["name:pt"],
+      name_ar: tags["name:ar"],
+      int_name: tags.int_name,
+      official_name: tags.official_name || tags["official_name:en"] || tags["official_name:pt"],
+      alt_name: tags.alt_name || tags["alt_name:en"] || tags["alt_name:pt"],
+      short_name: tags.short_name,
+      ISO3166_1: tags["ISO3166-1"],
+      ISO3166_2: tags["ISO3166-2"],
+      admin_level: tags.admin_level,
       osm_id: el.id,
       area_id: el.id ? 3600000000 + Number(el.id) : null,
     },
@@ -239,7 +327,7 @@ async function fetchAdminSubdivisions(
     const areaSelector = scope?.areaId
       ? `area(${scope.areaId})->.a;`
       : scope?.countryIso2
-        ? `area["ISO3166-1"="${scope.countryIso2}"]["admin_level"="2"]->.a;`
+        ? `area["ISO3166-1"="${scope.countryIso2}"]["boundary"="administrative"]->.a;`
         : "";
     const relationSelector = areaSelector
       ? `relation(area.a)["boundary"="administrative"]["admin_level"="${lv}"];`
@@ -289,7 +377,7 @@ type ViewLevel = "world" | "country" | "state" | "city";
 interface HeatEntry { region: string; votes: number; }
 interface ClubVote { club: string; votes: number; }
 interface Crumb { label: string; level: ViewLevel; value?: string; }
-interface CityHit { city: string; state: string; votes: number; }
+interface CityHit { city: string; state: string; country?: string; votes: number; }
 interface TerritoryScope { countryIso2?: string | null; areaId?: number | null; }
 interface ClubCompareData {
   name: string; info: any; totalVotes: number;
@@ -303,7 +391,8 @@ function FlyController({ center, zoom, bbox }: { center: [number, number]; zoom:
     if (bbox) {
       // bbox Nominatim = [southLat, northLat, westLon, eastLon]
       const [s, n, w, e] = bbox;
-      map.flyToBounds([[s, w], [n, e]], { duration: 1.2, maxZoom: 14 });
+      const fitZoom = zoom > 0 ? Math.max(2, Math.min(zoom, 13)) : 13;
+      map.flyToBounds([[s, w], [n, e]], { duration: 1.2, maxZoom: fitZoom });
     } else {
       map.flyTo(center, zoom, { duration: 1.2 });
     }
@@ -452,7 +541,16 @@ const MapaCalor = () => {
   /* ---------- Mapa de votos por nome (para colorir GeoJSON) ---------- */
   const votesByRegion = useMemo(() => {
     const map = new Map<string, number>();
-    for (const e of heatData) map.set(normalize(e.region), Number(e.votes));
+    for (const e of heatData) {
+      for (const key of regionLookupKeys(e.region)) map.set(key, Number(e.votes));
+    }
+    return map;
+  }, [heatData]);
+  const regionNameByKey = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const e of heatData) {
+      for (const key of regionLookupKeys(e.region)) map.set(key, e.region);
+    }
     return map;
   }, [heatData]);
   const maxVotes = useMemo(() => heatData.reduce((m, e) => Math.max(m, Number(e.votes)), 0), [heatData]);
@@ -461,28 +559,30 @@ const MapaCalor = () => {
   const lookupVotesForFeature = useCallback((props: any): { name: string; votes: number } => {
     const candidates: string[] = [];
     if (!props) return { name: "—", votes: 0 };
-    // Mundo
-    if (props.ADMIN) candidates.push(props.ADMIN);
-    if (props.name) candidates.push(props.name);
-    if (props.NAME) candidates.push(props.NAME);
-    if (props.NAME_LONG) candidates.push(props.NAME_LONG);
-    // Estados BR (codeforgermany usa "name")
-    // Municípios IBGE (tbrugz usa "name")
-    // Bairros OSM (já temos "name")
+    const candidateProps = [
+      "ADMIN", "name", "name_en", "name_pt", "int_name", "official_name", "alt_name", "short_name",
+      "NAME", "NAME_LONG", "NOME", "NM_MUN", "NM_UF", "ISO_A2", "ISO3166_1", "ISO3166_2",
+    ];
+    for (const key of candidateProps) {
+      const value = props[key];
+      if (typeof value === "string" && value.trim()) candidates.push(value);
+    }
     const display = candidates[0] || "—";
     for (const c of candidates) {
-      // tenta nome direto
-      const v = votesByRegion.get(normalize(c));
-      if (v) return { name: c, votes: v };
-      // tenta DB-form (e.g. "United States of America" → "USA")
+      for (const key of regionLookupKeys(c)) {
+        const v = votesByRegion.get(key);
+        if (v) return { name: regionNameByKey.get(key) || display, votes: v };
+      }
       const dbName = COUNTRY_GEO_TO_DB[c];
       if (dbName) {
-        const v2 = votesByRegion.get(normalize(dbName));
-        if (v2) return { name: c, votes: v2 };
+        for (const key of regionLookupKeys(dbName)) {
+          const v2 = votesByRegion.get(key);
+          if (v2) return { name: regionNameByKey.get(key) || display, votes: v2 };
+        }
       }
     }
     return { name: display, votes: 0 };
-  }, [votesByRegion]);
+  }, [votesByRegion, regionNameByKey]);
 
   /* ---------- Ranking ---------- */
   const ranking = useMemo(
@@ -500,8 +600,9 @@ const MapaCalor = () => {
 
   const goCountry = useCallback(async (country: string, bboxOverride?: GeoBbox | null, scopeOverride?: TerritoryScope) => {
     setCurrentGeo(null);
+    const enrichedScope = { ...(scopeOverride || {}), countryIso2: scopeOverride?.countryIso2 || countryIso2FromName(country) };
     setViewMode("country"); setActiveCountry(country); setActiveState(null); setActiveCity(null);
-    setCountryScope(scopeOverride || {}); setStateScope({}); setCityScope({});
+    setCountryScope(enrichedScope); setStateScope({}); setCityScope({});
     setBreadcrumbs([{ label: "Mundo", level: "world" }, { label: country, level: "country", value: country }]);
     if (bboxOverride) {
       setMapBbox(bboxOverride); setMapCenter(bboxCenter(bboxOverride)); setMapZoom(5);
@@ -524,7 +625,7 @@ const MapaCalor = () => {
       setMapBbox(bboxOverride); setMapCenter(bboxCenter(bboxOverride)); setMapZoom(7);
       return;
     }
-    const country = COUNTRY_DB_TO_GEO[activeCountry || "Brazil"] || "Brasil";
+    const country = COUNTRY_DB_TO_GEO[activeCountry || "Brazil"] || activeCountry || "Brasil";
     const r = await geocodeBounds(`${state}, ${country}`);
     if (r) { setMapCenter(r.center); setMapZoom(7); setMapBbox(r.bbox || null); }
   }, [activeCountry]);
@@ -543,7 +644,7 @@ const MapaCalor = () => {
       return;
     }
     const st = stateOverride || activeState || "";
-    const country = COUNTRY_DB_TO_GEO[activeCountry || "Brazil"] || "Brasil";
+    const country = COUNTRY_DB_TO_GEO[activeCountry || "Brazil"] || activeCountry || "Brasil";
     const r = await geocodeBounds(`${city}, ${st}, ${country}`);
     if (r) { setMapCenter(r.center); setMapZoom(13); setMapBbox(r.bbox || null); }
   }, [activeCountry, activeState]);
@@ -589,6 +690,19 @@ const MapaCalor = () => {
       setCitySearchLoading(false);
     }, 300);
   };
+
+  const openCityResultTerritory = useCallback(async (hit: CityHit) => {
+    setCitySearchQuery(""); setCitySearchResults([]);
+    const place = await geocodePlace([hit.city, hit.state, hit.country].filter(Boolean).join(", "));
+    const country = hit.country || place?.country || activeCountry;
+    if (country) {
+      const countryPlace = await geocodePlace(country);
+      const scope: TerritoryScope = { countryIso2: place?.countryCode || countryPlace?.countryCode || countryIso2FromName(country) };
+      await goCountry(country, countryPlace?.bbox || null, scope);
+      return;
+    }
+    await goCity(hit.city, hit.state);
+  }, [activeCountry, goCountry, goCity]);
 
   /* ---------- Comparativo ---------- */
   useEffect(() => {
@@ -790,7 +904,7 @@ const MapaCalor = () => {
                       {citySearchResults.map((c, i) => (
                         <button
                           key={`${c.city}-${c.state}-${i}`}
-                          onClick={() => goCity(c.city, c.state)}
+                          onClick={() => openCityResultTerritory(c)}
                           className="w-full flex justify-between items-center text-[10px] p-2 rounded-lg bg-white/5 hover:bg-primary/20 transition-colors"
                         >
                           <span className="font-black italic uppercase truncate text-left">
