@@ -358,7 +358,7 @@ const MapaCalor = () => {
 
   const totalVotes = useMemo(() => heatData.reduce((s, e) => s + Number(e.votes), 0), [heatData]);
 
-  /* ---------- Carrega o GeoJSON correto por nível ---------- */
+  /* ---------- Carrega o GeoJSON correto por nível (qualquer país via Overpass) ---------- */
   useEffect(() => {
     let cancelled = false;
     const run = async () => {
@@ -366,19 +366,30 @@ const MapaCalor = () => {
       let geo: any = null;
       if (viewMode === "world") {
         geo = await fetchGeo(GEO_URLS.worldGeo);
-      } else if (viewMode === "country" && activeCountry === "Brazil") {
-        geo = await fetchGeo(GEO_URLS.brStates);
+      } else if (viewMode === "country" && activeCountry) {
+        // Brasil: usa GeoJSON local rápido (estados IBGE)
+        if (activeCountry === "Brazil" || activeCountry === "BR") {
+          geo = await fetchGeo(GEO_URLS.brStates);
+        } else if (mapBbox) {
+          // Qualquer outro país → estados/províncias (admin_level=4) via Overpass
+          geo = await fetchAdminSubdivisions(mapBbox, 4, `states:${normalize(activeCountry)}`);
+        }
       } else if (viewMode === "state" && activeState) {
-        const uf = NAME_TO_UF[normalize(activeState)] || activeState;
-        if (uf && uf.length === 2) geo = await fetchGeo(GEO_URLS.brMunicipios(uf));
+        const uf = NAME_TO_UF[normalize(activeState)];
+        if (uf && (activeCountry === "Brazil" || activeCountry === "BR")) {
+          geo = await fetchGeo(GEO_URLS.brMunicipios(uf));
+        } else if (mapBbox) {
+          // Cidades/municípios (admin_level=8) p/ qualquer estado/província
+          geo = await fetchAdminSubdivisions(mapBbox, 8, `cities:${normalize(activeCountry || "")}:${normalize(activeState)}`);
+        }
       } else if (viewMode === "city" && mapBbox) {
-        geo = await fetchBairros(mapBbox);
+        geo = await fetchBairros(mapBbox, normalize(`${activeCity}:${activeState}`));
       }
       if (!cancelled) { setCurrentGeo(geo); setGeoLoading(false); }
     };
     run();
     return () => { cancelled = true; };
-  }, [viewMode, activeCountry, activeState, mapBbox]);
+  }, [viewMode, activeCountry, activeState, activeCity, mapBbox]);
 
   /* ---------- City: top clubs ---------- */
   useEffect(() => {
