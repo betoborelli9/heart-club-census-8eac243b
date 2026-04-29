@@ -475,32 +475,47 @@ const MapaCalor = () => {
     setMapCenter([10, 0]); setMapZoom(2); setMapBbox(null);
   }, []);
 
-  const goCountry = useCallback(async (country: string) => {
+  const goCountry = useCallback(async (country: string, bboxOverride?: GeoBbox | null) => {
+    setCurrentGeo(null);
     setViewMode("country"); setActiveCountry(country); setActiveState(null); setActiveCity(null);
     setBreadcrumbs([{ label: "Mundo", level: "world" }, { label: country, level: "country", value: country }]);
+    if (bboxOverride) {
+      setMapBbox(bboxOverride); setMapCenter(bboxCenter(bboxOverride)); setMapZoom(5);
+      return;
+    }
     const q = COUNTRY_DB_TO_GEO[country] || country;
     const r = await geocodeBounds(q);
     if (r) { setMapCenter(r.center); setMapZoom(5); setMapBbox(r.bbox || null); }
   }, []);
 
-  const goState = useCallback(async (state: string) => {
+  const goState = useCallback(async (state: string, bboxOverride?: GeoBbox | null) => {
+    setCurrentGeo(null);
     setViewMode("state"); setActiveState(state); setActiveCity(null);
     setBreadcrumbs(prev => [
       ...prev.filter(b => b.level === "world" || b.level === "country"),
       { label: state, level: "state", value: state },
     ]);
+    if (bboxOverride) {
+      setMapBbox(bboxOverride); setMapCenter(bboxCenter(bboxOverride)); setMapZoom(7);
+      return;
+    }
     const country = COUNTRY_DB_TO_GEO[activeCountry || "Brazil"] || "Brasil";
     const r = await geocodeBounds(`${state}, ${country}`);
     if (r) { setMapCenter(r.center); setMapZoom(7); setMapBbox(r.bbox || null); }
   }, [activeCountry]);
 
-  const goCity = useCallback(async (city: string, stateOverride?: string) => {
+  const goCity = useCallback(async (city: string, stateOverride?: string, bboxOverride?: GeoBbox | null) => {
+    setCurrentGeo(null);
     setViewMode("city"); setActiveCity(city);
     if (stateOverride) setActiveState(stateOverride);
     setBreadcrumbs(prev => [
       ...prev.filter(b => b.level !== "city"),
       { label: city, level: "city", value: city },
     ]);
+    if (bboxOverride) {
+      setMapBbox(bboxOverride); setMapCenter(bboxCenter(bboxOverride)); setMapZoom(12);
+      return;
+    }
     const st = stateOverride || activeState || "";
     const country = COUNTRY_DB_TO_GEO[activeCountry || "Brazil"] || "Brasil";
     const r = await geocodeBounds(`${city}, ${st}, ${country}`);
