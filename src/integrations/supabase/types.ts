@@ -407,6 +407,33 @@ export type Database = {
         }
         Relationships: []
       }
+      votos_ficticios_meta: {
+        Row: {
+          codigo_indicacao: string
+          created_at: string
+          id: string
+          indicado_por: string | null
+          nome_exibicao: string
+          user_id: string
+        }
+        Insert: {
+          codigo_indicacao: string
+          created_at?: string
+          id?: string
+          indicado_por?: string | null
+          nome_exibicao: string
+          user_id: string
+        }
+        Update: {
+          codigo_indicacao?: string
+          created_at?: string
+          id?: string
+          indicado_por?: string | null
+          nome_exibicao?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       votos_tracking: {
         Row: {
           created_at: string | null
