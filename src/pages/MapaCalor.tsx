@@ -173,33 +173,55 @@ function leafletBoundsToBbox(bounds: L.LatLngBounds): GeoBbox {
 
 /* ---------- Geocode (apenas para flyTo de cidades) ---------- */
 const NOMINATIM_CACHE_KEY = "mapacalor_nominatim_v2";
-function loadNomCache(): Record<string, [number, number, GeoBbox?]> {
+interface GeocodeResult { center: [number, number]; bbox?: GeoBbox; country?: string; countryCode?: string; state?: string; city?: string; }
+function loadNomCache(): Record<string, any> {
   try { return JSON.parse(localStorage.getItem(NOMINATIM_CACHE_KEY) || "{}"); } catch { return {}; }
 }
 const nomCache = loadNomCache();
-async function geocodeBounds(query: string): Promise<{ center: [number, number]; bbox?: GeoBbox } | null> {
-  const key = normalize(query);
-  if (nomCache[key]) {
-    const [lat, lng, bbox] = nomCache[key];
+function readCachedGeocode(value: any): GeocodeResult | null {
+  if (!value) return null;
+  if (Array.isArray(value)) {
+    const [lat, lng, bbox] = value;
     return { center: [lat, lng], bbox };
   }
+  return value;
+}
+async function geocodePlace(query: string): Promise<GeocodeResult | null> {
+  const key = normalize(`place:${query}`);
+  const legacyKey = normalize(query);
+  const cached = readCachedGeocode(nomCache[key] || nomCache[legacyKey]);
+  if (cached) return cached;
   try {
     const res = await fetch(
-      `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(query)}`,
-      { headers: { "Accept-Language": "pt-BR" } }
+      `https://nominatim.openstreetmap.org/search?format=json&limit=1&addressdetails=1&namedetails=1&q=${encodeURIComponent(query)}`,
+      { headers: { "Accept-Language": "pt-BR,en" } }
     );
     const data = await res.json();
     if (data?.[0]) {
-      const lat = parseFloat(data[0].lat);
-      const lng = parseFloat(data[0].lon);
-      const bb = data[0].boundingbox?.map(parseFloat) as number[] | undefined;
+      const item = data[0];
+      const lat = parseFloat(item.lat);
+      const lng = parseFloat(item.lon);
+      const bb = item.boundingbox?.map(parseFloat) as number[] | undefined;
       const bbox: GeoBbox | undefined = bb ? [bb[0], bb[1], bb[2], bb[3]] : undefined;
-      nomCache[key] = [lat, lng, bbox];
+      const address = item.address || {};
+      const result: GeocodeResult = {
+        center: [lat, lng],
+        bbox,
+        country: address.country,
+        countryCode: address.country_code ? String(address.country_code).toUpperCase() : undefined,
+        state: address.state || address.region || address.province || address.state_district,
+        city: address.city || address.town || address.village || address.municipality || address.county,
+      };
+      nomCache[key] = result;
       try { localStorage.setItem(NOMINATIM_CACHE_KEY, JSON.stringify(nomCache)); } catch {}
-      return { center: [lat, lng], bbox };
+      return result;
     }
   } catch {}
   return null;
+}
+async function geocodeBounds(query: string): Promise<{ center: [number, number]; bbox?: GeoBbox } | null> {
+  const r = await geocodePlace(query);
+  return r ? { center: r.center, bbox: r.bbox } : null;
 }
 
 /* ---------- Subdivisões via Overpass (OSM) — funciona p/ QUALQUER país ----------
