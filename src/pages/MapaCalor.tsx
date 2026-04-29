@@ -232,7 +232,7 @@ const OVERPASS_ENDPOINTS = [
   "https://overpass.kumi.systems/api/interpreter",
   "https://overpass.openstreetmap.ru/api/interpreter",
 ];
-const OVERPASS_CACHE_KEY = "mapacalor_overpass_v1";
+const OVERPASS_CACHE_KEY = "mapacalor_overpass_v2";
 function loadOvCache(): Record<string, any> {
   try { return JSON.parse(localStorage.getItem(OVERPASS_CACHE_KEY) || "{}"); } catch { return {}; }
 }
@@ -625,7 +625,7 @@ const MapaCalor = () => {
       setMapBbox(bboxOverride); setMapCenter(bboxCenter(bboxOverride)); setMapZoom(7);
       return;
     }
-    const country = COUNTRY_DB_TO_GEO[activeCountry || "Brazil"] || "Brasil";
+    const country = COUNTRY_DB_TO_GEO[activeCountry || "Brazil"] || activeCountry || "Brasil";
     const r = await geocodeBounds(`${state}, ${country}`);
     if (r) { setMapCenter(r.center); setMapZoom(7); setMapBbox(r.bbox || null); }
   }, [activeCountry]);
@@ -644,7 +644,7 @@ const MapaCalor = () => {
       return;
     }
     const st = stateOverride || activeState || "";
-    const country = COUNTRY_DB_TO_GEO[activeCountry || "Brazil"] || "Brasil";
+    const country = COUNTRY_DB_TO_GEO[activeCountry || "Brazil"] || activeCountry || "Brasil";
     const r = await geocodeBounds(`${city}, ${st}, ${country}`);
     if (r) { setMapCenter(r.center); setMapZoom(13); setMapBbox(r.bbox || null); }
   }, [activeCountry, activeState]);
