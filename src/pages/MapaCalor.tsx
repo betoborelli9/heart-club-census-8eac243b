@@ -103,13 +103,25 @@ async function fetchGeo(url: string): Promise<any | null> {
   } catch { return null; }
 }
 
+type GeoBbox = [number, number, number, number]; // south, north, west, east
+
+function bboxCenter(bbox: GeoBbox): [number, number] {
+  return [(bbox[0] + bbox[1]) / 2, (bbox[2] + bbox[3]) / 2];
+}
+
+function leafletBoundsToBbox(bounds: L.LatLngBounds): GeoBbox {
+  const sw = bounds.getSouthWest();
+  const ne = bounds.getNorthEast();
+  return [sw.lat, ne.lat, sw.lng, ne.lng];
+}
+
 /* ---------- Geocode (apenas para flyTo de cidades) ---------- */
 const NOMINATIM_CACHE_KEY = "mapacalor_nominatim_v2";
-function loadNomCache(): Record<string, [number, number, [number, number, number, number]?]> {
+function loadNomCache(): Record<string, [number, number, GeoBbox?]> {
   try { return JSON.parse(localStorage.getItem(NOMINATIM_CACHE_KEY) || "{}"); } catch { return {}; }
 }
 const nomCache = loadNomCache();
-async function geocodeBounds(query: string): Promise<{ center: [number, number]; bbox?: [number, number, number, number] } | null> {
+async function geocodeBounds(query: string): Promise<{ center: [number, number]; bbox?: GeoBbox } | null> {
   const key = normalize(query);
   if (nomCache[key]) {
     const [lat, lng, bbox] = nomCache[key];
@@ -125,7 +137,7 @@ async function geocodeBounds(query: string): Promise<{ center: [number, number];
       const lat = parseFloat(data[0].lat);
       const lng = parseFloat(data[0].lon);
       const bb = data[0].boundingbox?.map(parseFloat) as number[] | undefined;
-      const bbox: [number, number, number, number] | undefined = bb ? [bb[0], bb[1], bb[2], bb[3]] : undefined;
+      const bbox: GeoBbox | undefined = bb ? [bb[0], bb[1], bb[2], bb[3]] : undefined;
       nomCache[key] = [lat, lng, bbox];
       try { localStorage.setItem(NOMINATIM_CACHE_KEY, JSON.stringify(nomCache)); } catch {}
       return { center: [lat, lng], bbox };
@@ -192,6 +204,8 @@ function relationToFeature(el: any): any | null {
     properties: {
       name: el.tags?.["name:pt"] || el.tags?.name || el.tags?.["name:en"] || "—",
       admin_level: el.tags?.admin_level,
+      osm_id: el.id,
+      area_id: el.id ? 3600000000 + Number(el.id) : null,
     },
     geometry,
   };
@@ -209,9 +223,10 @@ async function overpassQuery(query: string): Promise<any | null> {
 
 /** Busca subdivisões administrativas dentro de um bbox para um admin_level específico. */
 async function fetchAdminSubdivisions(
-  bbox: [number, number, number, number],
+  bbox: GeoBbox,
   adminLevel: 4 | 6 | 8 | 10,
   cacheKey: string,
+  scope?: { countryIso2?: string | null; areaId?: number | null },
 ): Promise<any | null> {
   if (ovCache[cacheKey]) return ovCache[cacheKey];
   const [s, n, w, e] = bbox;
@@ -221,7 +236,15 @@ async function fetchAdminSubdivisions(
                           : adminLevel === 10 ? [10, 9, 11]
                           : [adminLevel];
   for (const lv of levels) {
-    const q = `[out:json][timeout:40];(relation["boundary"="administrative"]["admin_level"="${lv}"](${s},${w},${n},${e}););out geom;`;
+    const areaSelector = scope?.areaId
+      ? `area(${scope.areaId})->.a;`
+      : scope?.countryIso2
+        ? `area["ISO3166-1"="${scope.countryIso2}"]["admin_level"="2"]->.a;`
+        : "";
+    const relationSelector = areaSelector
+      ? `relation(area.a)["boundary"="administrative"]["admin_level"="${lv}"];`
+      : `relation["boundary"="administrative"]["admin_level"="${lv}"](${s},${w},${n},${e});`;
+    const q = `[out:json][timeout:40];${areaSelector}(${relationSelector});out geom;`;
     const data = await overpassQuery(q);
     if (!data?.elements?.length) continue;
     const features: any[] = [];
@@ -239,8 +262,27 @@ async function fetchAdminSubdivisions(
   return null;
 }
 
-const fetchBairros = (bbox: [number, number, number, number], cityKey: string) =>
+const fetchBairros = (bbox: GeoBbox, cityKey: string) =>
   fetchAdminSubdivisions(bbox, 10, `bairros:${cityKey}`);
+
+function getFeatureDisplayName(props: any): string {
+  return props?.ADMIN || props?.name || props?.NAME || props?.NAME_LONG || "—";
+}
+
+function getFeatureScope(props: any): TerritoryScope {
+  return {
+    countryIso2: props?.["ISO3166-1-Alpha-2"] || props?.iso_a2 || props?.ISO_A2 || null,
+    areaId: props?.area_id || (props?.osm_id ? 3600000000 + Number(props.osm_id) : null),
+  };
+}
+
+function getFeatureBounds(feature: any): GeoBbox | null {
+  try {
+    return leafletBoundsToBbox(L.geoJSON(feature).getBounds());
+  } catch {
+    return null;
+  }
+}
 
 /* ---------- Types ---------- */
 type ViewLevel = "world" | "country" | "state" | "city";
@@ -248,13 +290,14 @@ interface HeatEntry { region: string; votes: number; }
 interface ClubVote { club: string; votes: number; }
 interface Crumb { label: string; level: ViewLevel; value?: string; }
 interface CityHit { city: string; state: string; votes: number; }
+interface TerritoryScope { countryIso2?: string | null; areaId?: number | null; }
 interface ClubCompareData {
   name: string; info: any; totalVotes: number;
   topRegion: { region: string; votes: number } | null;
 }
 
 /* ---------- Map controllers ---------- */
-function FlyController({ center, zoom, bbox }: { center: [number, number]; zoom: number; bbox?: [number, number, number, number] | null }) {
+function FlyController({ center, zoom, bbox }: { center: [number, number]; zoom: number; bbox?: GeoBbox | null }) {
   const map = useMap();
   useEffect(() => {
     if (bbox) {
@@ -289,12 +332,15 @@ const MapaCalor = () => {
   const [activeCountry, setActiveCountry] = useState<string | null>(null);
   const [activeState, setActiveState] = useState<string | null>(null);
   const [activeCity, setActiveCity] = useState<string | null>(null);
+  const [countryScope, setCountryScope] = useState<TerritoryScope>({});
+  const [stateScope, setStateScope] = useState<TerritoryScope>({});
+  const [cityScope, setCityScope] = useState<TerritoryScope>({});
   const [breadcrumbs, setBreadcrumbs] = useState<Crumb[]>([{ label: "Mundo", level: "world" }]);
 
   /* Map view */
   const [mapCenter, setMapCenter] = useState<[number, number]>([10, 0]);
   const [mapZoom, setMapZoom] = useState<number>(2);
-  const [mapBbox, setMapBbox] = useState<[number, number, number, number] | null>(null);
+  const [mapBbox, setMapBbox] = useState<GeoBbox | null>(null);
 
   /* Data */
   const [heatData, setHeatData] = useState<HeatEntry[]>([]);
@@ -372,7 +418,7 @@ const MapaCalor = () => {
           geo = await fetchGeo(GEO_URLS.brStates);
         } else if (mapBbox) {
           // Qualquer outro país → estados/províncias (admin_level=4) via Overpass
-          geo = await fetchAdminSubdivisions(mapBbox, 4, `states:${normalize(activeCountry)}`);
+          geo = await fetchAdminSubdivisions(mapBbox, 4, `states:${normalize(activeCountry)}`, countryScope);
         }
       } else if (viewMode === "state" && activeState) {
         const uf = NAME_TO_UF[normalize(activeState)];
@@ -380,16 +426,16 @@ const MapaCalor = () => {
           geo = await fetchGeo(GEO_URLS.brMunicipios(uf));
         } else if (mapBbox) {
           // Cidades/municípios (admin_level=8) p/ qualquer estado/província
-          geo = await fetchAdminSubdivisions(mapBbox, 8, `cities:${normalize(activeCountry || "")}:${normalize(activeState)}`);
+          geo = await fetchAdminSubdivisions(mapBbox, 8, `cities:${normalize(activeCountry || "")}:${normalize(activeState)}`, stateScope);
         }
       } else if (viewMode === "city" && mapBbox) {
-        geo = await fetchBairros(mapBbox, normalize(`${activeCity}:${activeState}`));
+        geo = await fetchAdminSubdivisions(mapBbox, 10, `bairros:${normalize(`${activeCountry}:${activeState}:${activeCity}`)}`, cityScope);
       }
       if (!cancelled) { setCurrentGeo(geo); setGeoLoading(false); }
     };
     run();
     return () => { cancelled = true; };
-  }, [viewMode, activeCountry, activeState, activeCity, mapBbox]);
+  }, [viewMode, activeCountry, activeState, activeCity, mapBbox, countryScope, stateScope, cityScope]);
 
   /* ---------- City: top clubs ---------- */
   useEffect(() => {
@@ -447,36 +493,55 @@ const MapaCalor = () => {
   /* ---------- Navigation ---------- */
   const goWorld = useCallback(() => {
     setViewMode("world"); setActiveCountry(null); setActiveState(null); setActiveCity(null);
+    setCountryScope({}); setStateScope({}); setCityScope({});
     setBreadcrumbs([{ label: "Mundo", level: "world" }]);
     setMapCenter([10, 0]); setMapZoom(2); setMapBbox(null);
   }, []);
 
-  const goCountry = useCallback(async (country: string) => {
+  const goCountry = useCallback(async (country: string, bboxOverride?: GeoBbox | null, scopeOverride?: TerritoryScope) => {
+    setCurrentGeo(null);
     setViewMode("country"); setActiveCountry(country); setActiveState(null); setActiveCity(null);
+    setCountryScope(scopeOverride || {}); setStateScope({}); setCityScope({});
     setBreadcrumbs([{ label: "Mundo", level: "world" }, { label: country, level: "country", value: country }]);
+    if (bboxOverride) {
+      setMapBbox(bboxOverride); setMapCenter(bboxCenter(bboxOverride)); setMapZoom(5);
+      return;
+    }
     const q = COUNTRY_DB_TO_GEO[country] || country;
     const r = await geocodeBounds(q);
     if (r) { setMapCenter(r.center); setMapZoom(5); setMapBbox(r.bbox || null); }
   }, []);
 
-  const goState = useCallback(async (state: string) => {
+  const goState = useCallback(async (state: string, bboxOverride?: GeoBbox | null, scopeOverride?: TerritoryScope) => {
+    setCurrentGeo(null);
     setViewMode("state"); setActiveState(state); setActiveCity(null);
+    setStateScope(scopeOverride || {}); setCityScope({});
     setBreadcrumbs(prev => [
       ...prev.filter(b => b.level === "world" || b.level === "country"),
       { label: state, level: "state", value: state },
     ]);
+    if (bboxOverride) {
+      setMapBbox(bboxOverride); setMapCenter(bboxCenter(bboxOverride)); setMapZoom(7);
+      return;
+    }
     const country = COUNTRY_DB_TO_GEO[activeCountry || "Brazil"] || "Brasil";
     const r = await geocodeBounds(`${state}, ${country}`);
     if (r) { setMapCenter(r.center); setMapZoom(7); setMapBbox(r.bbox || null); }
   }, [activeCountry]);
 
-  const goCity = useCallback(async (city: string, stateOverride?: string) => {
+  const goCity = useCallback(async (city: string, stateOverride?: string, bboxOverride?: GeoBbox | null, scopeOverride?: TerritoryScope) => {
+    setCurrentGeo(null);
     setViewMode("city"); setActiveCity(city);
+    setCityScope(scopeOverride || {});
     if (stateOverride) setActiveState(stateOverride);
     setBreadcrumbs(prev => [
       ...prev.filter(b => b.level !== "city"),
       { label: city, level: "city", value: city },
     ]);
+    if (bboxOverride) {
+      setMapBbox(bboxOverride); setMapCenter(bboxCenter(bboxOverride)); setMapZoom(12);
+      return;
+    }
     const st = stateOverride || activeState || "";
     const country = COUNTRY_DB_TO_GEO[activeCountry || "Brazil"] || "Brasil";
     const r = await geocodeBounds(`${city}, ${st}, ${country}`);
@@ -578,17 +643,19 @@ const MapaCalor = () => {
         l.setStyle({ weight: 0.8, color: "#333333", opacity: 0.9 });
       },
       click: () => {
+        const featureBbox = getFeatureBounds(feature);
+        const featureScope = getFeatureScope(feature?.properties);
         if (viewMode === "world") {
           const dbName = COUNTRY_GEO_TO_DB[name] || name;
-          goCountry(dbName);
+          goCountry(dbName, featureBbox, featureScope);
         } else if (viewMode === "country") {
-          goState(name);
+          goState(name, featureBbox, featureScope);
         } else if (viewMode === "state") {
-          goCity(name);
+          goCity(name, activeState || undefined, featureBbox, featureScope);
         }
       },
     });
-  }, [lookupVotesForFeature, viewMode, goCountry, goState, goCity]);
+  }, [lookupVotesForFeature, viewMode, activeState, goCountry, goState, goCity]);
 
   /* Key força re-render do GeoJSON quando style/data muda */
   const geoKey = useMemo(
