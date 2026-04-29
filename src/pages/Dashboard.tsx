@@ -72,6 +72,16 @@ const Dashboard = () => {
           <div className="flex-1 max-w-sm">
             <ClubSearch onSelect={(club) => setQueriedTeam(club)} />
           </div>
+          {user?.email === "betoborelli9@gmail.com" && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigate("/admin/votos-ficticios")}
+              className="border-[#ff6200]/50 text-[#ff6200] hover:bg-[#ff6200]/10 font-black italic uppercase text-xs"
+            >
+              🧪 Votos Fictícios
+            </Button>
+          )}
           <Button variant="ghost" size="icon" onClick={() => signOut()} className="text-white/50 hover:text-white">
             <LogOut className="w-5 h-5" />
           </Button>

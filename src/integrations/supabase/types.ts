@@ -477,12 +477,15 @@ export type Database = {
           voto_id: string
         }[]
       }
+      fake_votes_summary: { Args: never; Returns: Json }
       get_club_vote_ranking: { Args: { p_limit?: number }; Returns: Json }
       get_club_vote_summary: { Args: { p_club_name: string }; Returns: Json }
       get_heatmap_data: {
         Args: { p_club_name: string; p_filter_value?: string; p_level?: string }
         Returns: Json
       }
+      purge_fake_votes: { Args: never; Returns: Json }
+      seed_fake_votes: { Args: { p_quantidade?: number }; Returns: Json }
       unaccent: { Args: { "": string }; Returns: string }
     }
     Enums: {

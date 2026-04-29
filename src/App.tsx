@@ -43,6 +43,7 @@ import AdminIngestion from "./pages/AdminIngestion";
 import ClubColors from "./pages/Admin/ClubColors";
 import ClubFeminino from "./pages/Admin/ClubFeminino";
 import GlobalBI from "./pages/Admin/GlobalBI"; // Rota Master Beto Borelli
+import VotosFicticios from "./pages/VotosFicticios"; // Rota Master — Geração de votos para teste
 
 const queryClient = new QueryClient();
 
@@ -79,6 +80,7 @@ const App = () => (
             <Route path="/admin/cores" element={<ClubColors />} />
             <Route path="/admin/feminino" element={<ClubFeminino />} />
             <Route path="/admin/global" element={<GlobalBI />} />
+            <Route path="/admin/votos-ficticios" element={<VotosFicticios />} />
 
             {/* Tratamento de Erros */}
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
