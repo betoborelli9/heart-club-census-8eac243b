@@ -176,6 +176,11 @@ const MapaCalor = () => {
   /* Tooltip */
   const [tooltip, setTooltip] = useState<{ x: number; y: number; name: string; votes: number } | null>(null);
 
+  /* City view: bairros (OSM Overpass) */
+  const [cityCenter, setCityCenter] = useState<[number, number] | null>(null);
+  const [cityBairrosGeo, setCityBairrosGeo] = useState<any | null>(null);
+  const [bairrosLoading, setBairrosLoading] = useState(false);
+
   /* ---------- Load heart club ---------- */
   useEffect(() => {
     const load = async () => {
