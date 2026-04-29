@@ -620,7 +620,14 @@ const MapaCalor = () => {
                 height={600}
                 style={{ width: "100%", height: "100%", background: "transparent", display: "block" }}
               >
-                {renderMap()}
+                <ZoomableGroup
+                  center={projectionConfig.center}
+                  zoom={1}
+                  minZoom={1}
+                  maxZoom={12}
+                >
+                  {renderMap()}
+                </ZoomableGroup>
               </ComposableMap>
 
               {/* Legend */}
