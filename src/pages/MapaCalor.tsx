@@ -541,7 +541,9 @@ const MapaCalor = () => {
   /* ---------- Mapa de votos por nome (para colorir GeoJSON) ---------- */
   const votesByRegion = useMemo(() => {
     const map = new Map<string, number>();
-    for (const e of heatData) map.set(normalize(e.region), Number(e.votes));
+    for (const e of heatData) {
+      for (const key of regionLookupKeys(e.region)) map.set(key, Number(e.votes));
+    }
     return map;
   }, [heatData]);
   const maxVotes = useMemo(() => heatData.reduce((m, e) => Math.max(m, Number(e.votes)), 0), [heatData]);
@@ -550,24 +552,26 @@ const MapaCalor = () => {
   const lookupVotesForFeature = useCallback((props: any): { name: string; votes: number } => {
     const candidates: string[] = [];
     if (!props) return { name: "—", votes: 0 };
-    // Mundo
-    if (props.ADMIN) candidates.push(props.ADMIN);
-    if (props.name) candidates.push(props.name);
-    if (props.NAME) candidates.push(props.NAME);
-    if (props.NAME_LONG) candidates.push(props.NAME_LONG);
-    // Estados BR (codeforgermany usa "name")
-    // Municípios IBGE (tbrugz usa "name")
-    // Bairros OSM (já temos "name")
+    const candidateProps = [
+      "ADMIN", "name", "name_en", "name_pt", "int_name", "official_name", "alt_name", "short_name",
+      "NAME", "NAME_LONG", "NOME", "NM_MUN", "NM_UF", "ISO_A2", "ISO3166_1", "ISO3166_2",
+    ];
+    for (const key of candidateProps) {
+      const value = props[key];
+      if (typeof value === "string" && value.trim()) candidates.push(value);
+    }
     const display = candidates[0] || "—";
     for (const c of candidates) {
-      // tenta nome direto
-      const v = votesByRegion.get(normalize(c));
-      if (v) return { name: c, votes: v };
-      // tenta DB-form (e.g. "United States of America" → "USA")
+      for (const key of regionLookupKeys(c)) {
+        const v = votesByRegion.get(key);
+        if (v) return { name: display, votes: v };
+      }
       const dbName = COUNTRY_GEO_TO_DB[c];
       if (dbName) {
-        const v2 = votesByRegion.get(normalize(dbName));
-        if (v2) return { name: c, votes: v2 };
+        for (const key of regionLookupKeys(dbName)) {
+          const v2 = votesByRegion.get(key);
+          if (v2) return { name: display, votes: v2 };
+        }
       }
     }
     return { name: display, votes: 0 };
