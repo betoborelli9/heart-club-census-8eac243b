@@ -880,6 +880,12 @@ const MapaCalor = () => {
                   <Loader2 className="w-7 h-7 animate-spin text-primary" />
                 </div>
               )}
+              {bairrosLoading && viewMode === "city" && (
+                <div className="absolute top-3 right-3 z-20 px-3 py-1.5 rounded-xl bg-black/70 border border-primary/30 flex items-center gap-2">
+                  <Loader2 className="w-3 h-3 animate-spin text-primary" />
+                  <span className="text-[9px] font-black italic uppercase text-primary">Carregando bairros...</span>
+                </div>
+              )}
 
               <ComposableMap
                 projection="geoMercator"
