@@ -366,6 +366,37 @@ const MapaCalor = () => {
       );
     }
 
+    /* STATE BRASIL: render municípios geojson */
+    if (viewMode === "state" && activeCountry === "Brazil" && activeState && BR_STATE_INFO[activeState]) {
+      const ufCode = BR_STATE_INFO[activeState].code;
+      return (
+        <Geographies geography={GEO_BR_MUN(ufCode)}>
+          {({ geographies }) => {
+            console.log(`[MapaCalor] Municípios ${activeState} (UF ${ufCode}):`, geographies?.length);
+            return geographies.map(geo => {
+              const cityName = geo.properties.name || geo.properties.NAME || "";
+              const v = voteMap[normalize(cityName)] || 0;
+              return (
+                <Geography
+                  key={geo.rsmKey} geography={geo}
+                  fill={colorScale(v)}
+                  stroke="hsl(0 0% 100% / 0.12)" strokeWidth={0.3}
+                  onClick={() => goCity(cityName)}
+                  onMouseEnter={(e: any) => setTooltip({ x: e.clientX, y: e.clientY, name: cityName, votes: v })}
+                  onMouseLeave={() => setTooltip(null)}
+                  style={{
+                    default: { outline: "none", cursor: "pointer", transition: "fill 0.25s" },
+                    hover: { outline: "none", fill: "hsl(var(--primary))", cursor: "pointer" },
+                    pressed: { outline: "none" },
+                  }}
+                />
+              );
+            });
+          }}
+        </Geographies>
+      );
+    }
+
     /* COUNTRY (não-Brasil) ou STATE/CITY: bubble map sobre o país */
     const countryCfg = activeCountry ? COUNTRY_PROJECTION[activeCountry] : null;
     const maxV = Math.max(...heatData.map(e => Number(e.votes)), 1);
