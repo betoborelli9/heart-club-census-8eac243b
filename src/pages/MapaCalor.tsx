@@ -593,8 +593,9 @@ const MapaCalor = () => {
 
   const goCountry = useCallback(async (country: string, bboxOverride?: GeoBbox | null, scopeOverride?: TerritoryScope) => {
     setCurrentGeo(null);
+    const enrichedScope = { ...(scopeOverride || {}), countryIso2: scopeOverride?.countryIso2 || countryIso2FromName(country) };
     setViewMode("country"); setActiveCountry(country); setActiveState(null); setActiveCity(null);
-    setCountryScope(scopeOverride || {}); setStateScope({}); setCityScope({});
+    setCountryScope(enrichedScope); setStateScope({}); setCityScope({});
     setBreadcrumbs([{ label: "Mundo", level: "world" }, { label: country, level: "country", value: country }]);
     if (bboxOverride) {
       setMapBbox(bboxOverride); setMapCenter(bboxCenter(bboxOverride)); setMapZoom(5);
@@ -682,6 +683,19 @@ const MapaCalor = () => {
       setCitySearchLoading(false);
     }, 300);
   };
+
+  const openCityResultTerritory = useCallback(async (hit: CityHit) => {
+    setCitySearchQuery(""); setCitySearchResults([]);
+    const place = await geocodePlace([hit.city, hit.state, hit.country].filter(Boolean).join(", "));
+    const country = hit.country || place?.country || activeCountry;
+    if (country) {
+      const countryPlace = await geocodePlace(country);
+      const scope: TerritoryScope = { countryIso2: place?.countryCode || countryPlace?.countryCode || countryIso2FromName(country) };
+      await goCountry(country, countryPlace?.bbox || null, scope);
+      return;
+    }
+    await goCity(hit.city, hit.state);
+  }, [activeCountry, goCountry, goCity]);
 
   /* ---------- Comparativo ---------- */
   useEffect(() => {
