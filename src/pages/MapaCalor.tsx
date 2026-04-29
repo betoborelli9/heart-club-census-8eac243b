@@ -1,17 +1,20 @@
+/* =====================================================================
+ * MapaCalor.tsx — War Room Compact Heatmap
+ * Layout: Sidebar 40% (rankings + breadcrumbs) | Mapa 60% (max 600px)
+ * Drill-down: world → country → state → city
+ * Choropleth: 5 tons de Laranja/Vermelho baseados em quantis
+ * ===================================================================== */
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Globe, ChevronRight, MapPin, Trophy, Flame, Search, Swords,
-  ArrowLeft, Loader2, LogOut, X
+  ChevronRight, MapPin, Trophy, Flame, Search, Swords,
+  ArrowLeft, Loader2, LogOut, X, Home,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
-  ComposableMap,
-  Geographies,
-  Geography,
-  ZoomableGroup,
+  ComposableMap, Geographies, Geography, ZoomableGroup, Marker,
 } from "react-simple-maps";
 import { useUser } from "@/contexts/UserContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -19,161 +22,110 @@ import { ClubLogo } from "@/components/ClubLogo";
 import { searchClubsLocal, ClubSearchResult } from "@/lib/search-clubs";
 import { CLUBS_DATA } from "@/clubes-data";
 import logo from "@/assets/logo.png";
-import {
-  continentZoomTargets,
-  isoToContinentMap,
-} from "@/data/mockDashboard";
 
-const GEO_URL = "https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json";
-const BRAZIL_STATES_GEO_URL = "https://raw.githubusercontent.com/codeforamerica/click_that_hood/master/public/data/brazil-states.geojson";
+/* ---------- GEO sources ---------- */
+const GEO_WORLD = "https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json";
+const GEO_BRAZIL_STATES = "https://raw.githubusercontent.com/codeforamerica/click_that_hood/master/public/data/brazil-states.geojson";
 
-const BR_STATE_ALIASES: Record<string, string[]> = {
-  "Acre": ["AC"],
-  "Alagoas": ["AL"],
-  "Amapá": ["AP"],
-  "Amazonas": ["AM"],
-  "Bahia": ["BA"],
-  "Ceará": ["CE"],
-  "Distrito Federal": ["DF", "Brasília"],
-  "Espírito Santo": ["ES"],
-  "Goiás": ["GO"],
-  "Maranhão": ["MA"],
-  "Mato Grosso": ["MT"],
-  "Mato Grosso do Sul": ["MS"],
-  "Minas Gerais": ["MG"],
-  "Pará": ["PA"],
-  "Paraíba": ["PB"],
-  "Paraná": ["PR"],
-  "Pernambuco": ["PE"],
-  "Piauí": ["PI"],
-  "Rio de Janeiro": ["RJ"],
-  "Rio Grande do Norte": ["RN"],
-  "Rio Grande do Sul": ["RS"],
-  "Rondônia": ["RO"],
-  "Roraima": ["RR"],
-  "Santa Catarina": ["SC"],
-  "São Paulo": ["SP"],
-  "Sergipe": ["SE"],
-  "Tocantins": ["TO"],
+/* GeoJSON country-name → DB country-name (voto_pais) */
+const COUNTRY_NAME_TO_DB: Record<string, string> = {
+  "Brazil": "Brazil", "United States of America": "USA", "United States": "USA",
+  "United Kingdom": "England", "Germany": "Germany", "Spain": "Spain",
+  "Italy": "Italy", "France": "France", "Argentina": "Argentina",
+  "South Korea": "South Korea", "Korea": "South Korea", "Australia": "Australia",
+  "Mexico": "Mexico", "Japan": "Japan", "South Africa": "South Africa",
+  "Egypt": "Egypt", "Canada": "Canada", "Nigeria": "Nigeria",
+  "Saudi Arabia": "Saudi Arabia", "Uruguay": "Uruguay", "Chile": "Chile",
+  "Portugal": "Portugal",
 };
 
-function normalize(value: string): string {
-  return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
-}
+/* Country → projection config for drill-in */
+const COUNTRY_PROJECTION: Record<string, { center: [number, number]; scale: number; statesGeo?: string }> = {
+  "Brazil": { center: [-55, -14], scale: 700, statesGeo: GEO_BRAZIL_STATES },
+  "USA": { center: [-98, 39], scale: 600 },
+  "Argentina": { center: [-65, -38], scale: 700 },
+  "Spain": { center: [-3, 40], scale: 1500 },
+  "England": { center: [-2, 53], scale: 2000 },
+  "Italy": { center: [12, 42], scale: 1500 },
+  "Germany": { center: [10, 51], scale: 1700 },
+  "France": { center: [2, 46], scale: 1700 },
+  "Japan": { center: [138, 36], scale: 1100 },
+  "Mexico": { center: [-102, 23], scale: 800 },
+};
 
-// ===== BRASA COLOR SCALE (ABSOLUTE) =====
-function getBrasaColor(votes: number): string {
-  if (!votes || votes === 0) return "hsl(var(--heat-empty))";
-  if (votes <= 10) return "hsl(var(--heat-low))";
-  if (votes <= 100) return "hsl(var(--heat-mid))";
-  return "hsl(var(--heat-high))";
+/* ---------- Helpers ---------- */
+function normalize(v: string): string {
+  return v.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
 }
-
-// Duel palettes
-function getDuelColorA(votes: number, maxVotes: number): string {
-  if (!votes) return "hsl(var(--heat-empty))";
-  const ratio = Math.min(votes / Math.max(maxVotes, 1), 1);
-  if (ratio <= 0.3) return "hsl(var(--heat-mid))";
-  if (ratio <= 0.6) return "hsl(var(--primary) / 0.85)";
-  return "hsl(var(--heat-high))";
-}
-function getDuelColorB(votes: number, maxVotes: number): string {
-  if (!votes) return "hsl(var(--heat-empty))";
-  const ratio = Math.min(votes / Math.max(maxVotes, 1), 1);
-  if (ratio <= 0.3) return "hsl(var(--duel-blue-low) / 0.75)";
-  if (ratio <= 0.6) return "hsl(var(--duel-blue-low))";
-  return "hsl(var(--duel-blue-high))";
-}
-
-const LEGEND_BRASA = [
-  "hsl(var(--heat-empty))",
-  "hsl(var(--heat-low))",
-  "hsl(var(--heat-mid))",
-  "hsl(var(--heat-high))",
-];
-const LEGEND_BLUE = [
-  "hsl(var(--heat-empty))",
-  "hsl(var(--duel-blue-low) / 0.75)",
-  "hsl(var(--duel-blue-low))",
-  "hsl(var(--duel-blue-high))",
-];
-
 function formatVotes(n: number): string {
-  if (n >= 1000000) return `${(n / 1000000).toFixed(1)}M`;
-  if (n >= 1000) return `${(n / 1000).toFixed(1)}K`;
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
   return n.toLocaleString("pt-BR");
 }
 
-type DrillLevel = "world" | "continent" | "country" | "state" | "city";
+/* 5-tier choropleth scale (orange → deep red).
+ * Quantile-based on the visible dataset so distribution scales with data. */
+const CHOROPLETH = [
+  "hsl(28 95% 60%)",   // tier 1 - light orange
+  "hsl(22 95% 52%)",   // tier 2
+  "hsl(16 95% 46%)",   // tier 3
+  "hsl(10 90% 40%)",   // tier 4
+  "hsl(0 85% 32%)",    // tier 5 - deep red
+];
+const EMPTY_FILL = "hsl(0 0% 14%)"; // dark neutral grey for null/zero
 
-interface HeatmapEntry { region: string; votes: number; }
-interface BreadcrumbItem { label: string; level: DrillLevel; value?: string; }
+function buildScale(votesArr: number[]) {
+  const sorted = votesArr.filter(v => v > 0).sort((a, b) => a - b);
+  if (sorted.length === 0) return (_: number) => EMPTY_FILL;
+  const q = (p: number) => sorted[Math.floor((sorted.length - 1) * p)];
+  const breaks = [q(0.2), q(0.4), q(0.6), q(0.8)];
+  return (v: number) => {
+    if (!v || v <= 0) return EMPTY_FILL;
+    if (v <= breaks[0]) return CHOROPLETH[0];
+    if (v <= breaks[1]) return CHOROPLETH[1];
+    if (v <= breaks[2]) return CHOROPLETH[2];
+    if (v <= breaks[3]) return CHOROPLETH[3];
+    return CHOROPLETH[4];
+  };
+}
 
+/* ---------- Types ---------- */
+type ViewLevel = "world" | "country" | "state" | "city";
+interface HeatEntry { region: string; votes: number; }
+interface ClubVote { club: string; votes: number; }
+interface Crumb { label: string; level: ViewLevel; value?: string; }
+
+/* ---------- Component ---------- */
 const MapaCalor = () => {
   const navigate = useNavigate();
   const { user, profile, signOut } = useUser();
 
+  /* Active club */
   const [heartClubName, setHeartClubName] = useState("");
   const [activeClubName, setActiveClubName] = useState("");
   const [activeClubInfo, setActiveClubInfo] = useState<any>(null);
 
-  const [duelMode, setDuelMode] = useState(false);
-  const [duelClubName, setDuelClubName] = useState("");
-  const [duelClubInfo, setDuelClubInfo] = useState<any>(null);
-  const [duelData, setDuelData] = useState<HeatmapEntry[]>([]);
+  /* Drill-down state */
+  const [viewMode, setViewMode] = useState<ViewLevel>("world");
+  const [activeCountry, setActiveCountry] = useState<string | null>(null);
+  const [activeState, setActiveState] = useState<string | null>(null);
+  const [activeCity, setActiveCity] = useState<string | null>(null);
+  const [breadcrumbs, setBreadcrumbs] = useState<Crumb[]>([{ label: "Mundo", level: "world" }]);
 
-  const [drillLevel, setDrillLevel] = useState<DrillLevel>("world");
-  const [breadcrumbs, setBreadcrumbs] = useState<BreadcrumbItem[]>([{ label: "Mundo", level: "world" }]);
-  const [center, setCenter] = useState<[number, number]>([0, 20]);
-  const [zoom, setZoom] = useState(1);
-  const [filterValue, setFilterValue] = useState<string | null>(null);
-
-  const [heatData, setHeatData] = useState<HeatmapEntry[]>([]);
+  /* Data */
+  const [heatData, setHeatData] = useState<HeatEntry[]>([]);
+  const [cityClubs, setCityClubs] = useState<ClubVote[]>([]);
   const [loading, setLoading] = useState(true);
   const [totalVotes, setTotalVotes] = useState(0);
 
+  /* Search */
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<ClubSearchResult[]>([]);
-  const [duelSearchQuery, setDuelSearchQuery] = useState("");
-  const [duelSearchResults, setDuelSearchResults] = useState<ClubSearchResult[]>([]);
 
-  const [tooltip, setTooltip] = useState<{ x: number; y: number; name: string; votes: number; pct: string } | null>(null);
-  const [curiosity, setCuriosity] = useState<string | null>(null);
+  /* Tooltip */
+  const [tooltip, setTooltip] = useState<{ x: number; y: number; name: string; votes: number } | null>(null);
 
-  // GPS Geolocation
-  const [geoCity, setGeoCity] = useState<string | null>(null);
-  const [geoConfirmed, setGeoConfirmed] = useState(false);
-  const [showGeoModal, setShowGeoModal] = useState(false);
-  const geoAttemptedRef = useRef(false);
-
-  // Request GPS on mount
-  useEffect(() => {
-    if (geoAttemptedRef.current || !navigator.geolocation) return;
-    geoAttemptedRef.current = true;
-
-    navigator.geolocation.getCurrentPosition(
-      async (pos) => {
-        try {
-          const { latitude, longitude } = pos.coords;
-          const res = await fetch(
-            `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json&accept-language=pt-BR`,
-            { headers: { "User-Agent": "HeartClubApp/1.0" } }
-          );
-          const data = await res.json();
-          const addr = data.address || {};
-          const city = addr.city || addr.town || addr.municipality || addr.village || "";
-          if (city) {
-            setGeoCity(city);
-            setShowGeoModal(true);
-          }
-        } catch { /* silently fail */ }
-      },
-      () => { /* permission denied — ok */ },
-      { enableHighAccuracy: false, timeout: 8000 }
-    );
-  }, []);
-
-  // Load heart club
+  /* ---------- Load heart club ---------- */
   useEffect(() => {
     const load = async () => {
       if (!user) return;
@@ -183,7 +135,7 @@ const MapaCalor = () => {
         .eq("user_id", user.id)
         .eq("is_original_vote", true)
         .maybeSingle();
-      const name = data?.clube_nome || null;
+      const name = data?.clube_nome || "";
       setHeartClubName(name);
       setActiveClubName(name);
       setActiveClubInfo(CLUBS_DATA.find(c => c.nome === name) || null);
@@ -191,460 +143,457 @@ const MapaCalor = () => {
     load();
   }, [user]);
 
+  /* ---------- Fetch heatmap data on view change ---------- */
   useEffect(() => {
     if (!activeClubName) return;
-    fetchHeatmapData(activeClubName, drillLevel, filterValue);
-  }, [activeClubName, drillLevel, filterValue]);
+    fetchHeat();
+  }, [activeClubName, viewMode, activeCountry, activeState]);
 
-  useEffect(() => {
-    if (!duelMode || !duelClubName) return;
-    fetchDuelData(duelClubName);
-  }, [duelClubName, duelMode, drillLevel, filterValue]);
-
-  const fetchHeatmapData = async (clubName: string, level: DrillLevel, filter: string | null) => {
+  const fetchHeat = async () => {
     setLoading(true);
-    const supaLevel = level === "world" || level === "continent" ? "country" : level;
+    let level: string = viewMode;
+    let filter: string | null = null;
+    if (viewMode === "world") level = "country";
+    else if (viewMode === "country") { level = "state"; filter = activeCountry; }
+    else if (viewMode === "state") { level = "city"; filter = activeState; }
+    else if (viewMode === "city") { level = "city"; filter = activeState; }
+
     const { data, error } = await supabase.rpc("get_heatmap_data", {
-      p_club_name: clubName, p_level: supaLevel, p_filter_value: filter,
+      p_club_name: activeClubName,
+      p_level: level,
+      p_filter_value: filter,
     });
     if (!error && data) {
-      const entries = (Array.isArray(data) ? data : []) as unknown as HeatmapEntry[];
+      const entries = (Array.isArray(data) ? data : []) as unknown as HeatEntry[];
       setHeatData(entries);
       setTotalVotes(entries.reduce((s, e) => s + Number(e.votes), 0));
-    } else { setHeatData([]); setTotalVotes(0); }
+    } else {
+      setHeatData([]); setTotalVotes(0);
+    }
     setLoading(false);
   };
 
-  const fetchDuelData = async (clubName: string) => {
-    const supaLevel = drillLevel === "world" || drillLevel === "continent" ? "country" : drillLevel;
-    const { data } = await supabase.rpc("get_heatmap_data", {
-      p_club_name: clubName, p_level: supaLevel, p_filter_value: filterValue,
-    });
-    if (data) setDuelData((Array.isArray(data) ? data : []) as unknown as HeatmapEntry[]);
-  };
+  /* When a city is selected → fetch top clubs in that city */
+  useEffect(() => {
+    if (viewMode !== "city" || !activeCity) { setCityClubs([]); return; }
+    const run = async () => {
+      const { data } = await supabase.rpc("get_top_clubs_by_region", {
+        p_level: "city", p_value: activeCity, p_limit: 10,
+      });
+      if (data) setCityClubs((Array.isArray(data) ? data : []) as unknown as ClubVote[]);
+    };
+    run();
+  }, [viewMode, activeCity]);
 
+  /* ---------- Maps & scales ---------- */
   const voteMap = useMemo(() => {
     const m: Record<string, number> = {};
-    heatData.forEach(e => { m[e.region] = Number(e.votes); });
+    heatData.forEach(e => { m[normalize(e.region)] = Number(e.votes); });
     return m;
   }, [heatData]);
 
-  const duelVoteMap = useMemo(() => {
-    const m: Record<string, number> = {};
-    duelData.forEach(e => { m[e.region] = Number(e.votes); });
-    return m;
-  }, [duelData]);
+  const colorScale = useMemo(
+    () => buildScale(heatData.map(e => Number(e.votes))),
+    [heatData],
+  );
 
-  const maxVotes = useMemo(() => Math.max(...heatData.map(e => Number(e.votes)), 1), [heatData]);
-  const duelMaxVotes = useMemo(() => Math.max(...duelData.map(e => Number(e.votes)), 1), [duelData]);
+  const ranking = useMemo(
+    () => [...heatData].sort((a, b) => Number(b.votes) - Number(a.votes)).slice(0, 15),
+    [heatData],
+  );
 
-  // Top 10
-  const top10 = useMemo(() => {
-    return [...heatData].sort((a, b) => Number(b.votes) - Number(a.votes)).slice(0, 10);
-  }, [heatData]);
-
-  // Distribution percentages
-  const distribution = useMemo(() => {
-    if (totalVotes === 0) return [];
-    return top10.map(e => ({
-      region: e.region,
-      pct: ((Number(e.votes) / totalVotes) * 100).toFixed(1),
-      votes: Number(e.votes),
-    }));
-  }, [top10, totalVotes]);
-
-  const navigateTo = useCallback((level: DrillLevel, label: string, value?: string) => {
-    setDrillLevel(level);
-    if (level === "world") {
-      setCenter([0, 20]); setZoom(1); setFilterValue(null);
-      setBreadcrumbs([{ label: "Mundo", level: "world" }]);
-    } else if (level === "state") {
-      setFilterValue(value || null);
-      setCenter([-55, -15]); setZoom(3);
-      setBreadcrumbs(prev => [...prev.filter(b => b.level === "world"), { label, level: "state", value }]);
-    } else if (level === "city") {
-      setFilterValue(value || null);
-      setZoom(6);
-      setBreadcrumbs(prev => [...prev.filter(b => b.level === "world" || b.level === "state"), { label, level: "city", value }]);
-    }
+  /* ---------- Navigation ---------- */
+  const goWorld = useCallback(() => {
+    setViewMode("world"); setActiveCountry(null); setActiveState(null); setActiveCity(null);
+    setBreadcrumbs([{ label: "Mundo", level: "world" }]);
   }, []);
 
-  const handleGeoClick = useCallback((geo: any) => {
-    const name = geo.properties.NAME || geo.properties.name;
-    const iso = geo.properties.ISO_A3 || geo.properties.ADM0_A3;
-    if (drillLevel === "world") {
-      const continent = isoToContinentMap[iso];
-      const target = continent ? continentZoomTargets[continent] : null;
-      if (target) { setCenter(target.center); setZoom(target.zoom + 1); }
-      navigateTo("state", name, name);
-    }
-  }, [drillLevel, navigateTo]);
+  const goCountry = useCallback((country: string) => {
+    setViewMode("country"); setActiveCountry(country); setActiveState(null); setActiveCity(null);
+    setBreadcrumbs([{ label: "Mundo", level: "world" }, { label: country, level: "country", value: country }]);
+  }, []);
 
-  // Curiosity check
-  useEffect(() => {
-    if (!activeClubName || !profile?.cidade) return;
-    const cityVotes = heatData.find(e => e.region === profile.cidade);
-    if (cityVotes && Number(cityVotes.votes) === 1) {
-      setCuriosity(`Você é o 1º torcedor do ${activeClubName} detectado em ${profile.cidade}!`);
-    } else { setCuriosity(null); }
-  }, [heatData, activeClubName, profile]);
+  const goState = useCallback((state: string) => {
+    setViewMode("state"); setActiveState(state); setActiveCity(null);
+    setBreadcrumbs(prev => [
+      ...prev.filter(b => b.level === "world" || b.level === "country"),
+      { label: state, level: "state", value: state },
+    ]);
+  }, []);
 
+  const goCity = useCallback((city: string) => {
+    setViewMode("city"); setActiveCity(city);
+    setBreadcrumbs(prev => [
+      ...prev.filter(b => b.level !== "city"),
+      { label: city, level: "city", value: city },
+    ]);
+  }, []);
+
+  const handleCrumb = (c: Crumb) => {
+    if (c.level === "world") goWorld();
+    else if (c.level === "country" && c.value) goCountry(c.value);
+    else if (c.level === "state" && c.value) goState(c.value);
+  };
+
+  /* ---------- Map click handlers ---------- */
+  const handleWorldClick = (geo: any) => {
+    const rawName = geo.properties.NAME || geo.properties.name || "";
+    const dbName = COUNTRY_NAME_TO_DB[rawName] || rawName;
+    goCountry(dbName);
+  };
+  const handleStateClick = (geo: any) => {
+    const stateName = geo.properties.name || geo.properties.NAME || "";
+    goState(stateName);
+  };
+
+  /* ---------- Search ---------- */
   const handleSearch = async (val: string) => {
     setSearchQuery(val);
-    if (val.length > 1) {
-      const results = await searchClubsLocal(val, 6);
-      setSearchResults(results);
-    } else {
-      setSearchResults([]);
-    }
+    if (val.length > 1) setSearchResults(await searchClubsLocal(val, 6));
+    else setSearchResults([]);
   };
   const selectClub = (club: ClubSearchResult) => {
-    setActiveClubName(club.name); setActiveClubInfo(CLUBS_DATA.find(c => c.nome === club.name) || null);
+    setActiveClubName(club.name);
+    setActiveClubInfo(CLUBS_DATA.find(c => c.nome === club.name) || null);
     setSearchQuery(""); setSearchResults([]);
-    setDrillLevel("world"); setCenter([0, 20]); setZoom(1); setFilterValue(null);
-    setBreadcrumbs([{ label: "Mundo", level: "world" }]);
+    goWorld();
   };
-  const handleDuelSearch = async (val: string) => {
-    setDuelSearchQuery(val);
-    if (val.length > 1) {
-      const results = await searchClubsLocal(val, 6);
-      setDuelSearchResults(results);
-    } else {
-      setDuelSearchResults([]);
+
+  /* ---------- Render map by level ---------- */
+  const projectionConfig = useMemo(() => {
+    if (viewMode === "world") return { scale: 130, center: [0, 20] as [number, number] };
+    if (viewMode === "country" && activeCountry) {
+      const cfg = COUNTRY_PROJECTION[activeCountry];
+      if (cfg) return { scale: cfg.scale, center: cfg.center };
     }
+    if (viewMode === "state" && activeCountry === "Brazil") {
+      return { scale: 1400, center: [-50, -15] as [number, number] };
+    }
+    return { scale: 130, center: [0, 20] as [number, number] };
+  }, [viewMode, activeCountry]);
+
+  const renderMap = () => {
+    /* WORLD: countries colored by total votes */
+    if (viewMode === "world") {
+      return (
+        <Geographies geography={GEO_WORLD}>
+          {({ geographies }) => geographies.map(geo => {
+            const rawName = geo.properties.NAME || geo.properties.name || "";
+            const dbName = COUNTRY_NAME_TO_DB[rawName] || rawName;
+            const v = voteMap[normalize(dbName)] || 0;
+            return (
+              <Geography
+                key={geo.rsmKey} geography={geo}
+                fill={colorScale(v)}
+                stroke="hsl(0 0% 100% / 0.05)" strokeWidth={0.5}
+                onClick={() => handleWorldClick(geo)}
+                onMouseEnter={(e: any) => setTooltip({ x: e.clientX, y: e.clientY, name: dbName, votes: v })}
+                onMouseLeave={() => setTooltip(null)}
+                style={{
+                  default: { outline: "none", cursor: "pointer", transition: "fill 0.25s" },
+                  hover: { outline: "none", fill: "hsl(var(--primary))", cursor: "pointer" },
+                  pressed: { outline: "none" },
+                }}
+              />
+            );
+          })}
+        </Geographies>
+      );
+    }
+
+    /* COUNTRY = BRAZIL: render states geojson */
+    if (viewMode === "country" && activeCountry === "Brazil") {
+      return (
+        <Geographies geography={GEO_BRAZIL_STATES}>
+          {({ geographies }) => geographies.map(geo => {
+            const stateName = geo.properties.name || "";
+            const v = voteMap[normalize(stateName)] || 0;
+            return (
+              <Geography
+                key={geo.rsmKey} geography={geo}
+                fill={colorScale(v)}
+                stroke="hsl(0 0% 100% / 0.08)" strokeWidth={0.5}
+                onClick={() => handleStateClick(geo)}
+                onMouseEnter={(e: any) => setTooltip({ x: e.clientX, y: e.clientY, name: stateName, votes: v })}
+                onMouseLeave={() => setTooltip(null)}
+                style={{
+                  default: { outline: "none", cursor: "pointer", transition: "fill 0.25s" },
+                  hover: { outline: "none", fill: "hsl(var(--primary))", cursor: "pointer" },
+                  pressed: { outline: "none" },
+                }}
+              />
+            );
+          })}
+        </Geographies>
+      );
+    }
+
+    /* COUNTRY (não-Brasil) ou STATE/CITY: bubble map sobre o país */
+    const countryCfg = activeCountry ? COUNTRY_PROJECTION[activeCountry] : null;
+    const maxV = Math.max(...heatData.map(e => Number(e.votes)), 1);
+    /* As bubbles não têm coords reais → mostramos a malha do país e
+       sobrepomos uma "matriz" simbólica clicável de pontos via ranking. */
+    return (
+      <>
+        <Geographies geography={GEO_WORLD}>
+          {({ geographies }) => geographies.map(geo => {
+            const rawName = geo.properties.NAME || geo.properties.name || "";
+            const dbName = COUNTRY_NAME_TO_DB[rawName] || rawName;
+            const isActive = dbName === activeCountry;
+            return (
+              <Geography
+                key={geo.rsmKey} geography={geo}
+                fill={isActive ? "hsl(0 0% 18%)" : "hsl(0 0% 8%)"}
+                stroke="hsl(0 0% 100% / 0.05)" strokeWidth={0.4}
+                style={{ default: { outline: "none" }, hover: { outline: "none", fill: "hsl(0 0% 22%)" }, pressed: { outline: "none" } }}
+              />
+            );
+          })}
+        </Geographies>
+        {/* Bubbles distribuídas em grid no centro do país */}
+        {ranking.slice(0, 20).map((entry, i) => {
+          if (!countryCfg) return null;
+          const angle = (i / Math.min(20, ranking.length)) * Math.PI * 2;
+          const radius = 3 + (i % 3) * 2;
+          const lng = countryCfg.center[0] + Math.cos(angle) * radius;
+          const lat = countryCfg.center[1] + Math.sin(angle) * radius;
+          const v = Number(entry.votes);
+          const size = 4 + (v / maxV) * 14;
+          return (
+            <Marker key={entry.region} coordinates={[lng, lat]}>
+              <circle
+                r={size} fill={colorScale(v)}
+                fillOpacity={0.8}
+                stroke="hsl(0 0% 100% / 0.4)" strokeWidth={0.5}
+                style={{ cursor: "pointer" }}
+                onClick={() => viewMode === "country" ? goState(entry.region) : goCity(entry.region)}
+                onMouseEnter={(e: any) => setTooltip({ x: e.clientX, y: e.clientY, name: entry.region, votes: v })}
+                onMouseLeave={() => setTooltip(null)}
+              />
+            </Marker>
+          );
+        })}
+      </>
+    );
   };
-  const selectDuelClub = (club: ClubSearchResult) => {
-    setDuelClubName(club.name); setDuelClubInfo(CLUBS_DATA.find(c => c.nome === club.name) || null);
-    setDuelSearchQuery(""); setDuelSearchResults([]);
-  };
 
-  const duelTotalA = totalVotes;
-  const duelTotalB = duelData.reduce((s, e) => s + Number(e.votes), 0);
-
-  const levelLabel = drillLevel === "world" ? "Mundial" : drillLevel === "state" ? "Nacional" : "Estadual";
-
+  /* ---------- UI ---------- */
   return (
     <div className="min-h-screen bg-background text-foreground" style={{ fontFamily: "Verdana, Geneva, sans-serif" }}>
-      {/* GPS Confirmation Modal */}
-      <AnimatePresence>
-        {showGeoModal && geoCity && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[100] bg-background/80 backdrop-blur-sm flex items-center justify-center p-4"
-          >
-            <motion.div
-              initial={{ scale: 0.9, y: 20 }}
-              animate={{ scale: 1, y: 0 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              className="glass-card rounded-2xl p-6 max-w-sm w-full border border-primary/20 space-y-4"
-            >
-              <div className="text-center space-y-2">
-                <MapPin className="w-10 h-10 text-primary mx-auto" />
-                <h3 className="text-lg font-black italic uppercase">Confirmação de Território</h3>
-                <p className="text-sm text-muted-foreground">
-                  Detectamos que sua lealdade está em{" "}
-                  <span className="text-primary font-bold">{geoCity}</span>.
-                  Você confirma que mora aqui?
-                </p>
-              </div>
-              <div className="flex gap-3 justify-center">
-                <Button
-                  onClick={() => { setGeoConfirmed(true); setShowGeoModal(false); }}
-                  className="btn-orange-gradient font-bold"
-                >
-                  Sim, é aqui!
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => { setGeoCity(null); setShowGeoModal(false); }}
-                >
-                  Não, corrigir
-                </Button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
       {/* HEADER */}
-      <header className="h-16 border-b border-border bg-background/80 backdrop-blur-xl sticky top-0 z-50">
+      <header className="h-14 border-b border-white/5 bg-black/80 backdrop-blur-xl sticky top-0 z-50">
         <div className="max-w-[1600px] mx-auto px-4 h-full flex items-center justify-between gap-4">
           <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate("/dashboard")}>
-            <ArrowLeft className="w-5 h-5 text-muted-foreground" />
-            <img src={logo} alt="Heart Club" className="h-10 w-auto" />
-            <span className="font-black italic text-lg tracking-tighter hidden sm:block">MAPA DE CALOR</span>
+            <ArrowLeft className="w-4 h-4 text-muted-foreground" />
+            <img src={logo} alt="Heart Club" className="h-8 w-auto" />
+            <span className="font-black italic text-sm tracking-tighter hidden sm:block">WAR ROOM</span>
           </div>
-          <div className="flex items-center gap-3">
-            {geoConfirmed && geoCity && (
-              <span className="text-[9px] text-primary font-bold uppercase tracking-widest hidden md:flex items-center gap-1">
-                <MapPin className="w-3 h-3" /> {geoCity}
-              </span>
-            )}
-            <Button variant={duelMode ? "default" : "outline"} size="sm" className="text-xs font-black uppercase" onClick={() => setDuelMode(!duelMode)}>
-              <Swords className="w-4 h-4 mr-1" /> Duelo
-            </Button>
-            <Button variant="ghost" size="icon" onClick={() => signOut()}><LogOut className="w-5 h-5" /></Button>
-          </div>
+          <Button variant="ghost" size="icon" onClick={() => signOut()}>
+            <LogOut className="w-4 h-4" />
+          </Button>
         </div>
       </header>
 
-      <div className="max-w-[1600px] mx-auto flex flex-col lg:flex-row gap-0 min-h-[calc(100vh-64px)]">
-        {/* SIDEBAR */}
-        <aside className="w-full lg:w-80 xl:w-96 border-r border-border bg-card/30 p-4 lg:p-6 overflow-y-auto lg:max-h-[calc(100vh-64px)]">
-          {/* Search */}
-          <div className="relative mb-4">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input value={searchQuery} placeholder="Pesquisar clube..." className="pl-10 bg-secondary border-border" onChange={(e) => handleSearch(e.target.value)} />
-            {searchResults.length > 0 && (
-              <div className="absolute top-12 left-0 right-0 bg-card border border-border rounded-xl overflow-hidden z-50 shadow-2xl max-h-60 overflow-y-auto">
-                {searchResults.map(club => (
-                  <button key={club.id} onMouseDown={(e) => { e.preventDefault(); selectClub(club); }} className="w-full flex items-center gap-3 p-3 hover:bg-secondary text-left">
-                    <div className="w-8 h-8 bg-white rounded-full p-1 flex items-center justify-center shrink-0"><ClubLogo src={club.logo} alt={club.name} size="sm" /></div>
-                    <div><span className="text-xs font-black italic uppercase">{club.name}</span><span className="text-[9px] text-muted-foreground block">{club.location}</span></div>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
+      {/* MAIN GRID — 40/60 */}
+      <div className="max-w-[1600px] mx-auto p-4 lg:p-6">
+        {/* Breadcrumbs (topo) */}
+        <div className="flex items-center gap-1 mb-4 flex-wrap">
+          <button onClick={goWorld} className="flex items-center gap-1 text-[10px] font-black uppercase tracking-widest text-muted-foreground hover:text-primary transition-colors">
+            <Home className="w-3 h-3" /> Início
+          </button>
+          {breadcrumbs.slice(1).map((bc, i) => (
+            <span key={i} className="flex items-center gap-1">
+              <ChevronRight className="w-3 h-3 text-muted-foreground" />
+              <button onClick={() => handleCrumb(bc)} className="text-[10px] font-black italic uppercase tracking-widest text-muted-foreground hover:text-primary transition-colors">
+                {bc.label}
+              </button>
+            </span>
+          ))}
+        </div>
 
-          {/* Active Club */}
-          <div className="flex items-center gap-3 mb-6 p-3 rounded-xl bg-secondary/50 border border-border">
-            <div className="w-12 h-12 bg-white rounded-full p-1.5 flex items-center justify-center shrink-0">
-              <ClubLogo src={activeClubInfo?.logoUrl} alt={activeClubName} size="sm" />
-            </div>
-            <div>
-              <p className="text-[9px] text-muted-foreground font-bold uppercase tracking-widest">Exibindo</p>
-              <h3 className="text-sm font-black italic uppercase leading-tight">{activeClubName}</h3>
-              <p className="text-[10px] text-primary font-bold">{formatVotes(totalVotes)} votos registrados</p>
-            </div>
-          </div>
-
-          {/* Duel */}
-          {duelMode && (
-            <div className="mb-6">
-              <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground mb-2"><Swords className="w-3 h-3 inline mr-1" /> Selecione o Rival</p>
-              {duelClubName ? (
-                <div className="flex items-center gap-3 p-3 rounded-xl bg-secondary/40 border border-border">
-                  <div className="w-10 h-10 bg-background rounded-full p-1 flex items-center justify-center shrink-0"><ClubLogo src={duelClubInfo?.logoUrl} alt={duelClubName} size="sm" /></div>
-                  <div className="flex-1">
-                    <h3 className="text-xs font-black italic uppercase">{duelClubName}</h3>
-                    <p className="text-[10px] font-bold" style={{ color: "hsl(var(--duel-blue-high))" }}>{formatVotes(duelTotalB)} votos</p>
-                  </div>
-                  <button onClick={() => { setDuelClubName(""); setDuelData([]); }}><X className="w-4 h-4 text-muted-foreground" /></button>
-                </div>
-              ) : (
-                <div className="relative">
-                  <Input value={duelSearchQuery} placeholder="Buscar rival..." className="bg-secondary border-border text-sm" onChange={(e) => handleDuelSearch(e.target.value)} />
-                  {duelSearchResults.length > 0 && (
-                    <div className="absolute top-12 left-0 right-0 bg-card border border-border rounded-xl overflow-hidden z-50 shadow-2xl max-h-48 overflow-y-auto">
-                      {duelSearchResults.map(club => (
-                        <button key={club.id} onMouseDown={(e) => { e.preventDefault(); selectDuelClub(club); }} className="w-full flex items-center gap-3 p-3 hover:bg-secondary text-left">
-                          <div className="w-7 h-7 bg-background rounded-full p-1 flex items-center justify-center shrink-0"><ClubLogo src={club.logo} alt={club.name} size="sm" /></div>
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
+          {/* SIDEBAR — 40% (2 of 5) */}
+          <aside className="lg:col-span-2 space-y-4">
+            {/* Club search */}
+            <div className="rounded-[24px] bg-black/40 backdrop-blur-xl border border-white/5 p-4">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  value={searchQuery} placeholder="Pesquisar clube..."
+                  className="pl-10 bg-secondary/50 border-white/5"
+                  onChange={(e) => handleSearch(e.target.value)}
+                />
+                {searchResults.length > 0 && (
+                  <div className="absolute top-12 left-0 right-0 bg-card border border-white/10 rounded-xl overflow-hidden z-50 shadow-2xl max-h-60 overflow-y-auto">
+                    {searchResults.map(club => (
+                      <button key={club.id} onMouseDown={(e) => { e.preventDefault(); selectClub(club); }}
+                        className="w-full flex items-center gap-3 p-3 hover:bg-secondary text-left">
+                        <div className="w-7 h-7 bg-white rounded-full p-1 flex items-center justify-center shrink-0">
+                          <ClubLogo src={club.logo} alt={club.name} size="sm" />
+                        </div>
+                        <div>
                           <span className="text-xs font-black italic uppercase">{club.name}</span>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
+                          <span className="text-[9px] text-muted-foreground block">{club.location}</span>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
 
-              {duelClubName && (
-                <div className="mt-4 p-4 rounded-xl bg-secondary/30 border border-border">
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="text-[10px] font-black uppercase text-primary">{activeClubName}</span>
-                    <span className="text-[10px] font-black uppercase text-muted-foreground">VS</span>
-                    <span className="text-[10px] font-black uppercase" style={{ color: "hsl(var(--duel-blue-high))" }}>{duelClubName}</span>
+              {activeClubName && (
+                <div className="flex items-center gap-3 mt-3 p-3 rounded-xl bg-white/5 border border-white/5">
+                  <div className="w-10 h-10 bg-white rounded-full p-1 flex items-center justify-center shrink-0">
+                    <ClubLogo src={activeClubInfo?.logoUrl} alt={activeClubName} size="sm" />
                   </div>
-                  <div className="h-3 w-full bg-muted rounded-full overflow-hidden flex">
-                    <div className="h-full transition-all duration-700" style={{ width: `${duelTotalA + duelTotalB > 0 ? (duelTotalA / (duelTotalA + duelTotalB)) * 100 : 50}%`, background: "linear-gradient(90deg, hsl(var(--heat-mid)), hsl(var(--heat-high)))" }} />
-                    <div className="h-full transition-all duration-700" style={{ width: `${duelTotalA + duelTotalB > 0 ? (duelTotalB / (duelTotalA + duelTotalB)) * 100 : 50}%`, background: "linear-gradient(90deg, hsl(var(--duel-blue-low)), hsl(var(--duel-blue-high)))" }} />
-                  </div>
-                  <div className="flex justify-between mt-1.5">
-                    <span className="text-[10px] font-bold text-primary">{formatVotes(duelTotalA)}</span>
-                    <span className="text-[10px] font-bold" style={{ color: "hsl(var(--duel-blue-high))" }}>{formatVotes(duelTotalB)}</span>
+                  <div className="min-w-0">
+                    <p className="text-[8px] text-muted-foreground font-black uppercase tracking-widest">Exibindo</p>
+                    <h3 className="text-xs font-black italic uppercase truncate">{activeClubName}</h3>
+                    <p className="text-[10px] text-primary font-bold">{formatVotes(totalVotes)} votos</p>
                   </div>
                 </div>
               )}
             </div>
-          )}
 
-          {/* Breadcrumbs */}
-          <div className="flex items-center gap-1 mb-4 flex-wrap">
-            {breadcrumbs.map((bc, i) => (
-              <span key={i} className="flex items-center gap-1">
-                {i > 0 && <ChevronRight className="w-3 h-3 text-muted-foreground" />}
-                <button onClick={() => navigateTo(bc.level, bc.label, bc.value)} className="text-[10px] font-bold uppercase text-muted-foreground hover:text-foreground transition-colors">{bc.label}</button>
-              </span>
-            ))}
-          </div>
-
-          {/* Top 10 */}
-          <div className="mb-6">
-            <h3 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-3 flex items-center gap-2 italic">
-              <Trophy className="w-3 h-3" /> Top 10 — {levelLabel}
-            </h3>
-            {top10.length === 0 ? (
-              <p className="text-[11px] italic text-muted-foreground text-center py-4">Nenhum voto registrado ainda.</p>
-            ) : (
-              <div className="space-y-3">
-                {top10.map((entry, i) => (
-                  <div key={entry.region} className="flex flex-col gap-1">
-                    <div className="flex justify-between text-[10px]">
-                      <span className="font-bold flex items-center gap-1.5">
-                        <span className="w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-black" style={{ backgroundColor: i < 3 ? "hsl(var(--heat-high))" : "hsl(var(--muted))", color: i < 3 ? "hsl(var(--background))" : "hsl(var(--foreground))" }}>{i + 1}</span>
-                        {entry.region}
-                      </span>
-                      <span className="font-black text-primary">{formatVotes(Number(entry.votes))}</span>
-                    </div>
-                    <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
-                      <motion.div initial={{ width: 0 }} animate={{ width: `${(Number(entry.votes) / Number(top10[0].votes)) * 100}%` }} transition={{ duration: 0.8, delay: i * 0.1 }} className="h-full rounded-full" style={{ background: "linear-gradient(90deg, hsl(var(--heat-mid)), hsl(var(--heat-high)))" }} />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Distribution */}
-          {distribution.length > 0 && (
-            <div className="mb-6">
-              <h3 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-3 italic">
-                📊 Distribuição
+            {/* Ranking lateral */}
+            <div className="rounded-[24px] bg-black/40 backdrop-blur-xl border border-white/5 p-4">
+              <h3 className="text-[10px] font-black italic uppercase tracking-widest text-muted-foreground mb-3 flex items-center gap-2">
+                <Trophy className="w-3 h-3" />
+                {viewMode === "world" && "Top Países"}
+                {viewMode === "country" && `Top em ${activeCountry}`}
+                {viewMode === "state" && `Top em ${activeState}`}
+                {viewMode === "city" && `Cidades de ${activeState}`}
               </h3>
-              <div className="space-y-1.5">
-                {distribution.slice(0, 5).map(d => (
-                  <div key={d.region} className="flex justify-between text-[10px]">
-                    <span className="text-muted-foreground truncate mr-2">{d.region}</span>
-                    <span className="font-bold text-primary shrink-0">{d.pct}%</span>
+              {ranking.length === 0 ? (
+                <p className="text-[11px] italic text-muted-foreground text-center py-4">
+                  Nenhum voto registrado ainda.
+                </p>
+              ) : (
+                <div className="space-y-2 max-h-[280px] overflow-y-auto pr-1">
+                  {ranking.map((entry, i) => {
+                    const v = Number(entry.votes);
+                    const max = Number(ranking[0].votes);
+                    const pct = (v / max) * 100;
+                    return (
+                      <button
+                        key={entry.region}
+                        onClick={() => {
+                          if (viewMode === "world") goCountry(entry.region);
+                          else if (viewMode === "country") goState(entry.region);
+                          else if (viewMode === "state") goCity(entry.region);
+                        }}
+                        className="w-full text-left group"
+                      >
+                        <div className="flex justify-between text-[10px] mb-1">
+                          <span className="font-black italic uppercase flex items-center gap-1.5 truncate">
+                            <span className="w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-black shrink-0"
+                              style={{ backgroundColor: i < 3 ? CHOROPLETH[4] : "hsl(0 0% 18%)", color: "white" }}>
+                              {i + 1}
+                            </span>
+                            <span className="truncate group-hover:text-primary transition-colors">{entry.region}</span>
+                          </span>
+                          <span className="font-black text-primary shrink-0">{formatVotes(v)}</span>
+                        </div>
+                        <div className="h-1 w-full bg-white/5 rounded-full overflow-hidden">
+                          <motion.div
+                            initial={{ width: 0 }} animate={{ width: `${pct}%` }}
+                            transition={{ duration: 0.6, delay: i * 0.04 }}
+                            className="h-full rounded-full"
+                            style={{ background: `linear-gradient(90deg, ${CHOROPLETH[1]}, ${CHOROPLETH[4]})` }}
+                          />
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Top clubes na cidade selecionada */}
+            {viewMode === "city" && activeCity && (
+              <div className="rounded-[24px] bg-black/40 backdrop-blur-xl border border-primary/20 p-4">
+                <h3 className="text-[10px] font-black italic uppercase tracking-widest text-primary mb-3 flex items-center gap-2">
+                  <Flame className="w-3 h-3" /> Clubes mais votados em {activeCity}
+                </h3>
+                {cityClubs.length === 0 ? (
+                  <p className="text-[11px] italic text-muted-foreground text-center py-3">Carregando...</p>
+                ) : (
+                  <div className="space-y-2">
+                    {cityClubs.map((c, i) => (
+                      <div key={c.club} className="flex justify-between items-center text-[10px] p-2 rounded-lg bg-white/5">
+                        <span className="font-black italic uppercase truncate flex items-center gap-2">
+                          <span className="text-muted-foreground w-4">{i + 1}.</span>
+                          {c.club}
+                        </span>
+                        <span className="font-black text-primary shrink-0">{formatVotes(Number(c.votes))}</span>
+                      </div>
+                    ))}
                   </div>
-                ))}
+                )}
               </div>
-            </div>
-          )}
-
-          {/* Curiosidade Sagrada */}
-          <AnimatePresence>
-            {curiosity && (
-              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="p-4 rounded-xl border border-primary/20 bg-primary/5 mb-4">
-                <p className="text-[10px] font-black uppercase tracking-widest text-primary mb-1 italic"><Flame className="w-3 h-3 inline mr-1" /> Curiosidade Sagrada</p>
-                <p className="text-xs italic text-primary/80">{curiosity}</p>
-              </motion.div>
             )}
-          </AnimatePresence>
-        </aside>
+          </aside>
 
-        {/* MAP AREA */}
-        <main className="flex-1 relative bg-background min-h-[400px] lg:min-h-0">
-          {loading && (
-            <div className="absolute inset-0 flex items-center justify-center z-20 bg-background/60 backdrop-blur-sm">
-              <Loader2 className="w-8 h-8 animate-spin text-primary" />
-            </div>
-          )}
+          {/* MAP — 60% (3 of 5) */}
+          <main className="lg:col-span-3">
+            <div className="relative rounded-[32px] bg-black/40 backdrop-blur-xl border border-white/5 overflow-hidden"
+              style={{ maxHeight: 600, height: 600 }}>
+              {loading && (
+                <div className="absolute inset-0 flex items-center justify-center z-20 bg-black/40 backdrop-blur-sm">
+                  <Loader2 className="w-7 h-7 animate-spin text-primary" />
+                </div>
+              )}
 
-          <div className="w-full h-full min-h-[50vh] lg:min-h-full">
-            <ComposableMap projection="geoMercator" projectionConfig={{ scale: 140, center: [0, 20] }} style={{ width: "100%", height: "100%", minHeight: "50vh", background: "hsl(var(--background))" }}>
-              <ZoomableGroup center={center} zoom={zoom} onMoveEnd={({ coordinates, zoom: z }) => { setCenter(coordinates as [number, number]); setZoom(z); }}>
-                <Geographies geography={GEO_URL}>
-                  {({ geographies }) =>
-                    geographies.map((geo) => {
-                      const name = geo.properties.NAME || geo.properties.name || "";
-                      const votesA = voteMap[name] || 0;
-                      const votesB = duelVoteMap[name] || 0;
+              <ComposableMap
+                projection="geoMercator"
+                projectionConfig={projectionConfig}
+                style={{ width: "100%", height: "100%", background: "transparent" }}
+              >
+                <ZoomableGroup>
+                  {renderMap()}
+                </ZoomableGroup>
+              </ComposableMap>
 
-                      let fillColor: string;
-                      if (duelMode && duelClubName) {
-                        if (votesA > votesB) fillColor = getDuelColorA(votesA, maxVotes);
-                        else if (votesB > votesA) fillColor = getDuelColorB(votesB, duelMaxVotes);
-                        else if (votesA > 0) fillColor = "hsl(var(--duel-neutral))";
-                        else fillColor = "hsl(var(--heat-empty))";
-                      } else {
-                        fillColor = getBrasaColor(votesA);
-                      }
-
-                      return (
-                        <Geography
-                          key={geo.rsmKey}
-                          geography={geo}
-                          fill={fillColor}
-                          stroke="hsl(var(--border))"
-                          strokeWidth={0.5}
-                          onClick={() => handleGeoClick(geo)}
-                          onMouseEnter={(e) => {
-                            if (votesA > 0 || votesB > 0) {
-                              setTooltip({ x: (e as any).clientX || 0, y: (e as any).clientY || 0, name, votes: votesA, pct: ((votesA / (totalVotes || 1)) * 100).toFixed(1) });
-                            }
-                          }}
-                          onMouseLeave={() => setTooltip(null)}
-                          style={{
-                            default: { outline: "none", cursor: "pointer", transition: "fill 0.3s" },
-                            hover: { outline: "none", fill: votesA > 0 ? "hsl(var(--heat-high))" : "hsl(var(--heat-empty))", cursor: "pointer" },
-                            pressed: { outline: "none" },
-                          }}
-                        />
-                      );
-                    })
-                  }
-                </Geographies>
-              </ZoomableGroup>
-            </ComposableMap>
-          </div>
-
-          {/* Tooltip */}
-          <AnimatePresence>
-            {tooltip && (
-              <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }} className="fixed z-50 pointer-events-none px-4 py-3 rounded-xl bg-card border border-border shadow-2xl" style={{ left: tooltip.x + 12, top: tooltip.y - 10 }}>
-                <p className="text-xs font-black italic uppercase">{tooltip.name}</p>
-                <p className="text-[10px] text-primary font-bold">{formatVotes(tooltip.votes)} votos</p>
-                <p className="text-[9px] text-muted-foreground">{tooltip.pct}% do total</p>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          {/* Legend */}
-          <div className="absolute bottom-4 right-4 p-3 rounded-xl bg-card/80 backdrop-blur-md border border-border z-10">
-            <p className="text-[8px] font-black uppercase tracking-widest text-muted-foreground mb-2 italic">Intensidade</p>
-            <div className="flex items-center gap-0.5">
-              {LEGEND_BRASA.map((c, i) => (<div key={i} className="w-4 h-3 rounded-sm" style={{ backgroundColor: c }} />))}
-            </div>
-            <div className="flex justify-between text-[7px] text-muted-foreground mt-1">
-              <span>0</span><span>1-10</span><span>11-100</span><span>100+</span>
-            </div>
-            {duelMode && duelClubName && (
-              <>
-                <div className="flex items-center gap-0.5 mt-2">
-                  {LEGEND_BLUE.map((c, i) => (<div key={i} className="w-4 h-3 rounded-sm" style={{ backgroundColor: c }} />))}
+              {/* Legend */}
+              <div className="absolute bottom-3 right-3 p-2.5 rounded-xl bg-black/60 backdrop-blur-md border border-white/10 z-10">
+                <p className="text-[8px] font-black italic uppercase tracking-widest text-muted-foreground mb-1.5">Densidade de votos</p>
+                <div className="flex items-center gap-0.5">
+                  {CHOROPLETH.map((c, i) => (
+                    <div key={i} className="w-5 h-3 rounded-sm" style={{ backgroundColor: c }} />
+                  ))}
                 </div>
                 <div className="flex justify-between text-[7px] text-muted-foreground mt-1">
-                  <span>0</span><span style={{ color: "hsl(var(--duel-blue-high))" }}>{duelClubName}</span>
+                  <span>Baixa</span><span>Alta</span>
                 </div>
-              </>
-            )}
-          </div>
+              </div>
 
-          {/* Drill-down list overlay */}
-          {drillLevel !== "world" && heatData.length > 0 && (
-            <div className="absolute top-4 left-4 p-4 rounded-xl bg-card/90 backdrop-blur-md border border-border z-10 max-h-[60%] overflow-y-auto w-64">
-              <h3 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-3 italic">
-                <MapPin className="w-3 h-3 inline mr-1" />
-                {drillLevel === "state" ? "Estados" : "Cidades"}
-              </h3>
-              <div className="space-y-2">
-                {[...heatData].sort((a, b) => Number(b.votes) - Number(a.votes)).slice(0, 15).map((entry, i) => (
-                  <button key={entry.region} onClick={() => { if (drillLevel === "state") navigateTo("city", entry.region, entry.region); }}
-                    className="w-full flex justify-between text-[10px] p-2 rounded-lg hover:bg-secondary transition-colors text-left">
-                    <span className="font-bold flex items-center gap-1.5">
-                      <span className="text-[8px] text-muted-foreground w-4">{i + 1}.</span>{entry.region}
-                    </span>
-                    <span className="font-black text-primary">{formatVotes(Number(entry.votes))}</span>
-                  </button>
-                ))}
+              {/* Level badge */}
+              <div className="absolute top-3 left-3 px-3 py-1.5 rounded-xl bg-black/60 backdrop-blur-md border border-white/10 z-10">
+                <p className="text-[9px] font-black italic uppercase tracking-widest text-primary">
+                  {viewMode === "world" && "🌍 Mundial"}
+                  {viewMode === "country" && `🏳️ ${activeCountry}`}
+                  {viewMode === "state" && `📍 ${activeState}`}
+                  {viewMode === "city" && `🎯 ${activeCity}`}
+                </p>
               </div>
             </div>
-          )}
-        </main>
+          </main>
+        </div>
       </div>
+
+      {/* Tooltip */}
+      <AnimatePresence>
+        {tooltip && tooltip.votes > 0 && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }}
+            className="fixed z-[100] pointer-events-none px-3 py-2 rounded-xl bg-black/90 border border-white/10 shadow-2xl"
+            style={{ left: tooltip.x + 12, top: tooltip.y - 10 }}
+          >
+            <p className="text-[10px] font-black italic uppercase">{tooltip.name}</p>
+            <p className="text-[10px] text-primary font-bold">{formatVotes(tooltip.votes)} votos</p>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

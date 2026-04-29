@@ -511,6 +511,10 @@ export type Database = {
         Args: { p_club_name: string; p_filter_value?: string; p_level?: string }
         Returns: Json
       }
+      get_top_clubs_by_region: {
+        Args: { p_level: string; p_limit?: number; p_value: string }
+        Returns: Json
+      }
       purge_fake_votes: { Args: never; Returns: Json }
       seed_fake_votes: { Args: { p_quantidade?: number }; Returns: Json }
       unaccent: { Args: { "": string }; Returns: string }
