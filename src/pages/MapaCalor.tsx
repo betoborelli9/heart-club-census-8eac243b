@@ -26,6 +26,39 @@ import logo from "@/assets/logo.png";
 /* ---------- GEO sources ---------- */
 const GEO_WORLD = "https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json";
 const GEO_BRAZIL_STATES = "https://raw.githubusercontent.com/codeforamerica/click_that_hood/master/public/data/brazil-states.geojson";
+/* Municípios por UF (IBGE via tbrugz/geodata-br) — usa código IBGE da UF */
+const GEO_BR_MUN = (uf: number) => `https://raw.githubusercontent.com/tbrugz/geodata-br/master/geojson/geojs-${uf}-mun.json`;
+
+/* Mapa Nome do Estado → { codigo IBGE, center [lng,lat], scale } */
+const BR_STATE_INFO: Record<string, { code: number; center: [number, number]; scale: number }> = {
+  "Acre":               { code: 12, center: [-70.0, -9.0],  scale: 2200 },
+  "Alagoas":            { code: 27, center: [-36.6, -9.6],  scale: 4500 },
+  "Amapá":              { code: 16, center: [-52.0, 1.5],   scale: 2400 },
+  "Amazonas":           { code: 13, center: [-65.0, -4.5],  scale: 1400 },
+  "Bahia":              { code: 29, center: [-41.5, -12.5], scale: 1900 },
+  "Ceará":              { code: 23, center: [-39.5, -5.2],  scale: 2700 },
+  "Distrito Federal":   { code: 53, center: [-47.8, -15.8], scale: 9000 },
+  "Espírito Santo":     { code: 32, center: [-40.5, -19.8], scale: 3800 },
+  "Goiás":              { code: 52, center: [-49.5, -15.8], scale: 2200 },
+  "Maranhão":           { code: 21, center: [-45.5, -5.5],  scale: 2000 },
+  "Mato Grosso":        { code: 51, center: [-55.5, -12.7], scale: 1500 },
+  "Mato Grosso do Sul": { code: 50, center: [-54.5, -20.5], scale: 1900 },
+  "Minas Gerais":       { code: 31, center: [-44.5, -18.5], scale: 1900 },
+  "Pará":               { code: 15, center: [-52.5, -4.5],  scale: 1400 },
+  "Paraíba":            { code: 25, center: [-36.8, -7.2],  scale: 4500 },
+  "Paraná":             { code: 41, center: [-51.5, -24.5], scale: 2700 },
+  "Pernambuco":         { code: 26, center: [-37.8, -8.4],  scale: 3200 },
+  "Piauí":              { code: 22, center: [-43.0, -7.5],  scale: 2100 },
+  "Rio de Janeiro":     { code: 33, center: [-42.5, -22.3], scale: 4800 },
+  "Rio Grande do Norte":{ code: 24, center: [-36.5, -5.7],  scale: 4200 },
+  "Rio Grande do Sul":  { code: 43, center: [-53.5, -29.8], scale: 2200 },
+  "Rondônia":           { code: 11, center: [-63.0, -10.8], scale: 2200 },
+  "Roraima":            { code: 14, center: [-61.5, 2.0],   scale: 2300 },
+  "Santa Catarina":     { code: 42, center: [-50.0, -27.3], scale: 3400 },
+  "São Paulo":          { code: 35, center: [-48.5, -22.0], scale: 2700 },
+  "Sergipe":            { code: 28, center: [-37.3, -10.6], scale: 5500 },
+  "Tocantins":          { code: 17, center: [-48.5, -10.5], scale: 1900 },
+};
 
 /* GeoJSON country-name → DB country-name (voto_pais) */
 const COUNTRY_NAME_TO_DB: Record<string, string> = {
@@ -266,11 +299,13 @@ const MapaCalor = () => {
       const cfg = COUNTRY_PROJECTION[activeCountry];
       if (cfg) return { scale: cfg.scale, center: cfg.center };
     }
-    if (viewMode === "state" && activeCountry === "Brazil") {
+    if (viewMode === "state" && activeCountry === "Brazil" && activeState) {
+      const info = BR_STATE_INFO[activeState];
+      if (info) return { scale: info.scale, center: info.center };
       return { scale: 1400, center: [-50, -15] as [number, number] };
     }
     return { scale: 130, center: [0, 20] as [number, number] };
-  }, [viewMode, activeCountry]);
+  }, [viewMode, activeCountry, activeState]);
 
   const renderMap = () => {
     /* WORLD: countries colored by total votes */
@@ -317,6 +352,37 @@ const MapaCalor = () => {
                   stroke="hsl(0 0% 100% / 0.15)" strokeWidth={0.5}
                   onClick={() => handleStateClick(geo)}
                   onMouseEnter={(e: any) => setTooltip({ x: e.clientX, y: e.clientY, name: stateName, votes: v })}
+                  onMouseLeave={() => setTooltip(null)}
+                  style={{
+                    default: { outline: "none", cursor: "pointer", transition: "fill 0.25s" },
+                    hover: { outline: "none", fill: "hsl(var(--primary))", cursor: "pointer" },
+                    pressed: { outline: "none" },
+                  }}
+                />
+              );
+            });
+          }}
+        </Geographies>
+      );
+    }
+
+    /* STATE BRASIL: render municípios geojson */
+    if (viewMode === "state" && activeCountry === "Brazil" && activeState && BR_STATE_INFO[activeState]) {
+      const ufCode = BR_STATE_INFO[activeState].code;
+      return (
+        <Geographies geography={GEO_BR_MUN(ufCode)}>
+          {({ geographies }) => {
+            console.log(`[MapaCalor] Municípios ${activeState} (UF ${ufCode}):`, geographies?.length);
+            return geographies.map(geo => {
+              const cityName = geo.properties.name || geo.properties.NAME || "";
+              const v = voteMap[normalize(cityName)] || 0;
+              return (
+                <Geography
+                  key={geo.rsmKey} geography={geo}
+                  fill={colorScale(v)}
+                  stroke="hsl(0 0% 100% / 0.12)" strokeWidth={0.3}
+                  onClick={() => goCity(cityName)}
+                  onMouseEnter={(e: any) => setTooltip({ x: e.clientX, y: e.clientY, name: cityName, votes: v })}
                   onMouseLeave={() => setTooltip(null)}
                   style={{
                     default: { outline: "none", cursor: "pointer", transition: "fill 0.25s" },
@@ -539,8 +605,8 @@ const MapaCalor = () => {
 
           {/* MAP — 60% (3 of 5) */}
           <main className="lg:col-span-3">
-            <div className="relative rounded-[32px] bg-black/40 backdrop-blur-xl border border-white/5 overflow-hidden"
-              style={{ maxHeight: 600, height: 600 }}>
+            <div className="relative rounded-[32px] bg-black/40 backdrop-blur-xl border border-white/5 overflow-hidden h-[380px] sm:h-[480px] lg:h-[600px]">
+            
               {loading && (
                 <div className="absolute inset-0 flex items-center justify-center z-20 bg-black/40 backdrop-blur-sm">
                   <Loader2 className="w-7 h-7 animate-spin text-primary" />
