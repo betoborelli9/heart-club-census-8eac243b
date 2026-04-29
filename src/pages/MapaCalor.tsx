@@ -349,7 +349,7 @@ const MapaCalor = () => {
       const { data } = await supabase.rpc("get_heatmap_data", {
         p_club_name: clubName, p_level: level, p_filter_value: filter,
       });
-      const arr = (Array.isArray(data) ? data : []) as HeatEntry[];
+      const arr = (Array.isArray(data) ? data : []) as unknown as HeatEntry[];
       const total = arr.reduce((s, e) => s + Number(e.votes), 0);
       const top = arr.length ? { region: arr[0].region, votes: Number(arr[0].votes) } : null;
       setter({ name: clubName, info, totalVotes: total, topRegion: top });
