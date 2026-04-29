@@ -325,6 +325,9 @@ const MapaCalor = () => {
   const [activeCountry, setActiveCountry] = useState<string | null>(null);
   const [activeState, setActiveState] = useState<string | null>(null);
   const [activeCity, setActiveCity] = useState<string | null>(null);
+  const [countryScope, setCountryScope] = useState<TerritoryScope>({});
+  const [stateScope, setStateScope] = useState<TerritoryScope>({});
+  const [cityScope, setCityScope] = useState<TerritoryScope>({});
   const [breadcrumbs, setBreadcrumbs] = useState<Crumb[]>([{ label: "Mundo", level: "world" }]);
 
   /* Map view */
