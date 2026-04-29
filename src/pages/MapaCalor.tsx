@@ -322,7 +322,7 @@ const MapaCalor = () => {
                 fill={colorScale(v)}
                 stroke="hsl(0 0% 100% / 0.05)" strokeWidth={0.5}
                 onClick={() => handleWorldClick(geo)}
-                onMouseEnter={(e: any) => setTooltip({ x: e.clientX, y: e.clientY, name: dbName, votes: v })}
+                onMouseMove={(e: any) => setTooltip({ x: e.clientX, y: e.clientY, name: dbName, votes: v })}
                 onMouseLeave={() => setTooltip(null)}
                 style={{
                   default: { outline: "none", cursor: "pointer", transition: "fill 0.25s" },
@@ -351,7 +351,7 @@ const MapaCalor = () => {
                   fill={colorScale(v)}
                   stroke="hsl(0 0% 100% / 0.15)" strokeWidth={0.5}
                   onClick={() => handleStateClick(geo)}
-                  onMouseEnter={(e: any) => setTooltip({ x: e.clientX, y: e.clientY, name: stateName, votes: v })}
+                  onMouseMove={(e: any) => setTooltip({ x: e.clientX, y: e.clientY, name: stateName, votes: v })}
                   onMouseLeave={() => setTooltip(null)}
                   style={{
                     default: { outline: "none", cursor: "pointer", transition: "fill 0.25s" },
@@ -382,7 +382,7 @@ const MapaCalor = () => {
                   fill={colorScale(v)}
                   stroke="hsl(0 0% 100% / 0.12)" strokeWidth={0.3}
                   onClick={() => goCity(cityName)}
-                  onMouseEnter={(e: any) => setTooltip({ x: e.clientX, y: e.clientY, name: cityName, votes: v })}
+                  onMouseMove={(e: any) => setTooltip({ x: e.clientX, y: e.clientY, name: cityName, votes: v })}
                   onMouseLeave={() => setTooltip(null)}
                   style={{
                     default: { outline: "none", cursor: "pointer", transition: "fill 0.25s" },
@@ -436,7 +436,7 @@ const MapaCalor = () => {
                 stroke="hsl(0 0% 100% / 0.4)" strokeWidth={0.5}
                 style={{ cursor: "pointer" }}
                 onClick={() => viewMode === "country" ? goState(entry.region) : goCity(entry.region)}
-                onMouseEnter={(e: any) => setTooltip({ x: e.clientX, y: e.clientY, name: entry.region, votes: v })}
+                onMouseMove={(e: any) => setTooltip({ x: e.clientX, y: e.clientY, name: entry.region, votes: v })}
                 onMouseLeave={() => setTooltip(null)}
               />
             </Marker>
