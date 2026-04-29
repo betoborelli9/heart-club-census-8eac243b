@@ -411,7 +411,7 @@ const MapaCalor = () => {
           geo = await fetchGeo(GEO_URLS.brStates);
         } else if (mapBbox) {
           // Qualquer outro país → estados/províncias (admin_level=4) via Overpass
-          geo = await fetchAdminSubdivisions(mapBbox, 4, `states:${normalize(activeCountry)}`);
+          geo = await fetchAdminSubdivisions(mapBbox, 4, `states:${normalize(activeCountry)}`, countryScope);
         }
       } else if (viewMode === "state" && activeState) {
         const uf = NAME_TO_UF[normalize(activeState)];
@@ -419,16 +419,16 @@ const MapaCalor = () => {
           geo = await fetchGeo(GEO_URLS.brMunicipios(uf));
         } else if (mapBbox) {
           // Cidades/municípios (admin_level=8) p/ qualquer estado/província
-          geo = await fetchAdminSubdivisions(mapBbox, 8, `cities:${normalize(activeCountry || "")}:${normalize(activeState)}`);
+          geo = await fetchAdminSubdivisions(mapBbox, 8, `cities:${normalize(activeCountry || "")}:${normalize(activeState)}`, stateScope);
         }
       } else if (viewMode === "city" && mapBbox) {
-        geo = await fetchBairros(mapBbox, normalize(`${activeCity}:${activeState}`));
+        geo = await fetchAdminSubdivisions(mapBbox, 10, `bairros:${normalize(`${activeCountry}:${activeState}:${activeCity}`)}`, cityScope);
       }
       if (!cancelled) { setCurrentGeo(geo); setGeoLoading(false); }
     };
     run();
     return () => { cancelled = true; };
-  }, [viewMode, activeCountry, activeState, activeCity, mapBbox]);
+  }, [viewMode, activeCountry, activeState, activeCity, mapBbox, countryScope, stateScope, cityScope]);
 
   /* ---------- City: top clubs ---------- */
   useEffect(() => {
