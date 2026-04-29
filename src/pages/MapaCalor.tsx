@@ -158,9 +158,20 @@ const MapaCalor = () => {
   const [loading, setLoading] = useState(true);
   const [totalVotes, setTotalVotes] = useState(0);
 
-  /* Search */
+  /* Search clube */
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<ClubSearchResult[]>([]);
+
+  /* Search cidade (heart club) */
+  const [citySearchQuery, setCitySearchQuery] = useState("");
+  const [citySearchResults, setCitySearchResults] = useState<CityHit[]>([]);
+  const [citySearchLoading, setCitySearchLoading] = useState(false);
+  const citySearchDebounce = useRef<ReturnType<typeof setTimeout>>();
+
+  /* Comparação de clubes (lado a lado) */
+  const [compareClubName, setCompareClubName] = useState<string | null>(null);
+  const [compareData, setCompareData] = useState<ClubCompareData | null>(null);
+  const [heartCompareData, setHeartCompareData] = useState<ClubCompareData | null>(null);
 
   /* Tooltip */
   const [tooltip, setTooltip] = useState<{ x: number; y: number; name: string; votes: number } | null>(null);
