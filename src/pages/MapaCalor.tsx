@@ -1,13 +1,13 @@
 /* =====================================================================
- * MapaCalor.tsx — War Room Heatmap (Leaflet Engine)
- * Engine: react-leaflet + leaflet.heat
- * Tiles: CartoDB DarkMatter (preto absoluto, fronteiras minimalistas)
- * Drill-down infinito: Mundo → País → Estado → Cidade → Bairro/Rua
- * Heatmap real (intensidade laranja → vermelho) + Circle markers clicáveis
- * Geocoding: Nominatim (OpenStreetMap) com cache em localStorage
+ * MapaCalor.tsx — War Room Choropleth (Polígonos Reais)
+ * Engine: react-leaflet + GeoJSON layers (sem bolinhas)
+ * Tiles: CartoDB DarkMatter (preto absoluto)
+ * Drill-down: Mundo (países) → Brasil (estados) → Estado (municípios) → Cidade (bairros)
+ * Coloração coroplética por densidade de votos (laranja → vermelho escuro)
+ * Tooltips com números completos via Intl.NumberFormat('pt-BR')
  * ===================================================================== */
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import {
   ChevronRight, MapPin, Trophy, Flame, Search, Loader2, LogOut,
   X, Home, ArrowLeft,
@@ -15,10 +15,9 @@ import {
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { MapContainer, TileLayer, CircleMarker, Tooltip as LTooltip, useMap } from "react-leaflet";
+import { MapContainer, TileLayer, GeoJSON, Tooltip as LTooltip, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import "leaflet.heat";
 import { useUser } from "@/contexts/UserContext";
 import { supabase } from "@/integrations/supabase/client";
 import { ClubLogo } from "@/components/ClubLogo";
@@ -27,49 +26,95 @@ import { CLUBS_DATA } from "@/clubes-data";
 import logo from "@/assets/logo.png";
 
 /* ---------- Helpers ---------- */
+const NF = new Intl.NumberFormat("pt-BR");
+const fmt = (n: number) => NF.format(Math.round(n));
+
 function normalize(v: string): string {
-  return v.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
-}
-function formatVotes(n: number): string {
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
-  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
-  return n.toLocaleString("pt-BR");
+  return (v || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
 }
 
-/* Paleta War Room */
-const CHOROPLETH = [
-  "hsl(28 95% 60%)",
-  "hsl(22 95% 52%)",
-  "hsl(16 95% 46%)",
-  "hsl(10 90% 40%)",
-  "hsl(0 85% 32%)",
+/* Paleta War Room (laranja → vermelho profundo) */
+const HEAT_PALETTE = [
+  "#3a1a05", // muito baixo (quase preto-laranja)
+  "#7a2a05",
+  "#b34708",
+  "#e6580a",
+  "#ff6200", // marca
+  "#ff3300",
+  "#a31515", // máximo
 ];
+function colorByIntensity(value: number, max: number): string {
+  if (!value || !max) return "rgba(40,40,40,0.15)";
+  const t = Math.min(1, Math.max(0, Math.log(value + 1) / Math.log(max + 1)));
+  const idx = Math.min(HEAT_PALETTE.length - 1, Math.floor(t * HEAT_PALETTE.length));
+  return HEAT_PALETTE[idx];
+}
 
-/* Mapeamento de nomes de país para o banco (DB usa "USA", "England", etc.) */
-const COUNTRY_NAME_TO_DB: Record<string, string> = {
-  "Brazil": "Brazil", "United States of America": "USA", "United States": "USA",
+/* Mapeamento DB ↔ GeoJSON (nomes de país) */
+const COUNTRY_DB_TO_GEO: Record<string, string> = {
+  "Brazil": "Brazil", "USA": "United States of America",
+  "England": "United Kingdom", "BR": "Brazil",
+};
+const COUNTRY_GEO_TO_DB: Record<string, string> = {
+  "Brazil": "Brazil", "United States of America": "USA",
   "United Kingdom": "England",
 };
-const DB_TO_GEOCODE_COUNTRY: Record<string, string> = {
-  "USA": "United States", "England": "United Kingdom",
+/* UF (sigla) ↔ Nome estado BR */
+const UF_TO_NAME: Record<string, string> = {
+  AC: "Acre", AL: "Alagoas", AP: "Amapá", AM: "Amazonas", BA: "Bahia", CE: "Ceará",
+  DF: "Distrito Federal", ES: "Espírito Santo", GO: "Goiás", MA: "Maranhão",
+  MT: "Mato Grosso", MS: "Mato Grosso do Sul", MG: "Minas Gerais", PA: "Pará",
+  PB: "Paraíba", PR: "Paraná", PE: "Pernambuco", PI: "Piauí", RJ: "Rio de Janeiro",
+  RN: "Rio Grande do Norte", RS: "Rio Grande do Sul", RO: "Rondônia", RR: "Roraima",
+  SC: "Santa Catarina", SP: "São Paulo", SE: "Sergipe", TO: "Tocantins",
 };
+const NAME_TO_UF: Record<string, string> = Object.fromEntries(
+  Object.entries(UF_TO_NAME).map(([k, v]) => [normalize(v), k])
+);
 
-/* Zoom alvo por nível */
-const ZOOM_BY_LEVEL = { world: 2, country: 5, state: 7, city: 13, bairro: 16 } as const;
-
-/* ---------- Geocoding (Nominatim com cache localStorage) ---------- */
-const GEO_CACHE_KEY = "mapacalor_geo_cache_v1";
-function loadGeoCache(): Record<string, [number, number]> {
-  try { return JSON.parse(localStorage.getItem(GEO_CACHE_KEY) || "{}"); } catch { return {}; }
+/* ---------- GeoJSON sources (cached) ---------- */
+const GEO_URLS = {
+  world: "https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json", // topojson, vamos converter
+  worldGeo: "https://raw.githubusercontent.com/datasets/geo-countries/master/data/countries.geojson",
+  brStates: "https://raw.githubusercontent.com/codeforgermany/click_that_hood/main/public/data/brazil-states.geojson",
+  brMunicipios: (uf: string) =>
+    `https://raw.githubusercontent.com/tbrugz/geodata-br/master/geojson/geojs-${ufCode(uf)}-mun.json`,
+};
+function ufCode(uf: string): string {
+  // Mapeia UF para código IBGE de 2 dígitos (necessário pro repo tbrugz)
+  const codes: Record<string, string> = {
+    AC: "12", AL: "27", AP: "16", AM: "13", BA: "29", CE: "23", DF: "53",
+    ES: "32", GO: "52", MA: "21", MT: "51", MS: "50", MG: "31", PA: "15",
+    PB: "25", PR: "41", PE: "26", PI: "22", RJ: "33", RN: "24", RS: "43",
+    RO: "11", RR: "14", SC: "42", SP: "35", SE: "28", TO: "17",
+  };
+  return codes[uf] || "00";
 }
-function saveGeoCache(cache: Record<string, [number, number]>) {
-  try { localStorage.setItem(GEO_CACHE_KEY, JSON.stringify(cache)); } catch {}
-}
-const geoCache: Record<string, [number, number]> = loadGeoCache();
 
-async function geocode(query: string): Promise<[number, number] | null> {
+const geoCache: Record<string, any> = {};
+async function fetchGeo(url: string): Promise<any | null> {
+  if (geoCache[url]) return geoCache[url];
+  try {
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    const json = await res.json();
+    geoCache[url] = json;
+    return json;
+  } catch { return null; }
+}
+
+/* ---------- Geocode (apenas para flyTo de cidades) ---------- */
+const NOMINATIM_CACHE_KEY = "mapacalor_nominatim_v2";
+function loadNomCache(): Record<string, [number, number, [number, number, number, number]?]> {
+  try { return JSON.parse(localStorage.getItem(NOMINATIM_CACHE_KEY) || "{}"); } catch { return {}; }
+}
+const nomCache = loadNomCache();
+async function geocodeBounds(query: string): Promise<{ center: [number, number]; bbox?: [number, number, number, number] } | null> {
   const key = normalize(query);
-  if (geoCache[key]) return geoCache[key];
+  if (nomCache[key]) {
+    const [lat, lng, bbox] = nomCache[key];
+    return { center: [lat, lng], bbox };
+  }
   try {
     const res = await fetch(
       `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(query)}`,
@@ -77,13 +122,48 @@ async function geocode(query: string): Promise<[number, number] | null> {
     );
     const data = await res.json();
     if (data?.[0]) {
-      const coord: [number, number] = [parseFloat(data[0].lat), parseFloat(data[0].lon)];
-      geoCache[key] = coord;
-      saveGeoCache(geoCache);
-      return coord;
+      const lat = parseFloat(data[0].lat);
+      const lng = parseFloat(data[0].lon);
+      const bb = data[0].boundingbox?.map(parseFloat) as number[] | undefined;
+      const bbox: [number, number, number, number] | undefined = bb ? [bb[0], bb[1], bb[2], bb[3]] : undefined;
+      nomCache[key] = [lat, lng, bbox];
+      try { localStorage.setItem(NOMINATIM_CACHE_KEY, JSON.stringify(nomCache)); } catch {}
+      return { center: [lat, lng], bbox };
     }
   } catch {}
   return null;
+}
+
+/* ---------- Bairros via Overpass (OSM) ---------- */
+async function fetchBairros(bbox: [number, number, number, number]): Promise<any | null> {
+  // bbox: [southLat, northLat, westLon, eastLon] (Nominatim)
+  const [s, n, w, e] = bbox;
+  const q = `[out:json][timeout:25];(relation["boundary"="administrative"]["admin_level"="10"](${s},${w},${n},${e}););out geom;`;
+  try {
+    const res = await fetch("https://overpass-api.de/api/interpreter", {
+      method: "POST", body: "data=" + encodeURIComponent(q),
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    const features: any[] = [];
+    for (const el of data.elements || []) {
+      if (el.type !== "relation" || !el.members) continue;
+      const outers: number[][][] = [];
+      for (const m of el.members) {
+        if (m.role === "outer" && m.geometry) {
+          outers.push(m.geometry.map((p: any) => [p.lon, p.lat]));
+        }
+      }
+      if (outers.length) {
+        features.push({
+          type: "Feature",
+          properties: { name: el.tags?.name || "Bairro" },
+          geometry: { type: "Polygon", coordinates: outers },
+        });
+      }
+    }
+    return { type: "FeatureCollection", features };
+  } catch { return null; }
 }
 
 /* ---------- Types ---------- */
@@ -96,42 +176,25 @@ interface ClubCompareData {
   name: string; info: any; totalVotes: number;
   topRegion: { region: string; votes: number } | null;
 }
-interface GeoPoint { lat: number; lng: number; weight: number; name: string; }
 
-/* ---------- Sub-components ---------- */
-/** Heatmap layer usando leaflet.heat */
-function HeatLayer({ points }: { points: GeoPoint[] }) {
+/* ---------- Map controllers ---------- */
+function FlyController({ center, zoom, bbox }: { center: [number, number]; zoom: number; bbox?: [number, number, number, number] | null }) {
   const map = useMap();
-  const layerRef = useRef<any>(null);
   useEffect(() => {
-    if (!points.length) {
-      if (layerRef.current) { map.removeLayer(layerRef.current); layerRef.current = null; }
-      return;
+    if (bbox) {
+      // bbox Nominatim = [southLat, northLat, westLon, eastLon]
+      const [s, n, w, e] = bbox;
+      map.flyToBounds([[s, w], [n, e]], { duration: 1.2, maxZoom: 14 });
+    } else {
+      map.flyTo(center, zoom, { duration: 1.2 });
     }
-    const max = Math.max(...points.map(p => p.weight), 1);
-    const data = points.map(p => [p.lat, p.lng, p.weight / max]);
-    if (layerRef.current) map.removeLayer(layerRef.current);
-    // @ts-ignore
-    layerRef.current = L.heatLayer(data, {
-      radius: 35, blur: 25, maxZoom: 18, max: 1.0,
-      gradient: {
-        0.0: "rgba(255,165,0,0)",
-        0.2: "#ffb347",
-        0.4: "#ff8c1a",
-        0.6: "#ff6200",
-        0.8: "#e63900",
-        1.0: "#a31515",
-      },
-    }).addTo(map);
-    return () => { if (layerRef.current) map.removeLayer(layerRef.current); };
-  }, [points, map]);
+  }, [center, zoom, bbox, map]);
   return null;
 }
 
-/** Faz flyTo sempre que center/zoom mudam */
-function FlyController({ center, zoom }: { center: [number, number]; zoom: number }) {
+function ResizeFix() {
   const map = useMap();
-  useEffect(() => { map.flyTo(center, zoom, { duration: 1.2 }); }, [center, zoom, map]);
+  useEffect(() => { setTimeout(() => map.invalidateSize(), 200); }, [map]);
   return null;
 }
 
@@ -154,15 +217,17 @@ const MapaCalor = () => {
 
   /* Map view */
   const [mapCenter, setMapCenter] = useState<[number, number]>([10, 0]);
-  const [mapZoom, setMapZoom] = useState<number>(ZOOM_BY_LEVEL.world);
+  const [mapZoom, setMapZoom] = useState<number>(2);
+  const [mapBbox, setMapBbox] = useState<[number, number, number, number] | null>(null);
 
   /* Data */
   const [heatData, setHeatData] = useState<HeatEntry[]>([]);
   const [cityClubs, setCityClubs] = useState<ClubVote[]>([]);
   const [loading, setLoading] = useState(true);
-  const [geocoding, setGeocoding] = useState(false);
-  const [totalVotes, setTotalVotes] = useState(0);
-  const [points, setPoints] = useState<GeoPoint[]>([]);
+
+  /* GeoJSON layers */
+  const [currentGeo, setCurrentGeo] = useState<any | null>(null);
+  const [geoLoading, setGeoLoading] = useState(false);
 
   /* Search */
   const [searchQuery, setSearchQuery] = useState("");
@@ -209,42 +274,35 @@ const MapaCalor = () => {
       if (!error && data) {
         const entries = (Array.isArray(data) ? data : []) as unknown as HeatEntry[];
         setHeatData(entries);
-        setTotalVotes(entries.reduce((s, e) => s + Number(e.votes), 0));
-      } else { setHeatData([]); setTotalVotes(0); }
+      } else { setHeatData([]); }
       setLoading(false);
     };
     fetchHeat();
   }, [activeClubName, viewMode, activeCountry, activeState]);
 
-  /* ---------- Geocoding em batch ---------- */
+  const totalVotes = useMemo(() => heatData.reduce((s, e) => s + Number(e.votes), 0), [heatData]);
+
+  /* ---------- Carrega o GeoJSON correto por nível ---------- */
   useEffect(() => {
     let cancelled = false;
     const run = async () => {
-      if (!heatData.length) { setPoints([]); return; }
-      setGeocoding(true);
-      const out: GeoPoint[] = [];
-      // limita: primeiros 50 para não estourar Nominatim
-      for (const e of heatData.slice(0, 50)) {
-        if (cancelled) return;
-        let q = e.region;
-        // Constrói query mais precisa por nível
-        if (viewMode === "world") {
-          q = DB_TO_GEOCODE_COUNTRY[e.region] || e.region;
-        } else if (viewMode === "country") {
-          q = `${e.region}, ${DB_TO_GEOCODE_COUNTRY[activeCountry || ""] || activeCountry}`;
-        } else if (viewMode === "state" || viewMode === "city") {
-          q = `${e.region}, ${activeState || ""}, ${DB_TO_GEOCODE_COUNTRY[activeCountry || ""] || activeCountry || "Brasil"}`;
-        }
-        const coord = await geocode(q);
-        if (coord) out.push({ lat: coord[0], lng: coord[1], weight: Number(e.votes), name: e.region });
-        // throttle leve para Nominatim (1 req/s recomendado, mas como temos cache, vai rápido após 1ª vez)
-        if (!geoCache[normalize(q)]) await new Promise(r => setTimeout(r, 250));
+      setGeoLoading(true);
+      let geo: any = null;
+      if (viewMode === "world") {
+        geo = await fetchGeo(GEO_URLS.worldGeo);
+      } else if (viewMode === "country" && activeCountry === "Brazil") {
+        geo = await fetchGeo(GEO_URLS.brStates);
+      } else if (viewMode === "state" && activeState) {
+        const uf = NAME_TO_UF[normalize(activeState)] || activeState;
+        if (uf && uf.length === 2) geo = await fetchGeo(GEO_URLS.brMunicipios(uf));
+      } else if (viewMode === "city" && mapBbox) {
+        geo = await fetchBairros(mapBbox);
       }
-      if (!cancelled) { setPoints(out); setGeocoding(false); }
+      if (!cancelled) { setCurrentGeo(geo); setGeoLoading(false); }
     };
     run();
     return () => { cancelled = true; };
-  }, [heatData, viewMode, activeCountry, activeState]);
+  }, [viewMode, activeCountry, activeState, mapBbox]);
 
   /* ---------- City: top clubs ---------- */
   useEffect(() => {
@@ -258,24 +316,60 @@ const MapaCalor = () => {
     run();
   }, [viewMode, activeCity]);
 
+  /* ---------- Mapa de votos por nome (para colorir GeoJSON) ---------- */
+  const votesByRegion = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const e of heatData) map.set(normalize(e.region), Number(e.votes));
+    return map;
+  }, [heatData]);
+  const maxVotes = useMemo(() => heatData.reduce((m, e) => Math.max(m, Number(e.votes)), 0), [heatData]);
+
+  /** Resolve voto de uma feature (qualquer propriedade comum de nome). */
+  const lookupVotesForFeature = useCallback((props: any): { name: string; votes: number } => {
+    const candidates: string[] = [];
+    if (!props) return { name: "—", votes: 0 };
+    // Mundo
+    if (props.ADMIN) candidates.push(props.ADMIN);
+    if (props.name) candidates.push(props.name);
+    if (props.NAME) candidates.push(props.NAME);
+    if (props.NAME_LONG) candidates.push(props.NAME_LONG);
+    // Estados BR (codeforgermany usa "name")
+    // Municípios IBGE (tbrugz usa "name")
+    // Bairros OSM (já temos "name")
+    const display = candidates[0] || "—";
+    for (const c of candidates) {
+      // tenta nome direto
+      const v = votesByRegion.get(normalize(c));
+      if (v) return { name: c, votes: v };
+      // tenta DB-form (e.g. "United States of America" → "USA")
+      const dbName = COUNTRY_GEO_TO_DB[c];
+      if (dbName) {
+        const v2 = votesByRegion.get(normalize(dbName));
+        if (v2) return { name: c, votes: v2 };
+      }
+    }
+    return { name: display, votes: 0 };
+  }, [votesByRegion]);
+
   /* ---------- Ranking ---------- */
   const ranking = useMemo(
     () => [...heatData].sort((a, b) => Number(b.votes) - Number(a.votes)).slice(0, 15),
     [heatData],
   );
 
-  /* ---------- Navigation + flyTo ---------- */
+  /* ---------- Navigation ---------- */
   const goWorld = useCallback(() => {
     setViewMode("world"); setActiveCountry(null); setActiveState(null); setActiveCity(null);
     setBreadcrumbs([{ label: "Mundo", level: "world" }]);
-    setMapCenter([10, 0]); setMapZoom(ZOOM_BY_LEVEL.world);
+    setMapCenter([10, 0]); setMapZoom(2); setMapBbox(null);
   }, []);
 
   const goCountry = useCallback(async (country: string) => {
     setViewMode("country"); setActiveCountry(country); setActiveState(null); setActiveCity(null);
     setBreadcrumbs([{ label: "Mundo", level: "world" }, { label: country, level: "country", value: country }]);
-    const coord = await geocode(DB_TO_GEOCODE_COUNTRY[country] || country);
-    if (coord) { setMapCenter(coord); setMapZoom(ZOOM_BY_LEVEL.country); }
+    const q = COUNTRY_DB_TO_GEO[country] || country;
+    const r = await geocodeBounds(q);
+    if (r) { setMapCenter(r.center); setMapZoom(5); setMapBbox(r.bbox || null); }
   }, []);
 
   const goState = useCallback(async (state: string) => {
@@ -284,8 +378,9 @@ const MapaCalor = () => {
       ...prev.filter(b => b.level === "world" || b.level === "country"),
       { label: state, level: "state", value: state },
     ]);
-    const coord = await geocode(`${state}, ${DB_TO_GEOCODE_COUNTRY[activeCountry || ""] || activeCountry || "Brasil"}`);
-    if (coord) { setMapCenter(coord); setMapZoom(ZOOM_BY_LEVEL.state); }
+    const country = COUNTRY_DB_TO_GEO[activeCountry || "Brazil"] || "Brasil";
+    const r = await geocodeBounds(`${state}, ${country}`);
+    if (r) { setMapCenter(r.center); setMapZoom(7); setMapBbox(r.bbox || null); }
   }, [activeCountry]);
 
   const goCity = useCallback(async (city: string, stateOverride?: string) => {
@@ -296,8 +391,9 @@ const MapaCalor = () => {
       { label: city, level: "city", value: city },
     ]);
     const st = stateOverride || activeState || "";
-    const coord = await geocode(`${city}, ${st}, ${DB_TO_GEOCODE_COUNTRY[activeCountry || ""] || activeCountry || "Brasil"}`);
-    if (coord) { setMapCenter(coord); setMapZoom(ZOOM_BY_LEVEL.city); }
+    const country = COUNTRY_DB_TO_GEO[activeCountry || "Brazil"] || "Brasil";
+    const r = await geocodeBounds(`${city}, ${st}, ${country}`);
+    if (r) { setMapCenter(r.center); setMapZoom(13); setMapBbox(r.bbox || null); }
   }, [activeCountry, activeState]);
 
   const handleCrumb = (c: Crumb) => {
@@ -342,7 +438,7 @@ const MapaCalor = () => {
     }, 300);
   };
 
-  /* ---------- Comparativo (heart + compare) ---------- */
+  /* ---------- Comparativo ---------- */
   useEffect(() => {
     const run = async (clubName: string, setter: (d: ClubCompareData) => void) => {
       const info = CLUBS_DATA.find(c => c.nome === clubName) || null;
@@ -363,12 +459,55 @@ const MapaCalor = () => {
     if (activeClubName) run(activeClubName, setHeartCompareData);
   }, [compareClubName, activeClubName, viewMode, activeCountry, activeState]);
 
-  /* ---------- Click no marker (drill-down) ---------- */
-  const handleMarkerClick = (regionName: string) => {
-    if (viewMode === "world") goCountry(COUNTRY_NAME_TO_DB[regionName] || regionName);
-    else if (viewMode === "country") goState(regionName);
-    else if (viewMode === "state") goCity(regionName);
-  };
+  /* ---------- Style + Events do GeoJSON (choropleth) ---------- */
+  const geoStyle = useCallback((feature: any) => {
+    const { votes } = lookupVotesForFeature(feature?.properties);
+    return {
+      fillColor: colorByIntensity(votes, maxVotes),
+      fillOpacity: votes > 0 ? 0.78 : 0.08,
+      color: "#333333",
+      weight: 0.8,
+      opacity: 0.9,
+    };
+  }, [lookupVotesForFeature, maxVotes]);
+
+  const onEachFeature = useCallback((feature: any, layer: any) => {
+    const { name, votes } = lookupVotesForFeature(feature?.properties);
+    layer.bindTooltip(
+      `<div style="font-family:Verdana,sans-serif">
+         <div style="font-weight:900;font-style:italic;text-transform:uppercase;font-size:11px;color:#fff">${name}</div>
+         <div style="color:#ff6200;font-weight:900;font-size:11px;margin-top:2px">${fmt(votes)} VOTOS</div>
+       </div>`,
+      { sticky: true, direction: "top", opacity: 0.95, className: "war-tooltip" }
+    );
+    layer.on({
+      mouseover: (e: any) => {
+        const l = e.target;
+        l.setStyle({ weight: 2, color: "#ffffff", opacity: 1 });
+        l.bringToFront();
+      },
+      mouseout: (e: any) => {
+        const l = e.target;
+        l.setStyle({ weight: 0.8, color: "#333333", opacity: 0.9 });
+      },
+      click: () => {
+        if (viewMode === "world") {
+          const dbName = COUNTRY_GEO_TO_DB[name] || name;
+          goCountry(dbName);
+        } else if (viewMode === "country") {
+          goState(name);
+        } else if (viewMode === "state") {
+          goCity(name);
+        }
+      },
+    });
+  }, [lookupVotesForFeature, viewMode, goCountry, goState, goCity]);
+
+  /* Key força re-render do GeoJSON quando style/data muda */
+  const geoKey = useMemo(
+    () => `${viewMode}-${activeCountry}-${activeState}-${activeCity}-${maxVotes}-${heatData.length}`,
+    [viewMode, activeCountry, activeState, activeCity, maxVotes, heatData.length]
+  );
 
   /* ---------- UI ---------- */
   return (
@@ -390,7 +529,7 @@ const MapaCalor = () => {
         {/* Breadcrumbs */}
         <div className="flex items-center gap-1 mb-4 flex-wrap">
           <button onClick={goWorld} className="flex items-center gap-1 text-[10px] font-black uppercase tracking-widest text-muted-foreground hover:text-primary transition-colors">
-            <Home className="w-3 h-3" /> Início
+            <Home className="w-3 h-3" /> Mundo
           </button>
           {breadcrumbs.slice(1).map((bc, i) => (
             <span key={i} className="flex items-center gap-1">
@@ -435,7 +574,7 @@ const MapaCalor = () => {
                 <div className={`mt-3 grid gap-2 ${compareData ? "grid-cols-2" : "grid-cols-1"}`}>
                   <div className="p-3 rounded-xl bg-white/5 border border-primary/30">
                     <div className="flex items-center gap-2 mb-1">
-                      <div className="w-8 h-8 bg-white rounded-full p-1 flex items-center justify-center shrink-0">
+                      <div className="w-9 h-9 bg-white rounded-full p-1 flex items-center justify-center shrink-0">
                         <ClubLogo src={(heartCompareData?.info || activeClubInfo)?.logoUrl} alt={activeClubName} size="sm" />
                       </div>
                       <div className="min-w-0">
@@ -444,10 +583,10 @@ const MapaCalor = () => {
                       </div>
                     </div>
                     <p className="text-[9px] text-muted-foreground font-black uppercase">Total visível</p>
-                    <p className="text-sm text-primary font-black italic">{formatVotes(heartCompareData?.totalVotes ?? totalVotes)}</p>
+                    <p className="text-base text-primary font-black italic">{fmt(heartCompareData?.totalVotes ?? totalVotes)}</p>
                     {heartCompareData?.topRegion && (
                       <p className="text-[8px] text-muted-foreground mt-1 truncate">
-                        Top: <span className="font-black uppercase">{heartCompareData.topRegion.region}</span> ({formatVotes(heartCompareData.topRegion.votes)})
+                        Top: <span className="font-black uppercase">{heartCompareData.topRegion.region}</span> ({fmt(heartCompareData.topRegion.votes)})
                       </p>
                     )}
                   </div>
@@ -458,7 +597,7 @@ const MapaCalor = () => {
                         <X className="w-3 h-3" />
                       </button>
                       <div className="flex items-center gap-2 mb-1">
-                        <div className="w-8 h-8 bg-white rounded-full p-1 flex items-center justify-center shrink-0">
+                        <div className="w-9 h-9 bg-white rounded-full p-1 flex items-center justify-center shrink-0">
                           <ClubLogo src={compareData.info?.logoUrl} alt={compareData.name} size="sm" />
                         </div>
                         <div className="min-w-0">
@@ -467,10 +606,10 @@ const MapaCalor = () => {
                         </div>
                       </div>
                       <p className="text-[9px] text-muted-foreground font-black uppercase">Total visível</p>
-                      <p className="text-sm font-black italic" style={{ color: CHOROPLETH[2] }}>{formatVotes(compareData.totalVotes)}</p>
+                      <p className="text-base font-black italic" style={{ color: HEAT_PALETTE[3] }}>{fmt(compareData.totalVotes)}</p>
                       {compareData.topRegion && (
                         <p className="text-[8px] text-muted-foreground mt-1 truncate">
-                          Top: <span className="font-black uppercase">{compareData.topRegion.region}</span> ({formatVotes(compareData.topRegion.votes)})
+                          Top: <span className="font-black uppercase">{compareData.topRegion.region}</span> ({fmt(compareData.topRegion.votes)})
                         </p>
                       )}
                     </div>
@@ -503,7 +642,7 @@ const MapaCalor = () => {
                           <span className="font-black italic uppercase truncate text-left">
                             {c.city} <span className="text-muted-foreground font-normal">/ {c.state}</span>
                           </span>
-                          <span className="font-black text-primary shrink-0">{formatVotes(Number(c.votes))}</span>
+                          <span className="font-black text-primary shrink-0">{fmt(Number(c.votes))}</span>
                         </button>
                       ))}
                     </div>
@@ -549,19 +688,19 @@ const MapaCalor = () => {
                         <div className="flex justify-between text-[10px] mb-1">
                           <span className="font-black italic uppercase flex items-center gap-1.5 truncate">
                             <span className="w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-black shrink-0"
-                              style={{ backgroundColor: i < 3 ? CHOROPLETH[4] : "hsl(0 0% 18%)", color: "white" }}>
+                              style={{ backgroundColor: i < 3 ? HEAT_PALETTE[5] : "hsl(0 0% 18%)", color: "white" }}>
                               {i + 1}
                             </span>
                             <span className="truncate group-hover:text-primary transition-colors">{entry.region}</span>
                           </span>
-                          <span className="font-black text-primary shrink-0">{formatVotes(v)}</span>
+                          <span className="font-black text-primary shrink-0">{fmt(v)}</span>
                         </div>
                         <div className="h-1 w-full bg-white/5 rounded-full overflow-hidden">
                           <motion.div
                             initial={{ width: 0 }} animate={{ width: `${pct}%` }}
                             transition={{ duration: 0.6, delay: i * 0.04 }}
                             className="h-full rounded-full"
-                            style={{ background: `linear-gradient(90deg, ${CHOROPLETH[1]}, ${CHOROPLETH[4]})` }}
+                            style={{ background: `linear-gradient(90deg, ${HEAT_PALETTE[3]}, ${HEAT_PALETTE[6]})` }}
                           />
                         </div>
                       </button>
@@ -600,7 +739,7 @@ const MapaCalor = () => {
                             {isHeart && <span className="text-primary text-[8px] shrink-0">❤️</span>}
                             {isCompare && <span className="text-[8px] shrink-0">⚔️</span>}
                           </span>
-                          <span className="font-black text-primary shrink-0">{formatVotes(Number(c.votes))}</span>
+                          <span className="font-black text-primary shrink-0">{fmt(Number(c.votes))}</span>
                         </div>
                       );
                     })}
@@ -612,13 +751,39 @@ const MapaCalor = () => {
 
           {/* MAP */}
           <main className="lg:col-span-3">
-            <div className="relative rounded-[32px] bg-black border border-white/5 overflow-hidden h-[380px] sm:h-[480px] lg:h-[600px]">
-              {(loading || geocoding) && (
+            <div className="relative rounded-[32px] bg-black border border-white/5 overflow-hidden h-[420px] sm:h-[520px] lg:h-[660px]">
+              {(loading || geoLoading) && (
                 <div className="absolute top-3 right-3 z-[500] px-3 py-1.5 rounded-xl bg-black/70 border border-primary/30 flex items-center gap-2">
                   <Loader2 className="w-3 h-3 animate-spin text-primary" />
                   <span className="text-[9px] font-black italic uppercase text-primary">
-                    {loading ? "Carregando..." : "Geocoding..."}
+                    {loading ? "Carregando votos..." : "Carregando território..."}
                   </span>
+                </div>
+              )}
+
+              {/* Emblemas flutuantes */}
+              {activeClubName && (
+                <div className="absolute top-3 left-3 z-[500] flex items-center gap-2">
+                  <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl bg-black/75 backdrop-blur-md border border-primary/40">
+                    <div className="w-7 h-7 bg-white rounded-full p-0.5 flex items-center justify-center">
+                      <ClubLogo src={activeClubInfo?.logoUrl} alt={activeClubName} size="sm" />
+                    </div>
+                    <div>
+                      <p className="text-[7px] text-primary font-black uppercase tracking-widest leading-none">❤️ Coração</p>
+                      <p className="text-[10px] font-black italic uppercase text-white leading-tight max-w-[100px] truncate">{activeClubName}</p>
+                    </div>
+                  </div>
+                  {compareData && (
+                    <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl bg-black/75 backdrop-blur-md border border-white/20">
+                      <div className="w-7 h-7 bg-white rounded-full p-0.5 flex items-center justify-center">
+                        <ClubLogo src={compareData.info?.logoUrl} alt={compareData.name} size="sm" />
+                      </div>
+                      <div>
+                        <p className="text-[7px] font-black uppercase tracking-widest leading-none text-white/80">⚔️ vs</p>
+                        <p className="text-[10px] font-black italic uppercase text-white leading-tight max-w-[100px] truncate">{compareData.name}</p>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -641,40 +806,23 @@ const MapaCalor = () => {
                   subdomains="abcd"
                   opacity={0.7}
                 />
-                <FlyController center={mapCenter} zoom={mapZoom} />
-                <HeatLayer points={points} />
-                {points.map((p, i) => (
-                  <CircleMarker
-                    key={`${p.name}-${i}`}
-                    center={[p.lat, p.lng]}
-                    radius={Math.max(4, Math.min(14, 4 + Math.log2(p.weight + 1) * 2))}
-                    pathOptions={{
-                      color: "#ff6200",
-                      fillColor: "#ff6200",
-                      fillOpacity: 0.6,
-                      weight: 1.2,
-                    }}
-                    eventHandlers={{ click: () => handleMarkerClick(p.name) }}
-                  >
-                    <LTooltip direction="top" offset={[0, -4]} opacity={0.95}>
-                      <div style={{ fontFamily: "Verdana, sans-serif" }}>
-                        <div style={{ fontWeight: 900, fontStyle: "italic", textTransform: "uppercase", fontSize: 10 }}>
-                          {p.name}
-                        </div>
-                        <div style={{ color: "#ff6200", fontWeight: 700, fontSize: 10 }}>
-                          {formatVotes(p.weight)} votos
-                        </div>
-                      </div>
-                    </LTooltip>
-                  </CircleMarker>
-                ))}
+                <FlyController center={mapCenter} zoom={mapZoom} bbox={mapBbox} />
+                <ResizeFix />
+                {currentGeo && (
+                  <GeoJSON
+                    key={geoKey}
+                    data={currentGeo}
+                    style={geoStyle as any}
+                    onEachFeature={onEachFeature}
+                  />
+                )}
               </MapContainer>
 
               {/* Legend */}
-              <div className="absolute bottom-3 right-3 p-2.5 rounded-xl bg-black/70 backdrop-blur-md border border-white/10 z-[500]">
+              <div className="absolute bottom-3 right-3 p-2.5 rounded-xl bg-black/80 backdrop-blur-md border border-white/10 z-[500]">
                 <p className="text-[8px] font-black italic uppercase tracking-widest text-muted-foreground mb-1.5">Densidade de votos</p>
                 <div className="flex items-center gap-0.5">
-                  {CHOROPLETH.map((c, i) => (
+                  {HEAT_PALETTE.slice(1).map((c, i) => (
                     <div key={i} className="w-5 h-3 rounded-sm" style={{ backgroundColor: c }} />
                   ))}
                 </div>
@@ -684,7 +832,7 @@ const MapaCalor = () => {
               </div>
 
               {/* Level badge */}
-              <div className="absolute top-3 left-3 px-3 py-1.5 rounded-xl bg-black/70 backdrop-blur-md border border-white/10 z-[500]">
+              <div className="absolute bottom-3 left-3 px-3 py-1.5 rounded-xl bg-black/80 backdrop-blur-md border border-white/10 z-[500]">
                 <p className="text-[9px] font-black italic uppercase tracking-widest text-primary">
                   {viewMode === "world" && "🌍 Mundial"}
                   {viewMode === "country" && `🏳️ ${activeCountry}`}
@@ -696,6 +844,20 @@ const MapaCalor = () => {
           </main>
         </div>
       </div>
+
+      {/* Custom tooltip CSS */}
+      <style>{`
+        .war-tooltip {
+          background: rgba(0,0,0,0.92) !important;
+          border: 1px solid rgba(255,98,0,0.5) !important;
+          border-radius: 8px !important;
+          padding: 6px 10px !important;
+          color: #fff !important;
+          box-shadow: 0 4px 20px rgba(255,98,0,0.25) !important;
+        }
+        .war-tooltip::before { display: none !important; }
+        .leaflet-container { font-family: Verdana, sans-serif; }
+      `}</style>
     </div>
   );
 };
