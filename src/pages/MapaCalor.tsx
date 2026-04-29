@@ -493,13 +493,15 @@ const MapaCalor = () => {
   /* ---------- Navigation ---------- */
   const goWorld = useCallback(() => {
     setViewMode("world"); setActiveCountry(null); setActiveState(null); setActiveCity(null);
+    setCountryScope({}); setStateScope({}); setCityScope({});
     setBreadcrumbs([{ label: "Mundo", level: "world" }]);
     setMapCenter([10, 0]); setMapZoom(2); setMapBbox(null);
   }, []);
 
-  const goCountry = useCallback(async (country: string, bboxOverride?: GeoBbox | null) => {
+  const goCountry = useCallback(async (country: string, bboxOverride?: GeoBbox | null, scopeOverride?: TerritoryScope) => {
     setCurrentGeo(null);
     setViewMode("country"); setActiveCountry(country); setActiveState(null); setActiveCity(null);
+    setCountryScope(scopeOverride || {}); setStateScope({}); setCityScope({});
     setBreadcrumbs([{ label: "Mundo", level: "world" }, { label: country, level: "country", value: country }]);
     if (bboxOverride) {
       setMapBbox(bboxOverride); setMapCenter(bboxCenter(bboxOverride)); setMapZoom(5);
@@ -510,9 +512,10 @@ const MapaCalor = () => {
     if (r) { setMapCenter(r.center); setMapZoom(5); setMapBbox(r.bbox || null); }
   }, []);
 
-  const goState = useCallback(async (state: string, bboxOverride?: GeoBbox | null) => {
+  const goState = useCallback(async (state: string, bboxOverride?: GeoBbox | null, scopeOverride?: TerritoryScope) => {
     setCurrentGeo(null);
     setViewMode("state"); setActiveState(state); setActiveCity(null);
+    setStateScope(scopeOverride || {}); setCityScope({});
     setBreadcrumbs(prev => [
       ...prev.filter(b => b.level === "world" || b.level === "country"),
       { label: state, level: "state", value: state },
@@ -526,9 +529,10 @@ const MapaCalor = () => {
     if (r) { setMapCenter(r.center); setMapZoom(7); setMapBbox(r.bbox || null); }
   }, [activeCountry]);
 
-  const goCity = useCallback(async (city: string, stateOverride?: string, bboxOverride?: GeoBbox | null) => {
+  const goCity = useCallback(async (city: string, stateOverride?: string, bboxOverride?: GeoBbox | null, scopeOverride?: TerritoryScope) => {
     setCurrentGeo(null);
     setViewMode("city"); setActiveCity(city);
+    setCityScope(scopeOverride || {});
     if (stateOverride) setActiveState(stateOverride);
     setBreadcrumbs(prev => [
       ...prev.filter(b => b.level !== "city"),
