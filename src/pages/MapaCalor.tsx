@@ -297,18 +297,68 @@ const MapaCalor = () => {
     goState(stateName);
   };
 
-  /* ---------- Search ---------- */
+  /* ---------- Search clube ---------- */
   const handleSearch = async (val: string) => {
     setSearchQuery(val);
     if (val.length > 1) setSearchResults(await searchClubsLocal(val, 6));
     else setSearchResults([]);
   };
+  /** Se o usuário ja tem clube do coração e busca outro → modo COMPARAÇÃO */
   const selectClub = (club: ClubSearchResult) => {
-    setActiveClubName(club.name);
-    setActiveClubInfo(CLUBS_DATA.find(c => c.nome === club.name) || null);
     setSearchQuery(""); setSearchResults([]);
-    goWorld();
+    if (heartClubName && club.name !== heartClubName && club.name !== activeClubName) {
+      setCompareClubName(club.name);
+    } else {
+      setActiveClubName(club.name);
+      setActiveClubInfo(CLUBS_DATA.find(c => c.nome === club.name) || null);
+      setCompareClubName(null);
+      setCompareData(null);
+      goWorld();
+    }
   };
+  const clearCompare = () => { setCompareClubName(null); setCompareData(null); };
+
+  /* ---------- Search cidade (votos do clube ativo em uma cidade) ---------- */
+  const handleCitySearch = (val: string) => {
+    setCitySearchQuery(val);
+    if (citySearchDebounce.current) clearTimeout(citySearchDebounce.current);
+    if (val.length < 2 || !activeClubName) {
+      setCitySearchResults([]); setCitySearchLoading(false); return;
+    }
+    setCitySearchLoading(true);
+    citySearchDebounce.current = setTimeout(async () => {
+      const { data } = await supabase.rpc("search_club_city_votes", {
+        p_club_name: activeClubName, p_city_query: val, p_limit: 15,
+      });
+      setCitySearchResults((Array.isArray(data) ? data : []) as unknown as CityHit[]);
+      setCitySearchLoading(false);
+    }, 300);
+  };
+
+  /* ---------- Fetch resumo (total + top região) p/ heart e compare ---------- */
+  useEffect(() => {
+    const run = async (clubName: string, setter: (d: ClubCompareData) => void) => {
+      const info = CLUBS_DATA.find(c => c.nome === clubName) || null;
+      const level = viewMode === "world" ? "country"
+                  : viewMode === "country" ? "state"
+                  : "city";
+      const filter = viewMode === "country" ? activeCountry
+                   : viewMode === "state"   ? activeState
+                   : viewMode === "city"    ? activeState
+                   : null;
+      const { data } = await supabase.rpc("get_heatmap_data", {
+        p_club_name: clubName, p_level: level, p_filter_value: filter,
+      });
+      const arr = (Array.isArray(data) ? data : []) as HeatEntry[];
+      const total = arr.reduce((s, e) => s + Number(e.votes), 0);
+      const top = arr.length ? { region: arr[0].region, votes: Number(arr[0].votes) } : null;
+      setter({ name: clubName, info, totalVotes: total, topRegion: top });
+    };
+    if (compareClubName) run(compareClubName, setCompareData);
+    else setCompareData(null);
+    if (activeClubName) run(activeClubName, setHeartCompareData);
+  }, [compareClubName, activeClubName, viewMode, activeCountry, activeState]);
+
 
   /* ---------- Render map by level ---------- */
   const projectionConfig = useMemo(() => {
