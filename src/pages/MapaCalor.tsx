@@ -204,6 +204,8 @@ function relationToFeature(el: any): any | null {
     properties: {
       name: el.tags?.["name:pt"] || el.tags?.name || el.tags?.["name:en"] || "—",
       admin_level: el.tags?.admin_level,
+      osm_id: el.id,
+      area_id: el.id ? 3600000000 + Number(el.id) : null,
     },
     geometry,
   };
@@ -224,6 +226,7 @@ async function fetchAdminSubdivisions(
   bbox: GeoBbox,
   adminLevel: 4 | 6 | 8 | 10,
   cacheKey: string,
+  scope?: { countryIso2?: string | null; areaId?: number | null },
 ): Promise<any | null> {
   if (ovCache[cacheKey]) return ovCache[cacheKey];
   const [s, n, w, e] = bbox;
@@ -233,7 +236,15 @@ async function fetchAdminSubdivisions(
                           : adminLevel === 10 ? [10, 9, 11]
                           : [adminLevel];
   for (const lv of levels) {
-    const q = `[out:json][timeout:40];(relation["boundary"="administrative"]["admin_level"="${lv}"](${s},${w},${n},${e}););out geom;`;
+    const areaSelector = scope?.areaId
+      ? `area(${scope.areaId})->.a;`
+      : scope?.countryIso2
+        ? `area["ISO3166-1"="${scope.countryIso2}"]["admin_level"="2"]->.a;`
+        : "";
+    const relationSelector = areaSelector
+      ? `relation(area.a)["boundary"="administrative"]["admin_level"="${lv}"];`
+      : `relation["boundary"="administrative"]["admin_level"="${lv}"](${s},${w},${n},${e});`;
+    const q = `[out:json][timeout:40];${areaSelector}(${relationSelector});out geom;`;
     const data = await overpassQuery(q);
     if (!data?.elements?.length) continue;
     const features: any[] = [];
