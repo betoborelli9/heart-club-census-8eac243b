@@ -176,6 +176,11 @@ const MapaCalor = () => {
   /* Tooltip */
   const [tooltip, setTooltip] = useState<{ x: number; y: number; name: string; votes: number } | null>(null);
 
+  /* City view: bairros (OSM Overpass) */
+  const [cityCenter, setCityCenter] = useState<[number, number] | null>(null);
+  const [cityBairrosGeo, setCityBairrosGeo] = useState<any | null>(null);
+  const [bairrosLoading, setBairrosLoading] = useState(false);
+
   /* ---------- Load heart club ---------- */
   useEffect(() => {
     const load = async () => {
@@ -272,8 +277,10 @@ const MapaCalor = () => {
     ]);
   }, []);
 
-  const goCity = useCallback((city: string) => {
+  const goCity = useCallback((city: string, stateOverride?: string) => {
     setViewMode("city"); setActiveCity(city);
+    if (stateOverride) setActiveState(stateOverride);
+    setCityCenter(null); setCityBairrosGeo(null);
     setBreadcrumbs(prev => [
       ...prev.filter(b => b.level !== "city"),
       { label: city, level: "city", value: city },
@@ -359,6 +366,65 @@ const MapaCalor = () => {
     if (activeClubName) run(activeClubName, setHeartCompareData);
   }, [compareClubName, activeClubName, viewMode, activeCountry, activeState]);
 
+  /* ---------- Carrega bairros via OSM (Overpass) ao entrar em uma cidade ---------- */
+  useEffect(() => {
+    if (viewMode !== "city" || !activeCity) {
+      setCityBairrosGeo(null); setCityCenter(null); return;
+    }
+    let cancelled = false;
+    const run = async () => {
+      setBairrosLoading(true);
+      try {
+        // 1) Geocode da cidade via Nominatim → bbox + center
+        const q = encodeURIComponent(`${activeCity}, ${activeState || ""}, Brasil`);
+        const geo = await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${q}`, {
+          headers: { "Accept-Language": "pt-BR" },
+        }).then(r => r.json()).catch(() => []);
+        if (cancelled || !geo?.[0]) { setBairrosLoading(false); return; }
+        const lat = parseFloat(geo[0].lat); const lon = parseFloat(geo[0].lon);
+        const bb = geo[0].boundingbox?.map(parseFloat); // [s,n,w,e]
+        setCityCenter([lon, lat]);
+        if (!bb) { setBairrosLoading(false); return; }
+
+        // 2) Overpass: bairros (admin_level=10 OU place=suburb/neighbourhood) na bbox
+        const overpassQ = `[out:json][timeout:25];
+          (
+            relation["boundary"="administrative"]["admin_level"="10"](${bb[0]},${bb[2]},${bb[1]},${bb[3]});
+            way["place"~"suburb|neighbourhood|quarter"](${bb[0]},${bb[2]},${bb[1]},${bb[3]});
+          );
+          out geom;`;
+        const op = await fetch("https://overpass-api.de/api/interpreter", {
+          method: "POST", body: overpassQ,
+        }).then(r => r.json()).catch(() => null);
+        if (cancelled || !op?.elements) { setBairrosLoading(false); return; }
+
+        // 3) Converter para GeoJSON FeatureCollection
+        const features: any[] = [];
+        for (const el of op.elements) {
+          const name = el.tags?.name; if (!name) continue;
+          if (el.type === "relation" && el.members) {
+            const ways = el.members.filter((m: any) => m.type === "way" && m.geometry && m.geometry.length > 2);
+            const polygons = ways.map((w: any) => [w.geometry.map((p: any) => [p.lon, p.lat])]);
+            if (polygons.length) features.push({
+              type: "Feature", properties: { name },
+              geometry: { type: "MultiPolygon", coordinates: polygons },
+            });
+          } else if (el.type === "way" && el.geometry && el.geometry.length > 2) {
+            features.push({
+              type: "Feature", properties: { name },
+              geometry: { type: "Polygon", coordinates: [el.geometry.map((p: any) => [p.lon, p.lat])] },
+            });
+          }
+        }
+        if (!cancelled) setCityBairrosGeo({ type: "FeatureCollection", features });
+      } finally {
+        if (!cancelled) setBairrosLoading(false);
+      }
+    };
+    run();
+    return () => { cancelled = true; };
+  }, [viewMode, activeCity, activeState]);
+
 
   /* ---------- Render map by level ---------- */
   const projectionConfig = useMemo(() => {
@@ -372,8 +438,11 @@ const MapaCalor = () => {
       if (info) return { scale: info.scale, center: info.center };
       return { scale: 1400, center: [-50, -15] as [number, number] };
     }
+    if (viewMode === "city" && cityCenter) {
+      return { scale: 60000, center: cityCenter };
+    }
     return { scale: 130, center: [0, 20] as [number, number] };
-  }, [viewMode, activeCountry, activeState]);
+  }, [viewMode, activeCountry, activeState, cityCenter]);
 
   const renderMap = () => {
     /* WORLD: countries colored by total votes */
@@ -449,7 +518,7 @@ const MapaCalor = () => {
                   key={geo.rsmKey} geography={geo}
                   fill={colorScale(v)}
                   stroke="hsl(0 0% 100% / 0.12)" strokeWidth={0.3}
-                  onClick={() => goCity(cityName)}
+                  onClick={() => goCity(cityName, activeState)}
                   onMouseMove={(e: any) => setTooltip({ x: e.clientX, y: e.clientY, name: cityName, votes: v })}
                   onMouseLeave={() => setTooltip(null)}
                   style={{
@@ -465,7 +534,46 @@ const MapaCalor = () => {
       );
     }
 
-    /* COUNTRY (não-Brasil) ou STATE/CITY: bubble map sobre o país */
+    /* CITY: bairros via OSM Overpass + marcador central */
+    if (viewMode === "city" && activeCity) {
+      return (
+        <>
+          {cityBairrosGeo && (
+            <Geographies geography={cityBairrosGeo}>
+              {({ geographies }) => geographies.map((geo: any) => {
+                const bairroName = geo.properties.name || "";
+                const v = voteMap[normalize(bairroName)] || 0; // dados de bairro normalmente 0
+                return (
+                  <Geography
+                    key={geo.rsmKey} geography={geo}
+                    fill={v > 0 ? colorScale(v) : "hsl(28 95% 60% / 0.18)"}
+                    stroke="hsl(28 95% 60% / 0.55)" strokeWidth={0.4}
+                    onMouseMove={(e: any) => setTooltip({ x: e.clientX, y: e.clientY, name: bairroName, votes: v })}
+                    onMouseLeave={() => setTooltip(null)}
+                    style={{
+                      default: { outline: "none", cursor: "pointer", transition: "fill 0.25s" },
+                      hover: { outline: "none", fill: "hsl(var(--primary))", cursor: "pointer" },
+                      pressed: { outline: "none" },
+                    }}
+                  />
+                );
+              })}
+            </Geographies>
+          )}
+          {cityCenter && (
+            <Marker coordinates={cityCenter}>
+              <circle r={6} fill="hsl(var(--primary))" stroke="white" strokeWidth={1.5} />
+              <text textAnchor="middle" y={-10} className="fill-white"
+                style={{ fontSize: 8, fontWeight: 900, fontStyle: "italic", textTransform: "uppercase" }}>
+                {activeCity}
+              </text>
+            </Marker>
+          )}
+        </>
+      );
+    }
+
+    /* COUNTRY (não-Brasil) ou STATE: bubble map sobre o país */
     const countryCfg = activeCountry ? COUNTRY_PROJECTION[activeCountry] : null;
     const maxV = Math.max(...heatData.map(e => Number(e.votes)), 1);
     /* As bubbles não têm coords reais → mostramos a malha do país e
@@ -648,7 +756,7 @@ const MapaCalor = () => {
                       {citySearchResults.map((c, i) => (
                         <button
                           key={`${c.city}-${c.state}-${i}`}
-                          onClick={() => goCity(c.city)}
+                          onClick={() => goCity(c.city, c.state)}
                           className="w-full flex justify-between items-center text-[10px] p-2 rounded-lg bg-white/5 hover:bg-primary/20 transition-colors"
                         >
                           <span className="font-black italic uppercase truncate text-left">
@@ -731,16 +839,31 @@ const MapaCalor = () => {
                 {cityClubs.length === 0 ? (
                   <p className="text-[11px] italic text-muted-foreground text-center py-3">Carregando...</p>
                 ) : (
-                  <div className="space-y-2">
-                    {cityClubs.map((c, i) => (
-                      <div key={c.club} className="flex justify-between items-center text-[10px] p-2 rounded-lg bg-white/5">
-                        <span className="font-black italic uppercase truncate flex items-center gap-2">
-                          <span className="text-muted-foreground w-4">{i + 1}.</span>
-                          {c.club}
-                        </span>
-                        <span className="font-black text-primary shrink-0">{formatVotes(Number(c.votes))}</span>
-                      </div>
-                    ))}
+                  <div className="space-y-2 max-h-[320px] overflow-y-auto pr-1">
+                    {cityClubs.map((c, i) => {
+                      const info = CLUBS_DATA.find(cd => cd.nome === c.club);
+                      const isHeart = c.club === heartClubName;
+                      const isCompare = c.club === compareClubName;
+                      return (
+                        <div key={c.club}
+                          className={`flex justify-between items-center text-[10px] p-2 rounded-lg ${
+                            isHeart ? "bg-primary/15 border border-primary/40"
+                            : isCompare ? "bg-white/10 border border-white/20"
+                            : "bg-white/5"
+                          }`}>
+                          <span className="font-black italic uppercase truncate flex items-center gap-2 min-w-0">
+                            <span className="text-muted-foreground w-4 shrink-0">{i + 1}.</span>
+                            <span className="w-6 h-6 bg-white rounded-full p-0.5 flex items-center justify-center shrink-0">
+                              <ClubLogo src={info?.logoUrl} alt={c.club} size="sm" />
+                            </span>
+                            <span className="truncate">{c.club}</span>
+                            {isHeart && <span className="text-primary text-[8px] shrink-0">❤️</span>}
+                            {isCompare && <span className="text-[8px] shrink-0">⚔️</span>}
+                          </span>
+                          <span className="font-black text-primary shrink-0">{formatVotes(Number(c.votes))}</span>
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </div>
@@ -754,6 +877,12 @@ const MapaCalor = () => {
               {loading && (
                 <div className="absolute inset-0 flex items-center justify-center z-20 bg-black/40 backdrop-blur-sm">
                   <Loader2 className="w-7 h-7 animate-spin text-primary" />
+                </div>
+              )}
+              {bairrosLoading && viewMode === "city" && (
+                <div className="absolute top-3 right-3 z-20 px-3 py-1.5 rounded-xl bg-black/70 border border-primary/30 flex items-center gap-2">
+                  <Loader2 className="w-3 h-3 animate-spin text-primary" />
+                  <span className="text-[9px] font-black italic uppercase text-primary">Carregando bairros...</span>
                 </div>
               )}
 
