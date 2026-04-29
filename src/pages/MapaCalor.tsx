@@ -840,16 +840,31 @@ const MapaCalor = () => {
                 {cityClubs.length === 0 ? (
                   <p className="text-[11px] italic text-muted-foreground text-center py-3">Carregando...</p>
                 ) : (
-                  <div className="space-y-2">
-                    {cityClubs.map((c, i) => (
-                      <div key={c.club} className="flex justify-between items-center text-[10px] p-2 rounded-lg bg-white/5">
-                        <span className="font-black italic uppercase truncate flex items-center gap-2">
-                          <span className="text-muted-foreground w-4">{i + 1}.</span>
-                          {c.club}
-                        </span>
-                        <span className="font-black text-primary shrink-0">{formatVotes(Number(c.votes))}</span>
-                      </div>
-                    ))}
+                  <div className="space-y-2 max-h-[320px] overflow-y-auto pr-1">
+                    {cityClubs.map((c, i) => {
+                      const info = CLUBS_DATA.find(cd => cd.nome === c.club);
+                      const isHeart = c.club === heartClubName;
+                      const isCompare = c.club === compareClubName;
+                      return (
+                        <div key={c.club}
+                          className={`flex justify-between items-center text-[10px] p-2 rounded-lg ${
+                            isHeart ? "bg-primary/15 border border-primary/40"
+                            : isCompare ? "bg-white/10 border border-white/20"
+                            : "bg-white/5"
+                          }`}>
+                          <span className="font-black italic uppercase truncate flex items-center gap-2 min-w-0">
+                            <span className="text-muted-foreground w-4 shrink-0">{i + 1}.</span>
+                            <span className="w-6 h-6 bg-white rounded-full p-0.5 flex items-center justify-center shrink-0">
+                              <ClubLogo src={info?.logoUrl} alt={c.club} size="sm" />
+                            </span>
+                            <span className="truncate">{c.club}</span>
+                            {isHeart && <span className="text-primary text-[8px] shrink-0">❤️</span>}
+                            {isCompare && <span className="text-[8px] shrink-0">⚔️</span>}
+                          </span>
+                          <span className="font-black text-primary shrink-0">{formatVotes(Number(c.votes))}</span>
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </div>
