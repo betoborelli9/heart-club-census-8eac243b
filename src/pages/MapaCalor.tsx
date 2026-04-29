@@ -267,6 +267,7 @@ function assembleRings(ways: { id: number; geometry: { lat: number; lon: number 
 
 function relationToFeature(el: any): any | null {
   if (!el.members) return null;
+  const tags = el.tags || {};
   const outers = el.members.filter((m: any) => m.role === "outer" && m.geometry);
   const inners = el.members.filter((m: any) => m.role === "inner" && m.geometry);
   if (!outers.length) return null;
@@ -280,8 +281,17 @@ function relationToFeature(el: any): any | null {
   return {
     type: "Feature",
     properties: {
-      name: el.tags?.["name:pt"] || el.tags?.name || el.tags?.["name:en"] || "—",
-      admin_level: el.tags?.admin_level,
+      name: tags["name:en"] || tags.name || tags["name:pt"] || "—",
+      name_en: tags["name:en"],
+      name_pt: tags["name:pt"],
+      name_ar: tags["name:ar"],
+      int_name: tags.int_name,
+      official_name: tags.official_name || tags["official_name:en"] || tags["official_name:pt"],
+      alt_name: tags.alt_name || tags["alt_name:en"] || tags["alt_name:pt"],
+      short_name: tags.short_name,
+      ISO3166_1: tags["ISO3166-1"],
+      ISO3166_2: tags["ISO3166-2"],
+      admin_level: tags.admin_level,
       osm_id: el.id,
       area_id: el.id ? 3600000000 + Number(el.id) : null,
     },
