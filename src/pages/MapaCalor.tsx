@@ -305,25 +305,28 @@ const MapaCalor = () => {
     if (viewMode === "country" && activeCountry === "Brazil") {
       return (
         <Geographies geography={GEO_BRAZIL_STATES}>
-          {({ geographies }) => geographies.map(geo => {
-            const stateName = geo.properties.name || "";
-            const v = voteMap[normalize(stateName)] || 0;
-            return (
-              <Geography
-                key={geo.rsmKey} geography={geo}
-                fill={colorScale(v)}
-                stroke="hsl(0 0% 100% / 0.08)" strokeWidth={0.5}
-                onClick={() => handleStateClick(geo)}
-                onMouseEnter={(e: any) => setTooltip({ x: e.clientX, y: e.clientY, name: stateName, votes: v })}
-                onMouseLeave={() => setTooltip(null)}
-                style={{
-                  default: { outline: "none", cursor: "pointer", transition: "fill 0.25s" },
-                  hover: { outline: "none", fill: "hsl(var(--primary))", cursor: "pointer" },
-                  pressed: { outline: "none" },
-                }}
-              />
-            );
-          })}
+          {({ geographies }) => {
+            console.log("[MapaCalor] Brazil geographies loaded:", geographies?.length);
+            return geographies.map(geo => {
+              const stateName = geo.properties.name || "";
+              const v = voteMap[normalize(stateName)] || 0;
+              return (
+                <Geography
+                  key={geo.rsmKey} geography={geo}
+                  fill={colorScale(v)}
+                  stroke="hsl(0 0% 100% / 0.15)" strokeWidth={0.5}
+                  onClick={() => handleStateClick(geo)}
+                  onMouseEnter={(e: any) => setTooltip({ x: e.clientX, y: e.clientY, name: stateName, votes: v })}
+                  onMouseLeave={() => setTooltip(null)}
+                  style={{
+                    default: { outline: "none", cursor: "pointer", transition: "fill 0.25s" },
+                    hover: { outline: "none", fill: "hsl(var(--primary))", cursor: "pointer" },
+                    pressed: { outline: "none" },
+                  }}
+                />
+              );
+            });
+          }}
         </Geographies>
       );
     }
@@ -547,11 +550,11 @@ const MapaCalor = () => {
               <ComposableMap
                 projection="geoMercator"
                 projectionConfig={projectionConfig}
-                style={{ width: "100%", height: "100%", background: "transparent" }}
+                width={800}
+                height={600}
+                style={{ width: "100%", height: "100%", background: "transparent", display: "block" }}
               >
-                <ZoomableGroup>
-                  {renderMap()}
-                </ZoomableGroup>
+                {renderMap()}
               </ComposableMap>
 
               {/* Legend */}
