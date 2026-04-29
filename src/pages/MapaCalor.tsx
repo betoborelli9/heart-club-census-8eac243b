@@ -547,11 +547,11 @@ const MapaCalor = () => {
               <ComposableMap
                 projection="geoMercator"
                 projectionConfig={projectionConfig}
-                style={{ width: "100%", height: "100%", background: "transparent" }}
+                width={800}
+                height={600}
+                style={{ width: "100%", height: "100%", background: "transparent", display: "block" }}
               >
-                <ZoomableGroup>
-                  {renderMap()}
-                </ZoomableGroup>
+                {renderMap()}
               </ComposableMap>
 
               {/* Legend */}
