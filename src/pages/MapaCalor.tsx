@@ -403,12 +403,11 @@ const MapaCalor = () => {
         for (const el of op.elements) {
           const name = el.tags?.name; if (!name) continue;
           if (el.type === "relation" && el.members) {
-            const rings: number[][][] = [];
-            const ways = el.members.filter((m: any) => m.type === "way" && m.geometry);
-            for (const w of ways) rings.push(w.geometry.map((p: any) => [p.lon, p.lat]));
-            if (rings.length) features.push({
+            const ways = el.members.filter((m: any) => m.type === "way" && m.geometry && m.geometry.length > 2);
+            const polygons = ways.map((w: any) => [w.geometry.map((p: any) => [p.lon, p.lat])]);
+            if (polygons.length) features.push({
               type: "Feature", properties: { name },
-              geometry: { type: "MultiPolygon", coordinates: [rings.map(r => r)] },
+              geometry: { type: "MultiPolygon", coordinates: polygons },
             });
           } else if (el.type === "way" && el.geometry && el.geometry.length > 2) {
             features.push({
