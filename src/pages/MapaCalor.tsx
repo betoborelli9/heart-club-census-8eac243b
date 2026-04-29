@@ -299,11 +299,13 @@ const MapaCalor = () => {
       const cfg = COUNTRY_PROJECTION[activeCountry];
       if (cfg) return { scale: cfg.scale, center: cfg.center };
     }
-    if (viewMode === "state" && activeCountry === "Brazil") {
+    if (viewMode === "state" && activeCountry === "Brazil" && activeState) {
+      const info = BR_STATE_INFO[activeState];
+      if (info) return { scale: info.scale, center: info.center };
       return { scale: 1400, center: [-50, -15] as [number, number] };
     }
     return { scale: 130, center: [0, 20] as [number, number] };
-  }, [viewMode, activeCountry]);
+  }, [viewMode, activeCountry, activeState]);
 
   const renderMap = () => {
     /* WORLD: countries colored by total votes */
