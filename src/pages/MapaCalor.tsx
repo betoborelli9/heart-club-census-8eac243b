@@ -127,6 +127,13 @@ type ViewLevel = "world" | "country" | "state" | "city";
 interface HeatEntry { region: string; votes: number; }
 interface ClubVote { club: string; votes: number; }
 interface Crumb { label: string; level: ViewLevel; value?: string; }
+interface CityHit { city: string; state: string; votes: number; }
+interface ClubCompareData {
+  name: string;
+  info: any;
+  totalVotes: number;
+  topRegion: { region: string; votes: number } | null;
+}
 
 /* ---------- Component ---------- */
 const MapaCalor = () => {
