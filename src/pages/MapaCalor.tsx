@@ -103,13 +103,25 @@ async function fetchGeo(url: string): Promise<any | null> {
   } catch { return null; }
 }
 
+type GeoBbox = [number, number, number, number]; // south, north, west, east
+
+function bboxCenter(bbox: GeoBbox): [number, number] {
+  return [(bbox[0] + bbox[1]) / 2, (bbox[2] + bbox[3]) / 2];
+}
+
+function leafletBoundsToBbox(bounds: L.LatLngBounds): GeoBbox {
+  const sw = bounds.getSouthWest();
+  const ne = bounds.getNorthEast();
+  return [sw.lat, ne.lat, sw.lng, ne.lng];
+}
+
 /* ---------- Geocode (apenas para flyTo de cidades) ---------- */
 const NOMINATIM_CACHE_KEY = "mapacalor_nominatim_v2";
-function loadNomCache(): Record<string, [number, number, [number, number, number, number]?]> {
+function loadNomCache(): Record<string, [number, number, GeoBbox?]> {
   try { return JSON.parse(localStorage.getItem(NOMINATIM_CACHE_KEY) || "{}"); } catch { return {}; }
 }
 const nomCache = loadNomCache();
-async function geocodeBounds(query: string): Promise<{ center: [number, number]; bbox?: [number, number, number, number] } | null> {
+async function geocodeBounds(query: string): Promise<{ center: [number, number]; bbox?: GeoBbox } | null> {
   const key = normalize(query);
   if (nomCache[key]) {
     const [lat, lng, bbox] = nomCache[key];
@@ -125,7 +137,7 @@ async function geocodeBounds(query: string): Promise<{ center: [number, number];
       const lat = parseFloat(data[0].lat);
       const lng = parseFloat(data[0].lon);
       const bb = data[0].boundingbox?.map(parseFloat) as number[] | undefined;
-      const bbox: [number, number, number, number] | undefined = bb ? [bb[0], bb[1], bb[2], bb[3]] : undefined;
+      const bbox: GeoBbox | undefined = bb ? [bb[0], bb[1], bb[2], bb[3]] : undefined;
       nomCache[key] = [lat, lng, bbox];
       try { localStorage.setItem(NOMINATIM_CACHE_KEY, JSON.stringify(nomCache)); } catch {}
       return { center: [lat, lng], bbox };
