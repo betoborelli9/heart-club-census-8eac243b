@@ -134,37 +134,113 @@ async function geocodeBounds(query: string): Promise<{ center: [number, number];
   return null;
 }
 
-/* ---------- Bairros via Overpass (OSM) ---------- */
-async function fetchBairros(bbox: [number, number, number, number]): Promise<any | null> {
-  // bbox: [southLat, northLat, westLon, eastLon] (Nominatim)
-  const [s, n, w, e] = bbox;
-  const q = `[out:json][timeout:25];(relation["boundary"="administrative"]["admin_level"="10"](${s},${w},${n},${e}););out geom;`;
-  try {
-    const res = await fetch("https://overpass-api.de/api/interpreter", {
-      method: "POST", body: "data=" + encodeURIComponent(q),
-    });
-    if (!res.ok) return null;
-    const data = await res.json();
-    const features: any[] = [];
-    for (const el of data.elements || []) {
-      if (el.type !== "relation" || !el.members) continue;
-      const outers: number[][][] = [];
-      for (const m of el.members) {
-        if (m.role === "outer" && m.geometry) {
-          outers.push(m.geometry.map((p: any) => [p.lon, p.lat]));
-        }
-      }
-      if (outers.length) {
-        features.push({
-          type: "Feature",
-          properties: { name: el.tags?.name || "Bairro" },
-          geometry: { type: "Polygon", coordinates: outers },
-        });
+/* ---------- Subdivisões via Overpass (OSM) — funciona p/ QUALQUER país ----------
+ * admin_level: 4 = estados/províncias, 6 = regiões, 8 = municípios/cidades, 10 = bairros
+ * Convertemos relations em FeatureCollection (polygon/multipolygon) com cache localStorage. */
+const OVERPASS_ENDPOINTS = [
+  "https://overpass-api.de/api/interpreter",
+  "https://overpass.kumi.systems/api/interpreter",
+  "https://overpass.openstreetmap.ru/api/interpreter",
+];
+const OVERPASS_CACHE_KEY = "mapacalor_overpass_v1";
+function loadOvCache(): Record<string, any> {
+  try { return JSON.parse(localStorage.getItem(OVERPASS_CACHE_KEY) || "{}"); } catch { return {}; }
+}
+const ovCache = loadOvCache();
+function saveOvCache() {
+  try { localStorage.setItem(OVERPASS_CACHE_KEY, JSON.stringify(ovCache)); } catch {}
+}
+
+/** Une vias (ways) por endpoints comuns para formar anéis fechados */
+function assembleRings(ways: { id: number; geometry: { lat: number; lon: number }[] }[]): number[][][] {
+  const rings: number[][][] = [];
+  const remaining = ways.map(w => w.geometry.map(p => [p.lon, p.lat] as number[]));
+  while (remaining.length) {
+    let ring = remaining.shift()!;
+    let extended = true;
+    while (extended) {
+      extended = false;
+      const head = ring[0]; const tail = ring[ring.length - 1];
+      for (let i = 0; i < remaining.length; i++) {
+        const seg = remaining[i];
+        const sH = seg[0]; const sT = seg[seg.length - 1];
+        if (tail[0] === sH[0] && tail[1] === sH[1]) { ring = ring.concat(seg.slice(1)); remaining.splice(i, 1); extended = true; break; }
+        if (tail[0] === sT[0] && tail[1] === sT[1]) { ring = ring.concat(seg.slice().reverse().slice(1)); remaining.splice(i, 1); extended = true; break; }
+        if (head[0] === sT[0] && head[1] === sT[1]) { ring = seg.concat(ring.slice(1)); remaining.splice(i, 1); extended = true; break; }
+        if (head[0] === sH[0] && head[1] === sH[1]) { ring = seg.slice().reverse().concat(ring.slice(1)); remaining.splice(i, 1); extended = true; break; }
       }
     }
-    return { type: "FeatureCollection", features };
-  } catch { return null; }
+    if (ring.length >= 4) rings.push(ring);
+  }
+  return rings;
 }
+
+function relationToFeature(el: any): any | null {
+  if (!el.members) return null;
+  const outers = el.members.filter((m: any) => m.role === "outer" && m.geometry);
+  const inners = el.members.filter((m: any) => m.role === "inner" && m.geometry);
+  if (!outers.length) return null;
+  const outerRings = assembleRings(outers.map((m: any, i: number) => ({ id: i, geometry: m.geometry })));
+  const innerRings = assembleRings(inners.map((m: any, i: number) => ({ id: i, geometry: m.geometry })));
+  if (!outerRings.length) return null;
+  const polygons = outerRings.map(o => [o, ...innerRings.filter(() => false)]); // inner association simplificada
+  const geometry = polygons.length === 1
+    ? { type: "Polygon", coordinates: polygons[0] }
+    : { type: "MultiPolygon", coordinates: polygons };
+  return {
+    type: "Feature",
+    properties: {
+      name: el.tags?.["name:pt"] || el.tags?.name || el.tags?.["name:en"] || "—",
+      admin_level: el.tags?.admin_level,
+    },
+    geometry,
+  };
+}
+
+async function overpassQuery(query: string): Promise<any | null> {
+  for (const ep of OVERPASS_ENDPOINTS) {
+    try {
+      const res = await fetch(ep, { method: "POST", body: "data=" + encodeURIComponent(query) });
+      if (res.ok) return await res.json();
+    } catch {}
+  }
+  return null;
+}
+
+/** Busca subdivisões administrativas dentro de um bbox para um admin_level específico. */
+async function fetchAdminSubdivisions(
+  bbox: [number, number, number, number],
+  adminLevel: 4 | 6 | 8 | 10,
+  cacheKey: string,
+): Promise<any | null> {
+  if (ovCache[cacheKey]) return ovCache[cacheKey];
+  const [s, n, w, e] = bbox;
+  // Tenta o nível pedido; se não vier nada, faz fallback p/ níveis vizinhos
+  const levels: number[] = adminLevel === 4 ? [4, 3, 5]
+                          : adminLevel === 8 ? [8, 7, 9, 6]
+                          : adminLevel === 10 ? [10, 9, 11]
+                          : [adminLevel];
+  for (const lv of levels) {
+    const q = `[out:json][timeout:40];(relation["boundary"="administrative"]["admin_level"="${lv}"](${s},${w},${n},${e}););out geom;`;
+    const data = await overpassQuery(q);
+    if (!data?.elements?.length) continue;
+    const features: any[] = [];
+    for (const el of data.elements) {
+      if (el.type !== "relation") continue;
+      const f = relationToFeature(el);
+      if (f) features.push(f);
+    }
+    if (features.length) {
+      const fc = { type: "FeatureCollection", features };
+      ovCache[cacheKey] = fc; saveOvCache();
+      return fc;
+    }
+  }
+  return null;
+}
+
+const fetchBairros = (bbox: [number, number, number, number], cityKey: string) =>
+  fetchAdminSubdivisions(bbox, 10, `bairros:${cityKey}`);
 
 /* ---------- Types ---------- */
 type ViewLevel = "world" | "country" | "state" | "city";
@@ -282,7 +358,7 @@ const MapaCalor = () => {
 
   const totalVotes = useMemo(() => heatData.reduce((s, e) => s + Number(e.votes), 0), [heatData]);
 
-  /* ---------- Carrega o GeoJSON correto por nível ---------- */
+  /* ---------- Carrega o GeoJSON correto por nível (qualquer país via Overpass) ---------- */
   useEffect(() => {
     let cancelled = false;
     const run = async () => {
@@ -290,19 +366,30 @@ const MapaCalor = () => {
       let geo: any = null;
       if (viewMode === "world") {
         geo = await fetchGeo(GEO_URLS.worldGeo);
-      } else if (viewMode === "country" && activeCountry === "Brazil") {
-        geo = await fetchGeo(GEO_URLS.brStates);
+      } else if (viewMode === "country" && activeCountry) {
+        // Brasil: usa GeoJSON local rápido (estados IBGE)
+        if (activeCountry === "Brazil" || activeCountry === "BR") {
+          geo = await fetchGeo(GEO_URLS.brStates);
+        } else if (mapBbox) {
+          // Qualquer outro país → estados/províncias (admin_level=4) via Overpass
+          geo = await fetchAdminSubdivisions(mapBbox, 4, `states:${normalize(activeCountry)}`);
+        }
       } else if (viewMode === "state" && activeState) {
-        const uf = NAME_TO_UF[normalize(activeState)] || activeState;
-        if (uf && uf.length === 2) geo = await fetchGeo(GEO_URLS.brMunicipios(uf));
+        const uf = NAME_TO_UF[normalize(activeState)];
+        if (uf && (activeCountry === "Brazil" || activeCountry === "BR")) {
+          geo = await fetchGeo(GEO_URLS.brMunicipios(uf));
+        } else if (mapBbox) {
+          // Cidades/municípios (admin_level=8) p/ qualquer estado/província
+          geo = await fetchAdminSubdivisions(mapBbox, 8, `cities:${normalize(activeCountry || "")}:${normalize(activeState)}`);
+        }
       } else if (viewMode === "city" && mapBbox) {
-        geo = await fetchBairros(mapBbox);
+        geo = await fetchBairros(mapBbox, normalize(`${activeCity}:${activeState}`));
       }
       if (!cancelled) { setCurrentGeo(geo); setGeoLoading(false); }
     };
     run();
     return () => { cancelled = true; };
-  }, [viewMode, activeCountry, activeState, mapBbox]);
+  }, [viewMode, activeCountry, activeState, activeCity, mapBbox]);
 
   /* ---------- City: top clubs ---------- */
   useEffect(() => {
