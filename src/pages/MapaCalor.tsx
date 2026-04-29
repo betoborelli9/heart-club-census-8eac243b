@@ -221,7 +221,7 @@ async function overpassQuery(query: string): Promise<any | null> {
 
 /** Busca subdivisões administrativas dentro de um bbox para um admin_level específico. */
 async function fetchAdminSubdivisions(
-  bbox: [number, number, number, number],
+  bbox: GeoBbox,
   adminLevel: 4 | 6 | 8 | 10,
   cacheKey: string,
 ): Promise<any | null> {
@@ -251,8 +251,20 @@ async function fetchAdminSubdivisions(
   return null;
 }
 
-const fetchBairros = (bbox: [number, number, number, number], cityKey: string) =>
+const fetchBairros = (bbox: GeoBbox, cityKey: string) =>
   fetchAdminSubdivisions(bbox, 10, `bairros:${cityKey}`);
+
+function getFeatureDisplayName(props: any): string {
+  return props?.ADMIN || props?.name || props?.NAME || props?.NAME_LONG || "—";
+}
+
+function getFeatureBounds(feature: any): GeoBbox | null {
+  try {
+    return leafletBoundsToBbox(L.geoJSON(feature).getBounds());
+  } catch {
+    return null;
+  }
+}
 
 /* ---------- Types ---------- */
 type ViewLevel = "world" | "country" | "state" | "city";
