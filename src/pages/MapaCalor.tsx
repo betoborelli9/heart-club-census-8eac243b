@@ -278,7 +278,7 @@ interface ClubCompareData {
 }
 
 /* ---------- Map controllers ---------- */
-function FlyController({ center, zoom, bbox }: { center: [number, number]; zoom: number; bbox?: [number, number, number, number] | null }) {
+function FlyController({ center, zoom, bbox }: { center: [number, number]; zoom: number; bbox?: GeoBbox | null }) {
   const map = useMap();
   useEffect(() => {
     if (bbox) {
@@ -318,7 +318,7 @@ const MapaCalor = () => {
   /* Map view */
   const [mapCenter, setMapCenter] = useState<[number, number]>([10, 0]);
   const [mapZoom, setMapZoom] = useState<number>(2);
-  const [mapBbox, setMapBbox] = useState<[number, number, number, number] | null>(null);
+  const [mapBbox, setMapBbox] = useState<GeoBbox | null>(null);
 
   /* Data */
   const [heatData, setHeatData] = useState<HeatEntry[]>([]);
