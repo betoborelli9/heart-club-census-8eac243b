@@ -269,6 +269,13 @@ function getFeatureDisplayName(props: any): string {
   return props?.ADMIN || props?.name || props?.NAME || props?.NAME_LONG || "—";
 }
 
+function getFeatureScope(props: any): TerritoryScope {
+  return {
+    countryIso2: props?.["ISO3166-1-Alpha-2"] || props?.iso_a2 || props?.ISO_A2 || null,
+    areaId: props?.area_id || (props?.osm_id ? 3600000000 + Number(props.osm_id) : null),
+  };
+}
+
 function getFeatureBounds(feature: any): GeoBbox | null {
   try {
     return leafletBoundsToBbox(L.geoJSON(feature).getBounds());
