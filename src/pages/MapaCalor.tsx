@@ -439,8 +439,11 @@ const MapaCalor = () => {
       if (info) return { scale: info.scale, center: info.center };
       return { scale: 1400, center: [-50, -15] as [number, number] };
     }
+    if (viewMode === "city" && cityCenter) {
+      return { scale: 60000, center: cityCenter };
+    }
     return { scale: 130, center: [0, 20] as [number, number] };
-  }, [viewMode, activeCountry, activeState]);
+  }, [viewMode, activeCountry, activeState, cityCenter]);
 
   const renderMap = () => {
     /* WORLD: countries colored by total votes */
