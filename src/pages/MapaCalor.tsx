@@ -666,6 +666,7 @@ const MapaCalor = () => {
                   )}
                 </div>
               )}
+            </div>
 
             {/* Ranking lateral */}
             <div className="rounded-[24px] bg-black/40 backdrop-blur-xl border border-white/5 p-4">
