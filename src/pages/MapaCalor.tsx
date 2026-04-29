@@ -535,7 +535,46 @@ const MapaCalor = () => {
       );
     }
 
-    /* COUNTRY (não-Brasil) ou STATE/CITY: bubble map sobre o país */
+    /* CITY: bairros via OSM Overpass + marcador central */
+    if (viewMode === "city" && activeCity) {
+      return (
+        <>
+          {cityBairrosGeo && (
+            <Geographies geography={cityBairrosGeo}>
+              {({ geographies }) => geographies.map((geo: any) => {
+                const bairroName = geo.properties.name || "";
+                const v = voteMap[normalize(bairroName)] || 0; // dados de bairro normalmente 0
+                return (
+                  <Geography
+                    key={geo.rsmKey} geography={geo}
+                    fill={v > 0 ? colorScale(v) : "hsl(28 95% 60% / 0.18)"}
+                    stroke="hsl(28 95% 60% / 0.55)" strokeWidth={0.4}
+                    onMouseMove={(e: any) => setTooltip({ x: e.clientX, y: e.clientY, name: bairroName, votes: v })}
+                    onMouseLeave={() => setTooltip(null)}
+                    style={{
+                      default: { outline: "none", cursor: "pointer", transition: "fill 0.25s" },
+                      hover: { outline: "none", fill: "hsl(var(--primary))", cursor: "pointer" },
+                      pressed: { outline: "none" },
+                    }}
+                  />
+                );
+              })}
+            </Geographies>
+          )}
+          {cityCenter && (
+            <Marker coordinates={cityCenter}>
+              <circle r={6} fill="hsl(var(--primary))" stroke="white" strokeWidth={1.5} />
+              <text textAnchor="middle" y={-10} className="fill-white"
+                style={{ fontSize: 8, fontWeight: 900, fontStyle: "italic", textTransform: "uppercase" }}>
+                {activeCity}
+              </text>
+            </Marker>
+          )}
+        </>
+      );
+    }
+
+    /* COUNTRY (não-Brasil) ou STATE: bubble map sobre o país */
     const countryCfg = activeCountry ? COUNTRY_PROJECTION[activeCountry] : null;
     const maxV = Math.max(...heatData.map(e => Number(e.votes)), 1);
     /* As bubbles não têm coords reais → mostramos a malha do país e
