@@ -519,7 +519,7 @@ const MapaCalor = () => {
                   key={geo.rsmKey} geography={geo}
                   fill={colorScale(v)}
                   stroke="hsl(0 0% 100% / 0.12)" strokeWidth={0.3}
-                  onClick={() => goCity(cityName)}
+                  onClick={() => goCity(cityName, activeState)}
                   onMouseMove={(e: any) => setTooltip({ x: e.clientX, y: e.clientY, name: cityName, votes: v })}
                   onMouseLeave={() => setTooltip(null)}
                   style={{
