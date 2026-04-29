@@ -277,8 +277,10 @@ const MapaCalor = () => {
     ]);
   }, []);
 
-  const goCity = useCallback((city: string) => {
+  const goCity = useCallback((city: string, stateOverride?: string) => {
     setViewMode("city"); setActiveCity(city);
+    if (stateOverride) setActiveState(stateOverride);
+    setCityCenter(null); setCityBairrosGeo(null);
     setBreadcrumbs(prev => [
       ...prev.filter(b => b.level !== "city"),
       { label: city, level: "city", value: city },
