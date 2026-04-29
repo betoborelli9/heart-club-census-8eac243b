@@ -33,6 +33,62 @@ function normalize(v: string): string {
   return (v || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
 }
 
+const REGION_ALIASES: Record<string, string[]> = {
+  "riade": ["riyadh", "riyadh region", "riyadh province", "ar riyad", "al riyadh"],
+  "riyadh": ["riade", "riyadh region", "riyadh province", "ar riyad", "al riyadh"],
+  "riyadh region": ["riyadh", "riade", "ar riyad"],
+  "riyadh province": ["riyadh", "riade", "ar riyad"],
+  "ar riyad": ["riyadh", "riade"],
+  "al riyadh": ["riyadh", "riade"],
+  "arabia saudita": ["saudi arabia", "kingdom of saudi arabia"],
+  "saudi arabia": ["arabia saudita", "kingdom of saudi arabia"],
+  "brasil": ["brazil", "br"],
+  "brazil": ["brasil", "br"],
+  "estados unidos": ["usa", "united states", "united states of america"],
+  "united states of america": ["usa", "united states", "estados unidos"],
+  "reino unido": ["united kingdom", "england"],
+  "united kingdom": ["reino unido", "england"],
+};
+
+const COUNTRY_NAME_TO_ISO2: Record<string, string> = {
+  "saudi arabia": "SA",
+  "arabia saudita": "SA",
+  "brazil": "BR",
+  "brasil": "BR",
+  "united states of america": "US",
+  "united states": "US",
+  "usa": "US",
+  "egypt": "EG",
+  "egito": "EG",
+};
+
+const REGION_SUFFIXES = [
+  " region", " province", " state", " governorate", " emirate", " administrative region",
+  " regiao", " provincia", " estado", " governadoria", " municipio", " municipality",
+];
+
+function regionLookupKeys(value: string): string[] {
+  const base = normalize(value);
+  const keys = new Set<string>();
+  const add = (v?: string | null) => {
+    const n = normalize(v || "");
+    if (n) keys.add(n);
+  };
+  add(base);
+  REGION_ALIASES[base]?.forEach(add);
+  for (const suffix of REGION_SUFFIXES) {
+    if (base.endsWith(suffix)) add(base.slice(0, -suffix.length));
+  }
+  return [...keys];
+}
+
+function countryIso2FromName(country: string): string | null {
+  for (const key of regionLookupKeys(country)) {
+    if (COUNTRY_NAME_TO_ISO2[key]) return COUNTRY_NAME_TO_ISO2[key];
+  }
+  return null;
+}
+
 /* Paleta War Room (laranja → vermelho profundo) */
 const HEAT_PALETTE = [
   "#3a1a05", // muito baixo (quase preto-laranja)
