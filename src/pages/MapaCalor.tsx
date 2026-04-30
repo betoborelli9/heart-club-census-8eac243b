@@ -895,6 +895,11 @@ const MapaCalor = () => {
     [viewMode, activeCountry, activeState, activeCity, maxVotes, heatData.length]
   );
 
+  const mapHardResetKey = useMemo(
+    () => `${viewMode}-${activeCity || activeState || activeCountry || "world"}`,
+    [viewMode, activeCountry, activeState, activeCity]
+  );
+
   /* ---------- UI ---------- */
   return (
     <div className="min-h-screen bg-background text-foreground" style={{ fontFamily: "Verdana, Geneva, sans-serif" }}>
