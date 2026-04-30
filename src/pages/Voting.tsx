@@ -135,25 +135,67 @@ const Voting = () => {
   }, [sympathySearch, performSearch]);
 
   /* ═══════════════════════════════════════════════════════════
+      MÓDULO: BUSCA POR CEP (ViaCEP)
+     ═══════════════════════════════════════════════════════════ */
+  const handleCepLookup = useCallback(async (raw: string) => {
+    const formatted = formatCep(raw);
+    setCep(formatted);
+    setCepError(null);
+    const digits = formatted.replace(/\D/g, "");
+    if (digits.length !== 8) return;
+    setCepLoading(true);
+    try {
+      const found = await lookupCep(digits);
+      if (!found) {
+        setCepError("CEP não encontrado.");
+        return;
+      }
+      setBairro(found.bairro);
+      setCidadeAddr(found.cidade);
+      setEstadoAddr(found.estado);
+    } finally {
+      setCepLoading(false);
+    }
+  }, []);
+
+  /* ═══════════════════════════════════════════════════════════
       MÓDULO: PROCESSAMENTO SEQUENCIAL (GARANTIA DE DADOS)
      ═══════════════════════════════════════════════════════════ */
   const handleConfirmVote = async () => {
     if (!heartClub || !user || !profile) return;
+    if (!bairro.trim()) {
+      toast({ variant: "destructive", title: "Informe seu bairro para registrar o voto." });
+      return;
+    }
     setSubmitting(true);
     try {
       const allSelected = [{ club: heartClub, main: true }, ...sympathyClubs.map((c) => ({ club: c, main: false }))];
+
+      // Auditoria silenciosa — GPS real do navegador (não bloqueia se falhar)
+      const audit = await captureGpsAudit();
 
       if (!TEST_MODE) {
         if (IS_MASTER_ADMIN) {
           await supabase.from("votos").delete().eq("user_id", user.id);
         }
 
+        const cidadeFinal = cidadeAddr.trim() || profile.cidade || "";
+        const estadoFinal = estadoAddr.trim() || profile.estado || "";
+
         const votesToInsert = allSelected.map((v) => ({
           user_id: user.id,
           clube_nome: v.club.name,
-          cidade: profile.cidade || "",
-          estado: profile.estado || "",
+          cidade: cidadeFinal,
+          estado: estadoFinal,
           pais: profile.pais || "BR",
+          bairro: bairro.trim(),
+          cep: cep.replace(/\D/g, "") || null,
+          numero: numero.trim() || null,
+          complemento: complemento.trim() || null,
+          voto_bairro_gps: audit.voto_bairro_gps,
+          voto_cidade_gps: audit.voto_cidade_gps,
+          voto_lat: audit.lat,
+          voto_lng: audit.lng,
           is_original_vote: v.main,
           fingerprint: fingerprint || "web-client",
         }));
