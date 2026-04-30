@@ -372,6 +372,51 @@ function getFeatureBounds(feature: any): GeoBbox | null {
   }
 }
 
+/* ---------- Geometry helpers ---------- */
+/** Retorna feature do país a partir do FeatureCollection mundial */
+function findCountryFeature(world: any, countryNameOrIso: string): any | null {
+  if (!world?.features) return null;
+  const target = normalize(countryNameOrIso);
+  const targetGeo = COUNTRY_DB_TO_GEO[countryNameOrIso] ? normalize(COUNTRY_DB_TO_GEO[countryNameOrIso]) : null;
+  return world.features.find((f: any) => {
+    const props = f.properties || {};
+    const names = [props.ADMIN, props.name, props.NAME, props.NAME_LONG, props.SOVEREIGNT].filter(Boolean).map(normalize);
+    if (targetGeo && names.includes(targetGeo)) return true;
+    return names.includes(target);
+  }) || null;
+}
+
+/** Constrói um polígono "mundo inteiro" com buraco = polígono do território.
+ * Renderiza como máscara preta cobrindo tudo, exceto o território ativo. */
+function buildMaskFeature(territoryFeature: any): any | null {
+  if (!territoryFeature?.geometry) return null;
+  const geom = territoryFeature.geometry;
+  // Coleta todos os anéis exteriores do território como "buracos"
+  const holes: number[][][] = [];
+  if (geom.type === "Polygon") {
+    holes.push(geom.coordinates[0]);
+  } else if (geom.type === "MultiPolygon") {
+    for (const poly of geom.coordinates) holes.push(poly[0]);
+  } else return null;
+  // Outer ring = mundo inteiro (com leve overflow para cobrir worldCopyJump)
+  const worldRing = [[-540, -85], [540, -85], [540, 85], [-540, 85], [-540, -85]];
+  return {
+    type: "Feature",
+    properties: { __mask: true },
+    geometry: { type: "Polygon", coordinates: [worldRing, ...holes] },
+  };
+}
+
+/** Verifica se o centróide aproximado de uma feature cai dentro de um bbox [s,n,w,e]. */
+function featureCentroidInBbox(feature: any, bbox: GeoBbox): boolean {
+  try {
+    const b = L.geoJSON(feature).getBounds();
+    const c = b.getCenter();
+    const [s, n, w, e] = bbox;
+    return c.lat >= s && c.lat <= n && c.lng >= w && c.lng <= e;
+  } catch { return false; }
+}
+
 /* ---------- Types ---------- */
 type ViewLevel = "world" | "country" | "state" | "city";
 interface HeatEntry { region: string; votes: number; }
