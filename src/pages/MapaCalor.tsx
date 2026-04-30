@@ -1122,17 +1122,20 @@ const MapaCalor = () => {
                   url="https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png"
                   subdomains="abcd"
                 />
-                <TileLayer
-                  url="https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png"
-                  subdomains="abcd"
-                  opacity={0.7}
-                />
+                {/* Labels apenas no nível mundial — evita poluição em territórios isolados */}
+                {viewMode === "world" && (
+                  <TileLayer
+                    url="https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png"
+                    subdomains="abcd"
+                    opacity={0.6}
+                  />
+                )}
                 <FlyController center={mapCenter} zoom={mapZoom} bbox={mapBbox} lockBounds={viewMode !== "world"} />
                 <ResizeFix />
-                {currentGeo && (
+                {isolatedGeo && (
                   <GeoJSON
                     key={geoKey}
-                    data={currentGeo}
+                    data={isolatedGeo}
                     style={geoStyle as any}
                     onEachFeature={onEachFeature}
                   />
