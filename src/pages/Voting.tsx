@@ -51,6 +51,16 @@ const Voting = () => {
   const [submitting, setSubmitting] = useState(false);
   const [fingerprint, setFingerprint] = useState<string | null>(null);
 
+  // Endereço de Identidade (público, alimenta o mapa coroplético)
+  const [cep, setCep] = useState("");
+  const [bairro, setBairro] = useState("");
+  const [cidadeAddr, setCidadeAddr] = useState("");
+  const [estadoAddr, setEstadoAddr] = useState("");
+  const [numero, setNumero] = useState("");
+  const [complemento, setComplemento] = useState("");
+  const [cepLoading, setCepLoading] = useState(false);
+  const [cepError, setCepError] = useState<string | null>(null);
+
   // Refs para controle de concorrência de busca (Race Conditions)
   const heartReqId = useRef(0);
   const sympathyReqId = useRef(0);
