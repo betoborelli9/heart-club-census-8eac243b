@@ -497,6 +497,7 @@ const MapaCalor = () => {
 
   /* GeoJSON layers */
   const [currentGeo, setCurrentGeo] = useState<any | null>(null);
+  const [parentFeature, setParentFeature] = useState<any | null>(null); // território ativo (para máscara)
   const [geoLoading, setGeoLoading] = useState(false);
 
   /* Search */
