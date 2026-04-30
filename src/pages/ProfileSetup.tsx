@@ -9,6 +9,7 @@ import { useNavigate } from "react-router-dom";
 import { useUser } from "@/contexts/UserContext";
 import { useToast } from "@/hooks/use-toast";
 import { CIDADES_POR_ESTADO } from "@/data/cidades-br";
+import { lookupCep, formatCep } from "@/lib/address";
 import logo from "@/assets/logo.png";
 
 const ESTADOS_BR = [
