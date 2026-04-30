@@ -486,12 +486,29 @@ const MapaCalor = () => {
     if (!activeClubName) return;
     const fetchHeat = async () => {
       setLoading(true);
+      // Cidade => bairros (RPC dedicada). Demais níveis => get_heatmap_data
+      if (viewMode === "city" && activeCity) {
+        const { data, error } = await supabase.rpc("get_heatmap_neighborhoods", {
+          p_club_name: activeClubName, p_city: activeCity,
+        });
+        if (!error && data) {
+          const arr = (Array.isArray(data) ? data : []) as any[];
+          // Normaliza para HeatEntry { region, votes }
+          const entries: HeatEntry[] = arr.map((r) => ({
+            region: r.region ?? r.bairro ?? r.neighborhood ?? r.name ?? "—",
+            votes: Number(r.votes ?? r.total ?? r.count ?? 0),
+          }));
+          setHeatData(entries);
+        } else { setHeatData([]); }
+        setLoading(false);
+        return;
+      }
+
       let level: string = viewMode;
       let filter: string | null = null;
       if (viewMode === "world") level = "country";
       else if (viewMode === "country") { level = "state"; filter = activeCountry; }
       else if (viewMode === "state") { level = "city"; filter = activeState; }
-      else if (viewMode === "city") { level = "city"; filter = activeState; }
 
       const { data, error } = await supabase.rpc("get_heatmap_data", {
         p_club_name: activeClubName, p_level: level, p_filter_value: filter,
@@ -503,7 +520,7 @@ const MapaCalor = () => {
       setLoading(false);
     };
     fetchHeat();
-  }, [activeClubName, viewMode, activeCountry, activeState]);
+  }, [activeClubName, viewMode, activeCountry, activeState, activeCity]);
 
   const totalVotes = useMemo(() => heatData.reduce((s, e) => s + Number(e.votes), 0), [heatData]);
 
