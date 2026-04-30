@@ -385,18 +385,32 @@ interface ClubCompareData {
 }
 
 /* ---------- Map controllers ---------- */
-function FlyController({ center, zoom, bbox }: { center: [number, number]; zoom: number; bbox?: GeoBbox | null }) {
+function FlyController({ center, zoom, bbox, lockBounds }: { center: [number, number]; zoom: number; bbox?: GeoBbox | null; lockBounds?: boolean }) {
   const map = useMap();
   useEffect(() => {
     if (bbox) {
       // bbox Nominatim = [southLat, northLat, westLon, eastLon]
       const [s, n, w, e] = bbox;
       const fitZoom = zoom > 0 ? Math.max(2, Math.min(zoom, 13)) : 13;
-      map.flyToBounds([[s, w], [n, e]], { duration: 1.2, maxZoom: fitZoom });
+      const bounds = L.latLngBounds([s, w], [n, e]);
+      map.flyToBounds(bounds, { duration: 1.2, maxZoom: fitZoom });
+      if (lockBounds) {
+        // Trava o zoom/pan dentro do território selecionado
+        const padded = bounds.pad(0.15);
+        map.setMaxBounds(padded);
+        map.options.maxBoundsViscosity = 1.0;
+        const minZ = Math.max(2, map.getBoundsZoom(bounds) - 1);
+        map.setMinZoom(minZ);
+      } else {
+        map.setMaxBounds(undefined as any);
+        map.setMinZoom(2);
+      }
     } else {
+      map.setMaxBounds(undefined as any);
+      map.setMinZoom(2);
       map.flyTo(center, zoom, { duration: 1.2 });
     }
-  }, [center, zoom, bbox, map]);
+  }, [center, zoom, bbox, lockBounds, map]);
   return null;
 }
 
