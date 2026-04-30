@@ -1088,7 +1088,7 @@ const MapaCalor = () => {
                   subdomains="abcd"
                   opacity={0.7}
                 />
-                <FlyController center={mapCenter} zoom={mapZoom} bbox={mapBbox} />
+                <FlyController center={mapCenter} zoom={mapZoom} bbox={mapBbox} lockBounds={viewMode !== "world"} />
                 <ResizeFix />
                 {currentGeo && (
                   <GeoJSON
