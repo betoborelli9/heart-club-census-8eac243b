@@ -570,51 +570,95 @@ const MapaCalor = () => {
 
   const totalVotes = useMemo(() => heatData.reduce((s, e) => s + Number(e.votes), 0), [heatData]);
 
-  /* ---------- Carrega o GeoJSON correto por nível (qualquer país via Overpass) ---------- */
+  /* ---------- Carrega o GeoJSON correto + polígono PAI (para máscara) ---------- */
   useEffect(() => {
     let cancelled = false;
     const run = async () => {
       setGeoLoading(true);
       let geo: any = null;
+      let parent: any = null;
+
       if (viewMode === "world") {
         geo = await fetchGeo(GEO_URLS.worldGeo);
+        parent = null;
       } else if (viewMode === "country" && activeCountry) {
-        // Brasil: usa GeoJSON local rápido (estados IBGE)
+        // Polígono pai = país (do mapa mundial)
+        const world = await fetchGeo(GEO_URLS.worldGeo);
+        parent = findCountryFeature(world, activeCountry);
         if (activeCountry === "Brazil" || activeCountry === "BR") {
           geo = await fetchGeo(GEO_URLS.brStates);
         } else if (mapBbox) {
-          // Qualquer outro país → estados/províncias (admin_level=4) via Overpass
           geo = await fetchAdminSubdivisions(mapBbox, 4, `states:${normalize(activeCountry)}`, countryScope);
         }
       } else if (viewMode === "state" && activeState) {
+        // Polígono pai = estado (busca via Overpass admin_level=4 escopado ao país)
+        const stateFc = await fetchAdminSubdivisions(
+          mapBbox || [-90, 90, -180, 180], 4,
+          `state-parent:${normalize(activeCountry || "")}:${normalize(activeState)}`,
+          countryScope,
+        );
+        parent = stateFc?.features?.find((f: any) => {
+          const names = [f.properties?.name, f.properties?.name_en, f.properties?.name_pt]
+            .filter(Boolean).map(normalize);
+          return names.includes(normalize(activeState));
+        }) || null;
+
         const uf = NAME_TO_UF[normalize(activeState)];
         if (uf && (activeCountry === "Brazil" || activeCountry === "BR")) {
           geo = await fetchGeo(GEO_URLS.brMunicipios(uf));
+          // Para BR, parent vem do brStates (mais preciso)
+          const brStates = await fetchGeo(GEO_URLS.brStates);
+          parent = brStates?.features?.find((f: any) =>
+            normalize(f.properties?.name || "") === normalize(activeState)
+          ) || parent;
         } else if (mapBbox) {
-          // Cidades/municípios (admin_level=8) p/ qualquer estado/província
           geo = await fetchAdminSubdivisions(mapBbox, 8, `cities:${normalize(activeCountry || "")}:${normalize(activeState)}`, stateScope);
         }
       } else if (viewMode === "city" && mapBbox) {
+        // Polígono pai = cidade (admin_level=8)
+        const cityFc = await fetchAdminSubdivisions(
+          mapBbox, 8,
+          `city-parent:${normalize(activeCountry || "")}:${normalize(activeState || "")}:${normalize(activeCity || "")}`,
+          stateScope,
+        );
+        parent = cityFc?.features?.find((f: any) => {
+          const names = [f.properties?.name, f.properties?.name_en, f.properties?.name_pt]
+            .filter(Boolean).map(normalize);
+          return names.includes(normalize(activeCity || ""));
+        }) || cityFc?.features?.[0] || null;
+
         geo = await fetchAdminSubdivisions(mapBbox, 10, `bairros:${normalize(`${activeCountry}:${activeState}:${activeCity}`)}`, cityScope);
       }
-      if (!cancelled) { setCurrentGeo(geo); setGeoLoading(false); }
+
+      if (!cancelled) {
+        setCurrentGeo(geo);
+        setParentFeature(parent);
+        setGeoLoading(false);
+      }
     };
     run();
     return () => { cancelled = true; };
   }, [viewMode, activeCountry, activeState, activeCity, mapBbox, countryScope, stateScope, cityScope]);
 
-  /* ---------- ISOLAMENTO RADICAL: filtra apenas o território ativo ----------
-   * Em country/state/city, removemos do FeatureCollection qualquer polígono
-   * que não pertença ao território selecionado. */
+  /* ---------- ISOLAMENTO RADICAL: filtra filhos para conter só os do território ativo ---------- */
   const isolatedGeo = useMemo(() => {
     if (!currentGeo) return null;
     if (viewMode === "world") return currentGeo;
-    // country: GeoJSON já são SUBdivisões (estados do país) -> mostrar tudo
-    // state:  GeoJSON são municípios -> mostrar tudo
-    // city:   GeoJSON são bairros    -> mostrar tudo
-    // O isolamento real ocorre no carregamento (cada nível só busca filhos do escopo).
-    return currentGeo;
-  }, [currentGeo, viewMode]);
+    if (!parentFeature) return currentGeo;
+    // Filtra features cujo centróide cai dentro do bbox do polígono pai
+    const parentBbox = getFeatureBounds(parentFeature);
+    if (!parentBbox) return currentGeo;
+    const filtered = (currentGeo.features || []).filter((f: any) =>
+      featureCentroidInBbox(f, parentBbox)
+    );
+    return { type: "FeatureCollection", features: filtered.length ? filtered : currentGeo.features };
+  }, [currentGeo, parentFeature, viewMode]);
+
+  /* Máscara preta cobrindo tudo fora do território ativo (Ilha Geográfica) */
+  const maskFeature = useMemo(() => {
+    if (viewMode === "world" || !parentFeature) return null;
+    return buildMaskFeature(parentFeature);
+  }, [parentFeature, viewMode]);
 
 
   /* ---------- City: top clubs ---------- */
