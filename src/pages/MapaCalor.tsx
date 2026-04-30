@@ -407,16 +407,6 @@ function buildMaskFeature(territoryFeature: any): any | null {
   };
 }
 
-/** Verifica se o centróide aproximado de uma feature cai dentro de um bbox [s,n,w,e]. */
-function featureCentroidInBbox(feature: any, bbox: GeoBbox): boolean {
-  try {
-    const b = L.geoJSON(feature).getBounds();
-    const c = b.getCenter();
-    const [s, n, w, e] = bbox;
-    return c.lat >= s && c.lat <= n && c.lng >= w && c.lng <= e;
-  } catch { return false; }
-}
-
 /* ---------- Types ---------- */
 type ViewLevel = "world" | "country" | "state" | "city";
 interface HeatEntry { region: string; votes: number; }
@@ -640,19 +630,11 @@ const MapaCalor = () => {
     return () => { cancelled = true; };
   }, [viewMode, activeCountry, activeState, activeCity, mapBbox, countryScope, stateScope, cityScope]);
 
-  /* ---------- ISOLAMENTO RADICAL: filtra filhos para conter só os do território ativo ---------- */
+  /* ---------- ISOLAMENTO REAL: não filtra geometrias parciais; renderiza 100% dos filhos carregados ---------- */
   const isolatedGeo = useMemo(() => {
     if (!currentGeo) return null;
-    if (viewMode === "world") return currentGeo;
-    if (!parentFeature) return currentGeo;
-    // Filtra features cujo centróide cai dentro do bbox do polígono pai
-    const parentBbox = getFeatureBounds(parentFeature);
-    if (!parentBbox) return currentGeo;
-    const filtered = (currentGeo.features || []).filter((f: any) =>
-      featureCentroidInBbox(f, parentBbox)
-    );
-    return { type: "FeatureCollection", features: filtered.length ? filtered : currentGeo.features };
-  }, [currentGeo, parentFeature, viewMode]);
+    return currentGeo;
+  }, [currentGeo]);
 
   /* Máscara preta cobrindo tudo fora do território ativo (Ilha Geográfica) */
   const maskFeature = useMemo(() => {
@@ -867,8 +849,8 @@ const MapaCalor = () => {
     return {
       fillColor: hasVotes ? colorByIntensity(votes, maxVotes) : "#0a0a0a",
       fillOpacity: hasVotes ? 0.82 : 0.35,
-      color: "#333333",
-      weight: 1,
+      color: "#A9A9A9",
+      weight: 0.5,
       opacity: 1,
     };
   }, [lookupVotesForFeature, maxVotes]);
@@ -890,7 +872,7 @@ const MapaCalor = () => {
       },
       mouseout: (e: any) => {
         const l = e.target;
-        l.setStyle({ weight: 0.8, color: "#333333", opacity: 0.9 });
+        l.setStyle({ weight: 0.5, color: "#A9A9A9", opacity: 1 });
       },
       click: () => {
         const featureBbox = getFeatureBounds(feature);
@@ -911,6 +893,11 @@ const MapaCalor = () => {
   const geoKey = useMemo(
     () => `${viewMode}-${activeCountry}-${activeState}-${activeCity}-${maxVotes}-${heatData.length}`,
     [viewMode, activeCountry, activeState, activeCity, maxVotes, heatData.length]
+  );
+
+  const mapHardResetKey = useMemo(
+    () => `${viewMode}-${activeCity || activeState || activeCountry || "world"}`,
+    [viewMode, activeCountry, activeState, activeCity]
   );
 
   /* ---------- UI ---------- */
@@ -1200,6 +1187,7 @@ const MapaCalor = () => {
               )}
 
               <MapContainer
+                key={mapHardResetKey}
                 center={mapCenter}
                 zoom={mapZoom}
                 minZoom={2}
@@ -1219,7 +1207,7 @@ const MapaCalor = () => {
                     <TileLayer
                       url="https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png"
                       subdomains="abcd"
-                      opacity={0.6}
+                      opacity={0.45}
                     />
                   </>
                 )}
@@ -1244,7 +1232,7 @@ const MapaCalor = () => {
                     style={{
                       fill: false,
                       color: "#ff6200",
-                      weight: 2.5,
+                      weight: 2,
                       opacity: 1,
                       interactive: false,
                     } as any}
