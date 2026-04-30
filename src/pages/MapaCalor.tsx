@@ -863,12 +863,13 @@ const MapaCalor = () => {
   /* ---------- Style + Events do GeoJSON (choropleth) ---------- */
   const geoStyle = useCallback((feature: any) => {
     const { votes } = lookupVotesForFeature(feature?.properties);
+    const hasVotes = votes > 0;
     return {
-      fillColor: colorByIntensity(votes, maxVotes),
-      fillOpacity: votes > 0 ? 0.78 : 0.08,
+      fillColor: hasVotes ? colorByIntensity(votes, maxVotes) : "#0a0a0a",
+      fillOpacity: hasVotes ? 0.82 : 0.35,
       color: "#333333",
-      weight: 0.8,
-      opacity: 0.9,
+      weight: 1,
+      opacity: 1,
     };
   }, [lookupVotesForFeature, maxVotes]);
 
