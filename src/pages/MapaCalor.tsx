@@ -1187,6 +1187,7 @@ const MapaCalor = () => {
               )}
 
               <MapContainer
+                key={mapHardResetKey}
                 center={mapCenter}
                 zoom={mapZoom}
                 minZoom={2}
@@ -1206,7 +1207,7 @@ const MapaCalor = () => {
                     <TileLayer
                       url="https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png"
                       subdomains="abcd"
-                      opacity={0.6}
+                      opacity={0.45}
                     />
                   </>
                 )}
@@ -1231,7 +1232,7 @@ const MapaCalor = () => {
                     style={{
                       fill: false,
                       color: "#ff6200",
-                      weight: 2.5,
+                      weight: 2,
                       opacity: 1,
                       interactive: false,
                     } as any}
