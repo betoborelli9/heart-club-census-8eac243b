@@ -39,6 +39,33 @@ const ProfileSetup = () => {
   const [cidadeQuery, setCidadeQuery] = useState("");
   const [showCidadeDropdown, setShowCidadeDropdown] = useState(false);
 
+  // CEP lookup
+  const [cep, setCep] = useState("");
+  const [cepLoading, setCepLoading] = useState(false);
+  const [cepError, setCepError] = useState<string | null>(null);
+
+  const handleCepLookup = async (raw: string) => {
+    const formatted = formatCep(raw);
+    setCep(formatted);
+    setCepError(null);
+    const digits = formatted.replace(/\D/g, "");
+    if (digits.length !== 8) return;
+    setCepLoading(true);
+    try {
+      const found = await lookupCep(digits);
+      if (!found) {
+        setCepError("CEP não encontrado.");
+        return;
+      }
+      setEstado(found.estado);
+      setCidade(found.cidade);
+      setCidadeQuery(found.cidade);
+      setGeoConfirmed(true);
+    } finally {
+      setCepLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (!isLoading && !isAuthenticated) navigate("/login", { replace: true });
   }, [isLoading, isAuthenticated, navigate]);
