@@ -245,6 +245,25 @@ const ProfileSetup = () => {
               {geoLoading && <Loader2 className="w-3 h-3 animate-spin text-primary ml-auto" />}
             </div>
 
+            {/* CEP lookup (Brasil) — preenche cidade/estado automaticamente */}
+            <div className="space-y-1.5">
+              <Label className="text-xs text-muted-foreground">CEP (preenche cidade/estado)</Label>
+              <div className="relative">
+                <Input
+                  inputMode="numeric"
+                  placeholder="00000-000"
+                  value={cep}
+                  onChange={(e) => handleCepLookup(e.target.value)}
+                  className="h-11 bg-secondary/30 border-border/30"
+                  maxLength={9}
+                />
+                {cepLoading && (
+                  <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 animate-spin text-primary" />
+                )}
+              </div>
+              {cepError && <p className="text-[11px] text-destructive">{cepError}</p>}
+            </div>
+
             {/* Geo confirmation prompt */}
             {geoDetected && geoConfirmed === null && (
               <motion.div
