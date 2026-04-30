@@ -407,16 +407,6 @@ function buildMaskFeature(territoryFeature: any): any | null {
   };
 }
 
-/** Verifica se o centróide aproximado de uma feature cai dentro de um bbox [s,n,w,e]. */
-function featureCentroidInBbox(feature: any, bbox: GeoBbox): boolean {
-  try {
-    const b = L.geoJSON(feature).getBounds();
-    const c = b.getCenter();
-    const [s, n, w, e] = bbox;
-    return c.lat >= s && c.lat <= n && c.lng >= w && c.lng <= e;
-  } catch { return false; }
-}
-
 /* ---------- Types ---------- */
 type ViewLevel = "world" | "country" | "state" | "city";
 interface HeatEntry { region: string; votes: number; }
