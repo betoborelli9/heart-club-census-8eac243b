@@ -1224,15 +1224,15 @@ const MapaCalor = () => {
                   />
                 )}
 
-                {/* Contorno enfático do território ativo (país/estado/cidade) */}
+                {/* Contorno do território ativo — cinza fino e elegante (Heart Club) */}
                 {parentFeature && viewMode !== "world" && (
                   <GeoJSON
                     key={`parent-outline-${geoKey}`}
                     data={parentFeature}
                     style={{
                       fill: false,
-                      color: "#ff6200",
-                      weight: 2,
+                      color: "#A9A9A9",
+                      weight: 0.5,
                       opacity: 1,
                       interactive: false,
                     } as any}
