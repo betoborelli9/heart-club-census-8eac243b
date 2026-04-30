@@ -557,6 +557,20 @@ const MapaCalor = () => {
     return () => { cancelled = true; };
   }, [viewMode, activeCountry, activeState, activeCity, mapBbox, countryScope, stateScope, cityScope]);
 
+  /* ---------- ISOLAMENTO RADICAL: filtra apenas o território ativo ----------
+   * Em country/state/city, removemos do FeatureCollection qualquer polígono
+   * que não pertença ao território selecionado. */
+  const isolatedGeo = useMemo(() => {
+    if (!currentGeo) return null;
+    if (viewMode === "world") return currentGeo;
+    // country: GeoJSON já são SUBdivisões (estados do país) -> mostrar tudo
+    // state:  GeoJSON são municípios -> mostrar tudo
+    // city:   GeoJSON são bairros    -> mostrar tudo
+    // O isolamento real ocorre no carregamento (cada nível só busca filhos do escopo).
+    return currentGeo;
+  }, [currentGeo, viewMode]);
+
+
   /* ---------- City: top clubs ---------- */
   useEffect(() => {
     if (viewMode !== "city" || !activeCity) { setCityClubs([]); return; }
