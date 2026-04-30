@@ -346,8 +346,11 @@ export type Database = {
       }
       votos: {
         Row: {
+          bairro: string | null
+          cep: string | null
           cidade: string
           clube_nome: string
+          complemento: string | null
           created_at: string | null
           estado: string
           fingerprint: string | null
@@ -357,17 +360,25 @@ export type Database = {
           is_original_vote: boolean
           is_residente: boolean | null
           is_suspicious: boolean | null
+          numero: string | null
           pais: string
           status_integridade: string | null
           user_id: string
+          voto_bairro_gps: string | null
           voto_cidade: string | null
+          voto_cidade_gps: string | null
           voto_continente: string | null
           voto_ip: string | null
+          voto_lat: number | null
+          voto_lng: number | null
           voto_pais: string | null
         }
         Insert: {
+          bairro?: string | null
+          cep?: string | null
           cidade: string
           clube_nome: string
+          complemento?: string | null
           created_at?: string | null
           estado: string
           fingerprint?: string | null
@@ -377,17 +388,25 @@ export type Database = {
           is_original_vote?: boolean
           is_residente?: boolean | null
           is_suspicious?: boolean | null
+          numero?: string | null
           pais: string
           status_integridade?: string | null
           user_id: string
+          voto_bairro_gps?: string | null
           voto_cidade?: string | null
+          voto_cidade_gps?: string | null
           voto_continente?: string | null
           voto_ip?: string | null
+          voto_lat?: number | null
+          voto_lng?: number | null
           voto_pais?: string | null
         }
         Update: {
+          bairro?: string | null
+          cep?: string | null
           cidade?: string
           clube_nome?: string
+          complemento?: string | null
           created_at?: string | null
           estado?: string
           fingerprint?: string | null
@@ -397,12 +416,17 @@ export type Database = {
           is_original_vote?: boolean
           is_residente?: boolean | null
           is_suspicious?: boolean | null
+          numero?: string | null
           pais?: string
           status_integridade?: string | null
           user_id?: string
+          voto_bairro_gps?: string | null
           voto_cidade?: string | null
+          voto_cidade_gps?: string | null
           voto_continente?: string | null
           voto_ip?: string | null
+          voto_lat?: number | null
+          voto_lng?: number | null
           voto_pais?: string | null
         }
         Relationships: []
@@ -485,8 +509,11 @@ export type Database = {
       admin_get_votes_with_tracking: {
         Args: never
         Returns: {
+          bairro: string
+          cep: string
           cidade: string
           clube_nome: string
+          complemento: string
           created_at: string
           estado: string
           fingerprint: string
@@ -494,14 +521,20 @@ export type Database = {
           is_fraud_attempt: boolean
           is_original_vote: boolean
           is_suspicious: boolean
+          numero: string
           pais: string
+          status_integridade: string
           user_email: string
           user_genero: string
           user_id: string
           user_nascimento: string
           user_nome: string
           user_profissao: string
+          voto_bairro_gps: string
+          voto_cidade_gps: string
           voto_id: string
+          voto_lat: number
+          voto_lng: number
         }[]
       }
       fake_votes_summary: { Args: never; Returns: Json }
@@ -509,6 +542,10 @@ export type Database = {
       get_club_vote_summary: { Args: { p_club_name: string }; Returns: Json }
       get_heatmap_data: {
         Args: { p_club_name: string; p_filter_value?: string; p_level?: string }
+        Returns: Json
+      }
+      get_heatmap_neighborhoods: {
+        Args: { p_city: string; p_club_name: string }
         Returns: Json
       }
       get_top_clubs_by_region: {
