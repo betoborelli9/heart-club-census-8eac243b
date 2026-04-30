@@ -630,19 +630,11 @@ const MapaCalor = () => {
     return () => { cancelled = true; };
   }, [viewMode, activeCountry, activeState, activeCity, mapBbox, countryScope, stateScope, cityScope]);
 
-  /* ---------- ISOLAMENTO RADICAL: filtra filhos para conter só os do território ativo ---------- */
+  /* ---------- ISOLAMENTO REAL: não filtra geometrias parciais; renderiza 100% dos filhos carregados ---------- */
   const isolatedGeo = useMemo(() => {
     if (!currentGeo) return null;
-    if (viewMode === "world") return currentGeo;
-    if (!parentFeature) return currentGeo;
-    // Filtra features cujo centróide cai dentro do bbox do polígono pai
-    const parentBbox = getFeatureBounds(parentFeature);
-    if (!parentBbox) return currentGeo;
-    const filtered = (currentGeo.features || []).filter((f: any) =>
-      featureCentroidInBbox(f, parentBbox)
-    );
-    return { type: "FeatureCollection", features: filtered.length ? filtered : currentGeo.features };
-  }, [currentGeo, parentFeature, viewMode]);
+    return currentGeo;
+  }, [currentGeo]);
 
   /* Máscara preta cobrindo tudo fora do território ativo (Ilha Geográfica) */
   const maskFeature = useMemo(() => {
