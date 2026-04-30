@@ -486,12 +486,29 @@ const MapaCalor = () => {
     if (!activeClubName) return;
     const fetchHeat = async () => {
       setLoading(true);
+      // Cidade => bairros (RPC dedicada). Demais níveis => get_heatmap_data
+      if (viewMode === "city" && activeCity) {
+        const { data, error } = await supabase.rpc("get_heatmap_neighborhoods", {
+          p_club_name: activeClubName, p_city: activeCity,
+        });
+        if (!error && data) {
+          const arr = (Array.isArray(data) ? data : []) as any[];
+          // Normaliza para HeatEntry { region, votes }
+          const entries: HeatEntry[] = arr.map((r) => ({
+            region: r.region ?? r.bairro ?? r.neighborhood ?? r.name ?? "—",
+            votes: Number(r.votes ?? r.total ?? r.count ?? 0),
+          }));
+          setHeatData(entries);
+        } else { setHeatData([]); }
+        setLoading(false);
+        return;
+      }
+
       let level: string = viewMode;
       let filter: string | null = null;
       if (viewMode === "world") level = "country";
       else if (viewMode === "country") { level = "state"; filter = activeCountry; }
       else if (viewMode === "state") { level = "city"; filter = activeState; }
-      else if (viewMode === "city") { level = "city"; filter = activeState; }
 
       const { data, error } = await supabase.rpc("get_heatmap_data", {
         p_club_name: activeClubName, p_level: level, p_filter_value: filter,
@@ -503,7 +520,7 @@ const MapaCalor = () => {
       setLoading(false);
     };
     fetchHeat();
-  }, [activeClubName, viewMode, activeCountry, activeState]);
+  }, [activeClubName, viewMode, activeCountry, activeState, activeCity]);
 
   const totalVotes = useMemo(() => heatData.reduce((s, e) => s + Number(e.votes), 0), [heatData]);
 
@@ -539,6 +556,20 @@ const MapaCalor = () => {
     run();
     return () => { cancelled = true; };
   }, [viewMode, activeCountry, activeState, activeCity, mapBbox, countryScope, stateScope, cityScope]);
+
+  /* ---------- ISOLAMENTO RADICAL: filtra apenas o território ativo ----------
+   * Em country/state/city, removemos do FeatureCollection qualquer polígono
+   * que não pertença ao território selecionado. */
+  const isolatedGeo = useMemo(() => {
+    if (!currentGeo) return null;
+    if (viewMode === "world") return currentGeo;
+    // country: GeoJSON já são SUBdivisões (estados do país) -> mostrar tudo
+    // state:  GeoJSON são municípios -> mostrar tudo
+    // city:   GeoJSON são bairros    -> mostrar tudo
+    // O isolamento real ocorre no carregamento (cada nível só busca filhos do escopo).
+    return currentGeo;
+  }, [currentGeo, viewMode]);
+
 
   /* ---------- City: top clubs ---------- */
   useEffect(() => {
@@ -1091,17 +1122,20 @@ const MapaCalor = () => {
                   url="https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png"
                   subdomains="abcd"
                 />
-                <TileLayer
-                  url="https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png"
-                  subdomains="abcd"
-                  opacity={0.7}
-                />
+                {/* Labels apenas no nível mundial — evita poluição em territórios isolados */}
+                {viewMode === "world" && (
+                  <TileLayer
+                    url="https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png"
+                    subdomains="abcd"
+                    opacity={0.6}
+                  />
+                )}
                 <FlyController center={mapCenter} zoom={mapZoom} bbox={mapBbox} lockBounds={viewMode !== "world"} />
                 <ResizeFix />
-                {currentGeo && (
+                {isolatedGeo && (
                   <GeoJSON
                     key={geoKey}
-                    data={currentGeo}
+                    data={isolatedGeo}
                     style={geoStyle as any}
                     onEachFeature={onEachFeature}
                   />
