@@ -385,18 +385,32 @@ interface ClubCompareData {
 }
 
 /* ---------- Map controllers ---------- */
-function FlyController({ center, zoom, bbox }: { center: [number, number]; zoom: number; bbox?: GeoBbox | null }) {
+function FlyController({ center, zoom, bbox, lockBounds }: { center: [number, number]; zoom: number; bbox?: GeoBbox | null; lockBounds?: boolean }) {
   const map = useMap();
   useEffect(() => {
     if (bbox) {
       // bbox Nominatim = [southLat, northLat, westLon, eastLon]
       const [s, n, w, e] = bbox;
       const fitZoom = zoom > 0 ? Math.max(2, Math.min(zoom, 13)) : 13;
-      map.flyToBounds([[s, w], [n, e]], { duration: 1.2, maxZoom: fitZoom });
+      const bounds = L.latLngBounds([s, w], [n, e]);
+      map.flyToBounds(bounds, { duration: 1.2, maxZoom: fitZoom });
+      if (lockBounds) {
+        // Trava o zoom/pan dentro do território selecionado
+        const padded = bounds.pad(0.15);
+        map.setMaxBounds(padded);
+        map.options.maxBoundsViscosity = 1.0;
+        const minZ = Math.max(2, map.getBoundsZoom(bounds) - 1);
+        map.setMinZoom(minZ);
+      } else {
+        map.setMaxBounds(undefined as any);
+        map.setMinZoom(2);
+      }
     } else {
+      map.setMaxBounds(undefined as any);
+      map.setMinZoom(2);
       map.flyTo(center, zoom, { duration: 1.2 });
     }
-  }, [center, zoom, bbox, map]);
+  }, [center, zoom, bbox, lockBounds, map]);
   return null;
 }
 
@@ -794,19 +808,27 @@ const MapaCalor = () => {
       </header>
 
       <div className="max-w-[1600px] mx-auto p-4 lg:p-6">
-        {/* Breadcrumbs */}
-        <div className="flex items-center gap-1 mb-4 flex-wrap">
-          <button onClick={goWorld} className="flex items-center gap-1 text-[10px] font-black uppercase tracking-widest text-muted-foreground hover:text-primary transition-colors">
-            <Home className="w-3 h-3" /> Mundo
+        {/* Breadcrumbs + Voltar ao Dashboard */}
+        <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
+          <div className="flex items-center gap-1 flex-wrap">
+            <button onClick={goWorld} className="flex items-center gap-1 text-[10px] font-black italic uppercase tracking-widest text-muted-foreground hover:text-primary transition-colors">
+              <Home className="w-3 h-3" /> Mundo
+            </button>
+            {breadcrumbs.slice(1).map((bc, i) => (
+              <span key={i} className="flex items-center gap-1">
+                <ChevronRight className="w-3 h-3 text-muted-foreground" />
+                <button onClick={() => handleCrumb(bc)} className="text-[10px] font-black italic uppercase tracking-widest text-muted-foreground hover:text-primary transition-colors">
+                  {bc.label}
+                </button>
+              </span>
+            ))}
+          </div>
+          <button
+            onClick={() => navigate("/dashboard")}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-primary/10 border border-primary/30 hover:bg-primary/20 transition-colors text-[10px] font-black italic uppercase tracking-widest text-primary"
+          >
+            <ArrowLeft className="w-3 h-3" /> Voltar ao Dashboard
           </button>
-          {breadcrumbs.slice(1).map((bc, i) => (
-            <span key={i} className="flex items-center gap-1">
-              <ChevronRight className="w-3 h-3 text-muted-foreground" />
-              <button onClick={() => handleCrumb(bc)} className="text-[10px] font-black italic uppercase tracking-widest text-muted-foreground hover:text-primary transition-colors">
-                {bc.label}
-              </button>
-            </span>
-          ))}
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
@@ -1074,7 +1096,7 @@ const MapaCalor = () => {
                   subdomains="abcd"
                   opacity={0.7}
                 />
-                <FlyController center={mapCenter} zoom={mapZoom} bbox={mapBbox} />
+                <FlyController center={mapCenter} zoom={mapZoom} bbox={mapBbox} lockBounds={viewMode !== "world"} />
                 <ResizeFix />
                 {currentGeo && (
                   <GeoJSON
