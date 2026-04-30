@@ -1203,31 +1203,50 @@ const MapaCalor = () => {
                 zoom={mapZoom}
                 minZoom={2}
                 maxZoom={19}
-                worldCopyJump={true}
+                worldCopyJump={false}
                 style={{ width: "100%", height: "100%", background: "#000" }}
                 scrollWheelZoom={true}
               >
-                <TileLayer
-                  attribution='&copy; <a href="https://carto.com/">CARTO</a> &copy; OpenStreetMap'
-                  url="https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png"
-                  subdomains="abcd"
-                />
-                {/* Labels apenas no nível mundial — evita poluição em territórios isolados */}
+                {/* Tiles base apenas no Mundo. Em territórios isolados o fundo é preto absoluto. */}
                 {viewMode === "world" && (
-                  <TileLayer
-                    url="https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png"
-                    subdomains="abcd"
-                    opacity={0.6}
-                  />
+                  <>
+                    <TileLayer
+                      attribution='&copy; <a href="https://carto.com/">CARTO</a> &copy; OpenStreetMap'
+                      url="https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png"
+                      subdomains="abcd"
+                    />
+                    <TileLayer
+                      url="https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png"
+                      subdomains="abcd"
+                      opacity={0.6}
+                    />
+                  </>
                 )}
                 <FlyController center={mapCenter} zoom={mapZoom} bbox={mapBbox} lockBounds={viewMode !== "world"} />
                 <ResizeFix />
+
+                {/* Polígonos filhos (estados/municípios/bairros) com choropleth */}
                 {isolatedGeo && (
                   <GeoJSON
                     key={geoKey}
                     data={isolatedGeo}
                     style={geoStyle as any}
                     onEachFeature={onEachFeature}
+                  />
+                )}
+
+                {/* Contorno enfático do território ativo (país/estado/cidade) */}
+                {parentFeature && viewMode !== "world" && (
+                  <GeoJSON
+                    key={`parent-outline-${geoKey}`}
+                    data={parentFeature}
+                    style={{
+                      fill: false,
+                      color: "#ff6200",
+                      weight: 2.5,
+                      opacity: 1,
+                      interactive: false,
+                    } as any}
                   />
                 )}
               </MapContainer>
