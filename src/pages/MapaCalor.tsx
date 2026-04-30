@@ -849,8 +849,8 @@ const MapaCalor = () => {
     return {
       fillColor: hasVotes ? colorByIntensity(votes, maxVotes) : "#0a0a0a",
       fillOpacity: hasVotes ? 0.82 : 0.35,
-      color: "#333333",
-      weight: 1,
+      color: "#A9A9A9",
+      weight: 0.5,
       opacity: 1,
     };
   }, [lookupVotesForFeature, maxVotes]);
@@ -872,7 +872,7 @@ const MapaCalor = () => {
       },
       mouseout: (e: any) => {
         const l = e.target;
-        l.setStyle({ weight: 0.8, color: "#333333", opacity: 0.9 });
+        l.setStyle({ weight: 0.5, color: "#A9A9A9", opacity: 1 });
       },
       click: () => {
         const featureBbox = getFeatureBounds(feature);
