@@ -17,6 +17,7 @@ import { ClubLogo } from "@/components/ClubLogo";
 import logo from "@/assets/logo.png";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import FingerprintJS from "@fingerprintjs/fingerprintjs";
+import { lookupCep, formatCep, captureGpsAudit } from "@/lib/address";
 
 /* ═══════════════════════════════════════════════════════════
     MÓDULO: CONFIGURAÇÕES E ESTADOS
