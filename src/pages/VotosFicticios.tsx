@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useUser } from "@/contexts/UserContext";
 import { supabase } from "@/integrations/supabase/client";
-import { syncOfficialGoianiaNeighborhoods } from "@/lib/official-neighborhoods";
+import { syncNeighborhoods } from "@/lib/official-neighborhoods";
 import { toast } from "sonner";
 
 const MASTER_EMAIL = "betoborelli9@gmail.com";
@@ -28,6 +28,9 @@ const VotosFicticios = () => {
   const navigate = useNavigate();
   const { user, isLoading } = useUser();
   const [quantidade, setQuantidade] = useState(5000);
+  const [syncCity, setSyncCity] = useState("Goiânia");
+  const [syncState, setSyncState] = useState("Goiás");
+  const [syncCountry, setSyncCountry] = useState("Brazil");
   const [summary, setSummary] = useState<Summary | null>(null);
   const [working, setWorking] = useState(false);
 
@@ -58,14 +61,17 @@ const VotosFicticios = () => {
       return;
     }
     setWorking(true);
-    const toastId = toast.loading("Sincronizando bairros oficiais de Goiânia...");
-    const { count, error: syncError } = await syncOfficialGoianiaNeighborhoods();
+    const cityLabel = syncCity.trim() || "(cidade)";
+    const toastId = toast.loading(`Sincronizando bairros oficiais de ${cityLabel}...`);
+    const { count, source, error: syncError } = await syncNeighborhoods({
+      city: syncCity, state: syncState, country: syncCountry,
+    });
     if (syncError || count === 0) {
       setWorking(false);
-      toast.error("Falha ao sincronizar bairros oficiais: " + (syncError?.message || "cache vazio"), { id: toastId });
+      toast.error("Falha ao sincronizar bairros: " + (syncError?.message || "nenhum bairro retornado"), { id: toastId });
       return;
     }
-    toast.loading(`${count.toLocaleString("pt-BR")} bairros oficiais sincronizados. Gerando votos...`, { id: toastId });
+    toast.loading(`${count.toLocaleString("pt-BR")} bairros sincronizados (${source}). Gerando votos...`, { id: toastId });
     const { data, error } = await supabase.rpc("seed_fake_votes", { p_quantidade: quantidade });
     setWorking(false);
     if (error) {
@@ -183,9 +189,30 @@ const VotosFicticios = () => {
             <Beaker className="w-5 h-5 text-[#ff6200]" /> Gerar Votos
           </h2>
           <p className="text-sm text-white/60">
-            Sincroniza a malha oficial de Goiânia automaticamente e distribui os votos usando
-            apenas bairros reais salvos no <code>geo_neighborhood_cache</code>.
+            Sincroniza a malha oficial da cidade informada (OpenStreetMap como padrão universal,
+            com overrides oficiais quando disponíveis — ex.: ArcGIS Goiânia, GeoSampa) e distribui
+            os votos usando apenas bairros reais salvos no <code>geo_neighborhood_cache</code>.
           </p>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <Input
+              value={syncCity}
+              onChange={(e) => setSyncCity(e.target.value)}
+              placeholder="Cidade (ex.: São Paulo)"
+              className="bg-black/50 border-white/20 text-white"
+            />
+            <Input
+              value={syncState}
+              onChange={(e) => setSyncState(e.target.value)}
+              placeholder="Estado (opcional)"
+              className="bg-black/50 border-white/20 text-white"
+            />
+            <Input
+              value={syncCountry}
+              onChange={(e) => setSyncCountry(e.target.value)}
+              placeholder="País (ex.: Brazil)"
+              className="bg-black/50 border-white/20 text-white"
+            />
+          </div>
           <div className="flex flex-col sm:flex-row gap-3">
             <Input
               type="number"
