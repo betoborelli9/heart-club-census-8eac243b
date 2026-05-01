@@ -586,6 +586,7 @@ export type Database = {
         Returns: Json
       }
       purge_fake_votes: { Args: never; Returns: Json }
+      purge_invalid_fake_votes: { Args: never; Returns: Json }
       search_club_city_votes: {
         Args: { p_city_query: string; p_club_name: string; p_limit?: number }
         Returns: Json

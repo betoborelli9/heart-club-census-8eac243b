@@ -82,6 +82,20 @@ const VotosFicticios = () => {
     fetchSummary();
   };
 
+  const handlePurgeInvalid = async () => {
+    if (!confirm("Remover votos fictícios sem bairro ou com bairros que não existem no cache oficial?")) return;
+    setWorking(true);
+    const { data, error } = await supabase.rpc("purge_invalid_fake_votes");
+    setWorking(false);
+    if (error) {
+      toast.error("Erro ao limpar inválidos: " + error.message);
+      return;
+    }
+    const removidos = (data as any)?.removidos ?? 0;
+    toast.success(`🧹 ${removidos.toLocaleString("pt-BR")} votos inválidos removidos.`);
+    fetchSummary();
+  };
+
   if (isLoading || !user) {
     return (
       <div className="h-screen flex items-center justify-center bg-black">
