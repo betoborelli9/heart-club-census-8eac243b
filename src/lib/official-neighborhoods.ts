@@ -59,6 +59,15 @@ export async function fetchOfficialGoianiaNeighborhoodGeoJson(): Promise<any | n
 }
 
 export async function syncOfficialGoianiaNeighborhoods() {
+  const { data: functionData, error: functionError } = await supabase.functions.invoke(
+    "sync-official-neighborhoods",
+    { body: { city: "Goiânia" } }
+  );
+
+  if (!functionError && typeof functionData?.count === "number" && functionData.count > 0) {
+    return { count: functionData.count, error: null };
+  }
+
   const geojson = await fetchOfficialGoianiaNeighborhoodGeoJson();
   const features = Array.isArray(geojson?.features) ? geojson.features : [];
   const rows = features.map((feature: any) => ({
