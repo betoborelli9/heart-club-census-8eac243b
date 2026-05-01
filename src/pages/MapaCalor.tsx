@@ -89,19 +89,20 @@ function countryIso2FromName(country: string): string | null {
   return null;
 }
 
-/* Paleta War Room (laranja → vermelho profundo) */
+/* Paleta War Room (laranja imediato → laranja profundo) */
 const HEAT_PALETTE = [
-  "#3a1a05", // muito baixo (quase preto-laranja)
-  "#7a2a05",
-  "#b34708",
-  "#e6580a",
+  "#ffb36b", // 1 voto já aparece claramente
+  "#ff9340",
+  "#ff7a1f",
   "#ff6200", // marca
-  "#ff3300",
-  "#a31515", // máximo
+  "#d94f00",
+  "#a83a00",
+  "#6f2500", // máximo
 ];
-function colorByIntensity(value: number, max: number): string {
+function getColorByVotes(value: number, max: number): string {
   if (!value || !max) return "rgba(40,40,40,0.15)";
-  const t = Math.min(1, Math.max(0, Math.log(value + 1) / Math.log(max + 1)));
+  if (value <= 1 || max <= 1) return HEAT_PALETTE[0];
+  const t = Math.min(1, Math.max(0, Math.log(value) / Math.log(max)));
   const idx = Math.min(HEAT_PALETTE.length - 1, Math.floor(t * HEAT_PALETTE.length));
   return HEAT_PALETTE[idx];
 }
@@ -281,7 +282,7 @@ function relationToFeature(el: any): any | null {
   return {
     type: "Feature",
     properties: {
-      name: tags["name:en"] || tags.name || tags["name:pt"] || "—",
+      name: tags.name || tags["name:pt"] || tags.official_name || tags["name:en"] || "—",
       name_en: tags["name:en"],
       name_pt: tags["name:pt"],
       name_ar: tags["name:ar"],
@@ -400,6 +401,22 @@ const fetchBairros = (bbox: GeoBbox, cityKey: string, cityName?: string | null) 
 
 function getFeatureDisplayName(props: any): string {
   return props?.ADMIN || props?.name || props?.nome || props?.NOME || props?.NAME || props?.NAME_LONG || props?.NM_UF || "—";
+}
+
+function getNeighborhoodFeatureName(props: any): string {
+  const candidates = [
+    props?.name,
+    props?.name_pt,
+    props?.official_name,
+    props?.nome,
+    props?.NOME,
+    props?.NM_BAIRRO,
+    props?.bairro,
+    props?.BAIRRO,
+    props?.NAME,
+    props?.name_en,
+  ];
+  return String(candidates.find((v) => typeof v === "string" && v.trim().length > 0) || "—").trim();
 }
 
 function isBrazilCountry(country?: string | null): boolean {
