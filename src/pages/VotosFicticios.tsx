@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useUser } from "@/contexts/UserContext";
 import { supabase } from "@/integrations/supabase/client";
+import { syncOfficialGoianiaNeighborhoods } from "@/lib/official-neighborhoods";
 import { toast } from "sonner";
 
 const MASTER_EMAIL = "betoborelli9@gmail.com";
@@ -57,14 +58,22 @@ const VotosFicticios = () => {
       return;
     }
     setWorking(true);
+    const toastId = toast.loading("Sincronizando bairros oficiais de Goiânia...");
+    const { count, error: syncError } = await syncOfficialGoianiaNeighborhoods();
+    if (syncError || count === 0) {
+      setWorking(false);
+      toast.error("Falha ao sincronizar bairros oficiais: " + (syncError?.message || "cache vazio"), { id: toastId });
+      return;
+    }
+    toast.loading(`${count.toLocaleString("pt-BR")} bairros oficiais sincronizados. Gerando votos...`, { id: toastId });
     const { data, error } = await supabase.rpc("seed_fake_votes", { p_quantidade: quantidade });
     setWorking(false);
     if (error) {
-      toast.error("Falha ao gerar votos: " + error.message);
+      toast.error("Falha ao gerar votos: " + error.message, { id: toastId });
       return;
     }
     const inseridos = (data as any)?.inseridos ?? quantidade;
-    toast.success(`✅ ${inseridos.toLocaleString("pt-BR")} votos fictícios gerados!`);
+    toast.success(`✅ ${inseridos.toLocaleString("pt-BR")} votos fictícios gerados com bairros reais!`, { id: toastId });
     fetchSummary();
   };
 
@@ -174,8 +183,8 @@ const VotosFicticios = () => {
             <Beaker className="w-5 h-5 text-[#ff6200]" /> Gerar Votos
           </h2>
           <p className="text-sm text-white/60">
-            Distribui aleatoriamente entre todos os clubes do <code>clubes_cache</code> usando apenas
-            bairros oficiais já sincronizados no <code>geo_neighborhood_cache</code>.
+            Sincroniza a malha oficial de Goiânia automaticamente e distribui os votos usando
+            apenas bairros reais salvos no <code>geo_neighborhood_cache</code>.
           </p>
           <div className="flex flex-col sm:flex-row gap-3">
             <Input
