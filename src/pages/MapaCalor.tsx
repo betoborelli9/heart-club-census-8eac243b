@@ -932,7 +932,7 @@ const MapaCalor = () => {
           const dbName = COUNTRY_GEO_TO_DB[name] || name;
           goCountry(dbName, featureBbox, featureScope);
         } else if (viewMode === "country") {
-          goState(name, featureBbox, featureScope);
+          goState(resolveBrazilStateName(name, feature?.properties), featureBbox, featureScope);
         } else if (viewMode === "state") {
           goCity(name, activeState || undefined, featureBbox, featureScope);
         }
