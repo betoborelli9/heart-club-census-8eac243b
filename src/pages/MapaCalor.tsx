@@ -613,27 +613,34 @@ const MapaCalor = () => {
           geo = await fetchAdminSubdivisions(mapBbox, 4, `states:${normalize(activeCountry)}`, countryScope);
         }
       } else if (viewMode === "state" && activeState) {
-        // Polígono pai = estado (busca via Overpass admin_level=4 escopado ao país)
-        const stateFc = await fetchAdminSubdivisions(
-          mapBbox || [-90, 90, -180, 180], 4,
-          `state-parent:${normalize(activeCountry || "")}:${normalize(activeState)}`,
-          countryScope,
-        );
-        parent = stateFc?.features?.find((f: any) => {
-          const names = [f.properties?.name, f.properties?.name_en, f.properties?.name_pt]
-            .filter(Boolean).map(normalize);
-          return names.includes(normalize(activeState));
-        }) || null;
-
-        const uf = NAME_TO_UF[normalize(activeState)];
-        if (uf && (activeCountry === "Brazil" || activeCountry === "BR")) {
-          geo = await fetchGeo(GEO_URLS.brMunicipios(uf));
-          // Para BR, parent vem do brStates (mais preciso)
+        const normalizedState = isBrazilCountry(activeCountry)
+          ? resolveBrazilStateName(activeState)
+          : activeState;
+        const uf = NAME_TO_UF[normalize(normalizedState)];
+        if (uf && isBrazilCountry(activeCountry)) {
           const brStates = await fetchGeo(GEO_URLS.brStates);
-          parent = brStates?.features?.find((f: any) =>
-            normalize(f.properties?.name || "") === normalize(activeState)
-          ) || parent;
+          parent = brStates?.features?.find((f: any) => matchesBrazilStateFeature(f.properties, normalizedState)) || null;
+          geo = await fetchGeo(GEO_URLS.brMunicipios(uf));
+          if (parent) {
+            const stateBbox = getFeatureBounds(parent);
+            if (stateBbox) {
+              setMapBbox(stateBbox);
+              setMapCenter(bboxCenter(stateBbox));
+              setMapZoom(7);
+            }
+          }
         } else if (mapBbox) {
+          // Polígono pai = estado (busca via Overpass admin_level=4 escopado ao país)
+          const stateFc = await fetchAdminSubdivisions(
+            mapBbox || [-90, 90, -180, 180], 4,
+            `state-parent:${normalize(activeCountry || "")}:${normalize(activeState)}`,
+            countryScope,
+          );
+          parent = stateFc?.features?.find((f: any) => {
+            const names = [f.properties?.name, f.properties?.name_en, f.properties?.name_pt]
+              .filter(Boolean).map(normalize);
+            return names.includes(normalize(activeState));
+          }) || null;
           geo = await fetchAdminSubdivisions(mapBbox, 8, `cities:${normalize(activeCountry || "")}:${normalize(activeState)}`, stateScope);
         }
       } else if (viewMode === "city" && mapBbox) {
