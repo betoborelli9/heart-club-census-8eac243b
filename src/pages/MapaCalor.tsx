@@ -693,7 +693,13 @@ const MapaCalor = () => {
           return names.includes(normalize(activeCity || ""));
         }) || cityFc?.features?.[0] || null;
 
-        geo = await fetchAdminSubdivisions(mapBbox, 10, `bairros:${normalize(`${activeCountry}:${activeState}:${activeCity}`)}`, cityScope);
+        // Bairros: escopo por NOME oficial da cidade (admin_level=8) — garante 100% dos bairros oficiais
+        geo = await fetchAdminSubdivisions(
+          mapBbox,
+          10,
+          `bairros:${normalize(`${activeCountry}:${activeState}:${activeCity}`)}`,
+          { ...cityScope, cityName: activeCity || null },
+        );
       }
 
       if (!cancelled) {
