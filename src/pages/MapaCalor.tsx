@@ -621,14 +621,6 @@ const MapaCalor = () => {
           const brStates = await fetchGeo(GEO_URLS.brStates);
           parent = brStates?.features?.find((f: any) => matchesBrazilStateFeature(f.properties, normalizedState)) || null;
           geo = await fetchGeo(GEO_URLS.brMunicipios(uf));
-          if (parent) {
-            const stateBbox = getFeatureBounds(parent);
-            if (stateBbox) {
-              setMapBbox(stateBbox);
-              setMapCenter(bboxCenter(stateBbox));
-              setMapZoom(7);
-            }
-          }
         } else if (mapBbox) {
           // Polígono pai = estado (busca via Overpass admin_level=4 escopado ao país)
           const stateFc = await fetchAdminSubdivisions(
