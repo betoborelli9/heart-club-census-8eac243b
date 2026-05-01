@@ -2,15 +2,31 @@
  * Caminho: supabase/functions/completarSerieA/index.ts
  */
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { completarSerieA } from "../import-clubs/importSerieA.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
 serve(async () => {
   try {
-    await completarSerieA();
-    return new Response(JSON.stringify({ status: "Motor de busca processado com sucesso" }), { 
-      headers: { "Content-Type": "application/json" }, status: 200 
-    });
+    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+    const { data: clubes, error } = await supabase
+      .from("clubes_cache")
+      .select("nome")
+      .or("mascote.is.null,cor_primaria.is.null");
+
+    if (error) throw error;
+
+    return new Response(
+      JSON.stringify({
+        status: "ok",
+        pendentes: clubes?.length ?? 0,
+        message: "Use a edge function import-clubs para enriquecer os dados.",
+      }),
+      { headers: { "Content-Type": "application/json" }, status: 200 },
+    );
   } catch (e) {
-    return new Response(JSON.stringify({ error: e.message }), { status: 500 });
+    const message = e instanceof Error ? e.message : "Erro desconhecido";
+    return new Response(JSON.stringify({ error: message }), { status: 500 });
   }
 });
