@@ -300,41 +300,86 @@ function relationToFeature(el: any): any | null {
 }
 
 async function overpassQuery(query: string): Promise<any | null> {
+  // Timeout client-side de 60s + retry entre endpoints
   for (const ep of OVERPASS_ENDPOINTS) {
     try {
-      const res = await fetch(ep, { method: "POST", body: "data=" + encodeURIComponent(query) });
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 65_000);
+      const res = await fetch(ep, {
+        method: "POST",
+        body: "data=" + encodeURIComponent(query),
+        signal: ctrl.signal,
+      });
+      clearTimeout(timer);
       if (res.ok) return await res.json();
     } catch {}
   }
   return null;
 }
 
-/** Busca subdivisões administrativas dentro de um bbox para um admin_level específico. */
+/** Busca subdivisões administrativas dentro de um bbox para um admin_level específico.
+ *  Para bairros (admin_level=10) NÃO aplicamos fallback — pedimos APENAS oficiais.
+ *  Suporta escopo por nome de cidade (cityName) que cria area[admin_level=8] no Overpass,
+ *  garantindo que TODOS os bairros da cidade sejam retornados, não apenas os do bbox. */
 async function fetchAdminSubdivisions(
   bbox: GeoBbox,
   adminLevel: 4 | 6 | 8 | 10,
   cacheKey: string,
-  scope?: { countryIso2?: string | null; areaId?: number | null },
+  scope?: { countryIso2?: string | null; areaId?: number | null; cityName?: string | null },
 ): Promise<any | null> {
   if (ovCache[cacheKey]) return ovCache[cacheKey];
   const [s, n, w, e] = bbox;
-  // Tenta o nível pedido; se não vier nada, faz fallback p/ níveis vizinhos
-  const levels: number[] = adminLevel === 4 ? [4, 3, 5]
+  // Bairros: SEM fallback (queremos só oficiais admin_level=10).
+  // Outros níveis: pequena tolerância para vizinhos.
+  const levels: number[] = adminLevel === 10 ? [10]
+                          : adminLevel === 4 ? [4, 3, 5]
                           : adminLevel === 8 ? [8, 7, 9, 6]
-                          : adminLevel === 10 ? [10, 9, 11]
                           : [adminLevel];
+
+  // Headers do Overpass: timeout 60s + maxsize 1GB para cidades grandes
+  const head = `[out:json][timeout:60][maxsize:1073741824];`;
+
   for (const lv of levels) {
-    const areaSelector = scope?.areaId
-      ? `area(${scope.areaId})->.a;`
-      : scope?.countryIso2
-        ? `area["ISO3166-1"="${scope.countryIso2}"]["boundary"="administrative"]->.a;`
-        : "";
-    const relationSelector = areaSelector
-      ? `relation(area.a)["boundary"="administrative"]["admin_level"="${lv}"];`
-      : `relation["boundary"="administrative"]["admin_level"="${lv}"](${s},${w},${n},${e});`;
-    const q = `[out:json][timeout:40];${areaSelector}(${relationSelector});out geom;`;
+    let areaSelector = "";
+    let relationSelector = "";
+
+    if (scope?.cityName && lv === 10) {
+      // Caminho preferido p/ bairros: amarra à área da CIDADE (admin_level=8) por NOME
+      const safeName = scope.cityName.replace(/"/g, '\\"');
+      areaSelector = `area["name"="${safeName}"]["boundary"="administrative"]["admin_level"="8"]->.city;`;
+      relationSelector = `relation(area.city)["boundary"="administrative"]["admin_level"="${lv}"];`;
+    } else if (scope?.areaId) {
+      areaSelector = `area(${scope.areaId})->.a;`;
+      relationSelector = `relation(area.a)["boundary"="administrative"]["admin_level"="${lv}"];`;
+    } else if (scope?.countryIso2) {
+      areaSelector = `area["ISO3166-1"="${scope.countryIso2}"]["boundary"="administrative"]->.a;`;
+      relationSelector = `relation(area.a)["boundary"="administrative"]["admin_level"="${lv}"];`;
+    } else {
+      relationSelector = `relation["boundary"="administrative"]["admin_level"="${lv}"](${s},${w},${n},${e});`;
+    }
+
+    const q = `${head}${areaSelector}(${relationSelector});out geom;`;
     const data = await overpassQuery(q);
-    if (!data?.elements?.length) continue;
+    if (!data?.elements?.length) {
+      // Para bairros: se a busca por nome da cidade não voltou nada, tenta por bbox como contingência
+      if (scope?.cityName && lv === 10) {
+        const fallbackQ = `${head}(relation["boundary"="administrative"]["admin_level"="10"](${s},${w},${n},${e}););out geom;`;
+        const fb = await overpassQuery(fallbackQ);
+        if (!fb?.elements?.length) continue;
+        const features: any[] = [];
+        for (const el of fb.elements) {
+          if (el.type !== "relation") continue;
+          const f = relationToFeature(el);
+          if (f) features.push(f);
+        }
+        if (features.length) {
+          const fc = { type: "FeatureCollection", features };
+          ovCache[cacheKey] = fc; saveOvCache();
+          return fc;
+        }
+      }
+      continue;
+    }
     const features: any[] = [];
     for (const el of data.elements) {
       if (el.type !== "relation") continue;
@@ -350,8 +395,8 @@ async function fetchAdminSubdivisions(
   return null;
 }
 
-const fetchBairros = (bbox: GeoBbox, cityKey: string) =>
-  fetchAdminSubdivisions(bbox, 10, `bairros:${cityKey}`);
+const fetchBairros = (bbox: GeoBbox, cityKey: string, cityName?: string | null) =>
+  fetchAdminSubdivisions(bbox, 10, `bairros:${cityKey}`, { cityName: cityName || null });
 
 function getFeatureDisplayName(props: any): string {
   return props?.ADMIN || props?.name || props?.nome || props?.NOME || props?.NAME || props?.NAME_LONG || props?.NM_UF || "—";
@@ -445,7 +490,7 @@ interface HeatEntry { region: string; votes: number; }
 interface ClubVote { club: string; votes: number; }
 interface Crumb { label: string; level: ViewLevel; value?: string; }
 interface CityHit { city: string; state: string; country?: string; votes: number; }
-interface TerritoryScope { countryIso2?: string | null; areaId?: number | null; }
+interface TerritoryScope { countryIso2?: string | null; areaId?: number | null; cityName?: string | null; }
 interface ClubCompareData {
   name: string; info: any; totalVotes: number;
   topRegion: { region: string; votes: number } | null;
@@ -648,7 +693,13 @@ const MapaCalor = () => {
           return names.includes(normalize(activeCity || ""));
         }) || cityFc?.features?.[0] || null;
 
-        geo = await fetchAdminSubdivisions(mapBbox, 10, `bairros:${normalize(`${activeCountry}:${activeState}:${activeCity}`)}`, cityScope);
+        // Bairros: escopo por NOME oficial da cidade (admin_level=8) — garante 100% dos bairros oficiais
+        geo = await fetchAdminSubdivisions(
+          mapBbox,
+          10,
+          `bairros:${normalize(`${activeCountry}:${activeState}:${activeCity}`)}`,
+          { ...cityScope, cityName: activeCity || null },
+        );
       }
 
       if (!cancelled) {
