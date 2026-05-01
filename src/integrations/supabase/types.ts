@@ -248,6 +248,39 @@ export type Database = {
         }
         Relationships: []
       }
+      geo_neighborhood_cache: {
+        Row: {
+          city: string
+          country: string
+          created_at: string
+          id: string
+          neighborhood: string
+          osm_id: number | null
+          state: string | null
+          updated_at: string
+        }
+        Insert: {
+          city: string
+          country: string
+          created_at?: string
+          id?: string
+          neighborhood: string
+          osm_id?: number | null
+          state?: string | null
+          updated_at?: string
+        }
+        Update: {
+          city?: string
+          country?: string
+          created_at?: string
+          id?: string
+          neighborhood?: string
+          osm_id?: number | null
+          state?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       indicacoes: {
         Row: {
           codigo_usado: string | null
