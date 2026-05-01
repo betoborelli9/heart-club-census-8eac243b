@@ -967,7 +967,26 @@ const MapaCalor = () => {
   /* ---------- Comparativo ---------- */
   useEffect(() => {
     const run = async (clubName: string, setter: (d: ClubCompareData) => void) => {
-      const info = CLUBS_DATA.find(c => c.nome === clubName) || null;
+      let info = CLUBS_DATA.find(c => c.nome === clubName) || null;
+      if (!info?.logoUrl) {
+        const { data: cacheRow } = await supabase
+          .from("clubes_cache")
+          .select("nome, nome_curto, cidade, pais, mascote, escudo_url")
+          .ilike("nome", clubName)
+          .maybeSingle();
+        if (cacheRow) {
+          info = {
+            nome: cacheRow.nome,
+            nome_curto: cacheRow.nome_curto || cacheRow.nome,
+            serie: "",
+            cidade: cacheRow.cidade || "",
+            estado: "",
+            pais: cacheRow.pais || "",
+            mascote: cacheRow.mascote || "",
+            logoUrl: (cacheRow.escudo_url || "").trim(),
+          };
+        }
+      }
       const level = viewMode === "world" ? "country"
                   : viewMode === "country" ? "state" : "city";
       const filter = viewMode === "country" ? activeCountry
