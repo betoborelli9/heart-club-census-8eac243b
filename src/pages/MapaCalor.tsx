@@ -1338,6 +1338,7 @@ const MapaCalor = () => {
                 worldCopyJump={false}
                 style={{ width: "100%", height: "100%", background: "#000" }}
                 scrollWheelZoom={true}
+                zoomControl={false}
               >
                 {/* Tiles base apenas no Mundo. Em territórios isolados o fundo é preto absoluto. */}
                 {viewMode === "world" && (
