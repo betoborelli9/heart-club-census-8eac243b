@@ -740,6 +740,7 @@ const MapaCalor = () => {
 
   /* ---------- Navigation ---------- */
   const goWorld = useCallback(() => {
+    setCurrentGeo(null); setParentFeature(null);
     setViewMode("world"); setActiveCountry(null); setActiveState(null); setActiveCity(null);
     setCountryScope({}); setStateScope({}); setCityScope({});
     setBreadcrumbs([{ label: "Mundo", level: "world" }]);
@@ -747,7 +748,7 @@ const MapaCalor = () => {
   }, []);
 
   const goCountry = useCallback(async (country: string, bboxOverride?: GeoBbox | null, scopeOverride?: TerritoryScope) => {
-    setCurrentGeo(null);
+    setCurrentGeo(null); setParentFeature(null);
     const enrichedScope = { ...(scopeOverride || {}), countryIso2: scopeOverride?.countryIso2 || countryIso2FromName(country) };
     const resolvedCountry = isBrazilCountry(country) ? "Brazil" : country;
     setViewMode("country"); setActiveCountry(resolvedCountry); setActiveState(null); setActiveCity(null);
@@ -763,7 +764,7 @@ const MapaCalor = () => {
   }, []);
 
   const goState = useCallback(async (state: string, bboxOverride?: GeoBbox | null, scopeOverride?: TerritoryScope) => {
-    setCurrentGeo(null);
+    setCurrentGeo(null); setParentFeature(null);
     const resolvedState = isBrazilCountry(activeCountry) ? resolveBrazilStateName(state) : state;
     const uf = NAME_TO_UF[normalize(resolvedState)];
     setViewMode("state"); setActiveState(resolvedState); setActiveCity(null);
@@ -791,7 +792,7 @@ const MapaCalor = () => {
   }, [activeCountry]);
 
   const goCity = useCallback(async (city: string, stateOverride?: string, bboxOverride?: GeoBbox | null, scopeOverride?: TerritoryScope) => {
-    setCurrentGeo(null);
+    setCurrentGeo(null); setParentFeature(null);
     setViewMode("city"); setActiveCity(city);
     setCityScope(scopeOverride || {});
     if (stateOverride) setActiveState(stateOverride);
