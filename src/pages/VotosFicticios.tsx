@@ -85,14 +85,38 @@ const VotosFicticios = () => {
   const handlePurgeInvalid = async () => {
     if (!confirm("Remover votos fictícios sem bairro ou com bairros que não existem no cache oficial?")) return;
     setWorking(true);
-    const { data, error } = await supabase.rpc("purge_invalid_fake_votes");
-    setWorking(false);
-    if (error) {
-      toast.error("Erro ao limpar inválidos: " + error.message);
-      return;
+    const toastId = toast.loading("Limpando inválidos em lotes...");
+    let totalRemovidos = 0;
+    let totalMetaRemovidos = 0;
+    let hasMore = true;
+    let batches = 0;
+
+    while (hasMore && batches < 100) {
+      const { data, error } = await supabase.rpc("purge_invalid_fake_votes");
+
+      if (error) {
+        setWorking(false);
+        toast.error("Erro ao limpar inválidos: " + error.message, { id: toastId });
+        return;
+      }
+
+      const result = (data as any) ?? {};
+      const removidos = Number(result.removidos ?? 0);
+      totalRemovidos += removidos;
+      totalMetaRemovidos += Number(result.meta_removidos ?? 0);
+      hasMore = Boolean(result.has_more) && removidos > 0;
+      batches += 1;
+
+      toast.loading(`Limpando inválidos: ${totalRemovidos.toLocaleString("pt-BR")} removidos...`, {
+        id: toastId,
+      });
     }
-    const removidos = (data as any)?.removidos ?? 0;
-    toast.success(`🧹 ${removidos.toLocaleString("pt-BR")} votos inválidos removidos.`);
+
+    setWorking(false);
+    toast.success(
+      `🧹 ${totalRemovidos.toLocaleString("pt-BR")} votos inválidos removidos (${totalMetaRemovidos.toLocaleString("pt-BR")} metas).`,
+      { id: toastId }
+    );
     fetchSummary();
   };
 
@@ -150,8 +174,8 @@ const VotosFicticios = () => {
             <Beaker className="w-5 h-5 text-[#ff6200]" /> Gerar Votos
           </h2>
           <p className="text-sm text-white/60">
-            Distribui aleatoriamente entre todos os clubes do <code>clubes_cache</code>, com 70% no
-            Brasil (15 cidades) e 30% no exterior (16 cidades em 11 países / 6 continentes).
+            Distribui aleatoriamente entre todos os clubes do <code>clubes_cache</code> usando apenas
+            bairros oficiais já sincronizados no <code>geo_neighborhood_cache</code>.
           </p>
           <div className="flex flex-col sm:flex-row gap-3">
             <Input
