@@ -354,7 +354,39 @@ const fetchBairros = (bbox: GeoBbox, cityKey: string) =>
   fetchAdminSubdivisions(bbox, 10, `bairros:${cityKey}`);
 
 function getFeatureDisplayName(props: any): string {
-  return props?.ADMIN || props?.name || props?.NAME || props?.NAME_LONG || "—";
+  return props?.ADMIN || props?.name || props?.nome || props?.NOME || props?.NAME || props?.NAME_LONG || props?.NM_UF || "—";
+}
+
+function isBrazilCountry(country?: string | null): boolean {
+  const n = normalize(country || "");
+  return n === "brazil" || n === "brasil" || n === "br";
+}
+
+function resolveBrazilStateName(value?: string | null, props?: any): string {
+  const candidates = [
+    value,
+    props?.name, props?.nome, props?.NOME, props?.NM_UF, props?.name_pt, props?.name_en,
+    props?.sigla, props?.SIGLA, props?.UF, props?.uf, props?.SIGLA_UF,
+    props?.ISO3166_2, props?.["ISO3166-2"], props?.id,
+  ].filter((v): v is string => typeof v === "string" && v.trim().length > 0);
+
+  for (const candidate of candidates) {
+    const raw = candidate.trim();
+    const uf = raw.replace(/^BR[-_\s]?/i, "").toUpperCase();
+    if (UF_TO_NAME[uf]) return UF_TO_NAME[uf];
+    const byName = NAME_TO_UF[normalize(raw)];
+    if (byName) return UF_TO_NAME[byName];
+  }
+
+  return value || getFeatureDisplayName(props);
+}
+
+function matchesBrazilStateFeature(props: any, state: string): boolean {
+  const targetName = resolveBrazilStateName(state);
+  const targetUf = NAME_TO_UF[normalize(targetName)];
+  const candidateName = resolveBrazilStateName(getFeatureDisplayName(props), props);
+  const candidateUf = NAME_TO_UF[normalize(candidateName)];
+  return normalize(candidateName) === normalize(targetName) || (!!targetUf && candidateUf === targetUf);
 }
 
 function getFeatureScope(props: any): TerritoryScope {
