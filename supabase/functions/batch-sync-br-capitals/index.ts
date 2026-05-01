@@ -173,12 +173,26 @@ async function syncCapital(serviceClient: any, capital: Capital) {
 async function seedWeightedVotes(serviceClient: any, quantity: number, purgeExisting: boolean) {
   quantity = Math.min(Math.max(Math.floor(quantity || 50000), 1), 50000);
   if (purgeExisting) {
-    const { data: oldVotes } = await serviceClient.from("votos").select("user_id").eq("status_integridade", "ficticio").limit(100000);
+    const { data: oldVotes, error: oldVotesError } = await serviceClient
+      .from("votos")
+      .select("id,user_id")
+      .eq("status_integridade", "ficticio")
+      .limit(200000);
+    if (oldVotesError) throw oldVotesError;
     const oldUsers = (oldVotes || []).map((v: any) => v.user_id).filter(Boolean);
-    for (let i = 0; i < oldUsers.length; i += 1000) {
-      await serviceClient.from("votos_ficticios_meta").delete().in("user_id", oldUsers.slice(i, i + 1000));
+    const oldVoteIds = (oldVotes || []).map((v: any) => v.id).filter(Boolean);
+    for (let i = 0; i < oldVoteIds.length; i += 1000) {
+      const { error } = await serviceClient.from("votos_tracking").delete().in("voto_id", oldVoteIds.slice(i, i + 1000));
+      if (error) throw error;
     }
-    await serviceClient.from("votos").delete().eq("status_integridade", "ficticio");
+    for (let i = 0; i < oldUsers.length; i += 1000) {
+      const { error } = await serviceClient.from("votos_ficticios_meta").delete().in("user_id", oldUsers.slice(i, i + 1000));
+      if (error) throw error;
+    }
+    for (let i = 0; i < oldVoteIds.length; i += 1000) {
+      const { error } = await serviceClient.from("votos").delete().in("id", oldVoteIds.slice(i, i + 1000));
+      if (error) throw error;
+    }
   }
 
   const { data: clubs, error: clubsError } = await serviceClient.from("clubes_cache").select("nome").not("nome", "is", null).limit(5000);
