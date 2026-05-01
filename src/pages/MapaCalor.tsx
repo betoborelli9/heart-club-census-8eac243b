@@ -23,6 +23,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { ClubLogo } from "@/components/ClubLogo";
 import { searchClubsLocal, ClubSearchResult } from "@/lib/search-clubs";
 import { CLUBS_DATA } from "@/clubes-data";
+import { fetchOfficialGoianiaNeighborhoodGeoJson, isOfficialGoianiaCity } from "@/lib/official-neighborhoods";
 import logo from "@/assets/logo.png";
 
 /* ---------- Helpers ---------- */
@@ -711,12 +712,14 @@ const MapaCalor = () => {
         }) || cityFc?.features?.[0] || null;
 
         // Bairros: escopo por NOME oficial da cidade (admin_level=8) — garante 100% dos bairros oficiais
-        geo = await fetchAdminSubdivisions(
-          mapBbox,
-          10,
-          `bairros:${normalize(`${activeCountry}:${activeState}:${activeCity}`)}`,
-          { ...cityScope, cityName: activeCity || null },
-        );
+        geo = isOfficialGoianiaCity(activeCity, activeState, activeCountry)
+          ? await fetchOfficialGoianiaNeighborhoodGeoJson()
+          : await fetchAdminSubdivisions(
+              mapBbox,
+              10,
+              `bairros:${normalize(`${activeCountry}:${activeState}:${activeCity}`)}`,
+              { ...cityScope, cityName: activeCity || null },
+            );
       }
 
       if (!cancelled) {

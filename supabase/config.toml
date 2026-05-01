@@ -17,3 +17,6 @@ verify_jwt = false
 
 [functions.check-club-feminino]
 verify_jwt = false
+
+[functions.sync-official-neighborhoods]
+verify_jwt = true
