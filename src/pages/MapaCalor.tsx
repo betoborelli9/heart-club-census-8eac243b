@@ -490,7 +490,7 @@ interface HeatEntry { region: string; votes: number; }
 interface ClubVote { club: string; votes: number; }
 interface Crumb { label: string; level: ViewLevel; value?: string; }
 interface CityHit { city: string; state: string; country?: string; votes: number; }
-interface TerritoryScope { countryIso2?: string | null; areaId?: number | null; }
+interface TerritoryScope { countryIso2?: string | null; areaId?: number | null; cityName?: string | null; }
 interface ClubCompareData {
   name: string; info: any; totalVotes: number;
   topRegion: { region: string; votes: number } | null;
