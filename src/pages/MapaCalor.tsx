@@ -89,19 +89,20 @@ function countryIso2FromName(country: string): string | null {
   return null;
 }
 
-/* Paleta War Room (laranja → vermelho profundo) */
+/* Paleta War Room (laranja imediato → laranja profundo) */
 const HEAT_PALETTE = [
-  "#3a1a05", // muito baixo (quase preto-laranja)
-  "#7a2a05",
-  "#b34708",
-  "#e6580a",
+  "#ffb36b", // 1 voto já aparece claramente
+  "#ff9340",
+  "#ff7a1f",
   "#ff6200", // marca
-  "#ff3300",
-  "#a31515", // máximo
+  "#d94f00",
+  "#a83a00",
+  "#6f2500", // máximo
 ];
-function colorByIntensity(value: number, max: number): string {
+function getColorByVotes(value: number, max: number): string {
   if (!value || !max) return "rgba(40,40,40,0.15)";
-  const t = Math.min(1, Math.max(0, Math.log(value + 1) / Math.log(max + 1)));
+  if (value <= 1 || max <= 1) return HEAT_PALETTE[0];
+  const t = Math.min(1, Math.max(0, Math.log(value) / Math.log(max)));
   const idx = Math.min(HEAT_PALETTE.length - 1, Math.floor(t * HEAT_PALETTE.length));
   return HEAT_PALETTE[idx];
 }
@@ -281,7 +282,7 @@ function relationToFeature(el: any): any | null {
   return {
     type: "Feature",
     properties: {
-      name: tags["name:en"] || tags.name || tags["name:pt"] || "—",
+      name: tags.name || tags["name:pt"] || tags.official_name || tags["name:en"] || "—",
       name_en: tags["name:en"],
       name_pt: tags["name:pt"],
       name_ar: tags["name:ar"],
@@ -400,6 +401,22 @@ const fetchBairros = (bbox: GeoBbox, cityKey: string, cityName?: string | null) 
 
 function getFeatureDisplayName(props: any): string {
   return props?.ADMIN || props?.name || props?.nome || props?.NOME || props?.NAME || props?.NAME_LONG || props?.NM_UF || "—";
+}
+
+function getNeighborhoodFeatureName(props: any): string {
+  const candidates = [
+    props?.name,
+    props?.name_pt,
+    props?.official_name,
+    props?.nome,
+    props?.NOME,
+    props?.NM_BAIRRO,
+    props?.bairro,
+    props?.BAIRRO,
+    props?.NAME,
+    props?.name_en,
+  ];
+  return String(candidates.find((v) => typeof v === "string" && v.trim().length > 0) || "—").trim();
 }
 
 function isBrazilCountry(country?: string | null): boolean {
@@ -718,6 +735,26 @@ const MapaCalor = () => {
     return currentGeo;
   }, [currentGeo]);
 
+  useEffect(() => {
+    if (viewMode !== "city" || !activeCity || !isolatedGeo?.features?.length) return;
+    const rows = isolatedGeo.features
+      .map((feature: any) => ({
+        country: activeCountry || "Brazil",
+        state: activeState || null,
+        city: activeCity,
+        neighborhood: getNeighborhoodFeatureName(feature?.properties),
+        osm_id: feature?.properties?.osm_id ? Number(feature.properties.osm_id) : null,
+      }))
+      .filter((row: any) => row.neighborhood && row.neighborhood !== "—");
+    if (!rows.length) return;
+    supabase
+      .from("geo_neighborhood_cache")
+      .upsert(rows, { onConflict: "country,state,city,neighborhood", ignoreDuplicates: false })
+      .then(({ error }) => {
+        if (error) console.warn("Falha ao sincronizar bairros oficiais", error.message);
+      });
+  }, [viewMode, activeCountry, activeState, activeCity, isolatedGeo]);
+
   /* Máscara preta cobrindo tudo fora do território ativo (Ilha Geográfica) */
   const maskFeature = useMemo(() => {
     if (viewMode === "world" || !parentFeature) return null;
@@ -758,6 +795,14 @@ const MapaCalor = () => {
   const lookupVotesForFeature = useCallback((props: any): { name: string; votes: number } => {
     const candidates: string[] = [];
     if (!props) return { name: "—", votes: 0 };
+    if (viewMode === "city") {
+      const neighborhoodName = getNeighborhoodFeatureName(props);
+      for (const key of regionLookupKeys(neighborhoodName)) {
+        const v = votesByRegion.get(key);
+        if (v !== undefined) return { name: regionNameByKey.get(key) || neighborhoodName, votes: v };
+      }
+      return { name: neighborhoodName, votes: 0 };
+    }
     const candidateProps = [
       "ADMIN", "name", "name_en", "name_pt", "int_name", "official_name", "alt_name", "short_name",
       "NAME", "NAME_LONG", "NOME", "NM_MUN", "NM_UF", "ISO_A2", "ISO3166_1", "ISO3166_2",
@@ -770,18 +815,18 @@ const MapaCalor = () => {
     for (const c of candidates) {
       for (const key of regionLookupKeys(c)) {
         const v = votesByRegion.get(key);
-        if (v) return { name: regionNameByKey.get(key) || display, votes: v };
+        if (v !== undefined) return { name: regionNameByKey.get(key) || display, votes: v };
       }
       const dbName = COUNTRY_GEO_TO_DB[c];
       if (dbName) {
         for (const key of regionLookupKeys(dbName)) {
           const v2 = votesByRegion.get(key);
-          if (v2) return { name: regionNameByKey.get(key) || display, votes: v2 };
+          if (v2 !== undefined) return { name: regionNameByKey.get(key) || display, votes: v2 };
         }
       }
     }
     return { name: display, votes: 0 };
-  }, [votesByRegion, regionNameByKey]);
+  }, [votesByRegion, regionNameByKey, viewMode]);
 
   /* ---------- Ranking ---------- */
   const ranking = useMemo(
@@ -942,7 +987,7 @@ const MapaCalor = () => {
     const { votes } = lookupVotesForFeature(feature?.properties);
     const hasVotes = votes > 0;
     return {
-      fillColor: hasVotes ? colorByIntensity(votes, maxVotes) : "#0a0a0a",
+      fillColor: hasVotes ? getColorByVotes(votes, maxVotes) : "#0a0a0a",
       fillOpacity: hasVotes ? 0.82 : 0.35,
       color: "#A9A9A9",
       weight: 0.5,
