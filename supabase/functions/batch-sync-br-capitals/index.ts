@@ -274,6 +274,25 @@ serve(async (req) => {
       return json(await seedWeightedVotes(serviceClient, Number(body.quantity || 50000), body.purgeExisting !== false));
     }
 
+    if (mode === "importRows") {
+      const rows = Array.isArray(body.rows) ? body.rows : [];
+      if (!rows.length || rows.length > 5000) return json({ error: "rows deve ter entre 1 e 5000 itens" }, 400);
+      const cleanRows = rows
+        .map((r: any) => ({
+          country: String(r.country || "Brazil").trim(),
+          state: String(r.state || "").trim(),
+          city: String(r.city || "").trim(),
+          neighborhood: String(r.neighborhood || "").trim(),
+          osm_id: Number.isFinite(Number(r.osm_id)) ? Number(r.osm_id) : null,
+        }))
+        .filter((r: CacheRow) => r.country && r.city && r.neighborhood);
+      const { error } = await serviceClient
+        .from("geo_neighborhood_cache")
+        .upsert(cleanRows, { onConflict: "country,state,city,neighborhood", ignoreDuplicates: false });
+      if (error) throw error;
+      return json({ imported: cleanRows.length });
+    }
+
     const summary = [];
     for (const capital of CAPITALS) {
       const { count } = await serviceClient.from("geo_neighborhood_cache").select("id", { count: "exact", head: true }).eq("country", capital.country).eq("state", capital.state).eq("city", capital.city);
