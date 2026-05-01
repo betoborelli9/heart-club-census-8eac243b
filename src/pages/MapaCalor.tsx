@@ -757,32 +757,44 @@ const MapaCalor = () => {
   const goCountry = useCallback(async (country: string, bboxOverride?: GeoBbox | null, scopeOverride?: TerritoryScope) => {
     setCurrentGeo(null);
     const enrichedScope = { ...(scopeOverride || {}), countryIso2: scopeOverride?.countryIso2 || countryIso2FromName(country) };
-    setViewMode("country"); setActiveCountry(country); setActiveState(null); setActiveCity(null);
+    const resolvedCountry = isBrazilCountry(country) ? "Brazil" : country;
+    setViewMode("country"); setActiveCountry(resolvedCountry); setActiveState(null); setActiveCity(null);
     setCountryScope(enrichedScope); setStateScope({}); setCityScope({});
-    setBreadcrumbs([{ label: "Mundo", level: "world" }, { label: country, level: "country", value: country }]);
+    setBreadcrumbs([{ label: "Mundo", level: "world" }, { label: resolvedCountry, level: "country", value: resolvedCountry }]);
     if (bboxOverride) {
       setMapBbox(bboxOverride); setMapCenter(bboxCenter(bboxOverride)); setMapZoom(5);
       return;
     }
-    const q = COUNTRY_DB_TO_GEO[country] || country;
+    const q = COUNTRY_DB_TO_GEO[resolvedCountry] || resolvedCountry;
     const r = await geocodeBounds(q);
     if (r) { setMapCenter(r.center); setMapZoom(5); setMapBbox(r.bbox || null); }
   }, []);
 
   const goState = useCallback(async (state: string, bboxOverride?: GeoBbox | null, scopeOverride?: TerritoryScope) => {
     setCurrentGeo(null);
-    setViewMode("state"); setActiveState(state); setActiveCity(null);
+    const resolvedState = isBrazilCountry(activeCountry) ? resolveBrazilStateName(state) : state;
+    const uf = NAME_TO_UF[normalize(resolvedState)];
+    setViewMode("state"); setActiveState(resolvedState); setActiveCity(null);
     setStateScope(scopeOverride || {}); setCityScope({});
     setBreadcrumbs(prev => [
       ...prev.filter(b => b.level === "world" || b.level === "country"),
-      { label: state, level: "state", value: state },
+      { label: resolvedState, level: "state", value: resolvedState },
     ]);
+    if (uf && isBrazilCountry(activeCountry)) {
+      const brStates = await fetchGeo(GEO_URLS.brStates);
+      const stateFeature = brStates?.features?.find((f: any) => matchesBrazilStateFeature(f.properties, resolvedState));
+      const stateBbox = stateFeature ? getFeatureBounds(stateFeature) : bboxOverride;
+      if (stateBbox) {
+        setMapBbox(stateBbox); setMapCenter(bboxCenter(stateBbox)); setMapZoom(7);
+        return;
+      }
+    }
     if (bboxOverride) {
       setMapBbox(bboxOverride); setMapCenter(bboxCenter(bboxOverride)); setMapZoom(7);
       return;
     }
     const country = COUNTRY_DB_TO_GEO[activeCountry || "Brazil"] || activeCountry || "Brasil";
-    const r = await geocodeBounds(`${state}, ${country}`);
+    const r = await geocodeBounds(`${resolvedState}, ${country}`);
     if (r) { setMapCenter(r.center); setMapZoom(7); setMapBbox(r.bbox || null); }
   }, [activeCountry]);
 
