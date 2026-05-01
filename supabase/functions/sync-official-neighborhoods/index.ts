@@ -14,6 +14,11 @@ function getOfficialGoianiaName(properties: Record<string, unknown>) {
   return String(properties?.QL_BAI || properties?.NM_BAI || properties?.NM || "").trim();
 }
 
+function getArcgisObjectId(properties: Record<string, unknown>) {
+  const value = properties?.OBJECTID || properties?.ObjectId || properties?.objectid || null;
+  return typeof value === "number" ? value : value ? Number(value) : null;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
@@ -47,15 +52,30 @@ serve(async (req) => {
 
     const geojson = await response.json();
     const features = Array.isArray(geojson?.features) ? geojson.features : [];
-    const rows = features
-      .map((feature: any) => ({
+    const uniqueRows = new Map<string, {
+      country: string;
+      state: string;
+      city: string;
+      neighborhood: string;
+      osm_id: number | null;
+    }>();
+
+    features.forEach((feature: any) => {
+      const neighborhood = getOfficialGoianiaName(feature.properties || {});
+      if (!neighborhood) return;
+
+      const row = {
         country: "Brazil",
         state: "Goiás",
         city: "Goiânia",
-        neighborhood: getOfficialGoianiaName(feature.properties || {}),
-        osm_id: feature.properties?.ObjectId ? Number(feature.properties.ObjectId) : null,
-      }))
-      .filter((row) => row.neighborhood.length > 0);
+        neighborhood,
+        osm_id: getArcgisObjectId(feature.properties || {}),
+      };
+      const key = `${row.country}|${row.state}|${row.city}|${row.neighborhood}`.toLocaleLowerCase("pt-BR");
+      if (!uniqueRows.has(key)) uniqueRows.set(key, row);
+    });
+
+    const rows = Array.from(uniqueRows.values());
 
     if (!rows.length) throw new Error("Malha oficial de Goiânia não retornou bairros.");
 
