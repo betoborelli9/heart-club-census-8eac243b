@@ -354,7 +354,39 @@ const fetchBairros = (bbox: GeoBbox, cityKey: string) =>
   fetchAdminSubdivisions(bbox, 10, `bairros:${cityKey}`);
 
 function getFeatureDisplayName(props: any): string {
-  return props?.ADMIN || props?.name || props?.NAME || props?.NAME_LONG || "—";
+  return props?.ADMIN || props?.name || props?.nome || props?.NOME || props?.NAME || props?.NAME_LONG || props?.NM_UF || "—";
+}
+
+function isBrazilCountry(country?: string | null): boolean {
+  const n = normalize(country || "");
+  return n === "brazil" || n === "brasil" || n === "br";
+}
+
+function resolveBrazilStateName(value?: string | null, props?: any): string {
+  const candidates = [
+    value,
+    props?.name, props?.nome, props?.NOME, props?.NM_UF, props?.name_pt, props?.name_en,
+    props?.sigla, props?.SIGLA, props?.UF, props?.uf, props?.SIGLA_UF,
+    props?.ISO3166_2, props?.["ISO3166-2"], props?.id,
+  ].filter((v): v is string => typeof v === "string" && v.trim().length > 0);
+
+  for (const candidate of candidates) {
+    const raw = candidate.trim();
+    const uf = raw.replace(/^BR[-_\s]?/i, "").toUpperCase();
+    if (UF_TO_NAME[uf]) return UF_TO_NAME[uf];
+    const byName = NAME_TO_UF[normalize(raw)];
+    if (byName) return UF_TO_NAME[byName];
+  }
+
+  return value || getFeatureDisplayName(props);
+}
+
+function matchesBrazilStateFeature(props: any, state: string): boolean {
+  const targetName = resolveBrazilStateName(state);
+  const targetUf = NAME_TO_UF[normalize(targetName)];
+  const candidateName = resolveBrazilStateName(getFeatureDisplayName(props), props);
+  const candidateUf = NAME_TO_UF[normalize(candidateName)];
+  return normalize(candidateName) === normalize(targetName) || (!!targetUf && candidateUf === targetUf);
 }
 
 function getFeatureScope(props: any): TerritoryScope {
@@ -581,27 +613,26 @@ const MapaCalor = () => {
           geo = await fetchAdminSubdivisions(mapBbox, 4, `states:${normalize(activeCountry)}`, countryScope);
         }
       } else if (viewMode === "state" && activeState) {
-        // Polígono pai = estado (busca via Overpass admin_level=4 escopado ao país)
-        const stateFc = await fetchAdminSubdivisions(
-          mapBbox || [-90, 90, -180, 180], 4,
-          `state-parent:${normalize(activeCountry || "")}:${normalize(activeState)}`,
-          countryScope,
-        );
-        parent = stateFc?.features?.find((f: any) => {
-          const names = [f.properties?.name, f.properties?.name_en, f.properties?.name_pt]
-            .filter(Boolean).map(normalize);
-          return names.includes(normalize(activeState));
-        }) || null;
-
-        const uf = NAME_TO_UF[normalize(activeState)];
-        if (uf && (activeCountry === "Brazil" || activeCountry === "BR")) {
-          geo = await fetchGeo(GEO_URLS.brMunicipios(uf));
-          // Para BR, parent vem do brStates (mais preciso)
+        const normalizedState = isBrazilCountry(activeCountry)
+          ? resolveBrazilStateName(activeState)
+          : activeState;
+        const uf = NAME_TO_UF[normalize(normalizedState)];
+        if (uf && isBrazilCountry(activeCountry)) {
           const brStates = await fetchGeo(GEO_URLS.brStates);
-          parent = brStates?.features?.find((f: any) =>
-            normalize(f.properties?.name || "") === normalize(activeState)
-          ) || parent;
+          parent = brStates?.features?.find((f: any) => matchesBrazilStateFeature(f.properties, normalizedState)) || null;
+          geo = await fetchGeo(GEO_URLS.brMunicipios(uf));
         } else if (mapBbox) {
+          // Polígono pai = estado (busca via Overpass admin_level=4 escopado ao país)
+          const stateFc = await fetchAdminSubdivisions(
+            mapBbox || [-90, 90, -180, 180], 4,
+            `state-parent:${normalize(activeCountry || "")}:${normalize(activeState)}`,
+            countryScope,
+          );
+          parent = stateFc?.features?.find((f: any) => {
+            const names = [f.properties?.name, f.properties?.name_en, f.properties?.name_pt]
+              .filter(Boolean).map(normalize);
+            return names.includes(normalize(activeState));
+          }) || null;
           geo = await fetchAdminSubdivisions(mapBbox, 8, `cities:${normalize(activeCountry || "")}:${normalize(activeState)}`, stateScope);
         }
       } else if (viewMode === "city" && mapBbox) {
@@ -709,6 +740,7 @@ const MapaCalor = () => {
 
   /* ---------- Navigation ---------- */
   const goWorld = useCallback(() => {
+    setCurrentGeo(null); setParentFeature(null);
     setViewMode("world"); setActiveCountry(null); setActiveState(null); setActiveCity(null);
     setCountryScope({}); setStateScope({}); setCityScope({});
     setBreadcrumbs([{ label: "Mundo", level: "world" }]);
@@ -716,39 +748,51 @@ const MapaCalor = () => {
   }, []);
 
   const goCountry = useCallback(async (country: string, bboxOverride?: GeoBbox | null, scopeOverride?: TerritoryScope) => {
-    setCurrentGeo(null);
+    setCurrentGeo(null); setParentFeature(null);
     const enrichedScope = { ...(scopeOverride || {}), countryIso2: scopeOverride?.countryIso2 || countryIso2FromName(country) };
-    setViewMode("country"); setActiveCountry(country); setActiveState(null); setActiveCity(null);
+    const resolvedCountry = isBrazilCountry(country) ? "Brazil" : country;
+    setViewMode("country"); setActiveCountry(resolvedCountry); setActiveState(null); setActiveCity(null);
     setCountryScope(enrichedScope); setStateScope({}); setCityScope({});
-    setBreadcrumbs([{ label: "Mundo", level: "world" }, { label: country, level: "country", value: country }]);
+    setBreadcrumbs([{ label: "Mundo", level: "world" }, { label: resolvedCountry, level: "country", value: resolvedCountry }]);
     if (bboxOverride) {
       setMapBbox(bboxOverride); setMapCenter(bboxCenter(bboxOverride)); setMapZoom(5);
       return;
     }
-    const q = COUNTRY_DB_TO_GEO[country] || country;
+    const q = COUNTRY_DB_TO_GEO[resolvedCountry] || resolvedCountry;
     const r = await geocodeBounds(q);
     if (r) { setMapCenter(r.center); setMapZoom(5); setMapBbox(r.bbox || null); }
   }, []);
 
   const goState = useCallback(async (state: string, bboxOverride?: GeoBbox | null, scopeOverride?: TerritoryScope) => {
-    setCurrentGeo(null);
-    setViewMode("state"); setActiveState(state); setActiveCity(null);
+    setCurrentGeo(null); setParentFeature(null);
+    const resolvedState = isBrazilCountry(activeCountry) ? resolveBrazilStateName(state) : state;
+    const uf = NAME_TO_UF[normalize(resolvedState)];
+    setViewMode("state"); setActiveState(resolvedState); setActiveCity(null);
     setStateScope(scopeOverride || {}); setCityScope({});
     setBreadcrumbs(prev => [
       ...prev.filter(b => b.level === "world" || b.level === "country"),
-      { label: state, level: "state", value: state },
+      { label: resolvedState, level: "state", value: resolvedState },
     ]);
+    if (uf && isBrazilCountry(activeCountry)) {
+      const brStates = await fetchGeo(GEO_URLS.brStates);
+      const stateFeature = brStates?.features?.find((f: any) => matchesBrazilStateFeature(f.properties, resolvedState));
+      const stateBbox = stateFeature ? getFeatureBounds(stateFeature) : bboxOverride;
+      if (stateBbox) {
+        setMapBbox(stateBbox); setMapCenter(bboxCenter(stateBbox)); setMapZoom(7);
+        return;
+      }
+    }
     if (bboxOverride) {
       setMapBbox(bboxOverride); setMapCenter(bboxCenter(bboxOverride)); setMapZoom(7);
       return;
     }
     const country = COUNTRY_DB_TO_GEO[activeCountry || "Brazil"] || activeCountry || "Brasil";
-    const r = await geocodeBounds(`${state}, ${country}`);
+    const r = await geocodeBounds(`${resolvedState}, ${country}`);
     if (r) { setMapCenter(r.center); setMapZoom(7); setMapBbox(r.bbox || null); }
   }, [activeCountry]);
 
   const goCity = useCallback(async (city: string, stateOverride?: string, bboxOverride?: GeoBbox | null, scopeOverride?: TerritoryScope) => {
-    setCurrentGeo(null);
+    setCurrentGeo(null); setParentFeature(null);
     setViewMode("city"); setActiveCity(city);
     setCityScope(scopeOverride || {});
     if (stateOverride) setActiveState(stateOverride);
@@ -881,7 +925,7 @@ const MapaCalor = () => {
           const dbName = COUNTRY_GEO_TO_DB[name] || name;
           goCountry(dbName, featureBbox, featureScope);
         } else if (viewMode === "country") {
-          goState(name, featureBbox, featureScope);
+          goState(resolveBrazilStateName(name, feature?.properties), featureBbox, featureScope);
         } else if (viewMode === "state") {
           goCity(name, activeState || undefined, featureBbox, featureScope);
         }
