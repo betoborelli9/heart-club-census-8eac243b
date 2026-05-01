@@ -735,6 +735,26 @@ const MapaCalor = () => {
     return currentGeo;
   }, [currentGeo]);
 
+  useEffect(() => {
+    if (viewMode !== "city" || !activeCity || !isolatedGeo?.features?.length) return;
+    const rows = isolatedGeo.features
+      .map((feature: any) => ({
+        country: activeCountry || "Brazil",
+        state: activeState || null,
+        city: activeCity,
+        neighborhood: getNeighborhoodFeatureName(feature?.properties),
+        osm_id: feature?.properties?.osm_id ? Number(feature.properties.osm_id) : null,
+      }))
+      .filter((row: any) => row.neighborhood && row.neighborhood !== "—");
+    if (!rows.length) return;
+    supabase
+      .from("geo_neighborhood_cache")
+      .upsert(rows, { onConflict: "country,state,city,neighborhood", ignoreDuplicates: false })
+      .then(({ error }) => {
+        if (error) console.warn("Falha ao sincronizar bairros oficiais", error.message);
+      });
+  }, [viewMode, activeCountry, activeState, activeCity, isolatedGeo]);
+
   /* Máscara preta cobrindo tudo fora do território ativo (Ilha Geográfica) */
   const maskFeature = useMemo(() => {
     if (viewMode === "world" || !parentFeature) return null;
@@ -775,6 +795,14 @@ const MapaCalor = () => {
   const lookupVotesForFeature = useCallback((props: any): { name: string; votes: number } => {
     const candidates: string[] = [];
     if (!props) return { name: "—", votes: 0 };
+    if (viewMode === "city") {
+      const neighborhoodName = getNeighborhoodFeatureName(props);
+      for (const key of regionLookupKeys(neighborhoodName)) {
+        const v = votesByRegion.get(key);
+        if (v !== undefined) return { name: regionNameByKey.get(key) || neighborhoodName, votes: v };
+      }
+      return { name: neighborhoodName, votes: 0 };
+    }
     const candidateProps = [
       "ADMIN", "name", "name_en", "name_pt", "int_name", "official_name", "alt_name", "short_name",
       "NAME", "NAME_LONG", "NOME", "NM_MUN", "NM_UF", "ISO_A2", "ISO3166_1", "ISO3166_2",
@@ -787,18 +815,18 @@ const MapaCalor = () => {
     for (const c of candidates) {
       for (const key of regionLookupKeys(c)) {
         const v = votesByRegion.get(key);
-        if (v) return { name: regionNameByKey.get(key) || display, votes: v };
+        if (v !== undefined) return { name: regionNameByKey.get(key) || display, votes: v };
       }
       const dbName = COUNTRY_GEO_TO_DB[c];
       if (dbName) {
         for (const key of regionLookupKeys(dbName)) {
           const v2 = votesByRegion.get(key);
-          if (v2) return { name: regionNameByKey.get(key) || display, votes: v2 };
+          if (v2 !== undefined) return { name: regionNameByKey.get(key) || display, votes: v2 };
         }
       }
     }
     return { name: display, votes: 0 };
-  }, [votesByRegion, regionNameByKey]);
+  }, [votesByRegion, regionNameByKey, viewMode]);
 
   /* ---------- Ranking ---------- */
   const ranking = useMemo(
@@ -959,7 +987,7 @@ const MapaCalor = () => {
     const { votes } = lookupVotesForFeature(feature?.properties);
     const hasVotes = votes > 0;
     return {
-      fillColor: hasVotes ? colorByIntensity(votes, maxVotes) : "#0a0a0a",
+      fillColor: hasVotes ? getColorByVotes(votes, maxVotes) : "#0a0a0a",
       fillOpacity: hasVotes ? 0.82 : 0.35,
       color: "#A9A9A9",
       weight: 0.5,
