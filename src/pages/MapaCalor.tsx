@@ -319,10 +319,10 @@ async function overpassQuery(query: string): Promise<any | null> {
   return null;
 }
 
-/** Busca subdivisões administrativas dentro de um bbox para um admin_level específico.
- *  Para bairros (admin_level=10) NÃO aplicamos fallback — pedimos APENAS oficiais.
- *  Suporta escopo por nome de cidade (cityName) que cria area[admin_level=8] no Overpass,
- *  garantindo que TODOS os bairros da cidade sejam retornados, não apenas os do bbox. */
+/** Busca subdivisões administrativas com FALLBACK RECURSIVO de admin_level.
+ *  Bairros: 10 → 9 → 8 → 11 → 7 (cobertura GLOBAL: do Catar a Palmas).
+ *  Estados: 4 → 3 → 5. Municípios/distritos: 8 → 7 → 9 → 6.
+ *  Suporta escopo por nome de cidade (cityName). */
 async function fetchAdminSubdivisions(
   bbox: GeoBbox,
   adminLevel: 4 | 6 | 8 | 10,
@@ -331,24 +331,26 @@ async function fetchAdminSubdivisions(
 ): Promise<any | null> {
   if (ovCache[cacheKey]) return ovCache[cacheKey];
   const [s, n, w, e] = bbox;
-  // Bairros: SEM fallback (queremos só oficiais admin_level=10).
-  // Outros níveis: pequena tolerância para vizinhos.
-  const levels: number[] = adminLevel === 10 ? [10]
-                          : adminLevel === 4 ? [4, 3, 5]
-                          : adminLevel === 8 ? [8, 7, 9, 6]
-                          : [adminLevel];
 
-  // Headers do Overpass: timeout 60s + maxsize 1GB para cidades grandes
+  const levels: number[] =
+    adminLevel === 10 ? [10, 9, 8, 11, 7]
+    : adminLevel === 4 ? [4, 3, 5]
+    : adminLevel === 8 ? [8, 7, 9, 6]
+    : [adminLevel];
+
   const head = `[out:json][timeout:60][maxsize:1073741824];`;
 
   for (const lv of levels) {
     let areaSelector = "";
     let relationSelector = "";
 
-    if (scope?.cityName && lv === 10) {
-      // Caminho preferido p/ bairros: amarra à área da CIDADE (admin_level=8) por NOME
+    if (scope?.cityName && (lv === 10 || lv === 9 || lv === 11 || lv === 8)) {
       const safeName = scope.cityName.replace(/"/g, '\\"');
-      areaSelector = `area["name"="${safeName}"]["boundary"="administrative"]["admin_level"="8"]->.city;`;
+      areaSelector = `(
+        area["name"="${safeName}"]["boundary"="administrative"]["admin_level"~"^(6|7|8|9)$"];
+        area["name:en"="${safeName}"]["boundary"="administrative"]["admin_level"~"^(6|7|8|9)$"];
+        area["name:pt"="${safeName}"]["boundary"="administrative"]["admin_level"~"^(6|7|8|9)$"];
+      )->.city;`;
       relationSelector = `relation(area.city)["boundary"="administrative"]["admin_level"="${lv}"];`;
     } else if (scope?.areaId) {
       areaSelector = `area(${scope.areaId})->.a;`;
@@ -362,32 +364,29 @@ async function fetchAdminSubdivisions(
 
     const q = `${head}${areaSelector}(${relationSelector});out geom;`;
     const data = await overpassQuery(q);
-    if (!data?.elements?.length) {
-      // Para bairros: se a busca por nome da cidade não voltou nada, tenta por bbox como contingência
-      if (scope?.cityName && lv === 10) {
-        const fallbackQ = `${head}(relation["boundary"="administrative"]["admin_level"="10"](${s},${w},${n},${e}););out geom;`;
-        const fb = await overpassQuery(fallbackQ);
-        if (!fb?.elements?.length) continue;
-        const features: any[] = [];
+
+    let features: any[] = [];
+    if (data?.elements?.length) {
+      for (const el of data.elements) {
+        if (el.type !== "relation") continue;
+        const f = relationToFeature(el);
+        if (f) features.push(f);
+      }
+    }
+
+    // Fallback bbox para este nível se a área não retornou nada
+    if (!features.length) {
+      const fallbackQ = `${head}(relation["boundary"="administrative"]["admin_level"="${lv}"](${s},${w},${n},${e}););out geom;`;
+      const fb = await overpassQuery(fallbackQ);
+      if (fb?.elements?.length) {
         for (const el of fb.elements) {
           if (el.type !== "relation") continue;
           const f = relationToFeature(el);
           if (f) features.push(f);
         }
-        if (features.length) {
-          const fc = { type: "FeatureCollection", features };
-          ovCache[cacheKey] = fc; saveOvCache();
-          return fc;
-        }
       }
-      continue;
     }
-    const features: any[] = [];
-    for (const el of data.elements) {
-      if (el.type !== "relation") continue;
-      const f = relationToFeature(el);
-      if (f) features.push(f);
-    }
+
     if (features.length) {
       const fc = { type: "FeatureCollection", features };
       ovCache[cacheKey] = fc; saveOvCache();
