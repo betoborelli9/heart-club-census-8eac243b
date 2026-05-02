@@ -1085,6 +1085,11 @@ const MapaCalor = () => {
     return `map-${viewMode}-${Math.abs(h).toString(36)}`;
   }, [viewMode, activeCountry, activeState, activeCity]);
 
+  const activeClubDisplayInfo = heartCompareData?.info?.logoUrl
+    ? heartCompareData.info
+    : activeClubInfo || heartCompareData?.info;
+  const activeClubLogo = activeClubDisplayInfo?.logoUrl || "";
+
   /* ---------- UI ---------- */
   return (
     <div className="min-h-screen bg-background text-foreground" style={{ fontFamily: "Verdana, Geneva, sans-serif" }}>
