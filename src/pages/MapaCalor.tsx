@@ -1085,6 +1085,11 @@ const MapaCalor = () => {
     return `map-${viewMode}-${Math.abs(h).toString(36)}`;
   }, [viewMode, activeCountry, activeState, activeCity]);
 
+  const activeClubDisplayInfo = heartCompareData?.info?.logoUrl
+    ? heartCompareData.info
+    : activeClubInfo || heartCompareData?.info;
+  const activeClubLogo = activeClubDisplayInfo?.logoUrl || "";
+
   /* ---------- UI ---------- */
   return (
     <div className="min-h-screen bg-background text-foreground" style={{ fontFamily: "Verdana, Geneva, sans-serif" }}>
@@ -1159,7 +1164,7 @@ const MapaCalor = () => {
                   <div className="p-3 rounded-xl bg-white/5 border border-primary/30">
                     <div className="flex items-center gap-2 mb-1">
                       <div className="w-9 h-9 bg-white rounded-full p-1 flex items-center justify-center shrink-0">
-                        <ClubLogo src={(heartCompareData?.info || activeClubInfo)?.logoUrl} alt={activeClubName} size="sm" />
+                        <ClubLogo src={activeClubLogo} alt={activeClubName} size="sm" />
                       </div>
                       <div className="min-w-0">
                         <p className="text-[7px] text-primary font-black uppercase tracking-widest">❤️ Coração</p>
@@ -1350,13 +1355,12 @@ const MapaCalor = () => {
                 <div className="absolute top-3 left-3 z-[500] flex items-center gap-2">
                   <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl bg-black/75 backdrop-blur-md border border-primary/40">
                     <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center overflow-hidden shrink-0">
-                      {(heartCompareData?.info || activeClubInfo)?.logoUrl ? (
+                      {activeClubLogo ? (
                         <img
-                          src={(heartCompareData?.info || activeClubInfo)?.logoUrl}
+                          src={activeClubLogo}
                           alt={activeClubName}
                           className="w-full h-full object-contain p-0.5"
                           referrerPolicy="no-referrer"
-                          onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
                         />
                       ) : (
                         <Trophy className="w-4 h-4 text-muted-foreground" />
