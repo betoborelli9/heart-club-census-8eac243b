@@ -86,14 +86,30 @@ const VotosFicticios = () => {
   const handlePurge = async () => {
     if (!confirm("Remover TODOS os votos fictícios? (votos reais não serão afetados)")) return;
     setWorking(true);
-    const { data, error } = await supabase.rpc("purge_fake_votes");
-    setWorking(false);
-    if (error) {
-      toast.error("Erro ao limpar: " + error.message);
-      return;
+    const toastId = toast.loading("Limpando votos fictícios em lotes...");
+    let total = 0;
+    let totalMeta = 0;
+    let hasMore = true;
+    let batches = 0;
+
+    while (hasMore && batches < 200) {
+      const { data, error } = await supabase.rpc("purge_fake_votes");
+      if (error) {
+        setWorking(false);
+        toast.error("Erro ao limpar: " + error.message, { id: toastId });
+        return;
+      }
+      const result = (data as any) ?? {};
+      const removidos = Number(result.removidos ?? 0);
+      total += removidos;
+      totalMeta += Number(result.meta_removidos ?? 0);
+      hasMore = Boolean(result.has_more) && removidos > 0;
+      batches += 1;
+      toast.loading(`Removendo... ${total.toLocaleString("pt-BR")} votos limpos`, { id: toastId });
     }
-    const removidos = (data as any)?.removidos ?? 0;
-    toast.success(`🧹 ${removidos.toLocaleString("pt-BR")} votos removidos.`);
+
+    setWorking(false);
+    toast.success(`🧹 ${total.toLocaleString("pt-BR")} votos fictícios removidos (${totalMeta.toLocaleString("pt-BR")} metas).`, { id: toastId });
     fetchSummary();
   };
 
