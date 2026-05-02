@@ -1349,8 +1349,18 @@ const MapaCalor = () => {
               {activeClubName && (
                 <div className="absolute top-3 left-3 z-[500] flex items-center gap-2">
                   <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl bg-black/75 backdrop-blur-md border border-primary/40">
-                    <div className="w-7 h-7 bg-white rounded-full p-0.5 flex items-center justify-center">
-                      <ClubLogo src={activeClubInfo?.logoUrl} alt={activeClubName} size="sm" />
+                    <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center overflow-hidden shrink-0">
+                      {(heartCompareData?.info || activeClubInfo)?.logoUrl ? (
+                        <img
+                          src={(heartCompareData?.info || activeClubInfo)?.logoUrl}
+                          alt={activeClubName}
+                          className="w-full h-full object-contain p-0.5"
+                          referrerPolicy="no-referrer"
+                          onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                        />
+                      ) : (
+                        <Trophy className="w-4 h-4 text-muted-foreground" />
+                      )}
                     </div>
                     <div>
                       <p className="text-[7px] text-primary font-black uppercase tracking-widest leading-none">❤️ Coração</p>
@@ -1359,8 +1369,18 @@ const MapaCalor = () => {
                   </div>
                   {compareData && (
                     <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl bg-black/75 backdrop-blur-md border border-white/20">
-                      <div className="w-7 h-7 bg-white rounded-full p-0.5 flex items-center justify-center">
-                        <ClubLogo src={compareData.info?.logoUrl} alt={compareData.name} size="sm" />
+                      <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center overflow-hidden shrink-0">
+                        {compareData.info?.logoUrl ? (
+                          <img
+                            src={compareData.info.logoUrl}
+                            alt={compareData.name}
+                            className="w-full h-full object-contain p-0.5"
+                            referrerPolicy="no-referrer"
+                            onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                          />
+                        ) : (
+                          <Trophy className="w-4 h-4 text-muted-foreground" />
+                        )}
                       </div>
                       <div>
                         <p className="text-[7px] font-black uppercase tracking-widest leading-none text-white/80">⚔️ vs</p>
