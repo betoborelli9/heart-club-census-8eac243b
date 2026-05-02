@@ -37,6 +37,7 @@ import { useUser } from "@/contexts/UserContext";
 import { supabase } from "@/integrations/supabase/client";
 import { CLUBS_DATA, type ClubData } from "@/clubes-data";
 import { useClubTheme } from "@/hooks/useClubTheme";
+import { searchClubsWithFallback, type ClubSearchResult } from "@/lib/search-clubs";
 import logo from "@/assets/logo.png";
 
 /* =========================
