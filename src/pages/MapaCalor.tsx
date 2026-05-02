@@ -1399,6 +1399,13 @@ const MapaCalor = () => {
                 )}
                 <FlyController center={mapCenter} zoom={mapZoom} bbox={mapBbox} lockBounds={viewMode !== "world"} />
                 <ResizeFix />
+                {/* Fit-to-screen: encaixa qualquer território no container, do menor vilarejo à maior cidade */}
+                {viewMode !== "world" && (
+                  <FitToGeoJson
+                    data={parentFeature ? { type: "FeatureCollection", features: [parentFeature] } : isolatedGeo}
+                    deps={[mapHardResetKey, parentFeature, isolatedGeo]}
+                  />
+                )}
 
                 {/* Polígonos filhos (estados/municípios/bairros) com choropleth */}
                 {isolatedGeo && (
