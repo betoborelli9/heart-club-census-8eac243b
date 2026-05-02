@@ -148,8 +148,13 @@ const Stats = () => {
   const [globalSympathy, setGlobalSympathy] = useState<number>(0);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
-  // Busca livre
+  // Busca livre — REAL (Supabase clubes_cache + edge function API-Football)
   const [search, setSearch] = useState<string>("");
+  const [searchResults, setSearchResults] = useState<ClubSearchResult[]>([]);
+  const [isSearching, setIsSearching] = useState<boolean>(false);
+  const [comparedClub, setComparedClub] = useState<ClubSearchResult | null>(null);
+  const [comparedVotes, setComparedVotes] = useState<number>(0);
+  const [comparedTotalGlobal, setComparedTotalGlobal] = useState<number>(0);
 
   /* ──────────────── Carrega clube do usuário ──────────────── */
   useEffect(() => {
