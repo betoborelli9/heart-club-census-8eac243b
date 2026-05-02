@@ -552,6 +552,24 @@ function ResizeFix() {
   return null;
 }
 
+/* FIT-TO-SCREEN: ajusta o mapa exatamente aos limites do GeoJSON carregado.
+ * Garante que QUALQUER território (Catar, Palestina, Palmas, Tóquio) caiba sem transbordar. */
+function FitToGeoJson({ data, deps }: { data: any | null; deps: any[] }) {
+  const map = useMap();
+  useEffect(() => {
+    if (!data?.features?.length) return;
+    try {
+      const layer = L.geoJSON(data);
+      const bounds = layer.getBounds();
+      if (bounds.isValid()) {
+        map.fitBounds(bounds, { padding: [20, 20], maxZoom: 14, animate: true });
+      }
+    } catch {}
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, deps);
+  return null;
+}
+
 /* ---------- Component principal ---------- */
 const MapaCalor = () => {
   const navigate = useNavigate();
