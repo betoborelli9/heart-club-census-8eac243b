@@ -677,42 +677,113 @@ const Stats = () => {
             )}
           </section>
 
-          {/* Busca livre por outro clube na região */}
-          {viewLevel !== "city" && (
-            <section className="rounded-2xl border border-white/10 bg-zinc-950 p-4">
-              <div className="mb-3 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.22em] text-white/50">
-                <Search className="h-3.5 w-3.5 text-primary" /> Consultar outro clube em {contextLabel}
-              </div>
-              <Input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Digite o nome do clube..."
-                className="border-white/10 bg-black/60 text-white placeholder:text-white/30"
-              />
-              {search.trim() && (
-                <div className="mt-3 space-y-1.5">
-                  {filteredClubs.length === 0 ? (
-                    <p className="text-xs text-white/50">Nenhum clube encontrado nesta região.</p>
-                  ) : (
-                    filteredClubs.slice(0, 6).map((c) => (
-                      <div
-                        key={c.club}
-                        className="flex items-center justify-between rounded-lg border border-white/5 bg-black/40 px-3 py-2 text-xs"
+          {/* Busca REAL por outro clube — Cache Supabase + API-Football */}
+          <section className="rounded-2xl border border-white/10 bg-zinc-950 p-4">
+            <div className="mb-3 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.22em] text-white/50">
+              <Search className="h-3.5 w-3.5 text-primary" /> Consultar qualquer clube em {contextLabel}
+            </div>
+            <Input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Digite 3+ letras (ex: Vila Nova, Real Madrid)..."
+              className="border-white/10 bg-black/60 text-white placeholder:text-white/30"
+            />
+
+            {/* Resultados */}
+            {search.trim().length >= 3 && (
+              <div className="mt-3 space-y-1.5">
+                {isSearching ? (
+                  <div className="flex items-center gap-2 text-xs text-white/50">
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" /> Buscando no banco e na API-Football...
+                  </div>
+                ) : searchResults.length === 0 ? (
+                  <p className="text-xs text-white/50">Nenhum clube encontrado.</p>
+                ) : (
+                  searchResults.map((c) => {
+                    const localLogo = resolveClubData(c.name)?.logoUrl;
+                    return (
+                      <button
+                        key={`${c.source}-${c.id}`}
+                        onClick={() => {
+                          setComparedClub(c);
+                          setSearch("");
+                          setSearchResults([]);
+                        }}
+                        className="flex w-full items-center justify-between rounded-lg border border-white/5 bg-black/40 px-3 py-2 text-xs transition-all hover:border-primary/40 hover:bg-black/70"
                       >
                         <div className="flex items-center gap-2">
-                          <div className="h-7 w-7 rounded-full bg-white p-0.5">
-                            <ClubLogo src={resolveClubData(c.club)?.logoUrl} alt={c.club} className="h-full w-full" />
+                          <div className="h-7 w-7 shrink-0 rounded-full bg-white p-0.5">
+                            <ClubLogo src={localLogo || c.logo} alt={c.name} className="h-full w-full" />
                           </div>
-                          <span className="font-black uppercase">{c.club}</span>
+                          <div className="text-left">
+                            <p className="font-black uppercase leading-tight">{c.name}</p>
+                            <p className="text-[10px] text-white/40">
+                              {c.location} · {c.source === "api" ? "API-Football" : "Cache"}
+                            </p>
+                          </div>
                         </div>
-                        <span className="font-bold text-white/70">{c.votes.toLocaleString("pt-BR")}</span>
-                      </div>
-                    ))
-                  )}
+                        <ChevronRight className="h-3.5 w-3.5 text-primary" />
+                      </button>
+                    );
+                  })
+                )}
+              </div>
+            )}
+
+            {/* Comparativo dinâmico */}
+            {comparedClub && (
+              <div className="mt-4 rounded-xl border border-primary/30 bg-primary/5 p-3">
+                <div className="mb-2 flex items-center justify-between">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">
+                    {clubName} vs {comparedClub.name}
+                  </p>
+                  <button
+                    onClick={() => setComparedClub(null)}
+                    className="text-[10px] font-bold uppercase text-white/40 hover:text-white"
+                  >
+                    Limpar
+                  </button>
                 </div>
-              )}
-            </section>
-          )}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="rounded-lg border border-white/10 bg-black/40 p-3">
+                    <div className="flex items-center gap-2">
+                      <div className="h-8 w-8 rounded-full bg-white p-0.5">
+                        <ClubLogo src={clubData?.logoUrl} alt={clubName || ""} className="h-full w-full" />
+                      </div>
+                      <p className="text-[11px] font-black uppercase">{clubName}</p>
+                    </div>
+                    <p className="mt-1.5 text-xl font-black italic">{myVotesInRegion.toLocaleString("pt-BR")}</p>
+                  </div>
+                  <div className="rounded-lg border border-white/10 bg-black/40 p-3">
+                    <div className="flex items-center gap-2">
+                      <div className="h-8 w-8 rounded-full bg-white p-0.5">
+                        <ClubLogo
+                          src={resolveClubData(comparedClub.name)?.logoUrl || comparedClub.logo}
+                          alt={comparedClub.name}
+                          className="h-full w-full"
+                        />
+                      </div>
+                      <p className="text-[11px] font-black uppercase">{comparedClub.name}</p>
+                    </div>
+                    <p className="mt-1.5 text-xl font-black italic">{comparedVotes.toLocaleString("pt-BR")}</p>
+                  </div>
+                </div>
+                {comparedGap ? (
+                  <p className="mt-3 text-xs text-white/70">
+                    <span className="font-black text-primary">{clubName}</span> está{" "}
+                    <span className="font-black text-primary">{comparedGap.pct.toFixed(1)}%</span>{" "}
+                    {comparedGap.ahead ? "à frente de" : "atrás de"}{" "}
+                    <span className="font-black">{comparedClub.name}</span> em {contextLabel}.
+                  </p>
+                ) : (
+                  <p className="mt-3 text-xs text-white/50">
+                    Sem dados suficientes em {contextLabel}. Total global de {comparedClub.name}:{" "}
+                    <span className="font-black text-white">{comparedTotalGlobal.toLocaleString("pt-BR")}</span> corações.
+                  </p>
+                )}
+              </div>
+            )}
+          </section>
 
           {/* UFMG: ocultado intencionalmente até integração real existir */}
         </main>
