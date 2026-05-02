@@ -314,12 +314,87 @@ const Stats = () => {
     return { diff, pct, ahead: diff >= 0 };
   }, [mainRival, myRank]);
 
-  /* ──────────────── Filtra busca ──────────────── */
-  const filteredClubs = useMemo(() => {
-    if (!search.trim()) return topClubsInRegion;
-    const q = normalize(search);
-    return topClubsInRegion.filter((c) => normalize(c.club).includes(q));
-  }, [topClubsInRegion, search]);
+  /* ──────────────── Busca REAL com debounce (Cache + API-Football) ──────────────── */
+  useEffect(() => {
+    const term = search.trim();
+    if (term.length < 3) {
+      setSearchResults([]);
+      setIsSearching(false);
+      return;
+    }
+    setIsSearching(true);
+    const handle = setTimeout(async () => {
+      try {
+        const results = await searchClubsWithFallback(term, 10);
+        setSearchResults(results);
+      } catch (err) {
+        console.error("[Stats search]", err);
+        setSearchResults([]);
+      } finally {
+        setIsSearching(false);
+      }
+    }, 350);
+    return () => clearTimeout(handle);
+  }, [search]);
+
+  /* ──────────────── Carrega votos REAIS do clube comparado na região atual ──────────────── */
+  useEffect(() => {
+    if (!comparedClub) {
+      setComparedVotes(0);
+      setComparedTotalGlobal(0);
+      return;
+    }
+    let mounted = true;
+    (async () => {
+      try {
+        // Total global (corações) do clube comparado
+        const { data: summary } = await supabase.rpc("get_club_vote_summary", {
+          p_club_name: comparedClub.name,
+        });
+        const totalGlobal = Number((summary as any)?.total_votes) || 0;
+
+        // Votos na região atual via top_clubs_by_region
+        let regionVotes = 0;
+        if (viewLevel === "world") {
+          regionVotes = totalGlobal;
+        } else {
+          const level = viewLevel === "country" ? "country" : viewLevel === "state" ? "state" : "city";
+          const value = viewLevel === "country" ? activeCountry : viewLevel === "state" ? activeState : activeCity;
+          if (value) {
+            const { data } = await supabase.rpc("get_top_clubs_by_region", {
+              p_level: level,
+              p_value: value,
+              p_limit: 100,
+            });
+            const found = ((data as any[]) || []).find(
+              (r) => normalize(r.club) === normalize(comparedClub.name),
+            );
+            regionVotes = Number(found?.votes) || 0;
+          }
+        }
+
+        if (!mounted) return;
+        setComparedTotalGlobal(totalGlobal);
+        setComparedVotes(regionVotes);
+      } catch (err) {
+        console.error("[Stats compared]", err);
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, [comparedClub, viewLevel, activeCountry, activeState, activeCity]);
+
+  /* ──────────────── Comparativo dinâmico vs clube consultado ──────────────── */
+  const comparedGap = useMemo(() => {
+    if (!comparedClub) return null;
+    const mine = myVotesInRegion;
+    const other = comparedVotes;
+    if (mine === 0 && other === 0) return null;
+    const diff = mine - other;
+    const base = Math.max(mine, other, 1);
+    return { diff, pct: Math.abs((diff / base) * 100), ahead: diff >= 0, mine, other };
+  }, [comparedClub, comparedVotes, myVotesInRegion]);
 
   /* ──────────────── Header label dinâmico ──────────────── */
   const contextLabel = useMemo(() => {
