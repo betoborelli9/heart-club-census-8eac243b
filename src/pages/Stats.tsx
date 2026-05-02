@@ -1,27 +1,37 @@
 /**
  * ARQUIVO: src/pages/Stats.tsx
- * MÓDULO: Painel de Estatísticas do Clube (fluido, legível e impactante)
- * ESTRUTURA: Imports | Config | Banner | Content
+ * MÓDULO: War Room de Estatísticas — Inteligência Geográfica Universal
+ * V25 - 2026-05-02 BRT
+ *
+ * ESTRUTURA:
+ *  - Splash do Parceiro Master (2s, só aparece se houver parceiro configurado)
+ *  - Slot fixo no TOPO para logo do Parceiro Master (oculto se vazio)
+ *  - Banner do clube + NavBar
+ *  - Inteligência Geográfica Universal (Mundo → País → Estado → Cidade → Bairro)
+ *  - Recordista Regional + Destaque Global
+ *  - Radar de Rivalidade automático (top-2 da região atual)
+ *  - Busca livre por qualquer clube na região atual
+ *  - UFMG: OCULTO até integração real existir
  */
 
-/* =========================
- * Imports
- * ========================= */
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   BarChart3,
+  ChevronRight,
   Crown,
   Flame,
+  Globe2,
   Loader2,
   LogOut,
+  Search,
   ShieldAlert,
-  Target,
   Trophy,
   Users,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { ClubLogo } from "@/components/ClubLogo";
 import { useUser } from "@/contexts/UserContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -30,318 +40,296 @@ import { useClubTheme } from "@/hooks/useClubTheme";
 import logo from "@/assets/logo.png";
 
 /* =========================
- * Config
+ * Parceiro Master (Monetização)
+ * Quando houver parceiro, popular { logoUrl, name }. Slot fica oculto se null.
  * ========================= */
-type CityStat = {
-  city: string;
-  votes: number;
-  ratio: number;
-};
+const PARTNER_MASTER: { logoUrl: string; name: string } | null = null;
 
-type RivalStat = {
-  club: string;
-  votes: number;
-};
+/* =========================
+ * Helpers
+ * ========================= */
+type ViewLevel = "world" | "country" | "state" | "city";
 
-type UFMGData = {
-  titulo: number;
-  libertadores: number;
-  rebaixamento: number;
-  source: "simulado" | "supabase";
-};
+type RegionRow = { region: string; votes: number };
+type ClubRankRow = { club: string; votes: number };
 
-const DEFAULT_UFMG: UFMGData = {
-  titulo: 34,
-  libertadores: 61,
-  rebaixamento: 9,
-  source: "simulado",
-};
-
-const RIVALS_MAP: Record<string, string[]> = {
-  "Vila Nova": ["Goiás", "Atlético-GO", "Gremio"],
-  Flamengo: ["Vasco", "Fluminense", "Botafogo"],
-  Corinthians: ["Palmeiras", "Santos", "São Paulo"],
-  Palmeiras: ["Corinthians", "São Paulo", "Santos"],
-  "São Paulo": ["Corinthians", "Palmeiras", "Santos"],
-  Vasco: ["Flamengo", "Fluminense", "Botafogo"],
-  Fluminense: ["Flamengo", "Vasco", "Botafogo"],
-  Botafogo: ["Flamengo", "Vasco", "Fluminense"],
-  Grêmio: ["Internacional", "Juventude", "Corinthians"],
-  Internacional: ["Grêmio", "Juventude", "Corinthians"],
-  Cruzeiro: ["Atlético-MG", "América-MG", "Vila Nova"],
-  "Atlético-MG": ["Cruzeiro", "América-MG", "Flamengo"],
-};
-
-const normalize = (value: string) =>
-  value
+const normalize = (v: string) =>
+  (v || "")
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-zA-Z0-9\s]/g, " ")
-    .replace(/\s+/g, " ")
-    .trim()
-    .toLowerCase();
+    .toLowerCase()
+    .trim();
 
-const clampPercent = (value: number) => Math.max(0, Math.min(100, Number.isFinite(value) ? value : 0));
-
-const buildCityRanking = (rows: { cidade: string }[]): CityStat[] => {
-  const tally = new Map<string, number>();
-
-  rows.forEach(({ cidade }) => {
-    const city = cidade?.trim() || "Não informado";
-    tally.set(city, (tally.get(city) || 0) + 1);
-  });
-
-  const sorted = Array.from(tally.entries())
-    .map(([city, votes]) => ({ city, votes }))
-    .sort((a, b) => b.votes - a.votes)
-    .slice(0, 7);
-
-  const maxVotes = sorted[0]?.votes || 1;
-
-  return sorted.map((entry) => ({
-    ...entry,
-    ratio: clampPercent((entry.votes / maxVotes) * 100),
-  }));
+const resolveClubData = (name: string | null): ClubData | null => {
+  if (!name) return null;
+  const n = normalize(name);
+  return CLUBS_DATA.find((c) => normalize(c.nome) === n) ?? null;
 };
 
-const resolveClub = (clubName: string | null): ClubData | null => {
-  if (!clubName) return null;
-  return CLUBS_DATA.find((club) => normalize(club.nome) === normalize(clubName)) ?? null;
+const LEVEL_LABELS: Record<ViewLevel, { ranking: string; recordista: string; rivais: string }> = {
+  world: { ranking: "Países", recordista: "Recordista Mundial", rivais: "Maior Rival Global" },
+  country: { ranking: "Estados", recordista: "Recordista Nacional", rivais: "Maior Rival Nacional" },
+  state: { ranking: "Cidades", recordista: "Recordista Estadual", rivais: "Maior Rival Estadual" },
+  city: { ranking: "Bairros", recordista: "Recordista da Cidade", rivais: "Maior Rival Local" },
 };
 
-const getMainRivals = (clubName: string): string[] => {
-  if (RIVALS_MAP[clubName]) return RIVALS_MAP[clubName];
-  return ["Flamengo", "Corinthians", "Palmeiras"];
-};
+/* =========================
+ * Splash Parceiro Master
+ * ========================= */
+const PartnerSplash = ({ onDone }: { onDone: () => void }) => {
+  useEffect(() => {
+    const t = setTimeout(onDone, 2000);
+    return () => clearTimeout(t);
+  }, [onDone]);
 
-const buildSimulatedUFMG = (votes: number): UFMGData => {
-  const titulo = clampPercent(18 + votes * 0.35);
-  const libertadores = clampPercent(titulo + 22);
-  const rebaixamento = clampPercent(40 - titulo * 0.7);
-
-  return {
-    titulo,
-    libertadores,
-    rebaixamento,
-    source: "simulado",
-  };
-};
-
-const UFMGStats = ({ data, loading }: { data: UFMGData; loading: boolean }) => {
-  const rows = [
-    { label: "Probabilidade de Título", value: data.titulo },
-    { label: "Acesso / Libertadores", value: data.libertadores },
-    { label: "Risco de Rebaixamento", value: data.rebaixamento },
-  ];
+  if (!PARTNER_MASTER) {
+    onDone();
+    return null;
+  }
 
   return (
-    <section className="rounded-3xl border border-border bg-card/80 p-6 shadow-xl backdrop-blur-sm">
-      <div className="mb-5 flex items-center justify-between gap-3">
-        <h3 className="text-sm font-black uppercase tracking-[0.22em] italic">Módulo UFMG</h3>
-        <span className="rounded-full border border-border bg-background/70 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-          {data.source === "supabase" ? "Dados oficiais" : "Modo simulador"}
+    <motion.div
+      initial={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.5 }}
+      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black"
+    >
+      <div className="flex flex-col items-center gap-3">
+        <img src={PARTNER_MASTER.logoUrl} alt={PARTNER_MASTER.name} className="h-24 w-auto" />
+        <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-white/40">
+          Parceiro Master
         </span>
       </div>
-
-      <div className="space-y-4">
-        {rows.map((item) => (
-          <div key={item.label} className="space-y-2">
-            <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wide">
-              <span className="text-muted-foreground">{item.label}</span>
-              <span>{item.value.toFixed(1)}%</span>
-            </div>
-            <div className="h-2.5 overflow-hidden rounded-full bg-muted">
-              <motion.div
-                className="h-full rounded-full bg-primary"
-                initial={{ width: 0 }}
-                animate={{ width: `${loading ? 0 : item.value}%` }}
-                transition={{ duration: 0.55, ease: "easeOut" }}
-              />
-            </div>
-          </div>
-        ))}
-      </div>
-    </section>
+    </motion.div>
   );
 };
 
+/* =========================
+ * Componente: Slot Parceiro (topo fixo)
+ * ========================= */
+const PartnerSlot = () => {
+  if (!PARTNER_MASTER) return null;
+  return (
+    <div className="flex items-center justify-center border-b border-white/5 bg-black py-2">
+      <img src={PARTNER_MASTER.logoUrl} alt={PARTNER_MASTER.name} className="h-7 w-auto opacity-90" />
+    </div>
+  );
+};
+
+/* =========================
+ * Stats principal
+ * ========================= */
 const Stats = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, profile, isLoading: isUserLoading, signOut } = useUser();
+  const { user, isLoading: isUserLoading, signOut } = useUser();
 
+  // Splash
+  const [showSplash, setShowSplash] = useState<boolean>(!!PARTNER_MASTER);
+
+  // Identidade do clube do usuário
   const [clubName, setClubName] = useState<string | null>(null);
-  const [clubData, setClubData] = useState<ClubData | null>(null);
-  const [cityStats, setCityStats] = useState<CityStat[]>([]);
-  const [totalVotes, setTotalVotes] = useState(0);
-  const [sympathizers, setSympathizers] = useState(0);
-  const [rivalStats, setRivalStats] = useState<RivalStat[]>([]);
-  const [selectedRival, setSelectedRival] = useState<string>("");
-  const [ufmgData, setUfmgData] = useState<UFMGData>(DEFAULT_UFMG);
-  const [isStatsLoading, setIsStatsLoading] = useState(true);
-
+  const clubData = useMemo(() => resolveClubData(clubName), [clubName]);
   const theme = useClubTheme(clubName);
   const isLightText = theme.textClass === "text-black";
   const bannerTextColor = isLightText ? "hsl(0 0% 8%)" : "hsl(0 0% 100%)";
 
-  const selectedRivalData = rivalStats.find((rival) => rival.club === selectedRival) ?? null;
-  const maxComparisonVotes = Math.max(totalVotes, selectedRivalData?.votes ?? 0, 1);
+  // Geo navegação universal
+  const [viewLevel, setViewLevel] = useState<ViewLevel>("world");
+  const [activeCountry, setActiveCountry] = useState<string | null>(null);
+  const [activeState, setActiveState] = useState<string | null>(null);
+  const [activeCity, setActiveCity] = useState<string | null>(null);
 
+  // Dados
+  const [regionRows, setRegionRows] = useState<RegionRow[]>([]);
+  const [topClubsInRegion, setTopClubsInRegion] = useState<ClubRankRow[]>([]);
+  const [globalTotal, setGlobalTotal] = useState<number>(0);
+  const [globalSympathy, setGlobalSympathy] = useState<number>(0);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+
+  // Busca livre
+  const [search, setSearch] = useState<string>("");
+
+  /* ──────────────── Carrega clube do usuário ──────────────── */
   useEffect(() => {
+    if (!user) return;
     let mounted = true;
-
-    const loadStats = async () => {
-      setIsStatsLoading(true);
-
-      try {
-        if (!user) {
-          if (mounted) {
-            setClubName(null);
-            setClubData(null);
-            setCityStats([]);
-            setTotalVotes(0);
-            setSympathizers(0);
-            setRivalStats([]);
-            setUfmgData(DEFAULT_UFMG);
-          }
-          return;
-        }
-
-        const { data: mainVote, error: mainVoteError } = await supabase
-          .from("votos")
-          .select("clube_nome")
-          .eq("user_id", user.id)
-          .eq("is_original_vote", true)
-          .maybeSingle();
-
-        if (mainVoteError) throw mainVoteError;
-
-        const resolvedClub = mainVote?.clube_nome ?? null;
-        const resolvedClubData = resolveClub(resolvedClub);
-
-        if (!mounted) return;
-
-        setClubName(resolvedClub);
-        setClubData(resolvedClubData);
-
-        if (!resolvedClub) {
-          setCityStats([]);
-          setTotalVotes(0);
-          setSympathizers(0);
-          setRivalStats([]);
-          setUfmgData(DEFAULT_UFMG);
-          return;
-        }
-
-        const [citiesResponse, ownCountResponse, simpatizantesResponse] = await Promise.all([
-          supabase.from("votos").select("cidade").eq("clube_nome", resolvedClub).eq("is_original_vote", true),
-          supabase
-            .from("votos")
-            .select("*", { count: "exact", head: true })
-            .eq("clube_nome", resolvedClub)
-            .eq("is_original_vote", true),
-          supabase
-            .from("votos")
-            .select("*", { count: "exact", head: true })
-            .eq("clube_nome", resolvedClub)
-            .eq("is_original_vote", false),
-        ]);
-
-        if (citiesResponse.error) throw citiesResponse.error;
-        if (ownCountResponse.error) throw ownCountResponse.error;
-        if (simpatizantesResponse.error) throw simpatizantesResponse.error;
-
-        if (!mounted) return;
-
-        const ownVotes = ownCountResponse.count || 0;
-        const cityRanking = buildCityRanking(citiesResponse.data || []);
-
-        setCityStats(cityRanking);
-        setTotalVotes(ownVotes);
-        setSympathizers(simpatizantesResponse.count || 0);
-
-        const rivals = getMainRivals(resolvedClub).filter((name) => normalize(name) !== normalize(resolvedClub));
-
-        const rivalsResponse = await Promise.all(
-          rivals.map(async (rivalClub) => {
-            const { count, error } = await supabase
-              .from("votos")
-              .select("*", { count: "exact", head: true })
-              .eq("clube_nome", rivalClub)
-              .eq("is_original_vote", true);
-
-            return {
-              club: rivalClub,
-              votes: error ? 0 : count || 0,
-            };
-          })
-        );
-
-        if (!mounted) return;
-
-        setRivalStats(rivalsResponse);
-        setSelectedRival((current) => current || rivalsResponse[0]?.club || "");
-
-        let nextUFMG = buildSimulatedUFMG(ownVotes);
-
-        try {
-          const ufmgResponse = await (supabase as unknown as {
-            from: (table: string) => {
-              select: (query: string) => {
-                eq: (column: string, value: string) => {
-                  maybeSingle: () => Promise<{ data: any; error: any }>;
-                };
-              };
-            };
-          })
-            .from("clube_probabilidades")
-            .select("prob_titulo, prob_libertadores, prob_acesso, prob_rebaixamento")
-            .eq("clube_nome", resolvedClub)
-            .maybeSingle();
-
-          if (!ufmgResponse.error && ufmgResponse.data) {
-            nextUFMG = {
-              titulo: clampPercent(Number(ufmgResponse.data.prob_titulo ?? 0)),
-              libertadores: clampPercent(
-                Number(ufmgResponse.data.prob_libertadores ?? ufmgResponse.data.prob_acesso ?? 0)
-              ),
-              rebaixamento: clampPercent(Number(ufmgResponse.data.prob_rebaixamento ?? 0)),
-              source: "supabase",
-            };
-          }
-        } catch {
-          nextUFMG = buildSimulatedUFMG(ownVotes);
-        }
-
-        if (mounted) {
-          setUfmgData(nextUFMG);
-        }
-      } catch (error) {
-        console.error("[Stats] erro ao carregar dados:", error);
-        if (mounted) {
-          setCityStats([]);
-          setTotalVotes(0);
-          setSympathizers(0);
-          setRivalStats([]);
-          setUfmgData(DEFAULT_UFMG);
-        }
-      } finally {
-        if (mounted) setIsStatsLoading(false);
-      }
-    };
-
-    loadStats();
-
+    (async () => {
+      const { data } = await supabase
+        .from("votos")
+        .select("clube_nome")
+        .eq("user_id", user.id)
+        .eq("is_original_vote", true)
+        .maybeSingle();
+      if (mounted) setClubName(data?.clube_nome ?? null);
+    })();
     return () => {
       mounted = false;
     };
   }, [user]);
 
-  const isStatsActive = location.pathname === "/stats" || location.pathname === "/estatisticas";
+  /* ──────────────── Carrega dados geo (universal) ──────────────── */
+  useEffect(() => {
+    if (!clubName) return;
+    let mounted = true;
+    setIsLoading(true);
 
+    (async () => {
+      try {
+        // Nível p/ RPC heatmap
+        const rpcLevel: "country" | "state" | "city" =
+          viewLevel === "world" ? "country" : viewLevel === "country" ? "state" : viewLevel === "state" ? "city" : "city";
+
+        const filterValue =
+          viewLevel === "world" ? null : viewLevel === "country" ? activeCountry : viewLevel === "state" ? activeState : activeCity;
+
+        // 1) Ranking da região (Países/Estados/Cidades) OU bairros
+        let regionRanking: RegionRow[] = [];
+        if (viewLevel === "city" && activeCity) {
+          const { data } = await supabase.rpc("get_heatmap_neighborhoods", {
+            p_club_name: clubName,
+            p_city: activeCity,
+          });
+          regionRanking = ((data as any[]) || []).map((r) => ({
+            region: r.neighborhood,
+            votes: Number(r.votes) || 0,
+          }));
+        } else {
+          const { data } = await supabase.rpc("get_heatmap_data", {
+            p_club_name: clubName,
+            p_level: rpcLevel,
+            p_filter_value: filterValue,
+          });
+          regionRanking = ((data as any[]) || []).map((r) => ({
+            region: r.region,
+            votes: Number(r.votes) || 0,
+          }));
+        }
+
+        // 2) Top clubes na região (Recordista + Rivais) — não aplica em "city" (bairros)
+        let topClubs: ClubRankRow[] = [];
+        if (viewLevel !== "city") {
+          // Para nível "world", buscamos top clubes globais (sem filtro)
+          if (viewLevel === "world") {
+            const { data } = await supabase.rpc("get_club_vote_ranking", { p_limit: 10 });
+            topClubs = ((data as any[]) || []).map((r) => ({ club: r.club, votes: Number(r.votes) || 0 }));
+          } else {
+            const { data } = await supabase.rpc("get_top_clubs_by_region", {
+              p_level: rpcLevel === "country" ? "country" : rpcLevel === "state" ? "state" : "city",
+              p_value: filterValue ?? "",
+              p_limit: 10,
+            });
+            // Quando viewLevel=country, queremos top clubes do país atual (não estados)
+            // Ajuste: usamos o nível corrente como p_level
+            const correctLevel: "country" | "state" | "city" =
+              viewLevel === "country" ? "country" : viewLevel === "state" ? "state" : "city";
+            const { data: d2 } = await supabase.rpc("get_top_clubs_by_region", {
+              p_level: correctLevel,
+              p_value: filterValue ?? "",
+              p_limit: 10,
+            });
+            topClubs = ((d2 as any[]) || []).map((r) => ({ club: r.club, votes: Number(r.votes) || 0 }));
+          }
+        } else if (activeCity) {
+          const { data } = await supabase.rpc("get_top_clubs_by_region", {
+            p_level: "city",
+            p_value: activeCity,
+            p_limit: 10,
+          });
+          topClubs = ((data as any[]) || []).map((r) => ({ club: r.club, votes: Number(r.votes) || 0 }));
+        }
+
+        // 3) Destaque Global (Total Corações + Simpatias)
+        const { data: summary } = await supabase.rpc("get_club_vote_summary", { p_club_name: clubName });
+        const s = (summary as any) || {};
+
+        if (!mounted) return;
+        setRegionRows(regionRanking);
+        setTopClubsInRegion(topClubs);
+        setGlobalTotal(Number(s.total_votes) || 0);
+        setGlobalSympathy(Number(s.sympathizers) || 0);
+      } catch (err) {
+        console.error("[Stats] erro:", err);
+        if (mounted) {
+          setRegionRows([]);
+          setTopClubsInRegion([]);
+        }
+      } finally {
+        if (mounted) setIsLoading(false);
+      }
+    })();
+
+    return () => {
+      mounted = false;
+    };
+  }, [clubName, viewLevel, activeCountry, activeState, activeCity]);
+
+  /* ──────────────── Drill-down ──────────────── */
+  const drillInto = (region: string) => {
+    if (viewLevel === "world") {
+      setActiveCountry(region);
+      setViewLevel("country");
+    } else if (viewLevel === "country") {
+      setActiveState(region);
+      setViewLevel("state");
+    } else if (viewLevel === "state") {
+      setActiveCity(region);
+      setViewLevel("city");
+    }
+  };
+
+  const goToLevel = (level: ViewLevel) => {
+    if (level === "world") {
+      setActiveCountry(null);
+      setActiveState(null);
+      setActiveCity(null);
+    } else if (level === "country") {
+      setActiveState(null);
+      setActiveCity(null);
+    } else if (level === "state") {
+      setActiveCity(null);
+    }
+    setViewLevel(level);
+  };
+
+  /* ──────────────── Recordista + Rival ──────────────── */
+  const recordista = topClubsInRegion[0] ?? null;
+  const myRank = topClubsInRegion.find((c) => normalize(c.club) === normalize(clubName || ""));
+  const myVotesInRegion = myRank?.votes ?? 0;
+  const mainRival =
+    topClubsInRegion.find((c) => normalize(c.club) !== normalize(clubName || "")) ?? null;
+
+  const enagementGap = useMemo(() => {
+    if (!mainRival || !myRank) return null;
+    if (myRank.votes === 0 && mainRival.votes === 0) return null;
+    const diff = myRank.votes - mainRival.votes;
+    const base = Math.max(myRank.votes, mainRival.votes, 1);
+    const pct = Math.abs((diff / base) * 100);
+    return { diff, pct, ahead: diff >= 0 };
+  }, [mainRival, myRank]);
+
+  /* ──────────────── Filtra busca ──────────────── */
+  const filteredClubs = useMemo(() => {
+    if (!search.trim()) return topClubsInRegion;
+    const q = normalize(search);
+    return topClubsInRegion.filter((c) => normalize(c.club).includes(q));
+  }, [topClubsInRegion, search]);
+
+  /* ──────────────── Header label dinâmico ──────────────── */
+  const contextLabel = useMemo(() => {
+    if (viewLevel === "world") return "Mundo";
+    if (viewLevel === "country") return activeCountry ?? "—";
+    if (viewLevel === "state") return `${activeState ?? "—"} · ${activeCountry ?? ""}`;
+    return `${activeCity ?? "—"} · ${activeState ?? ""}`;
+  }, [viewLevel, activeCountry, activeState, activeCity]);
+
+  const labels = LEVEL_LABELS[viewLevel];
+  const maxRegionVotes = regionRows[0]?.votes || 1;
+
+  /* ──────────────── Loading / Auth gates ──────────────── */
   if (isUserLoading) {
     return (
-      <div className="min-h-screen bg-background text-foreground flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <Loader2 className="h-9 w-9 animate-spin text-primary" />
       </div>
     );
@@ -349,254 +337,318 @@ const Stats = () => {
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-background text-foreground flex items-center justify-center px-4">
+      <div className="min-h-screen bg-background flex items-center justify-center px-4">
         <div className="w-full max-w-md rounded-3xl border border-border bg-card/80 p-8 text-center shadow-xl">
           <h1 className="text-2xl font-black italic uppercase">Estatísticas</h1>
-          <p className="mt-3 text-sm text-muted-foreground">Faça login para desbloquear o painel completo do seu clube.</p>
-          <Button className="mt-6 w-full" onClick={() => navigate("/login")}>Entrar agora</Button>
+          <p className="mt-3 text-sm text-muted-foreground">Faça login para acessar o painel.</p>
+          <Button className="mt-6 w-full" onClick={() => navigate("/login")}>Entrar</Button>
         </div>
       </div>
     );
   }
 
+  const isStatsActive = location.pathname === "/stats" || location.pathname === "/estatisticas";
+
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      {/* =========================
-       * Header
-       * ========================= */}
-      <header className="sticky top-0 z-50 h-16 border-b border-border bg-background/90 backdrop-blur-xl">
-        <div className="mx-auto flex h-full max-w-6xl items-center justify-between gap-4 px-4">
-          <button className="flex items-center gap-2" onClick={() => navigate("/dashboard")}>
-            <img src={logo} alt="Heart Club" className="h-8 w-auto md:h-10" />
-            <span className="text-lg font-black italic tracking-tighter">HEART CLUB</span>
-          </button>
-          <Button variant="ghost" size="icon" onClick={() => signOut()} className="text-muted-foreground hover:text-foreground">
-            <LogOut className="h-5 w-5" />
-          </Button>
-        </div>
-      </header>
+    <>
+      <AnimatePresence>{showSplash && <PartnerSplash onDone={() => setShowSplash(false)} />}</AnimatePresence>
 
-      <main className="mx-auto max-w-6xl space-y-5 px-3 py-4 md:px-4">
-        {/* =========================
-         * Banner + NavBar — Bloco visual único
-         * ========================= */}
-        <div>
-        <section
-          className="relative overflow-hidden rounded-t-[2.25rem] rounded-b-none border border-border/50 border-b-0 p-4 sm:p-6 md:p-8 shadow-2xl"
-          style={{ backgroundColor: theme.primaryHex }}
-        >
-          <div className="absolute inset-y-0 right-[10%] w-[4px] rotate-[22deg]" style={{ backgroundColor: "hsl(0 0% 100% / 0.72)" }} />
-          <div className="absolute inset-y-[-20%] right-[4%] w-[14px] rotate-[22deg]" style={{ backgroundColor: "hsl(0 0% 100% / 0.5)" }} />
+      <div className="min-h-screen bg-black text-white">
+        {/* Slot fixo Parceiro Master (oculto até existir) */}
+        <PartnerSlot />
 
-          <div className="relative z-10 flex items-center justify-between gap-4 sm:gap-6">
-            <div className="flex items-center gap-3 sm:gap-4">
-              {/* Emblema — Mobile 102px, Tablet 134px, Desktop 166px */}
+        {/* Header */}
+        <header className="sticky top-0 z-40 h-14 border-b border-white/10 bg-black/95 backdrop-blur-xl">
+          <div className="mx-auto flex h-full max-w-6xl items-center justify-between gap-4 px-3">
+            <button className="flex items-center gap-2" onClick={() => navigate("/dashboard")}>
+              <img src={logo} alt="Heart Club" className="h-7 w-auto" />
+              <span className="text-sm font-black italic tracking-tighter">HEART CLUB</span>
+            </button>
+            <Button variant="ghost" size="icon" onClick={() => signOut()} className="text-white/60 hover:text-white">
+              <LogOut className="h-5 w-5" />
+            </Button>
+          </div>
+        </header>
+
+        <main className="mx-auto max-w-6xl space-y-4 px-3 py-4">
+          {/* Banner clube */}
+          <section
+            className="relative overflow-hidden rounded-t-[2rem] border border-white/10 border-b-0 p-4 sm:p-6"
+            style={{ backgroundColor: theme.primaryHex }}
+          >
+            <div className="absolute inset-y-0 right-[10%] w-[3px] rotate-[22deg] bg-white/60" />
+            <div className="absolute inset-y-[-20%] right-[4%] w-[10px] rotate-[22deg] bg-white/40" />
+
+            <div className="relative z-10 flex items-center gap-3 sm:gap-4">
               <div
-                className="flex h-[102px] w-[102px] shrink-0 items-center justify-center rounded-full sm:h-[134px] sm:w-[134px] md:h-[166px] md:w-[166px]"
-                style={{ backgroundColor: "hsl(0 0% 100%)" }}
+                className="flex h-[88px] w-[88px] sm:h-[120px] sm:w-[120px] shrink-0 items-center justify-center rounded-full"
+                style={{ backgroundColor: "#fff" }}
               >
-                <ClubLogo
-                  src={clubData?.logoUrl}
-                  alt={clubName || "Clube do usuário"}
-                  className="h-[94%] w-[94%] rounded-full"
-                />
+                <ClubLogo src={clubData?.logoUrl} alt={clubName || "Clube"} className="h-[94%] w-[94%] rounded-full" />
               </div>
-
               <div className="space-y-1">
-                <p className="text-[10px] font-black uppercase tracking-[0.26em] sm:text-xs" style={{ color: bannerTextColor }}>
-                  ESTATÍSTICAS
+                <p className="text-[10px] font-black uppercase tracking-[0.26em]" style={{ color: bannerTextColor }}>
+                  WAR ROOM
                 </p>
                 <h1
-                  className="max-w-[44vw] text-2xl font-black italic uppercase leading-none sm:text-3xl md:max-w-none md:text-5xl"
+                  className="text-2xl sm:text-4xl font-black italic uppercase leading-none"
                   style={{ color: bannerTextColor }}
                 >
                   {clubName || "Clube não identificado"}
                 </h1>
               </div>
             </div>
-          </div>
-        </section>
+          </section>
 
-        <nav className="flex items-center justify-center gap-2 rounded-t-none rounded-b-2xl border border-border border-t-0 bg-card/70 px-2 py-2 shadow-lg backdrop-blur-md">
-          {[
-            { label: "MAPAS", icon: Flame, path: "/mapa-calor", active: location.pathname === "/mapa-calor" },
-            { label: "ESTATÍSTICAS", icon: BarChart3, path: "/estatisticas", active: isStatsActive },
-            { label: "RANKING", icon: Crown, path: "/estatisticas#ranking", active: location.hash === "#ranking" },
-          ].map((item) => (
+          {/* NavBar secundária */}
+          <nav className="flex items-center justify-center gap-2 -mt-2 rounded-b-2xl border border-white/10 border-t-0 bg-zinc-950/80 px-2 py-2 backdrop-blur-md">
+            {[
+              { label: "MAPAS", icon: Flame, path: "/mapa-calor", active: location.pathname === "/mapa-calor" },
+              { label: "ESTATÍSTICAS", icon: BarChart3, path: "/estatisticas", active: isStatsActive },
+              { label: "RANKING", icon: Crown, path: "/estatisticas#ranking", active: location.hash === "#ranking" },
+            ].map((item) => (
+              <button
+                key={item.label}
+                onClick={() => navigate(item.path)}
+                className={`inline-flex items-center gap-2 rounded-xl px-3 py-2 text-[11px] font-black uppercase tracking-wider transition-all ${
+                  item.active ? "bg-primary text-primary-foreground" : "text-white/60 hover:bg-white/5 hover:text-white"
+                }`}
+              >
+                <item.icon className="h-4 w-4" />
+                {item.label}
+              </button>
+            ))}
+          </nav>
+
+          {/* Destaque Global do clube */}
+          <section className="grid grid-cols-2 gap-3">
+            <div className="rounded-2xl border border-white/10 bg-zinc-950 p-4">
+              <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-white/50">
+                <Trophy className="h-3.5 w-3.5 text-primary" /> Corações Globais
+              </div>
+              <p className="mt-2 text-3xl sm:text-4xl font-black italic">{globalTotal.toLocaleString("pt-BR")}</p>
+            </div>
+            <div className="rounded-2xl border border-white/10 bg-zinc-950 p-4">
+              <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-white/50">
+                <Users className="h-3.5 w-3.5 text-primary" /> Simpatias
+              </div>
+              <p className="mt-2 text-3xl sm:text-4xl font-black italic">{globalSympathy.toLocaleString("pt-BR")}</p>
+            </div>
+          </section>
+
+          {/* Breadcrumb geográfico */}
+          <section className="flex flex-wrap items-center gap-1.5 text-xs">
             <button
-              key={item.label}
-              onClick={() => navigate(item.path)}
-              className={`inline-flex items-center gap-2 rounded-xl px-3 py-2 text-[11px] font-black uppercase tracking-wider transition-all sm:px-5 ${
-                item.active
-                  ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
+              onClick={() => goToLevel("world")}
+              className={`inline-flex items-center gap-1 rounded-full px-3 py-1.5 font-black uppercase tracking-wider transition-all ${
+                viewLevel === "world" ? "bg-primary text-primary-foreground" : "bg-white/5 text-white/60 hover:bg-white/10"
               }`}
             >
-              <item.icon className="h-4 w-4" />
-              {item.label}
+              <Globe2 className="h-3 w-3" /> Mundo
             </button>
-          ))}
-        </nav>
-        </div>
+            {activeCountry && (
+              <>
+                <ChevronRight className="h-3 w-3 text-white/30" />
+                <button
+                  onClick={() => goToLevel("country")}
+                  className={`rounded-full px-3 py-1.5 font-black uppercase tracking-wider ${
+                    viewLevel === "country" ? "bg-primary text-primary-foreground" : "bg-white/5 text-white/60 hover:bg-white/10"
+                  }`}
+                >
+                  {activeCountry}
+                </button>
+              </>
+            )}
+            {activeState && (
+              <>
+                <ChevronRight className="h-3 w-3 text-white/30" />
+                <button
+                  onClick={() => goToLevel("state")}
+                  className={`rounded-full px-3 py-1.5 font-black uppercase tracking-wider ${
+                    viewLevel === "state" ? "bg-primary text-primary-foreground" : "bg-white/5 text-white/60 hover:bg-white/10"
+                  }`}
+                >
+                  {activeState}
+                </button>
+              </>
+            )}
+            {activeCity && (
+              <>
+                <ChevronRight className="h-3 w-3 text-white/30" />
+                <span className="rounded-full bg-primary px-3 py-1.5 font-black uppercase tracking-wider text-primary-foreground">
+                  {activeCity}
+                </span>
+              </>
+            )}
+          </section>
 
-        {/* =========================
-         * Content
-         * ========================= */}
-        <div className="grid gap-4 lg:grid-cols-[1.5fr_1fr]">
-          <motion.section
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.35, ease: "easeOut" }}
-            className="rounded-3xl border border-border bg-card/80 p-6 shadow-xl backdrop-blur-sm"
-          >
-            <div className="mb-5 flex items-center gap-3">
-              <Target className="h-5 w-5 text-primary" />
-              <h2 className="text-sm font-black uppercase tracking-[0.2em] italic">Cidades com mais Corações</h2>
-            </div>
-
-            {isStatsLoading ? (
-              <div className="space-y-3">
-                {[1, 2, 3, 4].map((item) => (
-                  <div key={item} className="space-y-2 animate-pulse">
-                    <div className="h-3 w-40 rounded bg-muted" />
-                    <div className="h-2.5 w-full rounded bg-muted" />
-                  </div>
-                ))}
+          {/* Recordista Regional */}
+          {recordista && (
+            <section className="rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/10 to-transparent p-4">
+              <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.22em] text-primary">
+                <Crown className="h-3.5 w-3.5" /> {labels.recordista}
               </div>
-            ) : cityStats.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Ainda não há dados suficientes para o ranking por cidades.</p>
-            ) : (
-              <div className="space-y-4">
-                {cityStats.map((city, index) => (
-                  <div key={city.city} className="space-y-2">
-                    <div className="flex items-center justify-between text-xs font-bold uppercase tracking-wide">
-                      <span className="text-foreground">#{index + 1} · {city.city}</span>
-                      <span className="text-muted-foreground">{city.votes} corações</span>
+              <div className="mt-3 flex items-center gap-3">
+                <div className="h-12 w-12 shrink-0 rounded-full bg-white p-1">
+                  <ClubLogo
+                    src={resolveClubData(recordista.club)?.logoUrl}
+                    alt={recordista.club}
+                    className="h-full w-full"
+                  />
+                </div>
+                <div className="flex-1">
+                  <p className="text-base font-black italic uppercase leading-tight">{recordista.club}</p>
+                  <p className="text-xs text-white/60">
+                    {recordista.votes.toLocaleString("pt-BR")} corações em {contextLabel}
+                  </p>
+                </div>
+              </div>
+            </section>
+          )}
+
+          {/* Radar de Rivalidade auto */}
+          {mainRival && enagementGap && (
+            <section id="ranking" className="rounded-2xl border border-white/10 bg-zinc-950 p-4">
+              <div className="mb-3 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.22em] text-white/50">
+                <ShieldAlert className="h-3.5 w-3.5 text-primary" /> {labels.rivais}
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="rounded-xl border border-white/10 bg-black/40 p-3">
+                  <div className="flex items-center gap-2">
+                    <div className="h-9 w-9 rounded-full bg-white p-0.5">
+                      <ClubLogo src={clubData?.logoUrl} alt={clubName || ""} className="h-full w-full" />
                     </div>
-                    <div className="h-2.5 overflow-hidden rounded-full bg-muted">
-                      <motion.div
-                        className="h-full rounded-full bg-primary"
-                        initial={{ width: 0 }}
-                        animate={{ width: `${city.ratio}%` }}
-                        transition={{ duration: 0.55, ease: "easeOut", delay: index * 0.05 }}
+                    <p className="text-[11px] font-black uppercase">{clubName}</p>
+                  </div>
+                  <p className="mt-2 text-2xl font-black italic">{myVotesInRegion.toLocaleString("pt-BR")}</p>
+                </div>
+                <div className="rounded-xl border border-white/10 bg-black/40 p-3">
+                  <div className="flex items-center gap-2">
+                    <div className="h-9 w-9 rounded-full bg-white p-0.5">
+                      <ClubLogo
+                        src={resolveClubData(mainRival.club)?.logoUrl}
+                        alt={mainRival.club}
+                        className="h-full w-full"
                       />
                     </div>
+                    <p className="text-[11px] font-black uppercase">{mainRival.club}</p>
                   </div>
+                  <p className="mt-2 text-2xl font-black italic">{mainRival.votes.toLocaleString("pt-BR")}</p>
+                </div>
+              </div>
+              <p className="mt-3 text-xs text-white/70">
+                <span className="font-black text-primary">{clubName}</span>{" "}
+                {enagementGap.ahead ? "está" : "está"}{" "}
+                <span className="font-black text-primary">{enagementGap.pct.toFixed(1)}%</span>{" "}
+                {enagementGap.ahead ? "à frente" : "atrás"} de{" "}
+                <span className="font-black">{mainRival.club}</span> em engajamento em {contextLabel}.
+              </p>
+            </section>
+          )}
+
+          {/* Ranking dinâmico (Países/Estados/Cidades/Bairros) */}
+          <section className="rounded-2xl border border-white/10 bg-zinc-950 p-4">
+            <div className="mb-3 flex items-center justify-between gap-2">
+              <h2 className="flex items-center gap-2 text-sm font-black uppercase tracking-[0.2em] italic">
+                <Trophy className="h-4 w-4 text-primary" /> {labels.ranking} de {contextLabel}
+              </h2>
+            </div>
+
+            {isLoading ? (
+              <div className="space-y-2">
+                {[1, 2, 3, 4].map((i) => (
+                  <div key={i} className="h-10 animate-pulse rounded-lg bg-white/5" />
                 ))}
+              </div>
+            ) : regionRows.length === 0 ? (
+              <p className="text-sm text-white/50">Sem dados nesta região para {clubName}.</p>
+            ) : (
+              <div className="space-y-2">
+                {regionRows.slice(0, 12).map((row, i) => {
+                  const ratio = (row.votes / maxRegionVotes) * 100;
+                  const canDrill = viewLevel !== "city";
+                  return (
+                    <button
+                      key={`${row.region}-${i}`}
+                      onClick={() => canDrill && drillInto(row.region)}
+                      disabled={!canDrill}
+                      className={`group relative w-full overflow-hidden rounded-lg border border-white/5 bg-black/40 px-3 py-2.5 text-left transition-all ${
+                        canDrill ? "hover:border-primary/40 hover:bg-black/70" : "cursor-default"
+                      }`}
+                    >
+                      <div
+                        className="absolute inset-y-0 left-0 bg-primary/15"
+                        style={{ width: `${ratio}%` }}
+                      />
+                      <div className="relative flex items-center justify-between gap-2 text-xs">
+                        <span className="font-black uppercase tracking-wide">
+                          #{i + 1} · {row.region}
+                        </span>
+                        <span className="font-bold text-white/70">
+                          {row.votes.toLocaleString("pt-BR")}
+                          {canDrill && <ChevronRight className="ml-1 inline h-3 w-3 text-primary" />}
+                        </span>
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
             )}
-          </motion.section>
+          </section>
 
-          <div className="space-y-4">
-            <motion.section
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.35, ease: "easeOut", delay: 0.05 }}
-              className="rounded-3xl border border-border bg-card/80 p-6 shadow-xl"
-            >
-              <div className="mb-4 flex items-center gap-3">
-                <Users className="h-5 w-5 text-primary" />
-                <h3 className="text-sm font-black uppercase tracking-[0.2em] italic">Simpatizantes</h3>
+          {/* Busca livre por outro clube na região */}
+          {viewLevel !== "city" && (
+            <section className="rounded-2xl border border-white/10 bg-zinc-950 p-4">
+              <div className="mb-3 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.22em] text-white/50">
+                <Search className="h-3.5 w-3.5 text-primary" /> Consultar outro clube em {contextLabel}
               </div>
-              <p className="text-4xl font-black italic leading-none">{sympathizers}</p>
-              <p className="mt-2 text-xs uppercase tracking-[0.18em] text-muted-foreground">
-                torcedores que escolheram como 2º clube
-              </p>
-            </motion.section>
-
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.35, ease: "easeOut", delay: 0.1 }}
-            >
-              <UFMGStats data={ufmgData} loading={isStatsLoading} />
-            </motion.div>
-          </div>
-        </div>
-
-        <motion.section
-          id="ranking"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.35, ease: "easeOut", delay: 0.15 }}
-          className="rounded-3xl border border-border bg-card/80 p-6 shadow-xl"
-        >
-          <div className="mb-5 flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <Trophy className="h-5 w-5 text-primary" />
-              <h3 className="text-sm font-black uppercase tracking-[0.2em] italic">Radar de Rivais</h3>
-            </div>
-            <span className="rounded-full border border-border bg-background/60 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-              Heart Club Census
-            </span>
-          </div>
-
-          {rivalStats.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Sem rivais mapeados no momento para este clube.</p>
-          ) : (
-            <>
-              <div className="mb-5 flex gap-2 overflow-x-auto pb-1">
-                {rivalStats.map((rival) => (
-                  <button
-                    key={rival.club}
-                    onClick={() => setSelectedRival(rival.club)}
-                    className={`shrink-0 rounded-full border px-4 py-2 text-xs font-black uppercase tracking-wider transition-all ${
-                      selectedRival === rival.club
-                        ? "border-primary bg-primary text-primary-foreground"
-                        : "border-border bg-background/70 text-muted-foreground hover:text-foreground"
-                    }`}
-                  >
-                    {rival.club}
-                  </button>
-                ))}
-              </div>
-
-              {selectedRivalData ? (
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div className="rounded-2xl border border-border bg-background/70 p-4">
-                    <p className="text-[11px] font-black uppercase tracking-[0.16em] text-muted-foreground">Seu Clube</p>
-                    <p className="mt-2 text-3xl font-black italic">{totalVotes}</p>
-                    <div className="mt-3 h-2.5 overflow-hidden rounded-full bg-muted">
-                      <motion.div
-                        className="h-full rounded-full bg-primary"
-                        initial={{ width: 0 }}
-                        animate={{ width: `${(totalVotes / maxComparisonVotes) * 100}%` }}
-                        transition={{ duration: 0.45, ease: "easeOut" }}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="rounded-2xl border border-border bg-background/70 p-4">
-                    <p className="text-[11px] font-black uppercase tracking-[0.16em] text-muted-foreground">{selectedRivalData.club}</p>
-                    <p className="mt-2 text-3xl font-black italic">{selectedRivalData.votes}</p>
-                    <div className="mt-3 h-2.5 overflow-hidden rounded-full bg-muted">
-                      <motion.div
-                        className="h-full rounded-full bg-primary"
-                        initial={{ width: 0 }}
-                        animate={{ width: `${(selectedRivalData.votes / maxComparisonVotes) * 100}%` }}
-                        transition={{ duration: 0.45, ease: "easeOut", delay: 0.05 }}
-                      />
-                    </div>
-                  </div>
+              <Input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Digite o nome do clube..."
+                className="border-white/10 bg-black/60 text-white placeholder:text-white/30"
+              />
+              {search.trim() && (
+                <div className="mt-3 space-y-1.5">
+                  {filteredClubs.length === 0 ? (
+                    <p className="text-xs text-white/50">Nenhum clube encontrado nesta região.</p>
+                  ) : (
+                    filteredClubs.slice(0, 6).map((c) => (
+                      <div
+                        key={c.club}
+                        className="flex items-center justify-between rounded-lg border border-white/5 bg-black/40 px-3 py-2 text-xs"
+                      >
+                        <div className="flex items-center gap-2">
+                          <div className="h-7 w-7 rounded-full bg-white p-0.5">
+                            <ClubLogo src={resolveClubData(c.club)?.logoUrl} alt={c.club} className="h-full w-full" />
+                          </div>
+                          <span className="font-black uppercase">{c.club}</span>
+                        </div>
+                        <span className="font-bold text-white/70">{c.votes.toLocaleString("pt-BR")}</span>
+                      </div>
+                    ))
+                  )}
                 </div>
-              ) : null}
-
-              <div className="mt-4 flex items-center gap-2 rounded-2xl border border-border bg-background/60 p-3 text-sm">
-                <ShieldAlert className="h-4 w-4 text-primary" />
-                <p className="text-muted-foreground">
-                  {selectedRivalData && totalVotes >= selectedRivalData.votes
-                    ? `Seu clube está à frente de ${selectedRivalData.club} no engajamento atual.`
-                    : selectedRivalData
-                    ? `${selectedRivalData.club} está à frente no momento — oportunidade de virar o jogo no censo.`
-                    : "Selecione um rival para comparar o engajamento."}
-                </p>
-              </div>
-            </>
+              )}
+            </section>
           )}
-        </motion.section>
-      </main>
-    </div>
+
+          {/* UFMG: ocultado intencionalmente até integração real existir */}
+        </main>
+      </div>
+    </>
   );
 };
 
 export default Stats;
+
+/**
+ * [RODAPÉ TÉCNICO]
+ * V25 — 2026-05-02 BRT
+ * - Splash + Slot Parceiro Master (oculto se PARTNER_MASTER=null)
+ * - Inteligência geográfica universal via RPCs (get_heatmap_data, get_heatmap_neighborhoods, get_top_clubs_by_region, get_club_vote_summary, get_club_vote_ranking)
+ * - Recordista Regional + Rival Auto (top-2 da região, sem hardcode)
+ * - Drill-down: Mundo → País → Estado → Cidade → Bairros
+ * - Busca livre por clube na região atual
+ * - Módulo UFMG ocultado até dados oficiais reais existirem
+ */
