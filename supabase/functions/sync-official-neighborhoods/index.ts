@@ -64,79 +64,144 @@ const goianiaArcgis: Provider = {
   },
 };
 
-/* Universal default: OpenStreetMap Overpass admin_level=10 */
+/* Universal default: OpenStreetMap Overpass — RECURSIVE admin_level fallback (10→9→8→7→11)
+ * Garante cobertura GLOBAL: do Catar a Palmas, do menor vilarejo às megacidades.
+ */
+const OVERPASS_ENDPOINTS = [
+  "https://overpass-api.de/api/interpreter",
+  "https://overpass.kumi.systems/api/interpreter",
+  "https://overpass.openstreetmap.fr/api/interpreter",
+];
+
+async function overpassFetch(query: string): Promise<any | null> {
+  let lastErr: unknown = null;
+  for (const ep of OVERPASS_ENDPOINTS) {
+    try {
+      const res = await fetch(ep, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: `data=${encodeURIComponent(query)}`,
+      });
+      if (!res.ok) { lastErr = new Error(`Overpass ${ep} ${res.status}`); continue; }
+      return await res.json();
+    } catch (e) { lastErr = e; }
+  }
+  throw new Error(`Overpass falhou: ${lastErr instanceof Error ? lastErr.message : "desconhecido"}`);
+}
+
 const overpassUniversal: Provider = {
-  id: "osm_overpass_admin_level_10",
+  id: "osm_overpass_recursive",
   matches: () => true,
   fetch: async (city, state, country) => {
-    const endpoints = [
-      "https://overpass-api.de/api/interpreter",
-      "https://overpass.kumi.systems/api/interpreter",
-      "https://overpass.openstreetmap.fr/api/interpreter",
-    ];
-
-    // Build a tolerant Overpass query: find the city area, then admin_level=10 within it.
-    // Match city by name OR name:* tags (handles accents/locales).
     const cityEsc = city.replace(/"/g, '\\"');
-    const stateEsc = (state || "").replace(/"/g, '\\"');
     const countryEsc = (country || "").replace(/"/g, '\\"');
 
-    const stateFilter = state
-      ? `["is_in:state"~"${stateEsc}",i]` // soft hint, optional
-      : "";
+    // Country selector: match country admin_level 2 by name (any language)
     const countryFilter = country
-      ? `(area["admin_level"~"^[23]$"]["name"~"^${countryEsc}$",i];)->.country;`
+      ? `(
+           area["admin_level"="2"]["name"~"^${countryEsc}$",i];
+           area["admin_level"="2"]["name:en"~"^${countryEsc}$",i];
+           area["admin_level"="2"]["name:pt"~"^${countryEsc}$",i];
+         )->.country;`
       : `(area["admin_level"="2"];)->.country;`;
 
-    const query = `
-[out:json][timeout:60];
+    // Try to anchor the city area at admin_level 8 OR 7 (cities/municipalities)
+    // Some places (small villages, contested territories) use 6 too — keep it permissive.
+    const cityArea = `
 ${countryFilter}
 (
-  area["boundary"="administrative"]["admin_level"~"^(7|8)$"]["name"~"^${cityEsc}$",i](area.country);
-  area["boundary"="administrative"]["admin_level"~"^(7|8)$"]["name:pt"~"^${cityEsc}$",i](area.country);
-  area["boundary"="administrative"]["admin_level"~"^(7|8)$"]["name:en"~"^${cityEsc}$",i](area.country);
+  area["boundary"="administrative"]["admin_level"~"^(6|7|8|9)$"]["name"~"^${cityEsc}$",i](area.country);
+  area["boundary"="administrative"]["admin_level"~"^(6|7|8|9)$"]["name:en"~"^${cityEsc}$",i](area.country);
+  area["boundary"="administrative"]["admin_level"~"^(6|7|8|9)$"]["name:pt"~"^${cityEsc}$",i](area.country);
 )->.city;
+`;
+
+    // Recursive level fallback: 10 (bairros) → 9 (distritos) → 8 (subdivisões) → 11 → 7
+    const LEVELS: number[] = [10, 9, 8, 11, 7];
+
+    let lastSource = "";
+    for (const lv of LEVELS) {
+      const query = `
+[out:json][timeout:60];
+${cityArea}
 (
-  relation(area.city)["boundary"="administrative"]["admin_level"="10"];
-  way(area.city)["boundary"="administrative"]["admin_level"="10"];
+  relation(area.city)["boundary"="administrative"]["admin_level"="${lv}"];
+  way(area.city)["boundary"="administrative"]["admin_level"="${lv}"];
 );
 out tags;
 `.trim();
 
-    let lastErr: unknown = null;
-    for (const ep of endpoints) {
-      try {
-        const res = await fetch(ep, {
-          method: "POST",
-          headers: { "Content-Type": "application/x-www-form-urlencoded" },
-          body: `data=${encodeURIComponent(query)}`,
+      let json: any = null;
+      try { json = await overpassFetch(query); }
+      catch (_) { continue; }
+
+      const elements = Array.isArray(json?.elements) ? json.elements : [];
+      if (!elements.length) continue;
+
+      const rows: Row[] = [];
+      const seen = new Set<string>();
+      for (const el of elements) {
+        const tags = el?.tags || {};
+        // Normalização global: name → name:en → name:pt → place name → osm id
+        const name = String(
+          tags.name ||
+          tags["name:en"] ||
+          tags["name:pt"] ||
+          tags["official_name"] ||
+          tags["int_name"] ||
+          (el?.id ? `OSM-${el.id}` : "")
+        ).trim();
+        if (!name) continue;
+        const key = norm(name);
+        if (seen.has(key)) continue;
+        seen.add(key);
+        rows.push({
+          country: country || "",
+          state: state || null,
+          city,
+          neighborhood: name,
+          osm_id: typeof el?.id === "number" ? el.id : null,
         });
-        if (!res.ok) { lastErr = new Error(`Overpass ${ep} ${res.status}`); continue; }
-        const json = await res.json();
-        const elements = Array.isArray(json?.elements) ? json.elements : [];
-        const rows: Row[] = [];
-        const seen = new Set<string>();
-        for (const el of elements) {
-          const tags = el?.tags || {};
-          const name = String(tags.name || tags["name:pt"] || tags["name:en"] || "").trim();
-          if (!name) continue;
-          const key = norm(name);
-          if (seen.has(key)) continue;
-          seen.add(key);
-          rows.push({
-            country: country || "",
-            state: state || null,
-            city,
-            neighborhood: name,
-            osm_id: typeof el?.id === "number" ? el.id : null,
-          });
-        }
-        return { rows, source: `osm_overpass:${ep}` };
-      } catch (e) {
-        lastErr = e;
+      }
+      if (rows.length) {
+        lastSource = `osm_overpass:admin_level=${lv}`;
+        return { rows, source: lastSource };
       }
     }
-    throw new Error(`Overpass falhou: ${lastErr instanceof Error ? lastErr.message : "desconhecido"}`);
+
+    // Última tentativa: place=neighbourhood/suburb/quarter/village/hamlet por proximidade ao centroide via cidade
+    const placeQuery = `
+[out:json][timeout:60];
+${cityArea}
+(
+  node(area.city)["place"~"^(neighbourhood|suburb|quarter|village|hamlet|town|isolated_dwelling)$"];
+);
+out tags;
+`.trim();
+    try {
+      const json = await overpassFetch(placeQuery);
+      const elements = Array.isArray(json?.elements) ? json.elements : [];
+      const rows: Row[] = [];
+      const seen = new Set<string>();
+      for (const el of elements) {
+        const tags = el?.tags || {};
+        const name = String(tags.name || tags["name:en"] || tags["name:pt"] || "").trim();
+        if (!name) continue;
+        const key = norm(name);
+        if (seen.has(key)) continue;
+        seen.add(key);
+        rows.push({
+          country: country || "",
+          state: state || null,
+          city,
+          neighborhood: name,
+          osm_id: typeof el?.id === "number" ? el.id : null,
+        });
+      }
+      if (rows.length) return { rows, source: "osm_overpass:place_nodes" };
+    } catch (_) {}
+
+    return { rows: [], source: lastSource || "osm_overpass:empty" };
   },
 };
 
