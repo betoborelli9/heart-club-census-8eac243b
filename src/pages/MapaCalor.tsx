@@ -1077,10 +1077,13 @@ const MapaCalor = () => {
     [viewMode, activeCountry, activeState, activeCity, maxVotes, heatData.length]
   );
 
-  const mapHardResetKey = useMemo(
-    () => `${viewMode}-${activeCity || activeState || activeCountry || "world"}`,
-    [viewMode, activeCountry, activeState, activeCity]
-  );
+  const mapHardResetKey = useMemo(() => {
+    // Hash determinístico da localização → MapContainer é DESTRUÍDO/recriado a cada navegação
+    const raw = `${viewMode}|${activeCountry || ""}|${activeState || ""}|${activeCity || ""}`;
+    let h = 0;
+    for (let i = 0; i < raw.length; i++) { h = ((h << 5) - h + raw.charCodeAt(i)) | 0; }
+    return `map-${viewMode}-${Math.abs(h).toString(36)}`;
+  }, [viewMode, activeCountry, activeState, activeCity]);
 
   /* ---------- UI ---------- */
   return (
