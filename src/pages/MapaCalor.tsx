@@ -415,6 +415,9 @@ function getNeighborhoodFeatureName(props: any): string {
     props?.BAIRRO,
     props?.NAME,
     props?.name_en,
+    props?.int_name,
+    // fallback final: id OSM (garante chave única para qualquer feature do planeta)
+    props?.osm_id ? `OSM-${props.osm_id}` : null,
   ];
   return String(candidates.find((v) => typeof v === "string" && v.trim().length > 0) || "—").trim();
 }
