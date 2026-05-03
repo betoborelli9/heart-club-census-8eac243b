@@ -1,20 +1,30 @@
 /**
  * 📁 src/pages/Convite.tsx
  * 🎟️ Landing de Indicação — Heart Club
- * Acessada via /convite?ref=USER_ID. Guarda o ref no localStorage para
- * ser convertido após o voto (lógica de pontos do indicador).
+ * Acessada via /convite?ref=CODIGO. Identifica quem convidou (nome + clube),
+ * mostra banner de alta conversão e mantém slot fixo de patrocinador.
  */
 
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Heart, Sparkles, Trophy, Users, ArrowRight } from "lucide-react";
+import { Heart, Sparkles, Trophy, Users, ArrowRight, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { supabase } from "@/integrations/supabase/client";
+import { ClubLogo } from "@/components/ClubLogo";
+import { CLUBS_DATA, type ClubData } from "@/clubes-data";
+
+const normalize = (v: string) =>
+  v.normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toLowerCase();
 
 const Convite = () => {
   const [params] = useSearchParams();
   const navigate = useNavigate();
   const ref = params.get("ref") || "";
+
+  const [inviterName, setInviterName] = useState<string | null>(null);
+  const [inviterClub, setInviterClub] = useState<string | null>(null);
+  const [inviterClubData, setInviterClubData] = useState<ClubData | null>(null);
 
   useEffect(() => {
     if (ref) {
@@ -25,9 +35,51 @@ const Convite = () => {
     }
   }, [ref]);
 
+  /* Identifica quem convidou (por código de indicação ou user_id) */
+  useEffect(() => {
+    if (!ref) return;
+    const load = async () => {
+      // 1) tenta por codigo_indicacao
+      let { data: prof } = await supabase
+        .from("profiles")
+        .select("id, nome_exibicao")
+        .eq("codigo_indicacao", ref)
+        .maybeSingle();
+
+      // 2) fallback: trata ref como user_id
+      if (!prof) {
+        const { data: byId } = await supabase
+          .from("profiles")
+          .select("id, nome_exibicao")
+          .eq("id", ref)
+          .maybeSingle();
+        prof = byId ?? null;
+      }
+
+      if (!prof) return;
+      setInviterName(prof.nome_exibicao || null);
+
+      const { data: voto } = await supabase
+        .from("votos")
+        .select("clube_nome")
+        .eq("user_id", prof.id)
+        .eq("is_original_vote", true)
+        .maybeSingle();
+
+      const clubName = voto?.clube_nome || null;
+      setInviterClub(clubName);
+      if (clubName) {
+        const cd = CLUBS_DATA.find((c) => normalize(c.nome) === normalize(clubName)) ?? null;
+        setInviterClubData(cd);
+      }
+    };
+    load();
+  }, [ref]);
+
   const ctaGo = () => navigate(ref ? `/splash?ref=${encodeURIComponent(ref)}` : "/splash");
 
   const refShort = useMemo(() => (ref ? ref.slice(0, 8).toUpperCase() : "—"), [ref]);
+  const inviterFirst = inviterName?.split(" ")[0] || "Um torcedor";
 
   return (
     <div className="min-h-screen bg-black text-white relative overflow-hidden">
@@ -35,7 +87,60 @@ const Convite = () => {
       <div className="absolute inset-0 bg-gradient-to-b from-primary/15 via-transparent to-black pointer-events-none" />
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[800px] bg-primary/10 rounded-full blur-3xl pointer-events-none" />
 
-      <main className="relative z-10 max-w-3xl mx-auto px-5 py-14 space-y-10">
+      <main className="relative z-10 max-w-3xl mx-auto px-5 py-8 space-y-8">
+        {/* [SLOT FIXO DE PATROCINADOR — visível em todo acesso] */}
+        <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="text-[9px] font-black uppercase tracking-[0.3em] text-primary shrink-0">
+              Parceiro Oficial
+            </span>
+            <span className="text-xs text-white/70 italic truncate">
+              Seu negócio aqui — apoie o censo das torcidas.
+            </span>
+          </div>
+          <a
+            href="mailto:admin@heartclubapp.com?subject=Quero%20ser%20Parceiro%20Heart%20Club"
+            className="text-[10px] font-black uppercase tracking-wider text-primary hover:underline shrink-0"
+          >
+            Anunciar
+          </a>
+        </div>
+
+        {/* [BANNER DE QUEM CONVIDOU] */}
+        {ref && (
+          <motion.section
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="relative overflow-hidden rounded-3xl border border-primary/40 p-5 md:p-6"
+            style={{
+              background: `linear-gradient(135deg, hsl(var(--primary) / 0.18), rgba(0,0,0,0.6) 70%)`,
+              boxShadow: "0 0 40px hsl(var(--primary) / 0.25), inset 0 0 30px hsl(var(--primary) / 0.15)",
+            }}
+          >
+            <div className="flex items-center gap-4">
+              <div className="w-16 h-16 rounded-2xl border-2 border-primary/60 bg-primary/10 flex items-center justify-center text-2xl font-black italic text-primary">
+                {inviterFirst.charAt(0).toUpperCase()}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary">
+                  Convite pessoal
+                </p>
+                <h2 className="text-xl md:text-2xl font-black italic leading-tight">
+                  {inviterName ? `${inviterName} te convidou` : "Você foi convidado"} para o Heart Club.
+                </h2>
+                {inviterClub && (
+                  <div className="flex items-center gap-2 mt-1">
+                    <ClubLogo src={inviterClubData?.logoUrl} alt={inviterClub} size="xs" />
+                    <span className="text-xs text-white/70 italic">
+                      Torcedor(a) do <strong className="text-white">{inviterClub}</strong>
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+          </motion.section>
+        )}
+
         <motion.header
           initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
           className="text-center space-y-3"
@@ -68,6 +173,7 @@ const Convite = () => {
           <ul className="mt-4 space-y-2 text-sm text-white/80">
             <li className="flex gap-2"><Trophy className="h-4 w-4 text-primary mt-0.5" /> Ranking ao vivo do seu clube por bairro, cidade, estado e país.</li>
             <li className="flex gap-2"><Users className="h-4 w-4 text-primary mt-0.5" /> Cada voto seu reforça a torcida do seu time no mundo todo.</li>
+            <li className="flex gap-2"><ShieldCheck className="h-4 w-4 text-primary mt-0.5" /> Voto Sagrado: 1 pessoa = 1 voto, blindado contra fraude.</li>
             <li className="flex gap-2"><Sparkles className="h-4 w-4 text-primary mt-0.5" /> Quem te convidou ganha pontos a cada novo torcedor.</li>
           </ul>
         </motion.section>
