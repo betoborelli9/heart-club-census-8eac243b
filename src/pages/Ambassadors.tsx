@@ -295,7 +295,7 @@ const Ambassadors = () => {
     setIsSubmitting(true);
     try {
       await updateProfile({
-        telefone: phoneInput.replace(/\D/g, ""),
+        telefone: `${phoneCountry.dial}${phoneInput.replace(/\D/g, "")}`,
         profissao: professionInput,
         data_nascimento: format(birthDate, "yyyy-MM-dd"),
       });
