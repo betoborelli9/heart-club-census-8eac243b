@@ -332,16 +332,64 @@ const Ambassadors = () => {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  /* [MÓDULO: COMPARTILHAR WHATSAPP] */
-  const handleShareWhatsApp = () => {
-    const code = profile?.codigo_indicacao || "";
-    const msg = encodeURIComponent(
-      `🧡 Fala, torcedor! Eu já fiz parte do Heart Club Census — o maior censo de torcedores do mundo. Use meu código *${code}* e registre seu clube do coração! https://heart-club-census.lovable.app`
-    );
-    window.open(`https://wa.me/?text=${msg}`, "_blank");
+  /* [MÓDULO: LINK ÚNICO DE INDICAÇÃO] */
+  const referralLink = useMemo(() => {
+    const code = profile?.codigo_indicacao || user?.id || "";
+    const base = typeof window !== "undefined" ? window.location.origin : "https://heart-club-census.lovable.app";
+    return `${base}/convite?ref=${encodeURIComponent(code)}`;
+  }, [profile?.codigo_indicacao, user?.id]);
+
+  const referralMessage = useMemo(() => {
+    const nome = profile?.nome_exibicao ? ` ${profile.nome_exibicao}` : "";
+    return `🧡 Fala, torcedor! Registre seu coração no Heart Club pelo meu link e vamos dominar o mapa:${nome ? ` (convite de${nome})` : ""} ${referralLink}`;
+  }, [referralLink, profile?.nome_exibicao]);
+
+  /* [MÓDULO: COMPARTILHAR MULTICANAL] */
+  const shareWhatsApp = () => window.open(`https://wa.me/?text=${encodeURIComponent(referralMessage)}`, "_blank");
+  const shareTelegram = () => window.open(`https://t.me/share/url?url=${encodeURIComponent(referralLink)}&text=${encodeURIComponent(referralMessage)}`, "_blank");
+  const shareEmail = () => {
+    const subject = encodeURIComponent("Te convido para o Heart Club Census 🧡");
+    window.location.href = `mailto:?subject=${subject}&body=${encodeURIComponent(referralMessage)}`;
+  };
+  const shareCopyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(referralLink);
+      toast({ title: "Link copiado!", description: "Cole onde quiser compartilhar." });
+    } catch {
+      toast({ title: "Não foi possível copiar", variant: "destructive" });
+    }
+  };
+  const shareNative = async () => {
+    if (typeof navigator !== "undefined" && (navigator as any).share) {
+      try {
+        await (navigator as any).share({ title: "Heart Club Census", text: referralMessage, url: referralLink });
+      } catch {}
+    } else {
+      shareCopyLink();
+    }
   };
 
   const theme = useClubTheme(clubName);
+
+  /* [MÓDULO: PROGRESSO DO EMBAIXADOR — CRYSTAL GLOW DINÂMICO] */
+  const indicacoesCount = activityFeed.length;
+  const levelInfo = useMemo(() => {
+    const tiers = [
+      { name: "Bronze", min: 0, next: 5 },
+      { name: "Prata", min: 5, next: 15 },
+      { name: "Ouro", min: 15, next: 50 },
+      { name: "Platina", min: 50, next: 150 },
+      { name: "Diamante", min: 150, next: 500 },
+      { name: "Lendário", min: 500, next: 500 },
+    ];
+    const idx = tiers.findIndex((t, i) => indicacoesCount < (tiers[i + 1]?.min ?? Infinity));
+    const tier = tiers[Math.max(0, idx === -1 ? tiers.length - 1 : idx)];
+    const nextTier = tiers[Math.min(tiers.length - 1, (idx === -1 ? tiers.length - 1 : idx) + 1)];
+    const span = Math.max(1, nextTier.min - tier.min);
+    const progress = Math.min(100, Math.round(((indicacoesCount - tier.min) / span) * 100));
+    return { tier: tier.name, next: nextTier.name, progress, indicacoesCount, faltam: Math.max(0, nextTier.min - indicacoesCount) };
+  }, [indicacoesCount]);
+
 
   /* [MÓDULO: LOADING / AUTH GUARD] */
   if (isLoading) {
