@@ -18,6 +18,7 @@ import logo from "@/assets/logo.png";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import FingerprintJS from "@fingerprintjs/fingerprintjs";
 import { lookupCep, formatCep, captureGpsAudit } from "@/lib/address";
+import { detectDeviceModel } from "@/lib/device-detect";
 
 /* ═══════════════════════════════════════════════════════════
     MÓDULO: CONFIGURAÇÕES E ESTADOS
@@ -173,6 +174,7 @@ const Voting = () => {
 
       // Auditoria silenciosa — GPS real do navegador (não bloqueia se falhar)
       const audit = await captureGpsAudit();
+      const device_model = await detectDeviceModel();
 
       if (!TEST_MODE) {
         if (IS_MASTER_ADMIN) {
@@ -198,6 +200,7 @@ const Voting = () => {
           voto_lng: audit.lng,
           is_original_vote: v.main,
           fingerprint: fingerprint || "web-client",
+          device_model,
         }));
 
         const { error: voteError } = await supabase.from("votos").insert(votesToInsert);

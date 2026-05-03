@@ -9,6 +9,7 @@ import AdminAuditTable from "@/components/admin/AdminAuditTable";
 import AdminBIStats from "@/components/admin/AdminBIStats";
 import AdminCorrectionsTable from "@/components/admin/AdminCorrectionsTable";
 import NeighborhoodDominance from "@/components/admin/NeighborhoodDominance";
+import SocioeconomicProfile from "@/components/admin/SocioeconomicProfile";
 import ExecutiveReportButton from "@/components/admin/ExecutiveReportButton";
 import logo from "@/assets/logo.png";
 
@@ -88,6 +89,9 @@ const Admin = () => {
             <TabsTrigger value="neighborhoods" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               🗺️ Bairros
             </TabsTrigger>
+            <TabsTrigger value="socio" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              💼 Perfil Socioeconômico
+            </TabsTrigger>
             <TabsTrigger value="corrections" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               📝 Correções
             </TabsTrigger>
@@ -103,6 +107,10 @@ const Admin = () => {
 
           <TabsContent value="neighborhoods">
             <NeighborhoodDominance />
+          </TabsContent>
+
+          <TabsContent value="socio">
+            <SocioeconomicProfile />
           </TabsContent>
 
           <TabsContent value="corrections">
