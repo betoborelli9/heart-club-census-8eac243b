@@ -105,6 +105,9 @@ const Admin = () => {
             <TabsTrigger value="press" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               📰 Imprensa
             </TabsTrigger>
+            <TabsTrigger value="behavior" className="data-[state=active]:bg-yellow-500 data-[state=active]:text-black">
+              ⚠ Auditoria Comportamental
+            </TabsTrigger>
             <TabsTrigger value="corrections" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               📝 Correções
             </TabsTrigger>
