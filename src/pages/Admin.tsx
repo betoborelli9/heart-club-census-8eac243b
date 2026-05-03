@@ -14,6 +14,7 @@ import AffinityEcosystem from "@/components/admin/AffinityEcosystem";
 import PressReleaseGenerator from "@/components/admin/PressReleaseGenerator";
 import RevenueTerminal from "@/components/admin/RevenueTerminal";
 import BehavioralAudit from "@/components/admin/BehavioralAudit";
+import FanaticCities from "@/components/ambassador/FanaticCities";
 import ExecutiveReportButton from "@/components/admin/ExecutiveReportButton";
 import logo from "@/assets/logo.png";
 

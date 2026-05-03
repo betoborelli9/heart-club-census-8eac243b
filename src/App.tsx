@@ -32,6 +32,7 @@ import Dashboard from "./pages/Dashboard";
 import MapaCalor from "./pages/MapaCalor";
 import Stats from "./pages/Stats";
 import Ambassadors from "./pages/Ambassadors";
+import AmbassadorCenter from "./pages/AmbassadorCenter";
 import Correcao from "./pages/Correcao";
 import NotFound from "./pages/NotFound";
 import Convite from "./pages/Convite";
@@ -74,6 +75,8 @@ const App = () => (
             <Route path="/estatisticas" element={<Stats />} />
             <Route path="/ranking" element={<Stats />} />
             <Route path="/embaixadores" element={<Ambassadors />} />
+            <Route path="/embaixador" element={<AmbassadorCenter />} />
+            <Route path="/painel-embaixador" element={<AmbassadorCenter />} />
             <Route path="/correcao" element={<Correcao />} />
             <Route path="/convite" element={<Convite />} />
 
