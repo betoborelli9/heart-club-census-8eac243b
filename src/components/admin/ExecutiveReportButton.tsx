@@ -126,6 +126,35 @@ const ExecutiveReportButton = ({ days = 30 }: { days?: number }) => {
           : [["Nenhum clique registrado no período", "0"]],
       });
 
+      // Receita de Mídia Estimada (ROI)
+      const CPC = 0.85;
+      const partnerClicks = (s.partner_clicks_period as number) ?? 0;
+      let statsViews = 0;
+      try { statsViews = parseInt(localStorage.getItem("heartclub_stats_views") || "0", 10); } catch {}
+      const impressions = partnerClicks + statsViews;
+      const revenue = impressions * CPC;
+
+      y = (doc as any).lastAutoTable.finalY + 25;
+      if (y > 700) { doc.addPage(); y = 60; }
+      doc.setFont("helvetica", "bolditalic");
+      doc.setFontSize(14);
+      doc.setTextColor(...orange);
+      doc.text("Receita de Mídia Estimada", 40, y);
+      doc.setTextColor(0, 0, 0);
+      autoTable(doc, {
+        startY: y + 10,
+        theme: "grid",
+        headStyles: { fillColor: [16, 122, 56], textColor: 255 },
+        head: [["Métrica", "Valor"]],
+        body: [
+          ["Cliques em afiliados", String(partnerClicks)],
+          ["Page-views /Stats", String(statsViews)],
+          ["Impressões totais", String(impressions)],
+          ["CPC sugerido (BRL)", `R$ ${CPC.toFixed(2)}`],
+          ["Receita estimada", `R$ ${revenue.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`],
+        ],
+      });
+
       // Footer
       const pages = doc.getNumberOfPages();
       for (let i = 1; i <= pages; i++) {
