@@ -108,6 +108,15 @@ const Stats = () => {
   const { user } = useUser();
   const { toast } = useToast();
 
+  // ROI tracking — counts /stats page views for the Revenue Terminal
+  useEffect(() => {
+    try {
+      const k = "heartclub_stats_views";
+      const n = parseInt(localStorage.getItem(k) || "0", 10) + 1;
+      localStorage.setItem(k, String(n));
+    } catch {}
+  }, []);
+
   const [clubName, setClubName] = useState<string | null>(null);
   const [userVote, setUserVote] = useState<{ pais?: string; estado?: string; cidade?: string; bairro?: string }>({});
 
