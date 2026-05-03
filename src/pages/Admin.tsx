@@ -109,6 +109,10 @@ const Admin = () => {
             <NeighborhoodDominance />
           </TabsContent>
 
+          <TabsContent value="socio">
+            <SocioeconomicProfile />
+          </TabsContent>
+
           <TabsContent value="corrections">
             <AdminCorrectionsTable />
           </TabsContent>
