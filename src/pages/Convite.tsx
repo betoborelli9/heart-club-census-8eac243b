@@ -25,7 +25,7 @@ const Convite = () => {
     }
   }, [ref]);
 
-  const ctaGo = () => navigate("/login");
+  const ctaGo = () => navigate(ref ? `/splash?ref=${encodeURIComponent(ref)}` : "/splash");
 
   const refShort = useMemo(() => (ref ? ref.slice(0, 8).toUpperCase() : "—"), [ref]);
 
