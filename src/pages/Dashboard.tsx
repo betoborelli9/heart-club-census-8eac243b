@@ -19,6 +19,7 @@ import GeoLoyalty from "@/components/dashboard/GeoLoyalty";
 import ClubBanner from "@/components/dashboard/ClubBanner";
 import ClubIdentityCard from "@/components/dashboard/ClubIdentityCard";
 import { useClubTheme } from "@/hooks/useClubTheme";
+import AffiliateStore from "@/components/store/AffiliateStore";
 import logo from "@/assets/logo.png";
 
 /* [MÓDULO: COMPONENTE DASHBOARD] */
@@ -117,6 +118,11 @@ const Dashboard = () => {
         <div className="pt-16 md:pt-24 grid grid-cols-1 md:grid-cols-2 gap-12 md:gap-16">
           <RivalsRadar excludeClub={clubeName} />
           <GeoLoyalty clubName={clubeName} />
+        </div>
+
+        {/* [MÓDULO: LOJA DO TORCEDOR — Marketplace de Afiliados dinâmico] */}
+        <div className="pt-16 md:pt-24">
+          <AffiliateStore />
         </div>
 
         {/* [MÓDULO: RESPIRO INFERIOR] */}

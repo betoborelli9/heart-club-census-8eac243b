@@ -11,6 +11,8 @@ import AdminCorrectionsTable from "@/components/admin/AdminCorrectionsTable";
 import NeighborhoodDominance from "@/components/admin/NeighborhoodDominance";
 import SocioeconomicProfile from "@/components/admin/SocioeconomicProfile";
 import AffinityEcosystem from "@/components/admin/AffinityEcosystem";
+import PressReleaseGenerator from "@/components/admin/PressReleaseGenerator";
+import RevenueTerminal from "@/components/admin/RevenueTerminal";
 import ExecutiveReportButton from "@/components/admin/ExecutiveReportButton";
 import logo from "@/assets/logo.png";
 
@@ -96,6 +98,12 @@ const Admin = () => {
             <TabsTrigger value="affinity" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               🕸️ Afinidades
             </TabsTrigger>
+            <TabsTrigger value="revenue" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              💵 ROI Terminal
+            </TabsTrigger>
+            <TabsTrigger value="press" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              📰 Imprensa
+            </TabsTrigger>
             <TabsTrigger value="corrections" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               📝 Correções
             </TabsTrigger>
@@ -119,6 +127,14 @@ const Admin = () => {
 
           <TabsContent value="affinity">
             <AffinityEcosystem />
+          </TabsContent>
+
+          <TabsContent value="revenue">
+            <RevenueTerminal days={30} />
+          </TabsContent>
+
+          <TabsContent value="press">
+            <PressReleaseGenerator />
           </TabsContent>
 
           <TabsContent value="corrections">
