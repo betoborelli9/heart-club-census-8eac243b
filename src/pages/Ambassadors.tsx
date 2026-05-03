@@ -597,14 +597,47 @@ const Ambassadors = () => {
             {/* WhatsApp */}
             <div className="space-y-2">
               <Label className="text-xs font-bold uppercase tracking-wider text-white/60">WhatsApp</Label>
-              <Input
-                placeholder="(99) 99999-9999"
-                value={phoneInput}
-                onChange={(e) => setPhoneInput(formatPhone(e.target.value))}
-                className="bg-white/5 border-white/10 text-white placeholder:text-white/20"
-              />
-              {phoneInput && !isValidPhone(phoneInput) && (
-                <p className="text-[10px] text-red-400">Informe 11 dígitos</p>
+              <div className="flex gap-2">
+                <Select
+                  value={phoneCountry.code}
+                  onValueChange={(code) => {
+                    const c = COUNTRY_DIALS.find((x) => x.code === code) ?? COUNTRY_DIALS[0];
+                    setPhoneCountry(c);
+                    setPhoneInput("");
+                  }}
+                >
+                  <SelectTrigger className="w-[140px] bg-white/5 border-white/10 text-white">
+                    <SelectValue>
+                      <span className="flex items-center gap-1.5">
+                        <span>{phoneCountry.flag}</span>
+                        <span className="text-[#ff6200] font-bold">{phoneCountry.dial}</span>
+                      </span>
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent className="bg-[#1a1a1a] border-white/10 text-white max-h-72">
+                    {COUNTRY_DIALS.map((c) => (
+                      <SelectItem key={c.code} value={c.code} className="text-white focus:bg-white/10 focus:text-white">
+                        <span className="flex items-center gap-2">
+                          <span>{c.flag}</span>
+                          <span>{c.name}</span>
+                          <span className="text-[#ff6200] font-bold ml-auto">{c.dial}</span>
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Input
+                  placeholder={phoneCountry.code === "BR" ? "(99) 99999-9999" : "Número"}
+                  value={phoneInput}
+                  onChange={(e) => setPhoneInput(formatPhoneByCountry(e.target.value, phoneCountry))}
+                  className="flex-1 bg-white/5 border-white/10 text-white placeholder:text-white/20"
+                  inputMode="tel"
+                />
+              </div>
+              {phoneInput && !isValidPhoneByCountry(phoneInput, phoneCountry) && (
+                <p className="text-[10px] text-red-400">
+                  Informe {phoneCountry.digits[0] === phoneCountry.digits[1] ? phoneCountry.digits[0] : `${phoneCountry.digits[0]}-${phoneCountry.digits[1]}`} dígitos para {phoneCountry.name}
+                </p>
               )}
             </div>
 
