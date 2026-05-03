@@ -117,6 +117,10 @@ const Admin = () => {
             <SocioeconomicProfile />
           </TabsContent>
 
+          <TabsContent value="affinity">
+            <AffinityEcosystem />
+          </TabsContent>
+
           <TabsContent value="corrections">
             <AdminCorrectionsTable />
           </TabsContent>
