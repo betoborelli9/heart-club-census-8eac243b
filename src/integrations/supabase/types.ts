@@ -462,6 +462,7 @@ export type Database = {
           cidade: string
           clube_nome: string
           complemento: string | null
+          country_code: string | null
           created_at: string | null
           estado: string
           fingerprint: string | null
@@ -490,6 +491,7 @@ export type Database = {
           cidade: string
           clube_nome: string
           complemento?: string | null
+          country_code?: string | null
           created_at?: string | null
           estado: string
           fingerprint?: string | null
@@ -518,6 +520,7 @@ export type Database = {
           cidade?: string
           clube_nome?: string
           complemento?: string | null
+          country_code?: string | null
           created_at?: string | null
           estado?: string
           fingerprint?: string | null
@@ -618,6 +621,25 @@ export type Database = {
       }
       admin_get_bi_stats: { Args: never; Returns: Json }
       admin_get_executive_summary: { Args: { p_days?: number }; Returns: Json }
+      admin_get_geo_options: {
+        Args: {
+          p_city?: string
+          p_continent?: string
+          p_country?: string
+          p_state?: string
+        }
+        Returns: Json
+      }
+      admin_get_global_bi_stats: {
+        Args: {
+          p_city?: string
+          p_continent?: string
+          p_country?: string
+          p_neighborhood?: string
+          p_state?: string
+        }
+        Returns: Json
+      }
       admin_get_neighborhood_dominance: {
         Args: { p_limit?: number }
         Returns: Json
