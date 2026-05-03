@@ -279,8 +279,8 @@ const Ambassadors = () => {
 
   /* [MÓDULO: AÇÃO DO CENSO] */
   const handleCensusSubmit = async () => {
-    if (!isValidPhone(phoneInput)) {
-      toast({ title: "WhatsApp inválido", description: "Informe um número com 11 dígitos.", variant: "destructive" });
+    if (!isValidPhoneByCountry(phoneInput, phoneCountry)) {
+      toast({ title: "WhatsApp inválido", description: `Informe um número válido para ${phoneCountry.name}.`, variant: "destructive" });
       return;
     }
     if (!professionInput) {
