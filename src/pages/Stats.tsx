@@ -422,22 +422,36 @@ const Stats = () => {
       </header>
 
       <main className="max-w-6xl mx-auto p-4 space-y-5">
-        {/* HYPE BANNER */}
+        {/* HYPE BANNER + CONVITE INLINE */}
         <motion.div
           initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
           className="bg-gradient-to-r from-primary/15 via-primary/5 to-transparent border border-primary/30 rounded-2xl p-4"
         >
-          <p className="text-sm italic text-primary font-bold flex items-center gap-2">
-            <Sparkles className="h-4 w-4" /> {hypeMessage}
-          </p>
-          {myRow && (
-            <p className="text-xs text-white/60 mt-1">
-              Posição atual: <span className="text-white font-black">#{myIdx + 1}</span> · {fmt(myRow.votes)} votos
-              {myRow.growth_24h > 0 && (
-                <span className="ml-2 text-green-400">+{fmt(myRow.growth_24h)} (24h)</span>
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <div className="min-w-0 flex-1">
+              <p className="text-sm italic text-primary font-bold flex items-center gap-2">
+                <Sparkles className="h-4 w-4 shrink-0" /> {hypeMessage}
+              </p>
+              {myRow && (
+                <p className="text-xs text-white/60 mt-1">
+                  Posição atual: <span className="text-white font-black">#{myIdx + 1}</span> · {fmt(myRow.votes)} votos
+                  {myRow.growth_24h > 0 && (
+                    <span className="ml-2 text-green-400">+{fmt(myRow.growth_24h)} (24h)</span>
+                  )}
+                </p>
               )}
-            </p>
-          )}
+            </div>
+            <Button
+              onClick={copyInvite}
+              size="sm"
+              className="bg-primary text-black hover:bg-primary/90 font-black italic shrink-0"
+              title={inviteLink}
+            >
+              <Share2 className="h-4 w-4 mr-1.5" />
+              Ajude seu clube a subir no ranking
+              <Copy className="h-3.5 w-3.5 ml-2 opacity-70" />
+            </Button>
+          </div>
         </motion.div>
 
         {/* RADAR DE RIVALIDADE */}
