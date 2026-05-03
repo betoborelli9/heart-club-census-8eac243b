@@ -464,6 +464,7 @@ export type Database = {
           complemento: string | null
           country_code: string | null
           created_at: string | null
+          device_model: string | null
           estado: string
           fingerprint: string | null
           id: string
@@ -493,6 +494,7 @@ export type Database = {
           complemento?: string | null
           country_code?: string | null
           created_at?: string | null
+          device_model?: string | null
           estado: string
           fingerprint?: string | null
           id?: string
@@ -522,6 +524,7 @@ export type Database = {
           complemento?: string | null
           country_code?: string | null
           created_at?: string | null
+          device_model?: string | null
           estado?: string
           fingerprint?: string | null
           id?: string
@@ -619,6 +622,7 @@ export type Database = {
           marked_count: number
         }[]
       }
+      admin_flag_suspicious_devices: { Args: never; Returns: number }
       admin_get_bi_stats: { Args: never; Returns: Json }
       admin_get_club_neighborhood_ranking: {
         Args: { p_club_name: string; p_limit?: number; p_state?: string }
@@ -650,6 +654,10 @@ export type Database = {
       }
       admin_get_partner_revenue_heatmap: {
         Args: { p_days?: number }
+        Returns: Json
+      }
+      admin_get_socioeconomic_profile: {
+        Args: { p_club?: string; p_state?: string }
         Returns: Json
       }
       admin_get_votes_with_tracking: {
