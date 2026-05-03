@@ -6,8 +6,10 @@
  */
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { TrendingUp, DollarSign, MousePointerClick, Eye, Activity } from "lucide-react";
+import { TrendingUp, DollarSign, MousePointerClick, Eye, Activity, FileDown } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { exportBrandedPdf } from "@/lib/pdf-export";
 
 const DEFAULT_CPC = 0.85; // BRL — média sugerida AdSense esportes BR
 const STATS_VIEW_KEY = "heartclub_stats_views";
@@ -49,7 +51,28 @@ export default function RevenueTerminal({ days = 30 }: { days?: number }) {
             HC TERMINAL — REVENUE FEED
           </h2>
         </div>
-        <span className="text-[10px] text-green-400/60 italic">LIVE • últimos {days}d</span>
+        <div className="flex items-center gap-2">
+          <Button size="sm" variant="outline" className="h-7 text-[10px] border-green-500/40 text-green-400 hover:bg-green-500/10"
+            onClick={() => exportBrandedPdf({
+              filename: `heartclub-roi-${Date.now()}.pdf`,
+              title: "Receita de Mídia Estimada (ROI)",
+              subtitle: `Últimos ${days} dias`,
+              sections: [
+                { title: "Resumo", head: ["Métrica", "Valor"], body: [
+                  ["Cliques Afiliados", clicks],
+                  ["Views /Stats", statsViews],
+                  ["Impressões Totais", totalImpressions],
+                  ["CPC", fmt(cpc)],
+                  ["Receita Estimada", fmt(revenue)],
+                ]},
+                { title: "Breakdown por Parceiro", head: ["Parceiro", "Cliques", "Receita"],
+                  body: partnerBreak.map(p => [p.name, p.clicks, fmt(p.clicks * cpc)]) },
+              ],
+            })}>
+            <FileDown className="w-3 h-3 mr-1" /> PDF
+          </Button>
+          <span className="text-[10px] text-green-400/60 italic">LIVE • últimos {days}d</span>
+        </div>
       </header>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
