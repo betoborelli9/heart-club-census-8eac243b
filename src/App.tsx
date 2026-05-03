@@ -18,6 +18,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { UserProvider } from "@/contexts/UserContext";
+import FeedbackWidget from "@/components/FeedbackWidget";
 
 /* ═══════════════════════════════════════════════════════════
     MÓDULO: PÁGINAS (USER & PUBLIC)
@@ -89,6 +90,7 @@ const App = () => (
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
+          <FeedbackWidget />
         </BrowserRouter>
       </UserProvider>
     </TooltipProvider>
