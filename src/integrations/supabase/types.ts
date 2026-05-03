@@ -476,6 +476,10 @@ export type Database = {
           numero: string | null
           pais: string
           status_integridade: string | null
+          sympathy_1: string | null
+          sympathy_2: string | null
+          sympathy_3: string | null
+          sympathy_4: string | null
           user_id: string
           voto_bairro_gps: string | null
           voto_cidade: string | null
@@ -506,6 +510,10 @@ export type Database = {
           numero?: string | null
           pais: string
           status_integridade?: string | null
+          sympathy_1?: string | null
+          sympathy_2?: string | null
+          sympathy_3?: string | null
+          sympathy_4?: string | null
           user_id: string
           voto_bairro_gps?: string | null
           voto_cidade?: string | null
@@ -536,6 +544,10 @@ export type Database = {
           numero?: string | null
           pais?: string
           status_integridade?: string | null
+          sympathy_1?: string | null
+          sympathy_2?: string | null
+          sympathy_3?: string | null
+          sympathy_4?: string | null
           user_id?: string
           voto_bairro_gps?: string | null
           voto_cidade?: string | null
@@ -623,6 +635,10 @@ export type Database = {
         }[]
       }
       admin_flag_suspicious_devices: { Args: never; Returns: number }
+      admin_get_affinity_ecosystem: {
+        Args: { p_club: string; p_limit?: number }
+        Returns: Json
+      }
       admin_get_bi_stats: { Args: never; Returns: Json }
       admin_get_club_neighborhood_ranking: {
         Args: { p_club_name: string; p_limit?: number; p_state?: string }

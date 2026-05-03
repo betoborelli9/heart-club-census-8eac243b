@@ -184,9 +184,9 @@ const Voting = () => {
         const cidadeFinal = cidadeAddr.trim() || profile.cidade || "";
         const estadoFinal = estadoAddr.trim() || profile.estado || "";
 
-        const votesToInsert = allSelected.map((v) => ({
+        const mainVote = {
           user_id: user.id,
-          clube_nome: v.club.name,
+          clube_nome: heartClub.name,
           cidade: cidadeFinal,
           estado: estadoFinal,
           pais: profile.pais || "BR",
@@ -198,12 +198,16 @@ const Voting = () => {
           voto_cidade_gps: audit.voto_cidade_gps,
           voto_lat: audit.lat,
           voto_lng: audit.lng,
-          is_original_vote: v.main,
+          is_original_vote: true,
           fingerprint: fingerprint || "web-client",
           device_model,
-        }));
+          sympathy_1: sympathyClubs[0]?.name ?? null,
+          sympathy_2: sympathyClubs[1]?.name ?? null,
+          sympathy_3: sympathyClubs[2]?.name ?? null,
+          sympathy_4: sympathyClubs[3]?.name ?? null,
+        };
 
-        const { error: voteError } = await supabase.from("votos").insert(votesToInsert);
+        const { error: voteError } = await supabase.from("votos").insert([mainVote]);
         if (voteError) throw voteError;
       }
 

@@ -10,6 +10,7 @@ import AdminBIStats from "@/components/admin/AdminBIStats";
 import AdminCorrectionsTable from "@/components/admin/AdminCorrectionsTable";
 import NeighborhoodDominance from "@/components/admin/NeighborhoodDominance";
 import SocioeconomicProfile from "@/components/admin/SocioeconomicProfile";
+import AffinityEcosystem from "@/components/admin/AffinityEcosystem";
 import ExecutiveReportButton from "@/components/admin/ExecutiveReportButton";
 import logo from "@/assets/logo.png";
 
@@ -92,6 +93,9 @@ const Admin = () => {
             <TabsTrigger value="socio" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               💼 Perfil Socioeconômico
             </TabsTrigger>
+            <TabsTrigger value="affinity" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              🕸️ Afinidades
+            </TabsTrigger>
             <TabsTrigger value="corrections" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               📝 Correções
             </TabsTrigger>
@@ -111,6 +115,10 @@ const Admin = () => {
 
           <TabsContent value="socio">
             <SocioeconomicProfile />
+          </TabsContent>
+
+          <TabsContent value="affinity">
+            <AffinityEcosystem />
           </TabsContent>
 
           <TabsContent value="corrections">
