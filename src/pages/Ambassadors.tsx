@@ -148,6 +148,7 @@ const Ambassadors = () => {
 
   /* Census form state */
   const [phoneInput, setPhoneInput] = useState("");
+  const [phoneCountry, setPhoneCountry] = useState<CountryDial>(COUNTRY_DIALS[0]);
   const [professionInput, setProfessionInput] = useState("");
   const [birthDate, setBirthDate] = useState<Date | undefined>(undefined);
 
