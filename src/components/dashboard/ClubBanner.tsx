@@ -260,13 +260,7 @@ const ClubBanner = ({
 
         <nav className="flex items-center justify-center gap-1.5 bg-[#1a1a1a] px-4 py-3.5 overflow-x-auto no-scrollbar">
           <NavItem icon={Flame} label="MAPA DE CALOR" path="/mapa-calor" active={isActive("/mapa-calor")} />
-          <NavItem icon={BarChart3} label="ESTATÍSTICAS" path="/estatisticas" active={isActive("/estatisticas")} />
-          <NavItem
-            icon={Crown}
-            label="RANKING"
-            path="/estatisticas#ranking"
-            active={isActive("/estatisticas#ranking")}
-          />
+          <NavItem icon={Crown} label="RANKING" path="/ranking" active={isActive("/ranking")} />
           <NavItem icon={Users} label="EMBAIXADORES" path="/embaixadores" active={isActive("/embaixadores")} />
           <div className="w-[1px] h-6 bg-white/10 mx-2 hidden md:block" />
           <NavItem icon={Vote} label="VOTAÇÃO" path="/voting" variant="orange" />
