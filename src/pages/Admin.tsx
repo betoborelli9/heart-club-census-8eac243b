@@ -129,6 +129,14 @@ const Admin = () => {
             <AffinityEcosystem />
           </TabsContent>
 
+          <TabsContent value="revenue">
+            <RevenueTerminal days={30} />
+          </TabsContent>
+
+          <TabsContent value="press">
+            <PressReleaseGenerator />
+          </TabsContent>
+
           <TabsContent value="corrections">
             <AdminCorrectionsTable />
           </TabsContent>
