@@ -11,6 +11,8 @@ import AdminCorrectionsTable from "@/components/admin/AdminCorrectionsTable";
 import NeighborhoodDominance from "@/components/admin/NeighborhoodDominance";
 import SocioeconomicProfile from "@/components/admin/SocioeconomicProfile";
 import AffinityEcosystem from "@/components/admin/AffinityEcosystem";
+import PressReleaseGenerator from "@/components/admin/PressReleaseGenerator";
+import RevenueTerminal from "@/components/admin/RevenueTerminal";
 import ExecutiveReportButton from "@/components/admin/ExecutiveReportButton";
 import logo from "@/assets/logo.png";
 
