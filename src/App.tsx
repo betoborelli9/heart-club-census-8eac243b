@@ -33,6 +33,7 @@ import Stats from "./pages/Stats";
 import Ambassadors from "./pages/Ambassadors";
 import Correcao from "./pages/Correcao";
 import NotFound from "./pages/NotFound";
+import Convite from "./pages/Convite";
 
 /* ═══════════════════════════════════════════════════════════
     MÓDULO: PÁGINAS (ADMIN & BI)
@@ -73,6 +74,7 @@ const App = () => (
             <Route path="/ranking" element={<Stats />} />
             <Route path="/embaixadores" element={<Ambassadors />} />
             <Route path="/correcao" element={<Correcao />} />
+            <Route path="/convite" element={<Convite />} />
 
             {/* 👑 Gestão Administrativa e BI */}
             <Route path="/admin" element={<Admin />} />

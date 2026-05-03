@@ -72,11 +72,17 @@ const norm = (s: string) =>
   (s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
 
 export function getHistoricalRival(clubName: string | null | undefined): string | null {
-  if (!clubName) return null;
+  return getHistoricalRivals(clubName)[0] || null;
+}
+
+export function getHistoricalRivals(clubName: string | null | undefined, max = 3): string[] {
+  if (!clubName) return [];
   const n = norm(clubName);
+  const rivals: string[] = [];
   for (const [a, b] of PAIRS) {
-    if (norm(a) === n) return b;
-    if (norm(b) === n) return a;
+    if (norm(a) === n && !rivals.includes(b)) rivals.push(b);
+    else if (norm(b) === n && !rivals.includes(a)) rivals.push(a);
+    if (rivals.length >= max) break;
   }
-  return null;
+  return rivals;
 }
