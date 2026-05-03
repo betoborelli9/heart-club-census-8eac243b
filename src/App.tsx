@@ -74,6 +74,7 @@ const App = () => (
             <Route path="/ranking" element={<Stats />} />
             <Route path="/embaixadores" element={<Ambassadors />} />
             <Route path="/correcao" element={<Correcao />} />
+            <Route path="/convite" element={<Convite />} />
 
             {/* 👑 Gestão Administrativa e BI */}
             <Route path="/admin" element={<Admin />} />
