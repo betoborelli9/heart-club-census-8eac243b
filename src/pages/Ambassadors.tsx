@@ -50,16 +50,64 @@ const resolveClub = (name: string | null): ClubData | null => {
   return CLUBS_DATA.find((c) => normalize(c.nome) === normalize(name)) ?? null;
 };
 
-/* [MÓDULO: MÁSCARA WHATSAPP] */
-const formatPhone = (value: string): string => {
-  const digits = value.replace(/\D/g, "").slice(0, 11);
-  if (digits.length <= 2) return `(${digits}`;
-  if (digits.length <= 7) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
-  return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
+/* [MÓDULO: PAÍSES / DDI WHATSAPP] */
+export interface CountryDial {
+  code: string;        // ISO ex: BR
+  name: string;        // Nome em PT
+  dial: string;        // ex: +55
+  flag: string;        // emoji
+  digits: [number, number]; // min/max digitos do numero local
+}
+
+export const COUNTRY_DIALS: CountryDial[] = [
+  { code: "BR", name: "Brasil", dial: "+55", flag: "🇧🇷", digits: [10, 11] },
+  { code: "PT", name: "Portugal", dial: "+351", flag: "🇵🇹", digits: [9, 9] },
+  { code: "US", name: "Estados Unidos", dial: "+1", flag: "🇺🇸", digits: [10, 10] },
+  { code: "AR", name: "Argentina", dial: "+54", flag: "🇦🇷", digits: [10, 11] },
+  { code: "UY", name: "Uruguai", dial: "+598", flag: "🇺🇾", digits: [8, 9] },
+  { code: "PY", name: "Paraguai", dial: "+595", flag: "🇵🇾", digits: [9, 9] },
+  { code: "CL", name: "Chile", dial: "+56", flag: "🇨🇱", digits: [9, 9] },
+  { code: "CO", name: "Colômbia", dial: "+57", flag: "🇨🇴", digits: [10, 10] },
+  { code: "PE", name: "Peru", dial: "+51", flag: "🇵🇪", digits: [9, 9] },
+  { code: "VE", name: "Venezuela", dial: "+58", flag: "🇻🇪", digits: [10, 10] },
+  { code: "BO", name: "Bolívia", dial: "+591", flag: "🇧🇴", digits: [8, 8] },
+  { code: "EC", name: "Equador", dial: "+593", flag: "🇪🇨", digits: [9, 9] },
+  { code: "MX", name: "México", dial: "+52", flag: "🇲🇽", digits: [10, 10] },
+  { code: "ES", name: "Espanha", dial: "+34", flag: "🇪🇸", digits: [9, 9] },
+  { code: "IT", name: "Itália", dial: "+39", flag: "🇮🇹", digits: [9, 11] },
+  { code: "FR", name: "França", dial: "+33", flag: "🇫🇷", digits: [9, 9] },
+  { code: "DE", name: "Alemanha", dial: "+49", flag: "🇩🇪", digits: [10, 11] },
+  { code: "GB", name: "Reino Unido", dial: "+44", flag: "🇬🇧", digits: [10, 10] },
+  { code: "NL", name: "Holanda", dial: "+31", flag: "🇳🇱", digits: [9, 9] },
+  { code: "BE", name: "Bélgica", dial: "+32", flag: "🇧🇪", digits: [9, 9] },
+  { code: "CH", name: "Suíça", dial: "+41", flag: "🇨🇭", digits: [9, 9] },
+  { code: "IE", name: "Irlanda", dial: "+353", flag: "🇮🇪", digits: [9, 9] },
+  { code: "CA", name: "Canadá", dial: "+1", flag: "🇨🇦", digits: [10, 10] },
+  { code: "JP", name: "Japão", dial: "+81", flag: "🇯🇵", digits: [10, 11] },
+  { code: "AU", name: "Austrália", dial: "+61", flag: "🇦🇺", digits: [9, 9] },
+  { code: "AO", name: "Angola", dial: "+244", flag: "🇦🇴", digits: [9, 9] },
+  { code: "MZ", name: "Moçambique", dial: "+258", flag: "🇲🇿", digits: [9, 9] },
+];
+
+const formatPhoneBR = (digits: string): string => {
+  const d = digits.slice(0, 11);
+  if (d.length <= 2) return `(${d}`;
+  if (d.length <= 7) return `(${d.slice(0, 2)}) ${d.slice(2)}`;
+  return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
 };
 
-const isValidPhone = (value: string): boolean => {
-  return value.replace(/\D/g, "").length === 11;
+const formatPhoneByCountry = (value: string, country: CountryDial): string => {
+  const digits = value.replace(/\D/g, "").slice(0, country.digits[1]);
+  if (country.code === "BR") return formatPhoneBR(digits);
+  // formato genérico: agrupa em blocos de 3-4
+  if (digits.length <= 4) return digits;
+  if (digits.length <= 7) return `${digits.slice(0, 3)} ${digits.slice(3)}`;
+  return `${digits.slice(0, 3)} ${digits.slice(3, 6)} ${digits.slice(6)}`;
+};
+
+const isValidPhoneByCountry = (value: string, country: CountryDial): boolean => {
+  const len = value.replace(/\D/g, "").length;
+  return len >= country.digits[0] && len <= country.digits[1];
 };
 
 /* [MÓDULO: TIPOS] */
@@ -100,6 +148,9 @@ const Ambassadors = () => {
 
   /* Census form state */
   const [phoneInput, setPhoneInput] = useState("");
+  const [phoneCountry, setPhoneCountry] = useState<CountryDial>(
+    () => COUNTRY_DIALS.find((c) => c.code === (profile?.pais || "BR")) ?? COUNTRY_DIALS[0]
+  );
   const [professionInput, setProfessionInput] = useState("");
   const [birthDate, setBirthDate] = useState<Date | undefined>(undefined);
 
@@ -230,8 +281,8 @@ const Ambassadors = () => {
 
   /* [MÓDULO: AÇÃO DO CENSO] */
   const handleCensusSubmit = async () => {
-    if (!isValidPhone(phoneInput)) {
-      toast({ title: "WhatsApp inválido", description: "Informe um número com 11 dígitos.", variant: "destructive" });
+    if (!isValidPhoneByCountry(phoneInput, phoneCountry)) {
+      toast({ title: "WhatsApp inválido", description: `Informe um número válido para ${phoneCountry.name}.`, variant: "destructive" });
       return;
     }
     if (!professionInput) {
@@ -246,7 +297,7 @@ const Ambassadors = () => {
     setIsSubmitting(true);
     try {
       await updateProfile({
-        telefone: phoneInput.replace(/\D/g, ""),
+        telefone: `${phoneCountry.dial}${phoneInput.replace(/\D/g, "")}`,
         profissao: professionInput,
         data_nascimento: format(birthDate, "yyyy-MM-dd"),
       });
@@ -548,14 +599,47 @@ const Ambassadors = () => {
             {/* WhatsApp */}
             <div className="space-y-2">
               <Label className="text-xs font-bold uppercase tracking-wider text-white/60">WhatsApp</Label>
-              <Input
-                placeholder="(99) 99999-9999"
-                value={phoneInput}
-                onChange={(e) => setPhoneInput(formatPhone(e.target.value))}
-                className="bg-white/5 border-white/10 text-white placeholder:text-white/20"
-              />
-              {phoneInput && !isValidPhone(phoneInput) && (
-                <p className="text-[10px] text-red-400">Informe 11 dígitos</p>
+              <div className="flex gap-2">
+                <Select
+                  value={phoneCountry.code}
+                  onValueChange={(code) => {
+                    const c = COUNTRY_DIALS.find((x) => x.code === code) ?? COUNTRY_DIALS[0];
+                    setPhoneCountry(c);
+                    setPhoneInput("");
+                  }}
+                >
+                  <SelectTrigger className="w-[140px] bg-white/5 border-white/10 text-white">
+                    <SelectValue>
+                      <span className="flex items-center gap-1.5">
+                        <span>{phoneCountry.flag}</span>
+                        <span className="text-[#ff6200] font-bold">{phoneCountry.dial}</span>
+                      </span>
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent className="bg-[#1a1a1a] border-white/10 text-white max-h-72">
+                    {COUNTRY_DIALS.map((c) => (
+                      <SelectItem key={c.code} value={c.code} className="text-white focus:bg-white/10 focus:text-white">
+                        <span className="flex items-center gap-2">
+                          <span>{c.flag}</span>
+                          <span>{c.name}</span>
+                          <span className="text-[#ff6200] font-bold ml-auto">{c.dial}</span>
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Input
+                  placeholder={phoneCountry.code === "BR" ? "(99) 99999-9999" : "Número"}
+                  value={phoneInput}
+                  onChange={(e) => setPhoneInput(formatPhoneByCountry(e.target.value, phoneCountry))}
+                  className="flex-1 bg-white/5 border-white/10 text-white placeholder:text-white/20"
+                  inputMode="tel"
+                />
+              </div>
+              {phoneInput && !isValidPhoneByCountry(phoneInput, phoneCountry) && (
+                <p className="text-[10px] text-red-400">
+                  Informe {phoneCountry.digits[0] === phoneCountry.digits[1] ? phoneCountry.digits[0] : `${phoneCountry.digits[0]}-${phoneCountry.digits[1]}`} dígitos para {phoneCountry.name}
+                </p>
               )}
             </div>
 
