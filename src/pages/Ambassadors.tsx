@@ -20,7 +20,20 @@ import {
   Building2,
   Landmark,
   Activity,
+  MessageCircle,
+  Send,
+  Mail,
+  Link2,
+  Sparkles,
 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -319,16 +332,64 @@ const Ambassadors = () => {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  /* [MÓDULO: COMPARTILHAR WHATSAPP] */
-  const handleShareWhatsApp = () => {
-    const code = profile?.codigo_indicacao || "";
-    const msg = encodeURIComponent(
-      `🧡 Fala, torcedor! Eu já fiz parte do Heart Club Census — o maior censo de torcedores do mundo. Use meu código *${code}* e registre seu clube do coração! https://heart-club-census.lovable.app`
-    );
-    window.open(`https://wa.me/?text=${msg}`, "_blank");
+  /* [MÓDULO: LINK ÚNICO DE INDICAÇÃO] */
+  const referralLink = useMemo(() => {
+    const code = profile?.codigo_indicacao || user?.id || "";
+    const base = typeof window !== "undefined" ? window.location.origin : "https://heart-club-census.lovable.app";
+    return `${base}/convite?ref=${encodeURIComponent(code)}`;
+  }, [profile?.codigo_indicacao, user?.id]);
+
+  const referralMessage = useMemo(() => {
+    const nome = profile?.nome_exibicao ? ` ${profile.nome_exibicao}` : "";
+    return `🧡 Fala, torcedor! Registre seu coração no Heart Club pelo meu link e vamos dominar o mapa:${nome ? ` (convite de${nome})` : ""} ${referralLink}`;
+  }, [referralLink, profile?.nome_exibicao]);
+
+  /* [MÓDULO: COMPARTILHAR MULTICANAL] */
+  const shareWhatsApp = () => window.open(`https://wa.me/?text=${encodeURIComponent(referralMessage)}`, "_blank");
+  const shareTelegram = () => window.open(`https://t.me/share/url?url=${encodeURIComponent(referralLink)}&text=${encodeURIComponent(referralMessage)}`, "_blank");
+  const shareEmail = () => {
+    const subject = encodeURIComponent("Te convido para o Heart Club Census 🧡");
+    window.location.href = `mailto:?subject=${subject}&body=${encodeURIComponent(referralMessage)}`;
+  };
+  const shareCopyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(referralLink);
+      toast({ title: "Link copiado!", description: "Cole onde quiser compartilhar." });
+    } catch {
+      toast({ title: "Não foi possível copiar", variant: "destructive" });
+    }
+  };
+  const shareNative = async () => {
+    if (typeof navigator !== "undefined" && (navigator as any).share) {
+      try {
+        await (navigator as any).share({ title: "Heart Club Census", text: referralMessage, url: referralLink });
+      } catch {}
+    } else {
+      shareCopyLink();
+    }
   };
 
   const theme = useClubTheme(clubName);
+
+  /* [MÓDULO: PROGRESSO DO EMBAIXADOR — CRYSTAL GLOW DINÂMICO] */
+  const indicacoesCount = activityFeed.length;
+  const levelInfo = useMemo(() => {
+    const tiers = [
+      { name: "Bronze", min: 0, next: 5 },
+      { name: "Prata", min: 5, next: 15 },
+      { name: "Ouro", min: 15, next: 50 },
+      { name: "Platina", min: 50, next: 150 },
+      { name: "Diamante", min: 150, next: 500 },
+      { name: "Lendário", min: 500, next: 500 },
+    ];
+    const idx = tiers.findIndex((t, i) => indicacoesCount < (tiers[i + 1]?.min ?? Infinity));
+    const tier = tiers[Math.max(0, idx === -1 ? tiers.length - 1 : idx)];
+    const nextTier = tiers[Math.min(tiers.length - 1, (idx === -1 ? tiers.length - 1 : idx) + 1)];
+    const span = Math.max(1, nextTier.min - tier.min);
+    const progress = Math.min(100, Math.round(((indicacoesCount - tier.min) / span) * 100));
+    return { tier: tier.name, next: nextTier.name, progress, indicacoesCount, faltam: Math.max(0, nextTier.min - indicacoesCount) };
+  }, [indicacoesCount]);
+
 
   /* [MÓDULO: LOADING / AUTH GUARD] */
   if (isLoading) {
@@ -371,6 +432,27 @@ const Ambassadors = () => {
       </header>
 
       <main className="max-w-6xl mx-auto px-2 md:px-4 py-4 space-y-5">
+        {/* [MÓDULO: SLOT DE PATROCINADOR — FIXO NO TOPO] */}
+        <div
+          className="rounded-2xl border border-white/10 bg-gradient-to-r from-white/[0.04] via-white/[0.02] to-white/[0.04] px-4 py-3 flex items-center justify-between gap-3"
+          aria-label="Espaço patrocinado"
+        >
+          <div className="flex items-center gap-3 min-w-0">
+            <span className="text-[9px] font-black uppercase tracking-[0.3em] text-[#ff6200] shrink-0">
+              Parceiro Oficial
+            </span>
+            <span className="text-xs text-white/70 italic truncate">
+              Seu negócio aqui — fale com o time Heart Club.
+            </span>
+          </div>
+          <a
+            href="mailto:admin@heartclubapp.com?subject=Quero%20ser%20Parceiro%20Heart%20Club"
+            className="text-[10px] font-black uppercase tracking-wider text-[#ff6200] hover:underline shrink-0"
+          >
+            Anunciar
+          </a>
+        </div>
+
         {/* [MÓDULO: BANNER REUTILIZÁVEL] */}
         <ClubBanner
           clubName={clubName}
@@ -408,10 +490,10 @@ const Ambassadors = () => {
                 {profile?.nome_exibicao?.charAt(0)?.toUpperCase() || "?"}
               </div>
 
-              <div className="flex-1 space-y-3">
+              <div className="flex-1 space-y-3 w-full">
                 <div>
                   <p className="text-[10px] font-black uppercase tracking-[0.3em] text-[#ff6200]">
-                    Embaixador {profile?.nivel_embaixador || "Bronze"}
+                    Embaixador {levelInfo.tier}
                   </p>
                   <h2 className="text-2xl sm:text-3xl font-black italic uppercase leading-none mt-1">
                     {profile?.nome_exibicao || "Torcedor"}
@@ -421,11 +503,48 @@ const Ambassadors = () => {
                   </p>
                 </div>
 
-                {/* Código de indicação */}
+                {/* [CRYSTAL GLOW BAR — cores dinâmicas do clube] */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider">
+                    <span className="text-white/60">{levelInfo.tier} → {levelInfo.next}</span>
+                    <span style={{ color: theme.primaryHex }}>
+                      {levelInfo.indicacoesCount} indicados
+                      {levelInfo.faltam > 0 ? ` · faltam ${levelInfo.faltam}` : ""}
+                    </span>
+                  </div>
+                  <div
+                    className="relative h-3 rounded-full overflow-hidden border"
+                    style={{
+                      backgroundColor: `${theme.secondaryHex}10`,
+                      borderColor: `${theme.primaryHex}40`,
+                      boxShadow: `inset 0 0 8px ${theme.primaryHex}30, 0 0 12px ${theme.primaryHex}30`,
+                    }}
+                  >
+                    <motion.div
+                      initial={{ width: 0 }}
+                      animate={{ width: `${levelInfo.progress}%` }}
+                      transition={{ duration: 1.1, ease: "easeOut" }}
+                      className="h-full rounded-full"
+                      style={{
+                        background: `linear-gradient(90deg, ${theme.primaryHex}, ${theme.secondaryHex || theme.primaryHex})`,
+                        boxShadow: `0 0 14px ${theme.primaryHex}cc, 0 0 28px ${theme.primaryHex}80, inset 0 0 8px ${theme.secondaryHex || "#fff"}55`,
+                      }}
+                    />
+                    {/* highlight crystal */}
+                    <div
+                      className="absolute inset-0 pointer-events-none"
+                      style={{
+                        background: "linear-gradient(180deg, rgba(255,255,255,0.25), rgba(255,255,255,0) 45%)",
+                      }}
+                    />
+                  </div>
+                </div>
+
+                {/* Código + compartilhamento multicanal */}
                 <div className="flex items-center gap-2 flex-wrap">
                   <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-xl px-4 py-2.5">
                     <span className="text-[10px] font-bold uppercase tracking-wider text-white/40">Código:</span>
-                    <span className="text-lg font-black tracking-[0.2em] text-[#ff6200]">
+                    <span className="text-lg font-black tracking-[0.2em]" style={{ color: theme.primaryHex }}>
                       {profile?.codigo_indicacao || "—"}
                     </span>
                     <button onClick={handleCopyCode} className="ml-1 text-white/40 hover:text-white transition-colors">
@@ -433,17 +552,53 @@ const Ambassadors = () => {
                     </button>
                   </div>
 
-                  <Button
-                    onClick={handleShareWhatsApp}
-                    className="bg-[#25D366] hover:bg-[#1da851] text-white rounded-xl gap-2 text-xs font-bold uppercase tracking-wider"
-                  >
-                    <Share2 className="w-4 h-4" />
-                    WhatsApp
-                  </Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        className="rounded-xl gap-2 text-xs font-bold uppercase tracking-wider text-black hover:opacity-90"
+                        style={{
+                          background: `linear-gradient(90deg, ${theme.primaryHex}, ${theme.secondaryHex || theme.primaryHex})`,
+                          boxShadow: `0 0 18px ${theme.primaryHex}80`,
+                        }}
+                      >
+                        <Share2 className="w-4 h-4" /> Convidar torcedor
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent
+                      align="start"
+                      className="bg-[#0d0d0d] border border-white/10 text-white w-60"
+                    >
+                      <DropdownMenuLabel className="text-[10px] uppercase tracking-[0.2em] text-white/40">
+                        Compartilhar link
+                      </DropdownMenuLabel>
+                      <DropdownMenuSeparator className="bg-white/5" />
+                      <DropdownMenuItem onClick={shareWhatsApp} className="gap-2 focus:bg-white/10 cursor-pointer">
+                        <MessageCircle className="w-4 h-4 text-[#25D366]" /> WhatsApp
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={shareTelegram} className="gap-2 focus:bg-white/10 cursor-pointer">
+                        <Send className="w-4 h-4 text-[#229ED9]" /> Telegram
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={shareEmail} className="gap-2 focus:bg-white/10 cursor-pointer">
+                        <Mail className="w-4 h-4 text-[#ff6200]" /> E-mail
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={shareCopyLink} className="gap-2 focus:bg-white/10 cursor-pointer">
+                        <Link2 className="w-4 h-4 text-white/70" /> Copiar link
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator className="bg-white/5" />
+                      <DropdownMenuItem onClick={shareNative} className="gap-2 focus:bg-white/10 cursor-pointer">
+                        <Sparkles className="w-4 h-4" style={{ color: theme.primaryHex }} /> Mais opções…
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
+
+                <p className="text-[10px] text-white/40 italic break-all">
+                  {referralLink}
+                </p>
               </div>
             </div>
           </div>
+
 
           {/* [MÓDULO: FEED DE ATIVIDADE] */}
           <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-5 shadow-xl">
