@@ -141,6 +141,10 @@ const Admin = () => {
             <PressReleaseGenerator />
           </TabsContent>
 
+          <TabsContent value="behavior">
+            <BehavioralAudit />
+          </TabsContent>
+
           <TabsContent value="corrections">
             <AdminCorrectionsTable />
           </TabsContent>
