@@ -13,6 +13,7 @@ import SocioeconomicProfile from "@/components/admin/SocioeconomicProfile";
 import AffinityEcosystem from "@/components/admin/AffinityEcosystem";
 import PressReleaseGenerator from "@/components/admin/PressReleaseGenerator";
 import RevenueTerminal from "@/components/admin/RevenueTerminal";
+import BehavioralAudit from "@/components/admin/BehavioralAudit";
 import ExecutiveReportButton from "@/components/admin/ExecutiveReportButton";
 import logo from "@/assets/logo.png";
 
