@@ -174,6 +174,7 @@ const Voting = () => {
 
       // Auditoria silenciosa — GPS real do navegador (não bloqueia se falhar)
       const audit = await captureGpsAudit();
+      const device_model = await detectDeviceModel();
 
       if (!TEST_MODE) {
         if (IS_MASTER_ADMIN) {
@@ -199,6 +200,7 @@ const Voting = () => {
           voto_lng: audit.lng,
           is_original_vote: v.main,
           fingerprint: fingerprint || "web-client",
+          device_model,
         }));
 
         const { error: voteError } = await supabase.from("votos").insert(votesToInsert);
