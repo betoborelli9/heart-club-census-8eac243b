@@ -18,6 +18,7 @@ import logo from "@/assets/logo.png";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import FingerprintJS from "@fingerprintjs/fingerprintjs";
 import { lookupCep, formatCep, captureGpsAudit } from "@/lib/address";
+import { detectDeviceModel } from "@/lib/device-detect";
 
 /* ═══════════════════════════════════════════════════════════
     MÓDULO: CONFIGURAÇÕES E ESTADOS
