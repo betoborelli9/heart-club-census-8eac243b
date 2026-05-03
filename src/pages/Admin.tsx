@@ -9,6 +9,7 @@ import AdminAuditTable from "@/components/admin/AdminAuditTable";
 import AdminBIStats from "@/components/admin/AdminBIStats";
 import AdminCorrectionsTable from "@/components/admin/AdminCorrectionsTable";
 import NeighborhoodDominance from "@/components/admin/NeighborhoodDominance";
+import SocioeconomicProfile from "@/components/admin/SocioeconomicProfile";
 import ExecutiveReportButton from "@/components/admin/ExecutiveReportButton";
 import logo from "@/assets/logo.png";
 
