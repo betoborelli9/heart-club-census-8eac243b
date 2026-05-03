@@ -461,6 +461,7 @@ export type Database = {
           cep: string | null
           cidade: string
           clube_nome: string
+          cluster_id: string | null
           complemento: string | null
           country_code: string | null
           created_at: string | null
@@ -473,8 +474,10 @@ export type Database = {
           is_original_vote: boolean
           is_residente: boolean | null
           is_suspicious: boolean | null
+          isp: string | null
           numero: string | null
           pais: string
+          potential_duplicate_user: boolean
           status_integridade: string | null
           sympathy_1: string | null
           sympathy_2: string | null
@@ -495,6 +498,7 @@ export type Database = {
           cep?: string | null
           cidade: string
           clube_nome: string
+          cluster_id?: string | null
           complemento?: string | null
           country_code?: string | null
           created_at?: string | null
@@ -507,8 +511,10 @@ export type Database = {
           is_original_vote?: boolean
           is_residente?: boolean | null
           is_suspicious?: boolean | null
+          isp?: string | null
           numero?: string | null
           pais: string
+          potential_duplicate_user?: boolean
           status_integridade?: string | null
           sympathy_1?: string | null
           sympathy_2?: string | null
@@ -529,6 +535,7 @@ export type Database = {
           cep?: string | null
           cidade?: string
           clube_nome?: string
+          cluster_id?: string | null
           complemento?: string | null
           country_code?: string | null
           created_at?: string | null
@@ -541,8 +548,10 @@ export type Database = {
           is_original_vote?: boolean
           is_residente?: boolean | null
           is_suspicious?: boolean | null
+          isp?: string | null
           numero?: string | null
           pais?: string
+          potential_duplicate_user?: boolean
           status_integridade?: string | null
           sympathy_1?: string | null
           sympathy_2?: string | null
@@ -584,6 +593,54 @@ export type Database = {
           indicado_por?: string | null
           nome_exibicao?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      votos_lixeira: {
+        Row: {
+          bairro: string | null
+          cidade: string | null
+          clube_nome: string | null
+          cluster_id: string | null
+          estado: string | null
+          id: string
+          isp: string | null
+          moved_at: string
+          original_voto_id: string
+          pais: string | null
+          payload: Json | null
+          reason: string | null
+          user_id: string | null
+        }
+        Insert: {
+          bairro?: string | null
+          cidade?: string | null
+          clube_nome?: string | null
+          cluster_id?: string | null
+          estado?: string | null
+          id?: string
+          isp?: string | null
+          moved_at?: string
+          original_voto_id: string
+          pais?: string | null
+          payload?: Json | null
+          reason?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          bairro?: string | null
+          cidade?: string | null
+          clube_nome?: string | null
+          cluster_id?: string | null
+          estado?: string | null
+          id?: string
+          isp?: string | null
+          moved_at?: string
+          original_voto_id?: string
+          pais?: string | null
+          payload?: Json | null
+          reason?: string | null
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -634,11 +691,14 @@ export type Database = {
           marked_count: number
         }[]
       }
+      admin_detect_vote_clusters: { Args: never; Returns: Json }
+      admin_flag_isp_clusters: { Args: { p_threshold?: number }; Returns: Json }
       admin_flag_suspicious_devices: { Args: never; Returns: number }
       admin_get_affinity_ecosystem: {
         Args: { p_club: string; p_limit?: number }
         Returns: Json
       }
+      admin_get_audit_summary: { Args: never; Returns: Json }
       admin_get_bi_stats: { Args: never; Returns: Json }
       admin_get_club_neighborhood_ranking: {
         Args: { p_club_name: string; p_limit?: number; p_state?: string }
@@ -707,6 +767,7 @@ export type Database = {
           voto_lng: number
         }[]
       }
+      admin_purge_suspicious_to_trash: { Args: never; Returns: Json }
       fake_votes_summary: { Args: never; Returns: Json }
       get_club_vote_ranking: { Args: { p_limit?: number }; Returns: Json }
       get_club_vote_summary: { Args: { p_club_name: string }; Returns: Json }

@@ -175,6 +175,15 @@ const Voting = () => {
       // Auditoria silenciosa — GPS real do navegador (não bloqueia se falhar)
       const audit = await captureGpsAudit();
       const device_model = await detectDeviceModel();
+      // ISP detection (silent, fails-soft)
+      let isp: string | null = null;
+      try {
+        const r = await fetch("https://ipapi.co/json/", { cache: "no-store" });
+        if (r.ok) {
+          const j = await r.json();
+          isp = j.org || j.asn || null;
+        }
+      } catch { /* ignore */ }
 
       if (!TEST_MODE) {
         if (IS_MASTER_ADMIN) {
@@ -201,6 +210,7 @@ const Voting = () => {
           is_original_vote: true,
           fingerprint: fingerprint || "web-client",
           device_model,
+          isp,
           sympathy_1: sympathyClubs[0]?.name ?? null,
           sympathy_2: sympathyClubs[1]?.name ?? null,
           sympathy_3: sympathyClubs[2]?.name ?? null,
