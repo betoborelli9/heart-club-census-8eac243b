@@ -14,6 +14,7 @@ import AffinityEcosystem from "@/components/admin/AffinityEcosystem";
 import PressReleaseGenerator from "@/components/admin/PressReleaseGenerator";
 import RevenueTerminal from "@/components/admin/RevenueTerminal";
 import BehavioralAudit from "@/components/admin/BehavioralAudit";
+import FanaticCities from "@/components/ambassador/FanaticCities";
 import ExecutiveReportButton from "@/components/admin/ExecutiveReportButton";
 import logo from "@/assets/logo.png";
 
@@ -108,6 +109,9 @@ const Admin = () => {
             <TabsTrigger value="behavior" className="data-[state=active]:bg-yellow-500 data-[state=active]:text-black">
               ⚠ Auditoria Comportamental
             </TabsTrigger>
+            <TabsTrigger value="cities" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              🔥 Cidades Fanáticas
+            </TabsTrigger>
             <TabsTrigger value="corrections" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               📝 Correções
             </TabsTrigger>
@@ -143,6 +147,10 @@ const Admin = () => {
 
           <TabsContent value="behavior">
             <BehavioralAudit />
+          </TabsContent>
+
+          <TabsContent value="cities">
+            <FanaticCities limit={30} />
           </TabsContent>
 
           <TabsContent value="corrections">
