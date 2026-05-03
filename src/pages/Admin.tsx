@@ -93,6 +93,9 @@ const Admin = () => {
             <TabsTrigger value="socio" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               💼 Perfil Socioeconômico
             </TabsTrigger>
+            <TabsTrigger value="affinity" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              🕸️ Afinidades
+            </TabsTrigger>
             <TabsTrigger value="corrections" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               📝 Correções
             </TabsTrigger>
