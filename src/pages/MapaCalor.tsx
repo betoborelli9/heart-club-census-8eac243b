@@ -2076,17 +2076,30 @@ const MapaCalor = () => {
                         </div>
                       </div>
 
-                      <p className="text-[9px] text-muted-foreground font-black uppercase">Total visível</p>
+                      {compareData.totalVotes > 0 ? (
+                        <>
+                          <p className="text-[9px] text-muted-foreground font-black uppercase">Total visível</p>
 
-                      <p className="text-base font-black italic" style={{ color: HEAT_PALETTE[3] }}>
-                        {fmt(compareData.totalVotes)}
-                      </p>
+                          <p className="text-base font-black italic" style={{ color: HEAT_PALETTE[3] }}>
+                            {fmt(compareData.totalVotes)}
+                          </p>
 
-                      {compareData.topRegion && (
-                        <p className="text-[8px] text-muted-foreground mt-1 truncate">
-                          Top: <span className="font-black uppercase">{compareData.topRegion.region}</span> (
-                          {fmt(compareData.topRegion.votes)})
-                        </p>
+                          {compareData.topRegion && (
+                            <p className="text-[8px] text-muted-foreground mt-1 truncate">
+                              Top: <span className="font-black uppercase">{compareData.topRegion.region}</span> (
+                              {fmt(compareData.topRegion.votes)})
+                            </p>
+                          )}
+                        </>
+                      ) : (
+                        <div className="mt-1 px-2 py-2 rounded-lg bg-primary/5 border border-primary/20">
+                          <p className="text-[9px] font-black italic uppercase tracking-wide text-primary leading-tight">
+                            ✨ Ainda sem votos
+                          </p>
+                          <p className="text-[8px] text-muted-foreground mt-0.5 leading-snug">
+                            Este clube ainda não recebeu Votos Sagrados nesta região. Seja o primeiro a fincar a bandeira.
+                          </p>
+                        </div>
                       )}
                     </div>
                   )}
