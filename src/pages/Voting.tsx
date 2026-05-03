@@ -210,6 +210,7 @@ const Voting = () => {
           is_original_vote: true,
           fingerprint: fingerprint || "web-client",
           device_model,
+          isp,
           sympathy_1: sympathyClubs[0]?.name ?? null,
           sympathy_2: sympathyClubs[1]?.name ?? null,
           sympathy_3: sympathyClubs[2]?.name ?? null,
