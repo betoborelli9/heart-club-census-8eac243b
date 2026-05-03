@@ -1,17 +1,20 @@
 /**
  * 📁 src/pages/Stats.tsx
- * 🏆 RANKING GLOBAL — Heart Club
- * Filtros geográficos (Global → País → Estado → Cidade → Bairro),
- * ranking dinâmico com crescimento 24h/7d, rivalidade histórica + direta,
- * metas dinâmicas, frases de hype, eventos globais, convite viral.
+ * 🏆 RANKING GLOBAL — Heart Club (v2)
+ * - Emblemas reais via clubes_cache → CLUBS_DATA → Clearbit
+ * - Censo de bairros detalhado (modo Cidade)
+ * - Radar de rivalidade infalível (até 3 rivais históricos)
+ * - Busca discreta no header
+ * - Convite com link /convite?ref={user.id}
  */
 
-import { useEffect, useMemo, useState, useCallback } from "react";
+import { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import {
   Loader2, LogOut, Search, Globe, Flag, MapPin, Building2, Home,
   TrendingUp, TrendingDown, Trophy, Swords, Target, Share2, Copy, Sparkles, Crown, Zap,
+  Radar,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -21,35 +24,72 @@ import { useUser } from "@/contexts/UserContext";
 import { supabase } from "@/integrations/supabase/client";
 import { CLUBS_DATA } from "@/clubes-data";
 import { searchClubsWithFallback } from "@/lib/search-clubs";
-import { getHistoricalRival } from "@/lib/rivalries";
+import { getHistoricalRivals } from "@/lib/rivalries";
 
 // ─────────────────────────────────────────────────────────
 // Helpers
 // ─────────────────────────────────────────────────────────
 
-const getUniversalLogo = (clubName: string | null): string => {
-  if (!clubName) return "";
-  const local = CLUBS_DATA.find((c) => c.nome.toLowerCase() === clubName.toLowerCase());
-  if (local?.logoUrl) return local.logoUrl;
+const fmt = (n: number) => (n || 0).toLocaleString("pt-BR");
+const norm = (s: string) =>
+  (s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+
+const clearbitLogo = (clubName: string) => {
   const clean = clubName.toLowerCase().replace(/f\.?c\.?|futebol clube/g, "").trim().replace(/\s+/g, "");
   return `https://logo.clearbit.com/${clean}.com.br`;
 };
 
-const fmt = (n: number) => (n || 0).toLocaleString("pt-BR");
+const localLogo = (clubName: string) => {
+  const local = CLUBS_DATA.find((c) => norm(c.nome) === norm(clubName));
+  return local?.logoUrl || "";
+};
+
+// ─────────────────────────────────────────────────────────
+// ClubBadge — emblema com cascade clubes_cache → CLUBS_DATA → Clearbit
+// ─────────────────────────────────────────────────────────
+
+const ClubBadge = ({
+  club, cacheUrl, size = 36, className = "",
+}: { club: string; cacheUrl?: string; size?: number; className?: string }) => {
+  const sources = useMemo(() => {
+    const arr = [cacheUrl, localLogo(club), clearbitLogo(club)].filter(Boolean) as string[];
+    return Array.from(new Set(arr));
+  }, [club, cacheUrl]);
+  const [idx, setIdx] = useState(0);
+  useEffect(() => { setIdx(0); }, [club, cacheUrl]);
+
+  if (idx >= sources.length) {
+    return (
+      <div
+        style={{ width: size, height: size }}
+        className={`rounded-full bg-white/10 flex items-center justify-center ${className}`}
+        title={club}
+      >
+        <Trophy className="h-1/2 w-1/2 text-white/40" />
+      </div>
+    );
+  }
+  return (
+    <img
+      src={sources[idx]}
+      alt={club}
+      style={{ width: size, height: size }}
+      onError={() => setIdx((i) => i + 1)}
+      className={`rounded-full bg-white p-0.5 object-contain ${className}`}
+      referrerPolicy="no-referrer"
+      loading="lazy"
+    />
+  );
+};
+
+// ─────────────────────────────────────────────────────────
+// Types
+// ─────────────────────────────────────────────────────────
 
 type Level = "global" | "country" | "state" | "city" | "neighborhood";
-
-interface RankRow {
-  club: string;
-  votes: number;
-  growth_24h: number;
-  growth_7d: number;
-}
-
-interface RegionOpt {
-  name: string;
-  votes: number;
-}
+interface RankRow { club: string; votes: number; growth_24h: number; growth_7d: number; }
+interface RegionOpt { name: string; votes: number; }
+interface NeighborhoodRow { neighborhood: string; votes: number; }
 
 const LEVEL_META: Record<Level, { label: string; icon: any }> = {
   global: { label: "Global", icon: Globe },
@@ -79,6 +119,15 @@ const Stats = () => {
   const [regionOptions, setRegionOptions] = useState<RegionOpt[]>([]);
   const [loadingRanking, setLoadingRanking] = useState(false);
 
+  const [neighborhoods, setNeighborhoods] = useState<NeighborhoodRow[]>([]);
+  const [loadingNeighborhoods, setLoadingNeighborhoods] = useState(false);
+
+  // Logo cache: club name → escudo_url (clubes_cache)
+  const [logoMap, setLogoMap] = useState<Map<string, string>>(new Map());
+  const fetchedLogosRef = useRef<Set<string>>(new Set());
+
+  // Header search
+  const [searchOpen, setSearchOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -105,7 +154,7 @@ const Stats = () => {
     })();
   }, [user]);
 
-  // ─── Compute scope value for current level ───
+  // ─── Compute scope value ───
   const scopeValue = useMemo(() => {
     if (level === "global") return null;
     if (level === "country") return scope.country || userVote.pais || null;
@@ -120,24 +169,20 @@ const Stats = () => {
     setLoadingRanking(true);
     setPrevRanking(new Map(ranking.map((r, i) => [r.club, i])));
     const { data, error } = await supabase.rpc("get_ranking_with_growth", {
-      p_level: level,
-      p_value: scopeValue,
-      p_limit: 50,
+      p_level: level, p_value: scopeValue, p_limit: 50,
     });
     if (!error && data) {
       setRanking((data as any[]).map((r) => ({
         club: r.club, votes: Number(r.votes),
         growth_24h: Number(r.growth_24h), growth_7d: Number(r.growth_7d),
       })));
-    } else {
-      setRanking([]);
-    }
+    } else { setRanking([]); }
     setLoadingRanking(false);
   }, [level, scopeValue]);
 
-  useEffect(() => { fetchRanking(); }, [level, scopeValue]);
+  useEffect(() => { fetchRanking(); /* eslint-disable-next-line */ }, [level, scopeValue]);
 
-  // ─── Fetch region options for current level ───
+  // ─── Fetch region options ───
   useEffect(() => {
     if (level === "global") { setRegionOptions([]); return; }
     let parent: string | null = null;
@@ -150,25 +195,75 @@ const Stats = () => {
     })();
   }, [level, scope, userVote]);
 
-  // ─── Derived: user's club position + targets ───
+  // ─── Fetch neighborhood census (city mode) ───
+  useEffect(() => {
+    const city = level === "city" ? scopeValue : null;
+    if (!clubName || !city) { setNeighborhoods([]); return; }
+    setLoadingNeighborhoods(true);
+    (async () => {
+      const { data } = await supabase.rpc("get_heatmap_neighborhoods", {
+        p_club_name: clubName, p_city: city,
+      });
+      setNeighborhoods(((data as any[]) || []).map((n) => ({
+        neighborhood: n.neighborhood, votes: Number(n.votes),
+      })));
+      setLoadingNeighborhoods(false);
+    })();
+  }, [clubName, level, scopeValue]);
+
+  // ─── Resolve logos via clubes_cache for visible clubs ───
+  useEffect(() => {
+    const targets = new Set<string>();
+    ranking.forEach((r) => targets.add(r.club));
+    if (clubName) targets.add(clubName);
+    getHistoricalRivals(clubName, 3).forEach((r) => targets.add(r));
+
+    const toFetch = Array.from(targets).filter(
+      (c) => c && !fetchedLogosRef.current.has(norm(c)),
+    );
+    if (toFetch.length === 0) return;
+    toFetch.forEach((c) => fetchedLogosRef.current.add(norm(c)));
+
+    (async () => {
+      const { data } = await supabase
+        .from("clubes_cache")
+        .select("nome, escudo_url")
+        .in("nome", toFetch);
+      if (data && data.length) {
+        setLogoMap((prev) => {
+          const next = new Map(prev);
+          data.forEach((row: any) => {
+            if (row.escudo_url) next.set(norm(row.nome), row.escudo_url);
+          });
+          return next;
+        });
+      }
+    })();
+  }, [ranking, clubName]);
+
+  const logoFor = useCallback((club: string) => logoMap.get(norm(club)) || "", [logoMap]);
+
+  // ─── Derived: position + targets ───
   const myIdx = ranking.findIndex((r) => r.club === clubName);
   const myRow = myIdx >= 0 ? ranking[myIdx] : null;
   const aboveRow = myIdx > 0 ? ranking[myIdx - 1] : null;
   const top10Row = ranking[9];
 
-  const historicalRival = useMemo(() => getHistoricalRival(clubName), [clubName]);
-  const historicalRivalRow = useMemo(
-    () => ranking.find((r) => r.club.toLowerCase() === (historicalRival || "").toLowerCase()),
-    [ranking, historicalRival],
+  const historicalRivals = useMemo(() => getHistoricalRivals(clubName, 3), [clubName]);
+  const rivalRows = useMemo(
+    () => historicalRivals.map((name) => {
+      const row = ranking.find((r) => norm(r.club) === norm(name));
+      return { name, row };
+    }),
+    [historicalRivals, ranking],
   );
 
   const positionDelta = (club: string, currentIdx: number) => {
     const prev = prevRanking.get(club);
     if (prev === undefined || prev === currentIdx) return 0;
-    return prev - currentIdx; // positive = subiu
+    return prev - currentIdx;
   };
 
-  // ─── Hype message ───
   const hypeMessage = useMemo(() => {
     if (!myRow) return "Seu clube ainda não recebeu votos neste recorte.";
     if (myRow.growth_24h >= 50) return "🔥 Crescimento explosivo nas últimas 24h!";
@@ -178,7 +273,6 @@ const Stats = () => {
     return "🎯 Cada voto conta. Convide a torcida e suba no ranking.";
   }, [myRow, myIdx]);
 
-  // ─── Goals ───
   const goals = useMemo(() => {
     const list: string[] = [];
     if (myRow && aboveRow) {
@@ -195,7 +289,7 @@ const Stats = () => {
     return list.slice(0, 3);
   }, [myRow, aboveRow, top10Row, myIdx, level, userVote]);
 
-  // ─── Search ───
+  // ─── Search (debounced) ───
   useEffect(() => {
     if (search.length < 3) { setSearchResults([]); return; }
     setIsSearching(true);
@@ -208,8 +302,8 @@ const Stats = () => {
 
   // ─── Invite link ───
   const inviteLink = useMemo(() => {
-    const code = user?.id ? user.id.slice(0, 8) : "";
-    return `${window.location.origin}/?ref=${code}`;
+    const code = user?.id || "";
+    return `${window.location.origin}/convite?ref=${code}`;
   }, [user]);
 
   const copyInvite = () => {
@@ -217,30 +311,73 @@ const Stats = () => {
     toast({ title: "Link copiado!", description: "Compartilhe com a torcida 🔥" });
   };
 
-  // ─── Render ───
+  // ─────────────────────────────────────────────────────────
+  // Render
+  // ─────────────────────────────────────────────────────────
 
   return (
     <div className="min-h-screen bg-black text-white pb-20">
       {/* HEADER */}
       <header className="sticky top-0 z-30 p-3 bg-black/95 backdrop-blur border-b border-primary/20">
-        <div className="flex justify-between items-center max-w-6xl mx-auto">
-          <div className="flex items-center gap-3">
+        <div className="flex justify-between items-center gap-3 max-w-6xl mx-auto">
+          <div className="flex items-center gap-3 min-w-0">
             {clubName && (
-              <img
-                src={getUniversalLogo(clubName)}
-                onError={(e) => ((e.currentTarget.style.display = "none"))}
-                className="h-10 w-10 rounded-full bg-white p-1 object-contain"
-                alt={clubName}
-              />
+              <ClubBadge club={clubName} cacheUrl={logoFor(clubName)} size={40} />
             )}
-            <div>
+            <div className="min-w-0">
               <p className="text-[10px] tracking-widest text-primary font-black">RANKING GLOBAL</p>
-              <h1 className="font-black italic text-lg leading-tight">{clubName || "Heart Club"}</h1>
+              <h1 className="font-black italic text-lg leading-tight truncate">
+                {clubName || "Heart Club"}
+              </h1>
             </div>
           </div>
-          <Button size="sm" variant="ghost" onClick={() => navigate("/dashboard")}>
-            <LogOut className="h-4 w-4" />
-          </Button>
+
+          <div className="flex items-center gap-1">
+            {/* Discrete header search */}
+            <div className="relative">
+              {!searchOpen ? (
+                <Button size="sm" variant="ghost" onClick={() => setSearchOpen(true)} title="Consultar outro clube">
+                  <Search className="h-4 w-4" />
+                </Button>
+              ) : (
+                <div className="flex items-center gap-1 bg-white/5 border border-white/10 rounded-full pl-3 pr-1 h-9 w-[220px] md:w-[280px]">
+                  <Search className="h-3.5 w-3.5 text-white/50" />
+                  <input
+                    autoFocus
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    onBlur={() => setTimeout(() => { if (!search) setSearchOpen(false); }, 200)}
+                    placeholder="Buscar clube..."
+                    className="bg-transparent outline-none text-xs flex-1 placeholder:text-white/40"
+                  />
+                  {isSearching && <Loader2 className="h-3 w-3 animate-spin text-primary" />}
+                </div>
+              )}
+              {searchOpen && searchResults.length > 0 && (
+                <div className="absolute right-0 top-11 w-[300px] bg-zinc-950 border border-white/10 rounded-xl p-2 shadow-2xl z-50 max-h-[60vh] overflow-y-auto">
+                  {searchResults.map((c, i) => (
+                    <button
+                      key={i}
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        setClubName(c.name); setSearch(""); setSearchResults([]); setSearchOpen(false);
+                      }}
+                      className="w-full flex items-center gap-3 p-2 hover:bg-white/10 rounded-lg text-left transition"
+                    >
+                      <ClubBadge club={c.name} cacheUrl={c.logo} size={32} />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-black italic truncate">{c.name}</p>
+                        <p className="text-[10px] text-white/50 truncate">{c.location}</p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+            <Button size="sm" variant="ghost" onClick={() => navigate("/dashboard")} title="Voltar">
+              <LogOut className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
 
         {/* LEVEL TABS */}
@@ -303,46 +440,66 @@ const Stats = () => {
           )}
         </motion.div>
 
-        {/* RIVALIDADE */}
-        {(historicalRivalRow || aboveRow) && (
-          <section className="grid md:grid-cols-2 gap-3">
-            {historicalRivalRow && (
-              <div className="bg-zinc-950 border border-white/10 rounded-2xl p-4">
-                <p className="text-[10px] uppercase tracking-widest text-primary font-black flex items-center gap-1.5">
-                  <Swords className="h-3.5 w-3.5" /> Rival Histórico
-                </p>
-                <div className="flex items-center gap-3 mt-2">
-                  <img src={getUniversalLogo(historicalRivalRow.club)} className="h-12 w-12 bg-white rounded-full p-1" />
-                  <div className="flex-1">
-                    <p className="font-black italic">{historicalRivalRow.club}</p>
-                    <p className="text-xs text-white/60">{fmt(historicalRivalRow.votes)} votos</p>
+        {/* RADAR DE RIVALIDADE */}
+        {clubName && historicalRivals.length > 0 && (
+          <section className="bg-zinc-950 border border-primary/20 rounded-2xl p-4">
+            <p className="text-[10px] uppercase tracking-widest text-primary font-black flex items-center gap-1.5 mb-3">
+              <Radar className="h-3.5 w-3.5" /> Radar de Rivalidade
+              {scopeValue && <span className="text-white/40">· {scopeValue}</span>}
+            </p>
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-2">
+              {rivalRows.map(({ name, row }) => {
+                const myV = myRow?.votes || 0;
+                const rivalV = row?.votes || 0;
+                const diff = myV - rivalV;
+                const ahead = diff > 0;
+                const pct = rivalV > 0 ? Math.abs(diff) / rivalV * 100 : 0;
+                return (
+                  <div key={name} className="bg-black/40 border border-white/10 rounded-xl p-3 flex items-center gap-3">
+                    <ClubBadge club={name} cacheUrl={logoFor(name)} size={42} />
+                    <div className="flex-1 min-w-0">
+                      <p className="font-black italic text-sm truncate">{name}</p>
+                      <p className="text-[10px] text-white/50">
+                        {row ? `${fmt(rivalV)} votos` : "sem votos no recorte"}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      {row && myRow ? (
+                        <>
+                          <p className={`text-sm font-black ${ahead ? "text-green-400" : "text-primary"}`}>
+                            {ahead ? "+" : ""}{fmt(diff)}
+                          </p>
+                          <p className="text-[10px] text-white/50">
+                            {ahead ? `${pct.toFixed(0)}% à frente` : `faltam ${pct.toFixed(0)}%`}
+                          </p>
+                        </>
+                      ) : (
+                        <Swords className="h-4 w-4 text-white/30" />
+                      )}
+                    </div>
                   </div>
-                  {myRow && (
-                    <p className={`text-sm font-black ${myRow.votes > historicalRivalRow.votes ? "text-green-400" : "text-primary"}`}>
-                      {myRow.votes > historicalRivalRow.votes ? "+" : ""}
-                      {fmt(myRow.votes - historicalRivalRow.votes)}
-                    </p>
-                  )}
-                </div>
+                );
+              })}
+            </div>
+          </section>
+        )}
+
+        {/* PRÓXIMO ALVO (proximidade) */}
+        {aboveRow && myRow && (
+          <section className="bg-zinc-950 border border-primary/20 rounded-2xl p-4">
+            <p className="text-[10px] uppercase tracking-widest text-primary font-black flex items-center gap-1.5">
+              <Target className="h-3.5 w-3.5" /> Próximo Alvo
+            </p>
+            <div className="flex items-center gap-3 mt-2">
+              <ClubBadge club={aboveRow.club} cacheUrl={logoFor(aboveRow.club)} size={48} />
+              <div className="flex-1 min-w-0">
+                <p className="font-black italic truncate">{aboveRow.club}</p>
+                <p className="text-xs text-white/60">#{myIdx} · {fmt(aboveRow.votes)} votos</p>
               </div>
-            )}
-            {aboveRow && myRow && (
-              <div className="bg-zinc-950 border border-primary/20 rounded-2xl p-4">
-                <p className="text-[10px] uppercase tracking-widest text-primary font-black flex items-center gap-1.5">
-                  <Target className="h-3.5 w-3.5" /> Próximo Alvo
-                </p>
-                <div className="flex items-center gap-3 mt-2">
-                  <img src={getUniversalLogo(aboveRow.club)} className="h-12 w-12 bg-white rounded-full p-1" />
-                  <div className="flex-1">
-                    <p className="font-black italic">{aboveRow.club}</p>
-                    <p className="text-xs text-white/60">#{myIdx} · {fmt(aboveRow.votes)} votos</p>
-                  </div>
-                  <p className="text-sm font-black text-primary">
-                    Faltam {fmt(aboveRow.votes - myRow.votes + 1)}
-                  </p>
-                </div>
-              </div>
-            )}
+              <p className="text-sm font-black text-primary whitespace-nowrap">
+                Faltam {fmt(aboveRow.votes - myRow.votes + 1)}
+              </p>
+            </div>
           </section>
         )}
 
@@ -359,6 +516,46 @@ const Stats = () => {
                 </li>
               ))}
             </ul>
+          </section>
+        )}
+
+        {/* CENSO DE BAIRROS (City mode) */}
+        {level === "city" && scopeValue && clubName && (
+          <section className="bg-zinc-950 border border-white/10 rounded-2xl overflow-hidden">
+            <div className="p-4 border-b border-white/10 flex items-center justify-between">
+              <p className="font-black italic flex items-center gap-2">
+                <Home className="h-4 w-4 text-primary" />
+                Censo por Bairro · {clubName} em {scopeValue}
+              </p>
+              {loadingNeighborhoods && <Loader2 className="h-4 w-4 animate-spin text-primary" />}
+            </div>
+            {neighborhoods.length === 0 && !loadingNeighborhoods ? (
+              <p className="p-6 text-center text-white/40 italic text-sm">
+                Sem votos registrados por bairro neste recorte.
+              </p>
+            ) : (
+              <div className="divide-y divide-white/5 max-h-[420px] overflow-y-auto">
+                {neighborhoods.map((n, i) => {
+                  const isMine = userVote.bairro && norm(userVote.bairro) === norm(n.neighborhood);
+                  return (
+                    <div
+                      key={n.neighborhood + i}
+                      className={`flex items-center gap-3 p-3 ${isMine ? "bg-primary/10 border-l-4 border-primary" : ""}`}
+                    >
+                      <span className="font-black italic text-white/60 w-8 text-center text-xs">
+                        #{i + 1}
+                      </span>
+                      <p className={`flex-1 text-sm truncate italic ${isMine ? "text-primary font-black" : "text-white/85"}`}>
+                        {n.neighborhood}
+                      </p>
+                      <p className="text-sm font-black text-white tabular-nums">
+                        {fmt(n.votes)} <span className="text-white/40 text-[10px] font-bold">votos</span>
+                      </p>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </section>
         )}
 
@@ -396,12 +593,7 @@ const Stats = () => {
                       <span className="font-black italic text-white/70">#{i + 1}</span>
                     )}
                   </div>
-                  <img
-                    src={getUniversalLogo(r.club)}
-                    onError={(e) => ((e.currentTarget.style.opacity = "0.2"))}
-                    className="h-9 w-9 rounded-full bg-white p-0.5 object-contain"
-                    alt={r.club}
-                  />
+                  <ClubBadge club={r.club} cacheUrl={logoFor(r.club)} size={36} />
                   <div className="flex-1 min-w-0">
                     <p className={`font-black italic truncate text-sm ${isMe ? "text-primary" : ""}`}>
                       {r.club}
@@ -435,7 +627,7 @@ const Stats = () => {
             Ajude seu clube a subir no ranking
           </p>
           <p className="text-xs text-white/70 mt-1">
-            Convide amigos. Cada novo torcedor pelo seu link impulsiona seu time.
+            Cada novo torcedor pelo seu link único impulsiona seu time — e te dá pontos de embaixador.
           </p>
           <div className="mt-3 flex gap-2">
             <Input value={inviteLink} readOnly className="bg-black/40 text-xs" />
@@ -443,44 +635,6 @@ const Stats = () => {
               <Copy className="h-4 w-4 mr-1" /> Copiar
             </Button>
           </div>
-        </section>
-
-        {/* CONSULTA OUTRO CLUBE */}
-        <section className="bg-zinc-950 border border-white/10 rounded-2xl p-4">
-          <p className="text-[10px] uppercase tracking-widest text-primary font-black mb-2">
-            Consultar outro clube
-          </p>
-          <div className="relative">
-            <Search className="absolute left-3 top-3 h-4 w-4 text-white/40" />
-            <Input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Digite o nome do clube..."
-              className="pl-10 bg-black/40"
-            />
-          </div>
-          {isSearching && <Loader2 className="animate-spin mx-auto mt-3 h-4 w-4 text-primary" />}
-          {searchResults.length > 0 && (
-            <div className="mt-3 space-y-1.5">
-              {searchResults.map((c, i) => (
-                <button
-                  key={i}
-                  onClick={() => { setClubName(c.name); setSearch(""); setSearchResults([]); }}
-                  className="w-full flex items-center gap-3 p-2 bg-white/5 hover:bg-white/10 rounded-lg text-left transition"
-                >
-                  <img
-                    src={c.logo || getUniversalLogo(c.name)}
-                    onError={(e) => ((e.currentTarget.style.opacity = "0.2"))}
-                    className="h-8 w-8 rounded-full bg-white p-0.5 object-contain"
-                  />
-                  <div className="flex-1">
-                    <p className="text-sm font-black italic">{c.name}</p>
-                    <p className="text-[10px] text-white/50">{c.location}</p>
-                  </div>
-                </button>
-              ))}
-            </div>
-          )}
         </section>
       </main>
     </div>
