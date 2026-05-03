@@ -33,6 +33,7 @@ import Stats from "./pages/Stats";
 import Ambassadors from "./pages/Ambassadors";
 import Correcao from "./pages/Correcao";
 import NotFound from "./pages/NotFound";
+import Convite from "./pages/Convite";
 
 /* ═══════════════════════════════════════════════════════════
     MÓDULO: PÁGINAS (ADMIN & BI)
