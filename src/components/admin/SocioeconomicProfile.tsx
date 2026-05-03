@@ -59,7 +59,7 @@ const SocioeconomicProfile = () => {
         p_state: state === ALL ? null : state,
       });
       if (error) throw error;
-      setData(res as ProfileData);
+      setData(res as unknown as ProfileData);
     } catch (e: any) {
       toast({ title: "Falha ao carregar", description: e.message, variant: "destructive" });
     } finally {
