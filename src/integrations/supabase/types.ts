@@ -620,6 +620,10 @@ export type Database = {
         }[]
       }
       admin_get_bi_stats: { Args: never; Returns: Json }
+      admin_get_club_neighborhood_ranking: {
+        Args: { p_club_name: string; p_limit?: number; p_state?: string }
+        Returns: Json
+      }
       admin_get_executive_summary: { Args: { p_days?: number }; Returns: Json }
       admin_get_geo_options: {
         Args: {
