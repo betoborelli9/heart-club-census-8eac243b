@@ -98,6 +98,12 @@ const Admin = () => {
             <TabsTrigger value="affinity" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               🕸️ Afinidades
             </TabsTrigger>
+            <TabsTrigger value="revenue" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              💵 ROI Terminal
+            </TabsTrigger>
+            <TabsTrigger value="press" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              📰 Imprensa
+            </TabsTrigger>
             <TabsTrigger value="corrections" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               📝 Correções
             </TabsTrigger>
