@@ -320,6 +320,54 @@ export type Database = {
         }
         Relationships: []
       }
+      partner_clicks: {
+        Row: {
+          bairro: string | null
+          cidade: string | null
+          created_at: string
+          estado: string | null
+          id: string
+          lat: number | null
+          lng: number | null
+          pais: string | null
+          partner_id: string
+          partner_name: string | null
+          referrer_url: string | null
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          bairro?: string | null
+          cidade?: string | null
+          created_at?: string
+          estado?: string | null
+          id?: string
+          lat?: number | null
+          lng?: number | null
+          pais?: string | null
+          partner_id: string
+          partner_name?: string | null
+          referrer_url?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          bairro?: string | null
+          cidade?: string | null
+          created_at?: string
+          estado?: string | null
+          id?: string
+          lat?: number | null
+          lng?: number | null
+          pais?: string | null
+          partner_id?: string
+          partner_name?: string | null
+          referrer_url?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           cidade: string | null
@@ -569,6 +617,15 @@ export type Database = {
         }[]
       }
       admin_get_bi_stats: { Args: never; Returns: Json }
+      admin_get_executive_summary: { Args: { p_days?: number }; Returns: Json }
+      admin_get_neighborhood_dominance: {
+        Args: { p_limit?: number }
+        Returns: Json
+      }
+      admin_get_partner_revenue_heatmap: {
+        Args: { p_days?: number }
+        Returns: Json
+      }
       admin_get_votes_with_tracking: {
         Args: never
         Returns: {

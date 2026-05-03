@@ -8,6 +8,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import AdminAuditTable from "@/components/admin/AdminAuditTable";
 import AdminBIStats from "@/components/admin/AdminBIStats";
 import AdminCorrectionsTable from "@/components/admin/AdminCorrectionsTable";
+import NeighborhoodDominance from "@/components/admin/NeighborhoodDominance";
+import ExecutiveReportButton from "@/components/admin/ExecutiveReportButton";
 import logo from "@/assets/logo.png";
 
 const Admin = () => {
@@ -65,9 +67,12 @@ const Admin = () => {
               Admin
             </span>
           </div>
-          <Button variant="ghost" size="sm" onClick={() => navigate("/dashboard")}>
-            <ArrowLeft className="w-4 h-4 mr-1" /> Dashboard
-          </Button>
+          <div className="flex items-center gap-2">
+            <ExecutiveReportButton days={30} />
+            <Button variant="ghost" size="sm" onClick={() => navigate("/dashboard")}>
+              <ArrowLeft className="w-4 h-4 mr-1" /> Dashboard
+            </Button>
+          </div>
         </div>
       </header>
 
@@ -80,6 +85,9 @@ const Admin = () => {
             <TabsTrigger value="bi" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               📊 BI & Estatísticas
             </TabsTrigger>
+            <TabsTrigger value="neighborhoods" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              🗺️ Bairros
+            </TabsTrigger>
             <TabsTrigger value="corrections" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               📝 Correções
             </TabsTrigger>
@@ -91,6 +99,10 @@ const Admin = () => {
 
           <TabsContent value="bi">
             <AdminBIStats />
+          </TabsContent>
+
+          <TabsContent value="neighborhoods">
+            <NeighborhoodDominance />
           </TabsContent>
 
           <TabsContent value="corrections">
