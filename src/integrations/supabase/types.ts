@@ -573,12 +573,20 @@ export type Database = {
       fake_votes_summary: { Args: never; Returns: Json }
       get_club_vote_ranking: { Args: { p_limit?: number }; Returns: Json }
       get_club_vote_summary: { Args: { p_club_name: string }; Returns: Json }
+      get_distinct_regions: {
+        Args: { p_level: string; p_parent?: string }
+        Returns: Json
+      }
       get_heatmap_data: {
         Args: { p_club_name: string; p_filter_value?: string; p_level?: string }
         Returns: Json
       }
       get_heatmap_neighborhoods: {
         Args: { p_city: string; p_club_name: string }
+        Returns: Json
+      }
+      get_ranking_with_growth: {
+        Args: { p_level: string; p_limit?: number; p_value?: string }
         Returns: Json
       }
       get_top_clubs_by_region: {
