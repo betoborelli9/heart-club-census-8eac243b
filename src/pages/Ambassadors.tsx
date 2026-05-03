@@ -578,34 +578,91 @@ const Ambassadors = () => {
 
             {/* Data de Nascimento */}
             <div className="space-y-2">
-              <Label className="text-xs font-bold uppercase tracking-wider text-white/60">Data de Nascimento</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn(
-                      "w-full justify-start text-left font-normal bg-white/5 border-white/10 text-white hover:bg-white/10 hover:text-white",
-                      !birthDate && "text-white/20"
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {birthDate ? format(birthDate, "dd/MM/yyyy") : "Selecione a data"}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0 bg-[#1a1a1a] border-white/10" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={birthDate}
-                    onSelect={setBirthDate}
-                    disabled={(date) => date > new Date() || date < new Date("1920-01-01")}
-                    initialFocus
-                    className={cn("p-3 pointer-events-auto")}
-                    captionLayout="dropdown-buttons"
-                    fromYear={1920}
-                    toYear={new Date().getFullYear()}
-                  />
-                </PopoverContent>
-              </Popover>
+              <Label className="text-xs font-bold uppercase tracking-wider text-white/60 flex items-center gap-2">
+                <CalendarIcon className="h-3.5 w-3.5 text-[#ff6200]" />
+                Data de Nascimento
+              </Label>
+              <p className="text-[10px] text-white/40 italic">
+                Selecione dia, mês e ano do seu nascimento
+              </p>
+              <div className="grid grid-cols-3 gap-2">
+                {/* Dia */}
+                <Select
+                  value={birthDate ? String(birthDate.getDate()) : ""}
+                  onValueChange={(v) => {
+                    const d = parseInt(v, 10);
+                    const base = birthDate ?? new Date(2000, 0, 1);
+                    const next = new Date(base.getFullYear(), base.getMonth(), d);
+                    setBirthDate(next);
+                  }}
+                >
+                  <SelectTrigger className="bg-white/5 border-white/10 text-white h-12 text-base font-bold">
+                    <SelectValue placeholder="Dia" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-[#1a1a1a] border-white/10 text-white max-h-60">
+                    {Array.from({ length: 31 }, (_, i) => i + 1).map((d) => (
+                      <SelectItem key={d} value={String(d)} className="text-white focus:bg-[#ff6200]/20 focus:text-white">
+                        {String(d).padStart(2, "0")}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                {/* Mês */}
+                <Select
+                  value={birthDate ? String(birthDate.getMonth()) : ""}
+                  onValueChange={(v) => {
+                    const m = parseInt(v, 10);
+                    const base = birthDate ?? new Date(2000, 0, 1);
+                    const next = new Date(base.getFullYear(), m, base.getDate());
+                    setBirthDate(next);
+                  }}
+                >
+                  <SelectTrigger className="bg-white/5 border-white/10 text-white h-12 text-base font-bold">
+                    <SelectValue placeholder="Mês" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-[#1a1a1a] border-white/10 text-white max-h-60">
+                    {[
+                      "Janeiro","Fevereiro","Março","Abril","Maio","Junho",
+                      "Julho","Agosto","Setembro","Outubro","Novembro","Dezembro",
+                    ].map((label, idx) => (
+                      <SelectItem key={idx} value={String(idx)} className="text-white focus:bg-[#ff6200]/20 focus:text-white">
+                        {label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                {/* Ano */}
+                <Select
+                  value={birthDate ? String(birthDate.getFullYear()) : ""}
+                  onValueChange={(v) => {
+                    const y = parseInt(v, 10);
+                    const base = birthDate ?? new Date(2000, 0, 1);
+                    const next = new Date(y, base.getMonth(), base.getDate());
+                    setBirthDate(next);
+                  }}
+                >
+                  <SelectTrigger className="bg-white/5 border-white/10 text-white h-12 text-base font-bold">
+                    <SelectValue placeholder="Ano" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-[#1a1a1a] border-white/10 text-white max-h-60">
+                    {Array.from(
+                      { length: new Date().getFullYear() - 1920 + 1 },
+                      (_, i) => new Date().getFullYear() - i
+                    ).map((y) => (
+                      <SelectItem key={y} value={String(y)} className="text-white focus:bg-[#ff6200]/20 focus:text-white">
+                        {y}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              {birthDate && (
+                <p className="text-xs text-[#ff6200] font-bold italic pt-1">
+                  ✓ {format(birthDate, "dd/MM/yyyy")}
+                </p>
+              )}
             </div>
 
             <Button
