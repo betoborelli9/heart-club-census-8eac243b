@@ -8,7 +8,7 @@
  */
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, MapPin, Search, Trophy } from "lucide-react";
+import { Loader2, MapPin, Search, Trophy, FileDown } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -18,6 +18,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import logo from "@/assets/logo.png";
+import { exportBrandedPdf } from "@/lib/pdf-export";
 
 type DomRow = {
   estado: string;
@@ -185,6 +186,18 @@ const NeighborhoodDominance = () => {
           onChange={(e) => setFilter(e.target.value)}
           className="max-w-sm bg-card border-border"
         />
+        <Button size="sm" variant="outline" onClick={() => exportBrandedPdf({
+          filename: `heartclub-bairros-${Date.now()}.pdf`,
+          title: "Dominância Geográfica por Bairro",
+          subtitle: scopeState !== ALL ? `Estado: ${scopeState}` : "Visão Nacional",
+          sections: [{
+            title: "Top Bairros",
+            head: ["#", "Cidade", "Bairro", "Líder", "Votos", "Dominância"],
+            body: scoped.slice(0, 50).map((r, i) => [i+1, r.cidade, r.bairro, r.leader, r.leader_votes, `${r.dominance_pct}%`]),
+          }],
+        })}>
+          <FileDown className="w-4 h-4 mr-1" /> Exportar PDF
+        </Button>
         <span className="text-xs text-muted-foreground ml-auto">
           {scoped.length} bairros no escopo
         </span>
