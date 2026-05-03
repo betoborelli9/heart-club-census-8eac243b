@@ -633,23 +633,6 @@ const Stats = () => {
             })}
           </div>
         </section>
-
-        {/* CONVITE */}
-        <section className="bg-gradient-to-br from-primary/15 to-primary/5 border border-primary/30 rounded-2xl p-5">
-          <p className="font-black italic text-lg flex items-center gap-2">
-            <Share2 className="h-5 w-5 text-primary" />
-            Ajude seu clube a subir no ranking
-          </p>
-          <p className="text-xs text-white/70 mt-1">
-            Cada novo torcedor pelo seu link único impulsiona seu time — e te dá pontos de embaixador.
-          </p>
-          <div className="mt-3 flex gap-2">
-            <Input value={inviteLink} readOnly className="bg-black/40 text-xs" />
-            <Button onClick={copyInvite} className="bg-primary text-black hover:bg-primary/90">
-              <Copy className="h-4 w-4 mr-1" /> Copiar
-            </Button>
-          </div>
-        </section>
       </main>
     </div>
   );
