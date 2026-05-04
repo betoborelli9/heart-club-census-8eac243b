@@ -1080,6 +1080,7 @@ const MapaCalor = () => {
   /* Data */
 
   const [heatData, setHeatData] = useState<HeatEntry[]>([]);
+  const [compareHeatData, setCompareHeatData] = useState<HeatEntry[]>([]);
 
   const [cityClubs, setCityClubs] = useState<ClubVote[]>([]);
 
@@ -1148,42 +1149,21 @@ const MapaCalor = () => {
   useEffect(() => {
     if (!activeClubName) return;
 
-    const fetchHeat = async () => {
-      setLoading(true);
-
-      // Cidade => bairros (RPC dedicada). Demais níveis => get_heatmap_data
-
+    const fetchOne = async (clubName: string): Promise<HeatEntry[]> => {
       if (viewMode === "city" && activeCity) {
         const { data, error } = await supabase.rpc("get_heatmap_neighborhoods", {
-          p_club_name: activeClubName,
+          p_club_name: clubName,
           p_city: activeCity,
         });
-
-        if (!error && data) {
-          const arr = (Array.isArray(data) ? data : []) as any[];
-
-          // Normaliza para HeatEntry { region, votes }
-
-          const entries: HeatEntry[] = arr.map((r) => ({
-            region: r.region ?? r.bairro ?? r.neighborhood ?? r.name ?? "—",
-
-            votes: Number(r.votes ?? r.total ?? r.count ?? 0),
-          }));
-
-          setHeatData(entries);
-        } else {
-          setHeatData([]);
-        }
-
-        setLoading(false);
-
-        return;
+        if (error || !data) return [];
+        const arr = (Array.isArray(data) ? data : []) as any[];
+        return arr.map((r) => ({
+          region: r.region ?? r.bairro ?? r.neighborhood ?? r.name ?? "—",
+          votes: Number(r.votes ?? r.total ?? r.count ?? 0),
+        }));
       }
-
       let level: string = viewMode;
-
       let filter: string | null = null;
-
       if (viewMode === "world") level = "country";
       else if (viewMode === "country") {
         level = "state";
@@ -1192,26 +1172,28 @@ const MapaCalor = () => {
         level = "city";
         filter = activeState;
       }
-
       const { data, error } = await supabase.rpc("get_heatmap_data", {
-        p_club_name: activeClubName,
+        p_club_name: clubName,
         p_level: level,
         p_filter_value: filter,
       });
+      if (error || !data) return [];
+      return (Array.isArray(data) ? data : []) as unknown as HeatEntry[];
+    };
 
-      if (!error && data) {
-        const entries = (Array.isArray(data) ? data : []) as unknown as HeatEntry[];
-
-        setHeatData(entries);
-      } else {
-        setHeatData([]);
-      }
-
+    const fetchHeat = async () => {
+      setLoading(true);
+      const [primary, compare] = await Promise.all([
+        fetchOne(activeClubName),
+        compareClubName ? fetchOne(compareClubName) : Promise.resolve([] as HeatEntry[]),
+      ]);
+      setHeatData(primary);
+      setCompareHeatData(compare);
       setLoading(false);
     };
 
     fetchHeat();
-  }, [activeClubName, viewMode, activeCountry, activeState, activeCity]);
+  }, [activeClubName, compareClubName, viewMode, activeCountry, activeState, activeCity]);
 
   const totalVotes = useMemo(() => heatData.reduce((s, e) => s + Number(e.votes), 0), [heatData]);
 
@@ -1431,27 +1413,36 @@ const MapaCalor = () => {
 
   /* ---------- Mapa de votos por nome (para colorir GeoJSON) ---------- */
 
+  // Soma os votos do meu clube + clube comparado para colorir o mapa
+  const combinedHeatData = useMemo(() => {
+    if (!compareClubName || !compareHeatData.length) return heatData;
+    const map = new Map<string, number>();
+    const display = new Map<string, string>();
+    for (const e of [...heatData, ...compareHeatData]) {
+      const key = normalize(e.region);
+      map.set(key, (map.get(key) || 0) + Number(e.votes));
+      if (!display.has(key)) display.set(key, e.region);
+    }
+    return Array.from(map.entries()).map(([k, votes]) => ({ region: display.get(k) || k, votes }));
+  }, [heatData, compareHeatData, compareClubName]);
+
   const votesByRegion = useMemo(() => {
     const map = new Map<string, number>();
-
-    for (const e of heatData) {
+    for (const e of combinedHeatData) {
       for (const key of regionLookupKeys(e.region)) map.set(key, Number(e.votes));
     }
-
     return map;
-  }, [heatData]);
+  }, [combinedHeatData]);
 
   const regionNameByKey = useMemo(() => {
     const map = new Map<string, string>();
-
-    for (const e of heatData) {
+    for (const e of combinedHeatData) {
       for (const key of regionLookupKeys(e.region)) map.set(key, e.region);
     }
-
     return map;
-  }, [heatData]);
+  }, [combinedHeatData]);
 
-  const maxVotes = useMemo(() => heatData.reduce((m, e) => Math.max(m, Number(e.votes)), 0), [heatData]);
+  const maxVotes = useMemo(() => combinedHeatData.reduce((m, e) => Math.max(m, Number(e.votes)), 0), [combinedHeatData]);
 
   /** Resolve voto de uma feature (qualquer propriedade comum de nome). */
 
@@ -1722,13 +1713,19 @@ const MapaCalor = () => {
     setSearchQuery("");
     setSearchResults([]);
 
-    // Sempre troca o clube ativo no mapa — assim o usuário vê o calor
-    // de qualquer clube do mundo, não só o seu Coração.
-    setActiveClubName(club.name);
-    setActiveClubInfo(CLUBS_DATA.find((c) => c.nome === club.name) || null);
-    setCompareClubName(null);
-    setCompareData(null);
-    goWorld();
+    // Se já é o clube ativo, ignora. Caso contrário, abre comparação
+    // lado-a-lado com o Coração do torcedor.
+    if (club.name === activeClubName) return;
+
+    if (heartClubName && club.name !== heartClubName) {
+      setCompareClubName(club.name);
+    } else {
+      setActiveClubName(club.name);
+      setActiveClubInfo(CLUBS_DATA.find((c) => c.nome === club.name) || null);
+      setCompareClubName(null);
+      setCompareData(null);
+      goWorld();
+    }
   };
 
   const clearCompare = () => {
