@@ -62,6 +62,18 @@ const Voting = () => {
   const [cepLoading, setCepLoading] = useState(false);
   const [cepError, setCepError] = useState<string | null>(null);
 
+  // Se o usuário JÁ tem CEP salvo no profile, não pedimos de novo (anti-redundância)
+  const profileCep = ((profile as any)?.cep || "").toString();
+  const hasCepInProfile = profileCep.replace(/\D/g, "").length === 8;
+
+  // Pré-preenche o CEP a partir do profile (apenas leitura, não exibido se já existe)
+  useEffect(() => {
+    if (hasCepInProfile && !cep) {
+      setCep(formatCep(profileCep));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasCepInProfile, profileCep]);
+
   // Refs para controle de concorrência de busca (Race Conditions)
   const heartReqId = useRef(0);
   const sympathyReqId = useRef(0);
@@ -211,6 +223,18 @@ const Voting = () => {
 
       const { error: voteError } = await supabase.from("votos").insert([mainVote]);
       if (voteError) throw voteError;
+
+      // Salva o CEP no profile (anti-redundância) — só se o usuário digitou agora
+      const cepDigits = cep.replace(/\D/g, "");
+      if (cepDigits.length === 8 && !hasCepInProfile) {
+        supabase
+          .from("profiles")
+          .update({ cep: cepDigits })
+          .eq("id", user.id)
+          .then(({ error }) => {
+            if (error) console.warn("[VOTING] falha ao salvar CEP no profile:", error);
+          });
+      }
 
       // Redireciona imediatamente — todo enriquecimento roda em background
       toast({ title: "Lealdade registada com sucesso! 🏟️" });
@@ -417,26 +441,33 @@ const Voting = () => {
           {/* ENDEREÇO DE IDENTIDADE — alimenta o mapa coroplético */}
           <div className="space-y-3 mt-2 text-left">
             <p className="text-[11px] font-black italic uppercase opacity-70">
-              Digite seu CEP → Confirme seu Bairro → Vote
+              {hasCepInProfile
+                ? "Confirme seu Bairro → Vote"
+                : "Digite seu CEP → Confirme seu Bairro → Vote"}
             </p>
 
-            <div className="space-y-1">
-              <label className="text-[10px] font-black italic uppercase opacity-60">CEP</label>
-              <div className="relative">
-                <Input
-                  inputMode="numeric"
-                  placeholder="00000-000"
-                  value={cep}
-                  onChange={(e) => handleCepLookup(e.target.value)}
-                  className="h-11 font-black italic uppercase bg-card border-white/5"
-                  maxLength={9}
-                />
-                {cepLoading && (
-                  <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 animate-spin text-primary" />
-                )}
+            {!hasCepInProfile && (
+              <div className="space-y-1">
+                <label className="text-[10px] font-black italic uppercase opacity-60">CEP</label>
+                <div className="relative">
+                  <Input
+                    inputMode="numeric"
+                    placeholder="00000-000"
+                    value={cep}
+                    onChange={(e) => handleCepLookup(e.target.value)}
+                    className="h-11 font-black italic uppercase bg-card border-white/5"
+                    maxLength={9}
+                  />
+                  {cepLoading && (
+                    <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 animate-spin text-primary" />
+                  )}
+                </div>
+                {cepError && <p className="text-[10px] text-destructive italic">{cepError}</p>}
+                <p className="text-[10px] italic opacity-60 leading-relaxed mt-1">
+                  O seu CEP nos ajuda a mapear a força da torcida na sua região para o Mapa de Calor Global do Heart Club. Sua privacidade é garantida.
+                </p>
               </div>
-              {cepError && <p className="text-[10px] text-destructive italic">{cepError}</p>}
-            </div>
+            )}
 
             <div className="space-y-1">
               <label className="text-[10px] font-black italic uppercase opacity-60">Bairro *</label>
