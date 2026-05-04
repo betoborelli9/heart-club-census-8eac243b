@@ -207,7 +207,7 @@ const Ambassadors = () => {
 
   /* [MÓDULO: CARREGA RANKING E FEED] */
   useEffect(() => {
-    if (!user || !profile?.codigo_indicacao) return;
+    if (!user) return;
     const loadRanking = async () => {
       // Busca todas as indicações agrupadas por embaixador
       const { data: indicacoes } = await supabase
