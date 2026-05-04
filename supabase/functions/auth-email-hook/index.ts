@@ -88,11 +88,17 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Supabase "Send Email Hook" signs requests with this secret (v1,whsec_...)
+    // Fallback to AUTH_HOOK_SECRET / LOVABLE_API_KEY for backward compatibility.
+    const webhookSecret = Deno.env.get("SEND_EMAIL_HOOK_SECRET") ||
+      Deno.env.get("AUTH_HOOK_SECRET") ||
+      apiKey;
+
     let verified;
     try {
       verified = await verifyWebhookRequest<EmailWebhookPayload>({
         req,
-        secret: apiKey,
+        secret: webhookSecret,
         parser: parseEmailWebhookPayload,
       });
     } catch (error) {
