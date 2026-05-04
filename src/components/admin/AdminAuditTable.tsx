@@ -226,6 +226,34 @@ const AdminAuditTable = () => {
                     <TableCell className="text-xs text-muted-foreground">
                       {v.created_at ? new Date(v.created_at).toLocaleDateString("pt-BR") : "—"}
                     </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-1.5">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-8 px-2 border-green-600 text-green-500 hover:bg-green-500/10 hover:text-green-400"
+                          disabled={actingId === v.voto_id || approvedIds.has(v.voto_id)}
+                          onClick={() => handleApprove(v.voto_id)}
+                          title="Aprovar voto"
+                        >
+                          {actingId === v.voto_id ? (
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          ) : (
+                            <Check className="w-3.5 h-3.5" />
+                          )}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-8 px-2 border-destructive text-destructive hover:bg-destructive/10"
+                          disabled={actingId === v.voto_id}
+                          onClick={() => handleDeleteOne(v.voto_id)}
+                          title="Deletar voto definitivamente"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </Button>
+                      </div>
+                    </TableCell>
                   </TableRow>
                 ))}
                 {votes.length === 0 && (
