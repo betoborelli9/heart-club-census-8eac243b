@@ -172,82 +172,93 @@ const Voting = () => {
     try {
       const allSelected = [{ club: heartClub, main: true }, ...sympathyClubs.map((c) => ({ club: c, main: false }))];
 
-      // Auditoria silenciosa — GPS real do navegador (não bloqueia se falhar)
-      const audit = await captureGpsAudit();
-      const device_model = await detectDeviceModel();
-      // ISP detection (silent, fails-soft)
-      let isp: string | null = null;
-      try {
-        const r = await fetch("https://ipapi.co/json/", { cache: "no-store" });
-        if (r.ok) {
-          const j = await r.json();
-          isp = j.org || j.asn || null;
-        }
-      } catch { /* ignore */ }
-
-      if (!TEST_MODE) {
-        if (IS_MASTER_ADMIN) {
-          await supabase.from("votos").delete().eq("user_id", user.id);
-        }
-
-        const cidadeFinal = cidadeAddr.trim() || profile.cidade || "";
-        const estadoFinal = estadoAddr.trim() || profile.estado || "";
-
-        const mainVote = {
-          user_id: user.id,
-          clube_nome: heartClub.name,
-          cidade: cidadeFinal,
-          estado: estadoFinal,
-          pais: profile.pais || "BR",
-          bairro: bairro.trim(),
-          cep: cep.replace(/\D/g, "") || null,
-          numero: numero.trim() || null,
-          complemento: complemento.trim() || null,
-          voto_bairro_gps: audit.voto_bairro_gps,
-          voto_cidade_gps: audit.voto_cidade_gps,
-          voto_lat: audit.lat,
-          voto_lng: audit.lng,
-          is_original_vote: true,
-          fingerprint: fingerprint || "web-client",
-          device_model,
-          isp,
-          sympathy_1: sympathyClubs[0]?.name ?? null,
-          sympathy_2: sympathyClubs[1]?.name ?? null,
-          sympathy_3: sympathyClubs[2]?.name ?? null,
-          sympathy_4: sympathyClubs[3]?.name ?? null,
-        };
-
-        const { error: voteError } = await supabase.from("votos").insert([mainVote]);
-        if (voteError) throw voteError;
-      }
-
-      // 1. Salva base técnica no cache (sempre — popula clubes_cache também em modo teste)
-      await persistClubsIfMissing(allSelected.map((v) => v.club));
-
-      // 2. INVESTIGAÇÃO SEQUENCIAL: Obrigatório await para garantir Gemini antes do redirecionamento
-      for (const item of allSelected) {
-        console.log(`[VOTING]: Investigando ${item.club.name}...`);
-        try {
-          await supabase.functions.invoke("enrich-club-colors", {
-            body: {
-              club_name: item.club.name,
-              api_id: item.club.api_id,
-            },
-          });
-        } catch (e) {
-          console.error(`Erro ao enriquecer ${item.club.name}:`, e);
-        }
-      }
-
       if (TEST_MODE) {
         toast({ title: "Modo teste — voto não contabilizado 🧪" });
         navigate(`/testar-clube?club=${encodeURIComponent(heartClub.name)}`);
-      } else {
-        await refreshProfile();
-        toast({ title: "Lealdade registada com sucesso! 🏟️" });
-        navigate("/dashboard");
+        // Enriquecimento em background (não bloqueia)
+        persistClubsIfMissing(allSelected.map((v) => v.club)).catch(() => {});
+        return;
       }
+
+      if (IS_MASTER_ADMIN) {
+        await supabase.from("votos").delete().eq("user_id", user.id);
+      }
+
+      const cidadeFinal = cidadeAddr.trim() || profile.cidade || "";
+      const estadoFinal = estadoAddr.trim() || profile.estado || "";
+
+      // AUDITORIA PASSIVA: voto sempre é gravado.
+      // status_integridade = 'pendente' permite revisão posterior pelo admin
+      // sem bloquear o fluxo de votação por IP/Fingerprint/Cookie.
+      const mainVote = {
+        user_id: user.id,
+        clube_nome: heartClub.name,
+        cidade: cidadeFinal,
+        estado: estadoFinal,
+        pais: profile.pais || "BR",
+        bairro: bairro.trim(),
+        cep: cep.replace(/\D/g, "") || null,
+        numero: numero.trim() || null,
+        complemento: complemento.trim() || null,
+        is_original_vote: true,
+        fingerprint: fingerprint || "web-client",
+        status_integridade: "pendente",
+        sympathy_1: sympathyClubs[0]?.name ?? null,
+        sympathy_2: sympathyClubs[1]?.name ?? null,
+        sympathy_3: sympathyClubs[2]?.name ?? null,
+        sympathy_4: sympathyClubs[3]?.name ?? null,
+      };
+
+      const { error: voteError } = await supabase.from("votos").insert([mainVote]);
+      if (voteError) throw voteError;
+
+      // Redireciona imediatamente — todo enriquecimento roda em background
+      toast({ title: "Lealdade registada com sucesso! 🏟️" });
+      navigate("/dashboard");
+
+      // Background (fire-and-forget): GPS, device, ISP, enrichment
+      (async () => {
+        try {
+          const [audit, device_model] = await Promise.all([
+            captureGpsAudit().catch(() => null),
+            detectDeviceModel().catch(() => null),
+          ]);
+          let isp: string | null = null;
+          try {
+            const r = await fetch("https://ipapi.co/json/", { cache: "no-store" });
+            if (r.ok) {
+              const j = await r.json();
+              isp = j.org || j.asn || null;
+            }
+          } catch { /* ignore */ }
+
+          await supabase.from("votos").update({
+            voto_bairro_gps: audit?.voto_bairro_gps ?? null,
+            voto_cidade_gps: audit?.voto_cidade_gps ?? null,
+            voto_lat: audit?.lat ?? null,
+            voto_lng: audit?.lng ?? null,
+            device_model: device_model ?? null,
+            isp,
+          }).eq("user_id", user.id).eq("clube_nome", heartClub.name);
+        } catch (e) {
+          console.error("[VOTING][bg-audit]", e);
+        }
+
+        try {
+          await persistClubsIfMissing(allSelected.map((v) => v.club));
+          for (const item of allSelected) {
+            supabase.functions.invoke("enrich-club-colors", {
+              body: { club_name: item.club.name, api_id: item.club.api_id },
+            }).catch(() => {});
+          }
+        } catch (e) {
+          console.error("[VOTING][bg-enrich]", e);
+        }
+
+        refreshProfile().catch(() => {});
+      })();
     } catch (err) {
+      console.error("[VOTING] erro:", err);
       toast({ variant: "destructive", title: "Erro ao processar votos" });
     } finally {
       setSubmitting(false);
