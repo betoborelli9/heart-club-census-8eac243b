@@ -787,6 +787,7 @@ export type Database = {
         Args: { p_level: string; p_limit?: number; p_value?: string }
         Returns: Json
       }
+      get_sympathy_ranking: { Args: { p_limit?: number }; Returns: Json }
       get_top_clubs_by_region: {
         Args: { p_level: string; p_limit?: number; p_value: string }
         Returns: Json
