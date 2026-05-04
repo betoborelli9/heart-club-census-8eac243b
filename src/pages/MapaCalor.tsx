@@ -126,6 +126,12 @@ const REGION_SUFFIXES = [
   " municipality",
 ];
 
+const NEIGHBORHOOD_PREFIXES = [
+  "setor ", "jardim ", "residencial ", "parque ", "vila ", "chacara ",
+  "conjunto ", "loteamento ", "prive ", "condominio ", "alameda ", "fazenda ",
+  "bairro ",
+];
+
 function regionLookupKeys(value: string): string[] {
   const base = normalize(value);
 
@@ -143,6 +149,11 @@ function regionLookupKeys(value: string): string[] {
 
   for (const suffix of REGION_SUFFIXES) {
     if (base.endsWith(suffix)) add(base.slice(0, -suffix.length));
+  }
+
+  // Strip neighborhood prefixes (Setor X ↔ X) so matching works both ways
+  for (const prefix of NEIGHBORHOOD_PREFIXES) {
+    if (base.startsWith(prefix)) add(base.slice(prefix.length));
   }
 
   return [...keys];
@@ -1072,6 +1083,8 @@ const MapaCalor = () => {
 
   const [cityClubs, setCityClubs] = useState<ClubVote[]>([]);
 
+  const [clubLogos, setClubLogos] = useState<Record<string, string>>({});
+
   const [loading, setLoading] = useState(true);
 
   /* GeoJSON layers */
@@ -1394,6 +1407,27 @@ const MapaCalor = () => {
 
     run();
   }, [viewMode, activeCity]);
+
+  /* ---------- Logos: resolve via clubes_cache para qualquer clube exibido ---------- */
+  useEffect(() => {
+    const names = Array.from(new Set(cityClubs.map((c) => c.club).filter(Boolean)));
+    const missing = names.filter((n) => !clubLogos[n]);
+    if (!missing.length) return;
+    (async () => {
+      const { data } = await supabase
+        .from("clubes_cache")
+        .select("nome, escudo_url")
+        .in("nome", missing);
+      if (!data?.length) return;
+      setClubLogos((prev) => {
+        const next = { ...prev };
+        for (const row of data) {
+          if (row?.nome && row?.escudo_url) next[row.nome] = row.escudo_url;
+        }
+        return next;
+      });
+    })();
+  }, [cityClubs, clubLogos]);
 
   /* ---------- Mapa de votos por nome (para colorir GeoJSON) ---------- */
 
@@ -2233,6 +2267,7 @@ const MapaCalor = () => {
                   <div className="space-y-2 max-h-[320px] overflow-y-auto pr-1">
                     {cityClubs.map((c, i) => {
                       const info = CLUBS_DATA.find((cd) => cd.nome === c.club);
+                      const logoSrc = clubLogos[c.club] || info?.logoUrl || null;
 
                       const isHeart = c.club === heartClubName;
 
@@ -2253,7 +2288,7 @@ const MapaCalor = () => {
                             <span className="text-muted-foreground w-4 shrink-0">{i + 1}.</span>
 
                             <span className="w-6 h-6 bg-white rounded-full p-0.5 flex items-center justify-center shrink-0">
-                              <ClubLogo src={info?.logoUrl} alt={c.club} size="sm" />
+                              <ClubLogo src={logoSrc} alt={c.club} size="sm" />
                             </span>
 
                             <span className="truncate">{c.club}</span>

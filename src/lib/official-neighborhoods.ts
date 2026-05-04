@@ -58,12 +58,25 @@ export async function fetchOfficialGoianiaNeighborhoodGeoJson(): Promise<any | n
     features: features
       .map((feature: any) => {
         const p = feature?.properties || {};
-        const name = String(p.QL_BAI || p.NM_BAI || p.NM || p.name || "").trim();
-        if (!name) return null;
+        const baseName = String(p.QL_BAI || p.NM_BAI || p.NM || p.name || "").trim();
+        if (!baseName) return null;
+        // TP_BAI prefix → nome completo (ex.: "S" + "Coimbra" → "Setor Coimbra")
+        const tpMap: Record<string, string> = {
+          S: "Setor", J: "Jardim", R: "Residencial", PQ: "Parque", VL: "Vila",
+          CH: "Chácara", CJ: "Conjunto", LT: "Loteamento", PR: "Privê",
+          CD: "Condomínio", AL: "Alameda", FZ: "Fazenda",
+        };
+        const prefix = tpMap[String(p.TP_BAI || "").trim().toUpperCase()] || "";
+        const fullName = prefix && !baseName.toLowerCase().startsWith(prefix.toLowerCase())
+          ? `${prefix} ${baseName}` : baseName;
         return {
           ...feature,
           properties: {
-            ...p, name, official_name: name, source: "prefeitura_goiania_arcgis",
+            ...p,
+            name: fullName,
+            official_name: fullName,
+            alt_name: baseName,
+            source: "prefeitura_goiania_arcgis",
             osm_id: p?.ObjectId ?? p?.OBJECTID ?? p?.ID ?? null,
           },
         };
