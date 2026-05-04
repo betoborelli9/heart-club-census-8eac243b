@@ -25,7 +25,7 @@ const corsHeaders = {
 
 const subjectMap: Record<string, string> = {
   signup: "Confirme seu cadastro no Heart Club 🧡",
-  magiclink: "Seu link de acesso ao Heart Club 🔑",
+  magiclink: "Seu código de acesso ao Heart Club 🔑",
   recovery: "Redefinir sua senha — Heart Club 🔒",
   invite: "Você foi convidado para o Heart Club 🎉",
   email_change: "Confirmar troca de email — Heart Club 📧",
