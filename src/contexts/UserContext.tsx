@@ -129,9 +129,10 @@ export function UserProvider({ children }: { children: ReactNode }) {
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
-        fetchProfile(session.user.id).then(() => 
-          checkVoted(session.user.id).then(() => setIsLoading(false))
-        );
+        fetchProfile(session.user.id)
+          .then(() => checkVoted(session.user.id))
+          .then(() => tryRegisterReferral(session.user.id))
+          .then(() => setIsLoading(false));
       } else {
         setIsLoading(false);
       }
