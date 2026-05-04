@@ -1408,6 +1408,27 @@ const MapaCalor = () => {
     run();
   }, [viewMode, activeCity]);
 
+  /* ---------- Logos: resolve via clubes_cache para qualquer clube exibido ---------- */
+  useEffect(() => {
+    const names = Array.from(new Set(cityClubs.map((c) => c.club).filter(Boolean)));
+    const missing = names.filter((n) => !clubLogos[n]);
+    if (!missing.length) return;
+    (async () => {
+      const { data } = await supabase
+        .from("clubes_cache")
+        .select("nome, escudo_url")
+        .in("nome", missing);
+      if (!data?.length) return;
+      setClubLogos((prev) => {
+        const next = { ...prev };
+        for (const row of data) {
+          if (row?.nome && row?.escudo_url) next[row.nome] = row.escudo_url;
+        }
+        return next;
+      });
+    })();
+  }, [cityClubs, clubLogos]);
+
   /* ---------- Mapa de votos por nome (para colorir GeoJSON) ---------- */
 
   const votesByRegion = useMemo(() => {
