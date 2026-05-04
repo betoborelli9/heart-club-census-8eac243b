@@ -1193,7 +1193,7 @@ const MapaCalor = () => {
     };
 
     fetchHeat();
-  }, [activeClubName, viewMode, activeCountry, activeState, activeCity]);
+  }, [activeClubName, compareClubName, viewMode, activeCountry, activeState, activeCity]);
 
   const totalVotes = useMemo(() => heatData.reduce((s, e) => s + Number(e.votes), 0), [heatData]);
 
