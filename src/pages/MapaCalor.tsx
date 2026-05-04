@@ -126,6 +126,12 @@ const REGION_SUFFIXES = [
   " municipality",
 ];
 
+const NEIGHBORHOOD_PREFIXES = [
+  "setor ", "jardim ", "residencial ", "parque ", "vila ", "chacara ",
+  "conjunto ", "loteamento ", "prive ", "condominio ", "alameda ", "fazenda ",
+  "bairro ",
+];
+
 function regionLookupKeys(value: string): string[] {
   const base = normalize(value);
 
@@ -143,6 +149,11 @@ function regionLookupKeys(value: string): string[] {
 
   for (const suffix of REGION_SUFFIXES) {
     if (base.endsWith(suffix)) add(base.slice(0, -suffix.length));
+  }
+
+  // Strip neighborhood prefixes (Setor X ↔ X) so matching works both ways
+  for (const prefix of NEIGHBORHOOD_PREFIXES) {
+    if (base.startsWith(prefix)) add(base.slice(prefix.length));
   }
 
   return [...keys];
