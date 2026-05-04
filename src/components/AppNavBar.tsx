@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils";
 const ITEMS = [
   { to: "/dashboard", label: "Início", icon: Home },
   { to: "/stats", label: "Ranking", icon: Trophy },
-  { to: "/mapa-calor", label: "Mapa", icon: Map },
+  { to: "/mapa-calor", label: "Mapa de Calor", icon: Map },
   { to: "/embaixadores", label: "Embaixadores", icon: Users },
   { to: "/embaixador", label: "Painel", icon: Megaphone },
 ];
