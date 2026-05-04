@@ -135,6 +135,11 @@ interface RankingEntry {
 interface ActivityEntry {
   id: string;
   nome: string | null;
+  cidade?: string | null;
+  estado?: string | null;
+  clube_nome?: string | null;
+  bairro?: string | null;
+  voto_created_at?: string | null;
   created_at: string;
 }
 
@@ -202,7 +207,7 @@ const Ambassadors = () => {
 
   /* [MÓDULO: CARREGA RANKING E FEED] */
   useEffect(() => {
-    if (!user || !profile?.codigo_indicacao) return;
+    if (!user) return;
     const loadRanking = async () => {
       // Busca todas as indicações agrupadas por embaixador
       const { data: indicacoes } = await supabase
@@ -260,37 +265,27 @@ const Ambassadors = () => {
     };
 
     const loadActivityFeed = async () => {
-      if (!profile?.codigo_indicacao) return;
-      const { data } = await supabase
-        .from("indicacoes")
-        .select("id, indicado_id, created_at")
-        .eq("codigo_usado", profile.codigo_indicacao)
-        .order("created_at", { ascending: false })
-        .limit(10);
-
-      if (!data || data.length === 0) {
+      const { data, error } = await supabase.rpc("get_my_ambassador_referrals");
+      if (error || !data) {
         setActivityFeed([]);
         return;
       }
-
-      const indicadoIds = data.map((d) => d.indicado_id).filter(Boolean) as string[];
-      const { data: indicadoProfiles } = await supabase
-        .from("profiles")
-        .select("id, nome_exibicao")
-        .in("id", indicadoIds);
-
-      const feed: ActivityEntry[] = data.map((d) => ({
-        id: d.id,
-        nome: indicadoProfiles?.find((p) => p.id === d.indicado_id)?.nome_exibicao ?? "Novo membro",
-        created_at: d.created_at || "",
+      const feed: ActivityEntry[] = (data as any[]).map((d) => ({
+        id: d.indicacao_id,
+        nome: d.nome ?? "Novo membro",
+        cidade: d.cidade ?? null,
+        estado: d.estado ?? null,
+        clube_nome: d.clube_nome ?? null,
+        bairro: d.bairro ?? null,
+        voto_created_at: d.voto_created_at ?? null,
+        created_at: d.indicacao_created_at ?? "",
       }));
-
       setActivityFeed(feed);
     };
 
     loadRanking();
     loadActivityFeed();
-  }, [user, profile?.codigo_indicacao]);
+  }, [user]);
 
   /* [MÓDULO: AÇÃO DO CENSO] */
   const handleCensusSubmit = async () => {
@@ -613,25 +608,43 @@ const Ambassadors = () => {
               </p>
             ) : (
               <div className="space-y-2 max-h-[260px] overflow-y-auto pr-1">
-                {activityFeed.map((entry, i) => (
-                  <motion.div
-                    key={entry.id}
-                    initial={{ opacity: 0, x: 10 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: i * 0.05 }}
-                    className="flex items-center gap-3 rounded-xl bg-white/5 px-3 py-2.5"
-                  >
-                    <div className="w-7 h-7 rounded-full bg-[#ff6200]/20 flex items-center justify-center text-[10px] font-black text-[#ff6200]">
-                      {entry.nome?.charAt(0)?.toUpperCase() || "?"}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-bold truncate">{entry.nome}</p>
-                      <p className="text-[10px] text-white/30">
-                        {entry.created_at ? format(new Date(entry.created_at), "dd/MM/yyyy") : ""}
-                      </p>
-                    </div>
-                  </motion.div>
-                ))}
+                {activityFeed.map((entry, i) => {
+                  const cd = resolveClub(entry.clube_nome ?? null);
+                  const dateRef = entry.voto_created_at || entry.created_at;
+                  const localizacao = [entry.cidade, entry.estado].filter(Boolean).join(" · ");
+                  return (
+                    <motion.div
+                      key={entry.id}
+                      initial={{ opacity: 0, x: 10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: i * 0.05 }}
+                      className="flex items-center gap-3 rounded-xl bg-white/5 px-3 py-2.5"
+                    >
+                      <div className="w-8 h-8 rounded-full bg-[#ff6200]/20 flex items-center justify-center text-[10px] font-black text-[#ff6200] shrink-0">
+                        {entry.nome?.charAt(0)?.toUpperCase() || "?"}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-bold truncate">{entry.nome}</p>
+                        <p className="text-[10px] text-white/40 truncate">
+                          {localizacao || "—"}
+                          {dateRef ? ` · ${format(new Date(dateRef), "dd/MM/yyyy")}` : ""}
+                        </p>
+                      </div>
+                      {entry.clube_nome ? (
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <ClubLogo src={cd?.logoUrl} alt={entry.clube_nome} size="xs" />
+                          <span className="text-[10px] font-bold text-white/70 hidden sm:inline truncate max-w-[90px]">
+                            {entry.clube_nome}
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="text-[9px] uppercase tracking-wider text-white/30 shrink-0">
+                          aguardando voto
+                        </span>
+                      )}
+                    </motion.div>
+                  );
+                })}
               </div>
             )}
           </div>

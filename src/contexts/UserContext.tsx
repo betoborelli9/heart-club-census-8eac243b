@@ -84,6 +84,25 @@ export function UserProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  // Registra a indicação se houver hc_ref_code no localStorage (1x por usuário)
+  const tryRegisterReferral = async (uid: string) => {
+    try {
+      const code = localStorage.getItem("hc_ref_code");
+      const done = localStorage.getItem(`hc_ref_done_${uid}`);
+      if (!code || done) return;
+      const { data, error } = await supabase.rpc("register_referral_from_code", {
+        p_codigo: code,
+        p_indicado_id: uid,
+      });
+      if (!error) {
+        localStorage.setItem(`hc_ref_done_${uid}`, "1");
+        if (data === true) localStorage.removeItem("hc_ref_code");
+      }
+    } catch (e) {
+      console.warn("[REFERRAL] não foi possível registrar:", e);
+    }
+  };
+
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
@@ -95,6 +114,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
           setTimeout(async () => {
             await fetchProfile(session.user.id);
             await checkVoted(session.user.id);
+            await tryRegisterReferral(session.user.id);
             setIsLoading(false);
           }, 0);
         } else {
@@ -109,9 +129,10 @@ export function UserProvider({ children }: { children: ReactNode }) {
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
-        fetchProfile(session.user.id).then(() => 
-          checkVoted(session.user.id).then(() => setIsLoading(false))
-        );
+        fetchProfile(session.user.id)
+          .then(() => checkVoted(session.user.id))
+          .then(() => tryRegisterReferral(session.user.id))
+          .then(() => setIsLoading(false));
       } else {
         setIsLoading(false);
       }
