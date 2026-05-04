@@ -19,6 +19,16 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { UserProvider } from "@/contexts/UserContext";
 import FeedbackWidget from "@/components/FeedbackWidget";
+import AppNavBar from "@/components/AppNavBar";
+import { useLocation } from "react-router-dom";
+
+const HIDE_NAV_ROUTES = ["/", "/splash", "/login", "/profile-setup", "/voting", "/convite"];
+const GlobalNav = () => {
+  const { pathname } = useLocation();
+  if (HIDE_NAV_ROUTES.includes(pathname)) return null;
+  if (pathname.startsWith("/admin") || pathname.startsWith("/debug")) return null;
+  return <AppNavBar />;
+};
 
 /* ═══════════════════════════════════════════════════════════
     MÓDULO: PÁGINAS (USER & PUBLIC)
@@ -94,6 +104,7 @@ const App = () => (
             <Route path="*" element={<NotFound />} />
           </Routes>
           <FeedbackWidget />
+          <GlobalNav />
         </BrowserRouter>
       </UserProvider>
     </TooltipProvider>
