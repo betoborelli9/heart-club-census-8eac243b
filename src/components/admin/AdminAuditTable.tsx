@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Trash2, AlertTriangle, Shield, RefreshCw } from "lucide-react";
+import { Loader2, Trash2, AlertTriangle, Shield, RefreshCw, Check } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface VoteRow {
@@ -31,6 +31,8 @@ const AdminAuditTable = () => {
   const [votes, setVotes] = useState<VoteRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [cleaning, setCleaning] = useState(false);
+  const [actingId, setActingId] = useState<string | null>(null);
+  const [approvedIds, setApprovedIds] = useState<Set<string>>(new Set());
   const { toast } = useToast();
 
   // Group by fingerprint to detect duplicates
@@ -73,7 +75,42 @@ const AdminAuditTable = () => {
     setCleaning(false);
   };
 
+  const handleApprove = async (votoId: string) => {
+    setActingId(votoId);
+    const { error } = await supabase.rpc("admin_approve_vote", { p_voto_id: votoId });
+    if (error) {
+      toast({ title: "Erro ao aprovar", description: error.message, variant: "destructive" });
+    } else {
+      setApprovedIds((s) => new Set(s).add(votoId));
+      setVotes((prev) =>
+        prev.map((v) =>
+          v.voto_id === votoId
+            ? { ...v, is_fraud_attempt: false, is_suspicious: false, is_original_vote: true }
+            : v,
+        ),
+      );
+      toast({ title: "Voto aprovado", description: "Passa a contar normalmente no ranking." });
+    }
+    setActingId(null);
+  };
+
+  const handleDeleteOne = async (votoId: string) => {
+    if (!confirm("Deletar este voto definitivamente?")) return;
+    setActingId(votoId);
+    const { error } = await supabase.rpc("admin_delete_vote", { p_voto_id: votoId });
+    if (error) {
+      toast({ title: "Erro ao deletar", description: error.message, variant: "destructive" });
+    } else {
+      setVotes((prev) => prev.filter((v) => v.voto_id !== votoId));
+      toast({ title: "Voto removido" });
+    }
+    setActingId(null);
+  };
+
   const getRowClass = (vote: VoteRow): string => {
+    if (approvedIds.has(vote.voto_id)) {
+      return "border-l-4 border-l-green-500 bg-green-500/10";
+    }
     if (vote.is_fraud_attempt && vote.is_original_vote) {
       // Reincident — kept but flagged
       return "border-l-4 border-l-orange-500 bg-orange-500/5";
@@ -158,6 +195,7 @@ const AdminAuditTable = () => {
                   <TableHead className="text-muted-foreground">Localização</TableHead>
                   <TableHead className="text-muted-foreground">Fingerprint</TableHead>
                   <TableHead className="text-muted-foreground">Data</TableHead>
+                  <TableHead className="text-muted-foreground text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -188,11 +226,39 @@ const AdminAuditTable = () => {
                     <TableCell className="text-xs text-muted-foreground">
                       {v.created_at ? new Date(v.created_at).toLocaleDateString("pt-BR") : "—"}
                     </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-1.5">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-8 px-2 border-green-600 text-green-500 hover:bg-green-500/10 hover:text-green-400"
+                          disabled={actingId === v.voto_id || approvedIds.has(v.voto_id)}
+                          onClick={() => handleApprove(v.voto_id)}
+                          title="Aprovar voto"
+                        >
+                          {actingId === v.voto_id ? (
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          ) : (
+                            <Check className="w-3.5 h-3.5" />
+                          )}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-8 px-2 border-destructive text-destructive hover:bg-destructive/10"
+                          disabled={actingId === v.voto_id}
+                          onClick={() => handleDeleteOne(v.voto_id)}
+                          title="Deletar voto definitivamente"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </Button>
+                      </div>
+                    </TableCell>
                   </TableRow>
                 ))}
                 {votes.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-10 text-muted-foreground">
+                    <TableCell colSpan={8} className="text-center py-10 text-muted-foreground">
                       Nenhum voto encontrado.
                     </TableCell>
                   </TableRow>
