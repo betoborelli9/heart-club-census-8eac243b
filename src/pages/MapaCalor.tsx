@@ -2267,8 +2267,8 @@ const MapaCalor = () => {
                   <div className="space-y-2 max-h-[320px] overflow-y-auto pr-1">
                     {cityClubs.map((c, i) => {
                       const info = CLUBS_DATA.find((cd) => cd.nome === c.club);
+                      const logoSrc = clubLogos[c.club] || info?.logoUrl || null;
 
-                      const isHeart = c.club === heartClubName;
 
                       const isCompare = c.club === compareClubName;
 
