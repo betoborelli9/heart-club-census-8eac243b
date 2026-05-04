@@ -75,7 +75,42 @@ const AdminAuditTable = () => {
     setCleaning(false);
   };
 
+  const handleApprove = async (votoId: string) => {
+    setActingId(votoId);
+    const { error } = await supabase.rpc("admin_approve_vote", { p_voto_id: votoId });
+    if (error) {
+      toast({ title: "Erro ao aprovar", description: error.message, variant: "destructive" });
+    } else {
+      setApprovedIds((s) => new Set(s).add(votoId));
+      setVotes((prev) =>
+        prev.map((v) =>
+          v.voto_id === votoId
+            ? { ...v, is_fraud_attempt: false, is_suspicious: false, is_original_vote: true }
+            : v,
+        ),
+      );
+      toast({ title: "Voto aprovado", description: "Passa a contar normalmente no ranking." });
+    }
+    setActingId(null);
+  };
+
+  const handleDeleteOne = async (votoId: string) => {
+    if (!confirm("Deletar este voto definitivamente?")) return;
+    setActingId(votoId);
+    const { error } = await supabase.rpc("admin_delete_vote", { p_voto_id: votoId });
+    if (error) {
+      toast({ title: "Erro ao deletar", description: error.message, variant: "destructive" });
+    } else {
+      setVotes((prev) => prev.filter((v) => v.voto_id !== votoId));
+      toast({ title: "Voto removido" });
+    }
+    setActingId(null);
+  };
+
   const getRowClass = (vote: VoteRow): string => {
+    if (approvedIds.has(vote.voto_id)) {
+      return "border-l-4 border-l-green-500 bg-green-500/10";
+    }
     if (vote.is_fraud_attempt && vote.is_original_vote) {
       // Reincident — kept but flagged
       return "border-l-4 border-l-orange-500 bg-orange-500/5";
