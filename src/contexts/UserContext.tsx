@@ -19,6 +19,7 @@ interface Profile {
   telefone: string | null;
   codigo_indicacao: string | null;
   nivel_embaixador: string | null;
+  cep: string | null;
 }
 
 interface UserContextType {
