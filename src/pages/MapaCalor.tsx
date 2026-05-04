@@ -1080,6 +1080,7 @@ const MapaCalor = () => {
   /* Data */
 
   const [heatData, setHeatData] = useState<HeatEntry[]>([]);
+  const [compareHeatData, setCompareHeatData] = useState<HeatEntry[]>([]);
 
   const [cityClubs, setCityClubs] = useState<ClubVote[]>([]);
 
