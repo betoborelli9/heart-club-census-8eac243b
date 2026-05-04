@@ -202,7 +202,11 @@ const AdminAuditTable = () => {
                 {votes.map((v) => (
                   <TableRow key={v.voto_id} className={`border-border ${getRowClass(v)}`}>
                     <TableCell>
-                      {v.is_fraud_attempt ? (
+                      {approvedIds.has(v.voto_id) ? (
+                        <Badge variant="outline" className="border-green-600 text-green-500 text-[10px]">
+                          <Check className="w-3 h-3 mr-1" /> Aprovado
+                        </Badge>
+                      ) : v.is_fraud_attempt ? (
                         <Badge variant="outline" className="border-orange-500 text-orange-500 text-[10px]">
                           <AlertTriangle className="w-3 h-3 mr-1" /> Reincidente
                         </Badge>
