@@ -1416,24 +1416,36 @@ const MapaCalor = () => {
   const votesByRegion = useMemo(() => {
     const map = new Map<string, number>();
 
-    for (const e of heatData) {
+  // Soma os votos do meu clube + clube comparado para colorir o mapa
+  const combinedHeatData = useMemo(() => {
+    if (!compareClubName || !compareHeatData.length) return heatData;
+    const map = new Map<string, number>();
+    const display = new Map<string, string>();
+    for (const e of [...heatData, ...compareHeatData]) {
+      const key = normalize(e.region);
+      map.set(key, (map.get(key) || 0) + Number(e.votes));
+      if (!display.has(key)) display.set(key, e.region);
+    }
+    return Array.from(map.entries()).map(([k, votes]) => ({ region: display.get(k) || k, votes }));
+  }, [heatData, compareHeatData, compareClubName]);
+
+  const votesByRegion = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const e of combinedHeatData) {
       for (const key of regionLookupKeys(e.region)) map.set(key, Number(e.votes));
     }
-
     return map;
-  }, [heatData]);
+  }, [combinedHeatData]);
 
   const regionNameByKey = useMemo(() => {
     const map = new Map<string, string>();
-
-    for (const e of heatData) {
+    for (const e of combinedHeatData) {
       for (const key of regionLookupKeys(e.region)) map.set(key, e.region);
     }
-
     return map;
-  }, [heatData]);
+  }, [combinedHeatData]);
 
-  const maxVotes = useMemo(() => heatData.reduce((m, e) => Math.max(m, Number(e.votes)), 0), [heatData]);
+  const maxVotes = useMemo(() => combinedHeatData.reduce((m, e) => Math.max(m, Number(e.votes)), 0), [combinedHeatData]);
 
   /** Resolve voto de uma feature (qualquer propriedade comum de nome). */
 
