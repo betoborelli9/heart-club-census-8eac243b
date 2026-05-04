@@ -684,6 +684,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_approve_vote: { Args: { p_voto_id: string }; Returns: undefined }
       admin_clean_fraud_by_fingerprint: {
         Args: never
         Returns: {
@@ -691,6 +692,7 @@ export type Database = {
           marked_count: number
         }[]
       }
+      admin_delete_vote: { Args: { p_voto_id: string }; Returns: undefined }
       admin_detect_vote_clusters: { Args: never; Returns: Json }
       admin_flag_isp_clusters: { Args: { p_threshold?: number }; Returns: Json }
       admin_flag_suspicious_devices: { Args: never; Returns: number }
