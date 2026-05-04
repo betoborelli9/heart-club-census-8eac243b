@@ -1149,42 +1149,21 @@ const MapaCalor = () => {
   useEffect(() => {
     if (!activeClubName) return;
 
-    const fetchHeat = async () => {
-      setLoading(true);
-
-      // Cidade => bairros (RPC dedicada). Demais níveis => get_heatmap_data
-
+    const fetchOne = async (clubName: string): Promise<HeatEntry[]> => {
       if (viewMode === "city" && activeCity) {
         const { data, error } = await supabase.rpc("get_heatmap_neighborhoods", {
-          p_club_name: activeClubName,
+          p_club_name: clubName,
           p_city: activeCity,
         });
-
-        if (!error && data) {
-          const arr = (Array.isArray(data) ? data : []) as any[];
-
-          // Normaliza para HeatEntry { region, votes }
-
-          const entries: HeatEntry[] = arr.map((r) => ({
-            region: r.region ?? r.bairro ?? r.neighborhood ?? r.name ?? "—",
-
-            votes: Number(r.votes ?? r.total ?? r.count ?? 0),
-          }));
-
-          setHeatData(entries);
-        } else {
-          setHeatData([]);
-        }
-
-        setLoading(false);
-
-        return;
+        if (error || !data) return [];
+        const arr = (Array.isArray(data) ? data : []) as any[];
+        return arr.map((r) => ({
+          region: r.region ?? r.bairro ?? r.neighborhood ?? r.name ?? "—",
+          votes: Number(r.votes ?? r.total ?? r.count ?? 0),
+        }));
       }
-
       let level: string = viewMode;
-
       let filter: string | null = null;
-
       if (viewMode === "world") level = "country";
       else if (viewMode === "country") {
         level = "state";
@@ -1193,21 +1172,23 @@ const MapaCalor = () => {
         level = "city";
         filter = activeState;
       }
-
       const { data, error } = await supabase.rpc("get_heatmap_data", {
-        p_club_name: activeClubName,
+        p_club_name: clubName,
         p_level: level,
         p_filter_value: filter,
       });
+      if (error || !data) return [];
+      return (Array.isArray(data) ? data : []) as unknown as HeatEntry[];
+    };
 
-      if (!error && data) {
-        const entries = (Array.isArray(data) ? data : []) as unknown as HeatEntry[];
-
-        setHeatData(entries);
-      } else {
-        setHeatData([]);
-      }
-
+    const fetchHeat = async () => {
+      setLoading(true);
+      const [primary, compare] = await Promise.all([
+        fetchOne(activeClubName),
+        compareClubName ? fetchOne(compareClubName) : Promise.resolve([] as HeatEntry[]),
+      ]);
+      setHeatData(primary);
+      setCompareHeatData(compare);
       setLoading(false);
     };
 
