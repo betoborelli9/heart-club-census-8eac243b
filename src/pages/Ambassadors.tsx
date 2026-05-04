@@ -135,6 +135,11 @@ interface RankingEntry {
 interface ActivityEntry {
   id: string;
   nome: string | null;
+  cidade?: string | null;
+  estado?: string | null;
+  clube_nome?: string | null;
+  bairro?: string | null;
+  voto_created_at?: string | null;
   created_at: string;
 }
 
