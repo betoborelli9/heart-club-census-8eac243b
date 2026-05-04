@@ -62,6 +62,18 @@ const Voting = () => {
   const [cepLoading, setCepLoading] = useState(false);
   const [cepError, setCepError] = useState<string | null>(null);
 
+  // Se o usuário JÁ tem CEP salvo no profile, não pedimos de novo (anti-redundância)
+  const profileCep = ((profile as any)?.cep || "").toString();
+  const hasCepInProfile = profileCep.replace(/\D/g, "").length === 8;
+
+  // Pré-preenche o CEP a partir do profile (apenas leitura, não exibido se já existe)
+  useEffect(() => {
+    if (hasCepInProfile && !cep) {
+      setCep(formatCep(profileCep));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasCepInProfile, profileCep]);
+
   // Refs para controle de concorrência de busca (Race Conditions)
   const heartReqId = useRef(0);
   const sympathyReqId = useRef(0);
