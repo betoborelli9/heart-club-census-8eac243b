@@ -1,64 +1,69 @@
 /// <reference types="npm:@types/react@18.3.1" />
 import * as React from 'npm:react@18.3.1';
-import { Html, Head, Body, Container, Section, Text, Button, Img, Hr } from 'npm:@react-email/components@0.0.22';
+import { Html, Head, Body, Container, Section, Text, Img, Hr } from 'npm:@react-email/components@0.0.22';
 
 interface MagicLinkEmailProps {
   siteName?: string;
   siteUrl?: string;
-  confirmationUrl?: string;
+  token?: string;
   recipient?: string;
 }
+
+// Banner placeholder — substitua pelo banner oficial do Heart Club
+const BANNER_URL = 'https://www.heartclubapp.com/email-banner.png';
 
 export default function MagicLinkEmail({
   siteName = 'Heart Club',
   siteUrl = 'https://www.heartclubapp.com',
-  confirmationUrl = '',
+  token = '000000',
   recipient = '',
 }: MagicLinkEmailProps) {
+  const code = (token || '').toString().slice(0, 6);
+
   return (
     <Html>
       <Head />
       <Body style={main}>
         <Container style={container}>
-          {/* Top accent bar */}
-          <Section style={accentBar} />
-
-          <Section style={headerSection}>
+          {/* Banner superior (placeholder) */}
+          <Section style={bannerSection}>
             <Img
-              src={`${siteUrl}/favicon.ico`}
-              alt="Heart Club"
-              width="56"
-              height="56"
-              style={logo}
+              src={BANNER_URL}
+              alt={siteName}
+              width="480"
+              height="160"
+              style={bannerImg}
             />
           </Section>
 
-          <Text style={heading}>Sua entrada exclusiva 🔑</Text>
+          <Section style={accentBar} />
+
+          <Text style={heading}>Bem-vindo ao Censo Global 🌎🧡</Text>
 
           <Text style={paragraph}>
-            Olá! Sua passagem para a <strong style={{ color: '#111' }}>elite do futebol mundial</strong> está a um clique de distância.
+            Você está prestes a entrar no <strong style={{ color: '#111' }}>maior censo de torcidas do planeta</strong>.
+            Sua voz é parte de uma história que está sendo escrita por milhões de torcedores.
           </Text>
 
-          <Text style={paragraph}>
-            O Heart Club é onde torcedores de verdade deixam sua marca. Clique abaixo para acessar sua conta instantaneamente:
+          <Text style={paragraphCenter}>
+            Use o código abaixo para acessar sua conta:
           </Text>
 
-          <Section style={btnSection}>
-            <Button style={button} href={confirmationUrl}>
-              Acessar minha conta →
-            </Button>
+          {/* CÓDIGO 6 DÍGITOS EM DESTAQUE */}
+          <Section style={codeBox}>
+            <Text style={codeText}>{code}</Text>
           </Section>
 
           <Section style={securityBox}>
             <Text style={securityText}>
-              🔒 Este link é pessoal, válido por 1 hora e só pode ser usado uma vez.
+              🔒 Este código é pessoal, válido por 1 hora e só pode ser usado uma vez.
             </Text>
           </Section>
 
           <Hr style={hr} />
 
           <Text style={footer}>
-            © Heart Club — O maior censo de torcidas do planeta
+            © {siteName} — O maior censo de torcidas do planeta
           </Text>
           <Text style={footerSub}>
             Se você não solicitou este acesso, ignore este email com segurança.
@@ -80,20 +85,23 @@ const container = {
   maxWidth: '480px',
 };
 
+const bannerSection = {
+  textAlign: 'center' as const,
+  margin: '0',
+  padding: '0',
+};
+
+const bannerImg = {
+  width: '100%',
+  maxWidth: '480px',
+  height: 'auto',
+  display: 'block',
+  borderRadius: '12px 12px 0 0',
+};
+
 const accentBar = {
   height: '4px',
   background: 'linear-gradient(90deg, hsl(24, 100%, 50%), hsl(30, 100%, 60%))',
-  borderRadius: '4px 4px 0 0',
-};
-
-const headerSection = {
-  textAlign: 'center' as const,
-  padding: '32px 24px 16px',
-};
-
-const logo = {
-  margin: '0 auto',
-  borderRadius: '14px',
 };
 
 const heading = {
@@ -102,7 +110,7 @@ const heading = {
   fontWeight: '700',
   color: '#111111',
   textAlign: 'center' as const,
-  margin: '0 24px 20px',
+  margin: '28px 24px 18px',
   lineHeight: '1.3',
 };
 
@@ -113,22 +121,31 @@ const paragraph = {
   margin: '0 24px 14px',
 };
 
-const btnSection = {
+const paragraphCenter = {
+  fontSize: '15px',
+  lineHeight: '1.6',
+  color: '#444444',
+  margin: '8px 24px 12px',
   textAlign: 'center' as const,
-  margin: '28px 24px',
 };
 
-const button = {
-  backgroundColor: 'hsl(24, 100%, 50%)',
-  color: '#ffffff',
-  fontFamily: "'Space Grotesk', 'Helvetica Neue', Arial, sans-serif",
-  fontWeight: '700',
-  fontSize: '16px',
-  borderRadius: '12px',
-  padding: '16px 40px',
-  textDecoration: 'none',
-  display: 'inline-block',
-  boxShadow: '0 4px 14px rgba(255, 102, 0, 0.35)',
+const codeBox = {
+  margin: '8px 24px 24px',
+  padding: '22px 16px',
+  backgroundColor: '#FFF4EC',
+  border: '2px dashed hsl(24, 100%, 50%)',
+  borderRadius: '14px',
+  textAlign: 'center' as const,
+};
+
+const codeText = {
+  fontFamily: "'Space Grotesk', 'Courier New', monospace",
+  fontSize: '40px',
+  fontWeight: '900' as const,
+  letterSpacing: '12px',
+  color: 'hsl(24, 100%, 45%)',
+  margin: '0',
+  lineHeight: '1.1',
 };
 
 const securityBox = {
