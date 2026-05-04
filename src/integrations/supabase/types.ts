@@ -785,6 +785,21 @@ export type Database = {
         Args: { p_city: string; p_club_name: string }
         Returns: Json
       }
+      get_my_ambassador_referrals: {
+        Args: never
+        Returns: {
+          bairro: string
+          cidade: string
+          clube_nome: string
+          estado: string
+          indicacao_created_at: string
+          indicacao_id: string
+          indicado_id: string
+          nome: string
+          voto_created_at: string
+          voto_id: string
+        }[]
+      }
       get_ranking_with_growth: {
         Args: { p_level: string; p_limit?: number; p_value?: string }
         Returns: Json
@@ -796,6 +811,10 @@ export type Database = {
       }
       purge_fake_votes: { Args: never; Returns: Json }
       purge_invalid_fake_votes: { Args: never; Returns: Json }
+      register_referral_from_code: {
+        Args: { p_codigo: string; p_indicado_id?: string }
+        Returns: boolean
+      }
       search_club_city_votes: {
         Args: { p_city_query: string; p_club_name: string; p_limit?: number }
         Returns: Json
