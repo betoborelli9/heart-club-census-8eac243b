@@ -234,16 +234,35 @@ const Stats = () => {
     toFetch.forEach((c) => fetchedLogosRef.current.add(norm(c)));
 
     (async () => {
+      // Match acento-insensível e tolerante a sufixos (ex.: "Atlético-GO" ↔ "Atletico Goianiense")
       const { data } = await supabase
         .from("clubes_cache")
         .select("nome, escudo_url")
-        .in("nome", toFetch);
+        .not("escudo_url", "is", null);
       if (data && data.length) {
+        const cache = data as Array<{ nome: string; escudo_url: string }>;
         setLogoMap((prev) => {
           const next = new Map(prev);
-          data.forEach((row: any) => {
-            if (row.escudo_url) next.set(norm(row.nome), row.escudo_url);
-          });
+          for (const target of toFetch) {
+            const nt = norm(target);
+            // 1) match exato normalizado
+            let hit = cache.find((r) => norm(r.nome) === nt);
+            // 2) prefixo (cobre "Atlético-GO" ⊂ "Atletico Goianiense" via primeira palavra)
+            if (!hit) {
+              const head = nt.split(/[\s\-]/)[0];
+              if (head && head.length >= 4) {
+                hit = cache.find((r) => norm(r.nome).startsWith(head));
+              }
+            }
+            // 3) inclui token significativo
+            if (!hit) {
+              hit = cache.find((r) => {
+                const nr = norm(r.nome);
+                return nr.includes(nt) || nt.includes(nr);
+              });
+            }
+            if (hit?.escudo_url) next.set(nt, hit.escudo_url);
+          }
           return next;
         });
       }
