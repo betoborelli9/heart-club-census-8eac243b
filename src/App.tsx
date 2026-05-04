@@ -104,6 +104,7 @@ const App = () => (
             <Route path="*" element={<NotFound />} />
           </Routes>
           <FeedbackWidget />
+          <GlobalNav />
         </BrowserRouter>
       </UserProvider>
     </TooltipProvider>
