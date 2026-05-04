@@ -1722,18 +1722,13 @@ const MapaCalor = () => {
     setSearchQuery("");
     setSearchResults([]);
 
-    if (heartClubName && club.name !== heartClubName && club.name !== activeClubName) {
-      setCompareClubName(club.name);
-    } else {
-      setActiveClubName(club.name);
-
-      setActiveClubInfo(CLUBS_DATA.find((c) => c.nome === club.name) || null);
-
-      setCompareClubName(null);
-      setCompareData(null);
-
-      goWorld();
-    }
+    // Sempre troca o clube ativo no mapa — assim o usuário vê o calor
+    // de qualquer clube do mundo, não só o seu Coração.
+    setActiveClubName(club.name);
+    setActiveClubInfo(CLUBS_DATA.find((c) => c.nome === club.name) || null);
+    setCompareClubName(null);
+    setCompareData(null);
+    goWorld();
   };
 
   const clearCompare = () => {
