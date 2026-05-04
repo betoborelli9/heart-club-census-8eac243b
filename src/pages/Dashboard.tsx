@@ -121,6 +121,11 @@ const Dashboard = () => {
           <GeoLoyalty clubName={clubeName} />
         </div>
 
+        {/* [MÓDULO: RANKING DE SIMPATIA — segundo time mais querido] */}
+        <div className="pt-16 md:pt-24">
+          <SympathyRanking />
+        </div>
+
         {/* [MÓDULO: LOJA DO TORCEDOR — Marketplace de Afiliados dinâmico] */}
         <div className="pt-16 md:pt-24">
           <AffiliateStore />
