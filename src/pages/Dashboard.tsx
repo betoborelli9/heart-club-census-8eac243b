@@ -20,6 +20,7 @@ import ClubBanner from "@/components/dashboard/ClubBanner";
 import ClubIdentityCard from "@/components/dashboard/ClubIdentityCard";
 import { useClubTheme } from "@/hooks/useClubTheme";
 import AffiliateStore from "@/components/store/AffiliateStore";
+import SympathyRanking from "@/components/dashboard/SympathyRanking";
 import logo from "@/assets/logo.png";
 
 /* [MÓDULO: COMPONENTE DASHBOARD] */
