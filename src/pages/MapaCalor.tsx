@@ -2269,6 +2269,7 @@ const MapaCalor = () => {
                       const info = CLUBS_DATA.find((cd) => cd.nome === c.club);
                       const logoSrc = clubLogos[c.club] || info?.logoUrl || null;
 
+                      const isHeart = c.club === heartClubName;
 
                       const isCompare = c.club === compareClubName;
 
