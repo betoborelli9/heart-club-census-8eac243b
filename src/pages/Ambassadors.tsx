@@ -285,7 +285,7 @@ const Ambassadors = () => {
 
     loadRanking();
     loadActivityFeed();
-  }, [user, profile?.codigo_indicacao]);
+  }, [user]);
 
   /* [MÓDULO: AÇÃO DO CENSO] */
   const handleCensusSubmit = async () => {
