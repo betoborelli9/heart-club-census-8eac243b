@@ -1083,6 +1083,8 @@ const MapaCalor = () => {
 
   const [cityClubs, setCityClubs] = useState<ClubVote[]>([]);
 
+  const [clubLogos, setClubLogos] = useState<Record<string, string>>({});
+
   const [loading, setLoading] = useState(true);
 
   /* GeoJSON layers */
