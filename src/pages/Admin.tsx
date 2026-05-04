@@ -6,6 +6,7 @@ import { Loader2, ShieldAlert, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import AdminAuditTable from "@/components/admin/AdminAuditTable";
+import AdminSympathyTable from "@/components/admin/AdminSympathyTable";
 import AdminBIStats from "@/components/admin/AdminBIStats";
 import AdminCorrectionsTable from "@/components/admin/AdminCorrectionsTable";
 import NeighborhoodDominance from "@/components/admin/NeighborhoodDominance";
@@ -90,6 +91,9 @@ const Admin = () => {
             <TabsTrigger value="audit" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               🔍 Auditoria de Votos
             </TabsTrigger>
+            <TabsTrigger value="sympathy" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              💛 Simpatias
+            </TabsTrigger>
             <TabsTrigger value="bi" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               📊 BI & Estatísticas
             </TabsTrigger>
@@ -121,6 +125,10 @@ const Admin = () => {
 
           <TabsContent value="audit">
             <AdminAuditTable />
+          </TabsContent>
+
+          <TabsContent value="sympathy">
+            <AdminSympathyTable />
           </TabsContent>
 
           <TabsContent value="bi">

@@ -738,6 +738,23 @@ export type Database = {
         Args: { p_club?: string; p_state?: string }
         Returns: Json
       }
+      admin_get_sympathy_votes: {
+        Args: never
+        Returns: {
+          cidade: string
+          clube_coracao: string
+          clube_simpatia: string
+          created_at: string
+          estado: string
+          fingerprint: string
+          pais: string
+          slot: number
+          user_email: string
+          user_id: string
+          user_nome: string
+          voto_id: string
+        }[]
+      }
       admin_get_votes_with_tracking: {
         Args: never
         Returns: {
