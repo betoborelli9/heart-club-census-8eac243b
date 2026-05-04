@@ -1413,9 +1413,6 @@ const MapaCalor = () => {
 
   /* ---------- Mapa de votos por nome (para colorir GeoJSON) ---------- */
 
-  const votesByRegion = useMemo(() => {
-    const map = new Map<string, number>();
-
   // Soma os votos do meu clube + clube comparado para colorir o mapa
   const combinedHeatData = useMemo(() => {
     if (!compareClubName || !compareHeatData.length) return heatData;
