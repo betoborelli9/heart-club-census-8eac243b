@@ -2288,7 +2288,7 @@ const MapaCalor = () => {
                             <span className="text-muted-foreground w-4 shrink-0">{i + 1}.</span>
 
                             <span className="w-6 h-6 bg-white rounded-full p-0.5 flex items-center justify-center shrink-0">
-                              <ClubLogo src={info?.logoUrl} alt={c.club} size="sm" />
+                              <ClubLogo src={logoSrc} alt={c.club} size="sm" />
                             </span>
 
                             <span className="truncate">{c.club}</span>
