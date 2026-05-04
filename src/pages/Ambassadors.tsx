@@ -608,25 +608,43 @@ const Ambassadors = () => {
               </p>
             ) : (
               <div className="space-y-2 max-h-[260px] overflow-y-auto pr-1">
-                {activityFeed.map((entry, i) => (
-                  <motion.div
-                    key={entry.id}
-                    initial={{ opacity: 0, x: 10 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: i * 0.05 }}
-                    className="flex items-center gap-3 rounded-xl bg-white/5 px-3 py-2.5"
-                  >
-                    <div className="w-7 h-7 rounded-full bg-[#ff6200]/20 flex items-center justify-center text-[10px] font-black text-[#ff6200]">
-                      {entry.nome?.charAt(0)?.toUpperCase() || "?"}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-bold truncate">{entry.nome}</p>
-                      <p className="text-[10px] text-white/30">
-                        {entry.created_at ? format(new Date(entry.created_at), "dd/MM/yyyy") : ""}
-                      </p>
-                    </div>
-                  </motion.div>
-                ))}
+                {activityFeed.map((entry, i) => {
+                  const cd = resolveClub(entry.clube_nome ?? null);
+                  const dateRef = entry.voto_created_at || entry.created_at;
+                  const localizacao = [entry.cidade, entry.estado].filter(Boolean).join(" · ");
+                  return (
+                    <motion.div
+                      key={entry.id}
+                      initial={{ opacity: 0, x: 10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: i * 0.05 }}
+                      className="flex items-center gap-3 rounded-xl bg-white/5 px-3 py-2.5"
+                    >
+                      <div className="w-8 h-8 rounded-full bg-[#ff6200]/20 flex items-center justify-center text-[10px] font-black text-[#ff6200] shrink-0">
+                        {entry.nome?.charAt(0)?.toUpperCase() || "?"}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-bold truncate">{entry.nome}</p>
+                        <p className="text-[10px] text-white/40 truncate">
+                          {localizacao || "—"}
+                          {dateRef ? ` · ${format(new Date(dateRef), "dd/MM/yyyy")}` : ""}
+                        </p>
+                      </div>
+                      {entry.clube_nome ? (
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <ClubLogo src={cd?.logoUrl} alt={entry.clube_nome} size="xs" />
+                          <span className="text-[10px] font-bold text-white/70 hidden sm:inline truncate max-w-[90px]">
+                            {entry.clube_nome}
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="text-[9px] uppercase tracking-wider text-white/30 shrink-0">
+                          aguardando voto
+                        </span>
+                      )}
+                    </motion.div>
+                  );
+                })}
               </div>
             )}
           </div>
