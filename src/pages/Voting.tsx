@@ -224,6 +224,18 @@ const Voting = () => {
       const { error: voteError } = await supabase.from("votos").insert([mainVote]);
       if (voteError) throw voteError;
 
+      // Salva o CEP no profile (anti-redundância) — só se o usuário digitou agora
+      const cepDigits = cep.replace(/\D/g, "");
+      if (cepDigits.length === 8 && !hasCepInProfile) {
+        supabase
+          .from("profiles")
+          .update({ cep: cepDigits })
+          .eq("id", user.id)
+          .then(({ error }) => {
+            if (error) console.warn("[VOTING] falha ao salvar CEP no profile:", error);
+          });
+      }
+
       // Redireciona imediatamente — todo enriquecimento roda em background
       toast({ title: "Lealdade registada com sucesso! 🏟️" });
       navigate("/dashboard");
