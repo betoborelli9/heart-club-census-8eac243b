@@ -265,31 +265,21 @@ const Ambassadors = () => {
     };
 
     const loadActivityFeed = async () => {
-      if (!profile?.codigo_indicacao) return;
-      const { data } = await supabase
-        .from("indicacoes")
-        .select("id, indicado_id, created_at")
-        .eq("codigo_usado", profile.codigo_indicacao)
-        .order("created_at", { ascending: false })
-        .limit(10);
-
-      if (!data || data.length === 0) {
+      const { data, error } = await supabase.rpc("get_my_ambassador_referrals");
+      if (error || !data) {
         setActivityFeed([]);
         return;
       }
-
-      const indicadoIds = data.map((d) => d.indicado_id).filter(Boolean) as string[];
-      const { data: indicadoProfiles } = await supabase
-        .from("profiles")
-        .select("id, nome_exibicao")
-        .in("id", indicadoIds);
-
-      const feed: ActivityEntry[] = data.map((d) => ({
-        id: d.id,
-        nome: indicadoProfiles?.find((p) => p.id === d.indicado_id)?.nome_exibicao ?? "Novo membro",
-        created_at: d.created_at || "",
+      const feed: ActivityEntry[] = (data as any[]).map((d) => ({
+        id: d.indicacao_id,
+        nome: d.nome ?? "Novo membro",
+        cidade: d.cidade ?? null,
+        estado: d.estado ?? null,
+        clube_nome: d.clube_nome ?? null,
+        bairro: d.bairro ?? null,
+        voto_created_at: d.voto_created_at ?? null,
+        created_at: d.indicacao_created_at ?? "",
       }));
-
       setActivityFeed(feed);
     };
 
