@@ -195,6 +195,7 @@ const AdminAuditTable = () => {
                   <TableHead className="text-muted-foreground">Localização</TableHead>
                   <TableHead className="text-muted-foreground">Fingerprint</TableHead>
                   <TableHead className="text-muted-foreground">Data</TableHead>
+                  <TableHead className="text-muted-foreground text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
