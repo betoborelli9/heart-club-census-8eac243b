@@ -174,6 +174,7 @@ const Convite = () => {
             <li className="flex gap-2"><Trophy className="h-4 w-4 text-primary mt-0.5" /> Ranking ao vivo do seu clube por bairro, cidade, estado e país.</li>
             <li className="flex gap-2"><Users className="h-4 w-4 text-primary mt-0.5" /> Cada voto seu reforça a torcida do seu time no mundo todo.</li>
             <li className="flex gap-2"><ShieldCheck className="h-4 w-4 text-primary mt-0.5" /> Voto Sagrado: 1 pessoa = 1 voto, blindado contra fraude.</li>
+            <li className="flex gap-2"><Heart className="h-4 w-4 text-primary mt-0.5" /> Além do seu time do coração, você pode escolher até 4 clubes de simpatia para completar o seu perfil torcedor.</li>
             <li className="flex gap-2"><Sparkles className="h-4 w-4 text-primary mt-0.5" /> Quem te convidou ganha pontos a cada novo torcedor.</li>
           </ul>
         </motion.section>
