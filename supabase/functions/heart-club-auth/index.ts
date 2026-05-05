@@ -37,7 +37,7 @@ Deno.serve(async (req) => {
 
     if (dbError) throw new Error(`Erro no Banco: ${dbError.message}`)
 
-    // ==========================================
+ // ==========================================
     // MÓDULO 3: DISPARO DE E-MAIL (RESEND)
     // Objetivo: Enviar o link de acesso sem passar pelos filtros do Supabase.
     // ==========================================
@@ -48,7 +48,8 @@ Deno.serve(async (req) => {
         'Authorization': `Bearer ${RESEND_API_KEY}`
       },
       body: JSON.stringify({
-        from: 'Heart Club <contato@heart-club.com>',
+        // ALTERAÇÃO: Usando o domínio de teste obrigatório para domínios não verificados
+        from: 'Heart Club <onboarding@resend.dev>', 
         to: [email],
         subject: 'Seu acesso exclusivo ao Heart Club',
         html: `
@@ -68,7 +69,10 @@ Deno.serve(async (req) => {
       })
     })
 
-    if (!emailRes.ok) throw new Error('Falha ao disparar e-mail via Resend.')
+    if (!emailRes.ok) {
+      const errorData = await emailRes.json();
+      throw new Error(`Erro Resend: ${JSON.stringify(errorData)}`);
+    }
 
     return new Response(JSON.stringify({ success: true, message: "Token gerado e enviado." }), { 
       status: 200, 
@@ -84,6 +88,6 @@ Deno.serve(async (req) => {
 })
 
 /**
- * RODAPÉ: Fim do arquivo.
- * PRÓXIMO PASSO: Configurar as secrets no Supabase e realizar o Deploy.
+ * RODAPÉ: Ajustado remetente para onboarding@resend.dev.
+ * PRÓXIMO PASSO: Realizar o deploy e testar com seu e-mail de cadastro do Resend.
  */
