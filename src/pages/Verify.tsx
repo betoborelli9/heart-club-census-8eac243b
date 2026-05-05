@@ -1,15 +1,20 @@
 /**
- * PROJETO: Heart Club
- * ARQUIVO: src/pages/Verify.tsx
- * DESCRIÇÃO: Página que valida o token de custódia e realiza o login.
- * AUTOR: Especialista Senior (AI) para Beto Borelli
+ * ═══════════════════════════════════════════════════════════════════
+ * [CAMINHO]: src/pages/Verify.tsx
+ * [MÓDULO]: AUTH - GUARDIAO VERIFICATION
+ * [STATUS]: CORREÇÃO DE BUILD
+ * [DESCRIÇÃO]: Validação de tokens de custódia.
+ * ═══════════════════════════════════════════════════════════════════
  */
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { supabase } from "@/lib/supabase";
+import { supabase } from "@/integrations/supabase/client"; // CAMINHO CORRETO LOVABLE
 import { toast } from "sonner";
 
+/* ═══════════════════════════════════════════════════════════
+    MÓDULO: LOGICA DE VALIDAÇÃO
+   ═══════════════════════════════════════════════════════════ */
 const Verify = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -24,7 +29,7 @@ const Verify = () => {
         return;
       }
 
-      // Validação do Token na tabela de custódia
+      // Consulta na tabela de custódia criada no Passo 1
       const { data, error } = await supabase
         .from("auth_tokens")
         .select("*")
@@ -39,7 +44,7 @@ const Verify = () => {
         return;
       }
 
-      // Marca o token como utilizado
+      // Invalidação do token após o uso (Segurança)
       await supabase
         .from("auth_tokens")
         .update({ used: true })
@@ -64,3 +69,11 @@ const Verify = () => {
 };
 
 export default Verify;
+
+/**
+ * ═══════════════════════════════════════════════════════════════════
+ * [RODAPÉ TÉCNICO]
+ * - Import corrigido para @/integrations/supabase/client.
+ * - Mantida a estrutura de feedback via Sonner.
+ * ═══════════════════════════════════════════════════════════════════
+ */
