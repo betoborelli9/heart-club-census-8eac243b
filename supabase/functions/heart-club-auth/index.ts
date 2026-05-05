@@ -2,7 +2,7 @@
  * Caminho: src/pages/Login.tsx
  * Contexto: Interface de Autenticação Unificada (Google OAuth + Edge Function Resend)
  * Projeto: HEART CLUB GLOBAL
- * Objetivo: Corrigir loop de redirecionamento para novos usuários.
+ * Objetivo: Quebrar o loop de redirecionamento garantindo que o estado de auth seja respeitado.
  */
 
 import { useState, useEffect } from "react";
@@ -11,7 +11,7 @@ import { Mail, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useUser } from "@/contexts/UserContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -20,24 +20,31 @@ import logo from "@/assets/logo.png";
 const Login = () => {
   // --- MÓDULO 1: ESTADOS E REDIRECIONAMENTO ---
   const navigate = useNavigate();
+  const location = useLocation();
   const { isAuthenticated, isProfileComplete, hasVoted, isLoading } = useUser();
   const { toast } = useToast();
 
   const [email, setEmail] = useState("");
   const [loadingProvider, setLoadingProvider] = useState<string | null>(null);
 
-  // Lógica de Redirecionamento Blindada para evitar Loops
+  // Lógica de Redirecionamento Blindada
   useEffect(() => {
+    // Só redireciona se o carregamento do usuário terminou e ele está autenticado
     if (!isLoading && isAuthenticated) {
-      console.log("Status Auth:", { isProfileComplete, hasVoted });
+      console.log("DEBUG AUTH - Perfil:", isProfileComplete, "Votou:", hasVoted);
       
-      if (!isProfileComplete) {
-        navigate("/profile-setup", { replace: true });
-      } else if (!hasVoted) {
-        navigate("/voting", { replace: true });
-      } else {
-        navigate("/dashboard", { replace: true });
-      }
+      // Pequeno delay para garantir que o estado do perfil foi carregado do banco
+      const redirectTimeout = setTimeout(() => {
+        if (!isProfileComplete) {
+          navigate("/profile-setup", { replace: true });
+        } else if (!hasVoted) {
+          navigate("/voting", { replace: true });
+        } else {
+          navigate("/dashboard", { replace: true });
+        }
+      }, 500);
+
+      return () => clearTimeout(redirectTimeout);
     }
   }, [isAuthenticated, isProfileComplete, hasVoted, isLoading, navigate]);
 
@@ -76,7 +83,7 @@ const Login = () => {
 
       toast({
         title: "Email enviado! ✉️",
-        description: "Verifique sua caixa de entrada e clique no link.",
+        description: "Abra o e-mail no mesmo navegador e clique no link.",
       });
     } catch (error: any) {
       console.error("Erro no disparo:", error);
@@ -159,7 +166,11 @@ const Login = () => {
             className="w-full h-12 font-bold btn-orange-gradient rounded-xl"
             disabled={loadingProvider === "email"}
           >
-            {loadingProvider === "email" ? <Loader2 className="w-5 h-5 animate-spin" /> : <Mail className="w-5 h-5 mr-2" />}
+            {loadingProvider === "email" ? (
+              <Loader2 className="w-5 h-5 animate-spin" />
+            ) : (
+              <Mail className="w-5 h-5 mr-2" />
+            )}
             Entrar com email
           </Button>
         </form>
