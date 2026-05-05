@@ -2,10 +2,10 @@
  * ═══════════════════════════════════════════════════════════════════
  * [CAMINHO]: src/App.tsx
  * [MÓDULO]: CORE - ROUTING SYSTEM
- * [STATUS]: PRODUÇÃO — VERSÃO 2.4 (ADMIN GLOBAL BI INTEGRATION)
+ * [STATUS]: PRODUÇÃO — VERSÃO 2.5 (GUARDIAO AUTH INTEGRATION)
  * [DESCRIÇÃO]:
  * Centralização de rotas do Heart Club.
- * Adicionada a rota /admin/global para o monitoramento mundial.
+ * Adicionada a rota /verify para validação de tokens do Guardião.
  * ═══════════════════════════════════════════════════════════════════
  */
 
@@ -22,7 +22,8 @@ import FeedbackWidget from "@/components/FeedbackWidget";
 import AppNavBar from "@/components/AppNavBar";
 import { useLocation } from "react-router-dom";
 
-const HIDE_NAV_ROUTES = ["/", "/splash", "/login", "/profile-setup", "/voting", "/convite"];
+// Inclusão do Verify no HIDE_NAV para não mostrar barra de navegação durante o login
+const HIDE_NAV_ROUTES = ["/", "/splash", "/login", "/profile-setup", "/voting", "/convite", "/verify"];
 const GlobalNav = () => {
   const { pathname } = useLocation();
   if (HIDE_NAV_ROUTES.includes(pathname)) return null;
@@ -36,6 +37,7 @@ const GlobalNav = () => {
 import Splash from "./pages/Splash";
 import Landing from "./pages/Landing";
 import Login from "./pages/Login";
+import Verify from "./pages/Verify"; // Nova página do Guardião
 import ProfileSetup from "./pages/ProfileSetup";
 import Voting from "./pages/Voting";
 import Dashboard from "./pages/Dashboard";
@@ -55,8 +57,8 @@ import DebugApi from "./pages/DebugApi";
 import AdminIngestion from "./pages/AdminIngestion";
 import ClubColors from "./pages/Admin/ClubColors";
 import ClubFeminino from "./pages/Admin/ClubFeminino";
-import GlobalBI from "./pages/Admin/GlobalBI"; // Rota Master Beto Borelli
-import VotosFicticios from "./pages/VotosFicticios"; // Rota Master — Geração de votos para teste
+import GlobalBI from "./pages/Admin/GlobalBI"; 
+import VotosFicticios from "./pages/VotosFicticios"; 
 
 const queryClient = new QueryClient();
 
@@ -75,6 +77,7 @@ const App = () => (
             <Route path="/" element={<Landing />} />
             <Route path="/splash" element={<Splash />} />
             <Route path="/login" element={<Login />} />
+            <Route path="/verify" element={<Verify />} />
             <Route path="/profile-setup" element={<ProfileSetup />} />
 
             {/* Experiência do Torcedor */}
@@ -100,7 +103,6 @@ const App = () => (
             <Route path="/admin/votos-ficticios" element={<VotosFicticios />} />
 
             {/* Tratamento de Erros */}
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
           <FeedbackWidget />
@@ -116,8 +118,8 @@ export default App;
 /**
  * ═══════════════════════════════════════════════════════════════════
  * [RODAPÉ TÉCNICO]
- * - Rota /admin/global integrada com sucesso.
- * - Preservada a duplicidade proposital de /stats e /estatisticas.
- * - Mantida a hierarquia de Ingestion e ClubColors original.
+ * - Rota /verify adicionada para suporte ao Magic Link próprio.
+ * - Página Verify incluída no HIDE_NAV_ROUTES para consistência visual.
+ * - Preservada a estrutura Master de Admin e BI do Beto Borelli.
  * ═══════════════════════════════════════════════════════════════════
  */
