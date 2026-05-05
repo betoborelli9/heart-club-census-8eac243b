@@ -1,8 +1,8 @@
 /**
  * Caminho: src/pages/Login.tsx
- * Contexto: Interface de Autenticação Unificada (Google OAuth + Magic Link por Email)
+ * Contexto: Interface de Autenticação Unificada (Google OAuth + Edge Function Resend)
  * Projeto: HEART CLUB GLOBAL
- * Objetivo: Reduzir fricção de login, eliminar OTP e permitir escala com entrada simples via link.
+ * Objetivo: Eliminar o erro de "email rate limit exceeded" usando o canal profissional do Resend.
  */
 
 import { useState, useEffect } from "react";
@@ -19,7 +19,6 @@ import logo from "@/assets/logo.png";
 
 const Login = () => {
   // --- MÓDULO 1: ESTADOS E REDIRECIONAMENTO ---
-  // Gerencia o fluxo do usuário e garante que ele caia na etapa correta do censo pós-login
   const navigate = useNavigate();
   const { isAuthenticated, isProfileComplete, hasVoted, isLoading } = useUser();
   const { toast } = useToast();
@@ -36,7 +35,6 @@ const Login = () => {
   }, [isAuthenticated, isProfileComplete, hasVoted, isLoading, navigate]);
 
   // --- MÓDULO 2: AUTH GOOGLE (OAUTH2) ---
-  // Login em um clique, principal método de entrada
   const handleOAuth = async (provider: "google") => {
     setLoadingProvider(provider);
     const { error } = await supabase.auth.signInWithOAuth({
@@ -50,40 +48,39 @@ const Login = () => {
     }
   };
 
-  // --- MÓDULO 3: AUTH EMAIL (MAGIC LINK) ---
-  // Envia um link clicável para o e-mail do usuário (sem código, sem senha)
+  // --- MÓDULO 3: AUTH EMAIL (EDGE FUNCTION + RESEND) ---
+  // Bypass total do rate limit do Supabase usando nossa própria função.
   const handleSendLink = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email.trim()) return;
 
     setLoadingProvider("email");
 
-    const { error } = await supabase.auth.signInWithOtp({
-      email: email.trim().toLowerCase(),
-      options: {
-        shouldCreateUser: true,
-        emailRedirectTo: `${window.location.origin}/login`,
-      },
-    });
-
-    if (error) {
-      toast({
-        variant: "destructive",
-        title: "Erro ao enviar email",
-        description: error.message,
+    try {
+      // Chamada para a Edge Function profissional
+      const { data, error } = await supabase.functions.invoke('heart-club-auth', {
+        body: { email: email.trim().toLowerCase() },
       });
-    } else {
+
+      if (error) throw error;
+
       toast({
         title: "Email enviado! ✉️",
         description: "Clique no botão do email para entrar.",
       });
+    } catch (error: any) {
+      console.error("Erro no disparo:", error);
+      toast({
+        variant: "destructive",
+        title: "Erro ao enviar email",
+        description: error.message || "Tente novamente em instantes.",
+      });
+    } finally {
+      setLoadingProvider(null);
     }
-
-    setLoadingProvider(null);
   };
 
   // --- MÓDULO 4: INTERFACE ---
-  // Interface simples, direta e sem etapas adicionais
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -147,7 +144,7 @@ const Login = () => {
           </div>
         </div>
 
-        {/* EMAIL MAGIC LINK */}
+        {/* EMAIL MAGIC LINK - AGORA BLINDADO */}
         <form onSubmit={handleSendLink} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
@@ -185,12 +182,3 @@ const Login = () => {
 };
 
 export default Login;
-
-/**
- * REGISTRO DE EXECUÇÃO E RECOMENDAÇÕES:
- * - Remoção completa do fluxo OTP (código de 6 dígitos).
- * - Implementação de Magic Link via email (login por clique).
- * - Manutenção do Google OAuth como método principal.
- * - Redução de erros, fricção e problemas de rate limit.
- * - Fluxo otimizado para escala e melhor experiência do usuário.
- */
