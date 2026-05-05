@@ -2,7 +2,7 @@
  * Caminho: src/pages/Login.tsx
  * Contexto: Interface de Autenticação Unificada (Google OAuth + Edge Function Resend)
  * Projeto: HEART CLUB GLOBAL
- * Objetivo: Eliminar o erro de "email rate limit exceeded" usando o canal profissional do Resend.
+ * Objetivo: Eliminar erro de request na Edge Function usando fetch direto.
  */
 
 import { useState, useEffect } from "react";
@@ -48,8 +48,8 @@ const Login = () => {
     }
   };
 
-  // --- MÓDULO 3: AUTH EMAIL (EDGE FUNCTION + RESEND) ---
-  // Bypass total do rate limit do Supabase usando nossa própria função.
+  // --- MÓDULO 3: AUTH EMAIL (FETCH DIRETO PARA EDGE FUNCTION) ---
+  // Substituindo invoke por fetch para garantir compatibilidade total.
   const handleSendLink = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email.trim()) return;
@@ -57,12 +57,19 @@ const Login = () => {
     setLoadingProvider("email");
 
     try {
-      // Chamada para a Edge Function profissional
-      const { data, error } = await supabase.functions.invoke('heart-club-auth', {
-        body: { email: email.trim().toLowerCase() },
+      // Chamada direta para a URL da sua Edge Function no Supabase
+      const response = await fetch('https://tmttlchkqjtbusfdwyrx.supabase.co/functions/v1/heart-club-auth', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ email: email.trim().toLowerCase() }),
       });
 
-      if (error) throw error;
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Erro ao processar login");
+      }
 
       toast({
         title: "Email enviado! ✉️",
@@ -144,7 +151,7 @@ const Login = () => {
           </div>
         </div>
 
-        {/* EMAIL MAGIC LINK - AGORA BLINDADO */}
+        {/* EMAIL MAGIC LINK */}
         <form onSubmit={handleSendLink} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
