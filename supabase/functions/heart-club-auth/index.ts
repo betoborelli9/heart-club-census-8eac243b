@@ -1,9 +1,8 @@
 /**
  * PROJETO: Heart Club
  * ARQUIVO: supabase/functions/heart-club-auth/index.ts
- * DESCRIÇÃO: Central de autenticação. Ajustado destino do link para /verify.
- * STATUS: Produção - Link de redirecionamento corrigido.
- * AUTOR: Especialista Senior (AI) para Beto Borelli
+ * DESCRIÇÃO: Disparo de e-mail com Design Premium (Dark Mode).
+ * STATUS: Produção - Visual Atualizado
  */
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
@@ -35,58 +34,67 @@ Deno.serve(async (req) => {
 
     if (dbError) throw new Error(`Erro Banco: ${dbError.message}`)
 
-  // ==========================================
-// MÓDULO 3: DISPARO PROFISSIONAL ESTILIZADO (RESEND)
-// ==========================================
-const emailRes = await fetch('https://api.resend.com/emails', {
-  method: 'POST',
-  headers: {
-    'Content-Type': 'application/json',
-    'Authorization': `Bearer ${RESEND_API_KEY}`
-  },
-  body: JSON.stringify({
-    from: 'Heart Club <admin@heartclubapp.com>',
-    to: [email],
-    subject: '⚽ Seu acesso ao Global Fan Census - Heart Club',
-    html: `
-      <div style="background-color: #000000; padding: 40px 20px; font-family: sans-serif; text-align: center; color: #ffffff;">
-        <div style="max-width: 500px; margin: 0 auto; background-color: #121212; border-radius: 16px; padding: 32px; border: 1px solid #333;">
-          
-          <h1 style="color: #ff5722; font-size: 24px; margin-bottom: 16px; font-weight: bold;">
-            Global Fan Census - Heart Club
-          </h1>
-          
-          <p style="font-size: 18px; line-height: 1.5; color: #efefef; margin-bottom: 24px;">
-            Vote no seu clube do coração e em até 4 clubes de simpatia.
-          </p>
-          
-          <div style="margin: 40px 0;">
-            <a href="https://www.heartclubapp.com/verify?token=${token}" 
-               style="background: linear-gradient(90deg, #ff5722 0%, #ff7043 100%); 
-                      color: #ffffff; 
-                      padding: 16px 40px; 
-                      text-decoration: none; 
-                      border-radius: 50px; 
-                      font-weight: bold; 
-                      font-size: 18px;
-                      box-shadow: 0 4px 15px rgba(255, 87, 34, 0.4);
-                      display: inline-block;">
-               ENTRAR NO HEART CLUB
-            </a>
+    // --- DISPARO COM DESIGN PREMIUM ---
+    const emailRes = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${RESEND_API_KEY}`
+      },
+      body: JSON.stringify({
+        from: 'Heart Club <admin@heartclubapp.com>',
+        to: [email],
+        subject: '⚽ Seu acesso ao Global Fan Census - Heart Club',
+        html: `
+          <div style="background-color: #000000; padding: 40px 10px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #ffffff;">
+            <div style="max-width: 480px; margin: 0 auto; background-color: #121212; border-radius: 20px; padding: 40px; border: 1px solid #222; text-align: center;">
+              
+              <h1 style="color: #ff5722; font-size: 26px; margin-bottom: 10px; font-weight: 800; letter-spacing: -0.5px;">
+                HEART CLUB
+              </h1>
+              
+              <p style="font-size: 16px; line-height: 1.5; color: #a1a1aa; margin-bottom: 30px;">
+                O maior censo de torcidas do mundo convida você para registrar sua paixão.
+              </p>
+              
+              <div style="margin: 40px 0;">
+                <a href="https://www.heartclubapp.com/verify?token=${token}" 
+                   style="background: #ff5722; 
+                          color: #ffffff; 
+                          padding: 18px 35px; 
+                          text-decoration: none; 
+                          border-radius: 12px; 
+                          font-weight: bold; 
+                          font-size: 16px;
+                          display: inline-block;">
+                   ENTRAR NO HEART CLUB
+                </a>
+              </div>
+              
+              <p style="font-size: 13px; color: #52525b; line-height: 1.6; margin-top: 40px;">
+                Vote no seu clube do coração e em até 4 clubes de simpatia. Ajude a mapear a maior base de dados de torcedores do planeta.
+              </p>
+              
+              <div style="margin-top: 30px; border-top: 1px solid #222; padding-top: 20px;">
+                <p style="font-size: 11px; color: #3f3f46;">
+                  Este link expira em 15 minutos e é de uso único.
+                </p>
+              </div>
+            </div>
           </div>
-          
-          <p style="font-size: 14px; color: #888; line-height: 1.6; margin-top: 32px;">
-            O Heart Club é uma plataforma dedicada a torcedores de futebol de todo o mundo para registrar a paixão clubística em um mapa interativo e dinâmico.
-          </p>
-          
-          <hr style="border: 0; border-top: 1px solid #333; margin: 30px 0;">
-          
-          <p style="font-size: 11px; color: #666;">
-            Este link é exclusivo e expira em 15 minutos.<br>
-            Se você não solicitou este acesso, ignore este e-mail.
-          </p>
-        </div>
-      </div>
-    `
-  })
+        `
+      })
+    })
+
+    return new Response(JSON.stringify({ success: true }), {
+      status: 200,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    })
+
+  } catch (err) {
+    return new Response(JSON.stringify({ error: err.message }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    })
+  }
 })
