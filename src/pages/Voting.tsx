@@ -5,7 +5,7 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { Heart, Loader2, X, Search, Sparkles, ShieldCheck, PlusCircle } from "lucide-react";
+import { Heart, Loader2, X, Search, Sparkles, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -17,7 +17,7 @@ import { ClubLogo } from "@/components/ClubLogo";
 import logo from "@/assets/logo.png";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import FingerprintJS from "@fingerprintjs/fingerprintjs";
-import { lookupCep, formatCep, captureGpsAudit } from "@/lib/address";
+import { captureGpsAudit } from "@/lib/address";
 import { detectDeviceModel } from "@/lib/device-detect";
 
 /* ═══════════════════════════════════════════════════════════
@@ -51,28 +51,6 @@ const Voting = () => {
   const [showConfirm, setShowConfirm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [fingerprint, setFingerprint] = useState<string | null>(null);
-
-  // Endereço de Identidade (público, alimenta o mapa coroplético)
-  const [cep, setCep] = useState("");
-  const [bairro, setBairro] = useState("");
-  const [cidadeAddr, setCidadeAddr] = useState("");
-  const [estadoAddr, setEstadoAddr] = useState("");
-  const [numero, setNumero] = useState("");
-  const [complemento, setComplemento] = useState("");
-  const [cepLoading, setCepLoading] = useState(false);
-  const [cepError, setCepError] = useState<string | null>(null);
-
-  // Se o usuário JÁ tem CEP salvo no profile, não pedimos de novo (anti-redundância)
-  const profileCep = ((profile as any)?.cep || "").toString();
-  const hasCepInProfile = profileCep.replace(/\D/g, "").length === 8;
-
-  // Pré-preenche o CEP a partir do profile (apenas leitura, não exibido se já existe)
-  useEffect(() => {
-    if (hasCepInProfile && !cep) {
-      setCep(formatCep(profileCep));
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hasCepInProfile, profileCep]);
 
   // Refs para controle de concorrência de busca (Race Conditions)
   const heartReqId = useRef(0);
