@@ -23,3 +23,9 @@ verify_jwt = true
 
 [functions.batch-sync-br-capitals]
 verify_jwt = false
+
+[functions.verify-auth-token]
+verify_jwt = false
+
+[functions.heart-club-auth]
+verify_jwt = false

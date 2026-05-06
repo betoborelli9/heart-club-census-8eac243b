@@ -22,6 +22,7 @@ const Verify = () => {
   useEffect(() => {
     const validateToken = async () => {
       const token = searchParams.get("token");
+      const redirect = searchParams.get("redirect") || "/voting";
 
       if (!token) {
         toast.error("Token de acesso ausente.");
@@ -29,29 +30,21 @@ const Verify = () => {
         return;
       }
 
-      // Consulta na tabela de custódia criada no Passo 1
-      const { data, error } = await supabase
-        .from("auth_tokens")
-        .select("*")
-        .eq("token", token)
-        .eq("used", false)
-        .gt("expires_at", new Date().toISOString())
-        .single();
+      // Validação via Edge Function (service role) — evita bloqueio de RLS
+      const { data, error } = await supabase.functions.invoke("verify-auth-token", {
+        body: { token },
+      });
 
-      if (error || !data) {
-        toast.error("Link inválido ou expirado.");
+      if (error || !data?.valid) {
+        const reason = data?.error;
+        if (reason === "already_used") toast.error("Este link já foi utilizado.");
+        else if (reason === "expired") toast.error("Link expirado. Solicite um novo.");
+        else toast.error("Link inválido ou expirado.");
         navigate("/login");
         return;
       }
 
-      // Invalidação do token após o uso (Segurança)
-      await supabase
-        .from("auth_tokens")
-        .update({ used: true })
-        .eq("id", data.id);
-
       toast.success("Acesso autorizado! Bem-vindo ao Heart Club.");
-      const redirect = searchParams.get("redirect") || "/voting";
       navigate(redirect);
     };
 
