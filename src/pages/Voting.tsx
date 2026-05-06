@@ -440,6 +440,19 @@ const Voting = () => {
 
           {/* ENDEREÇO DE IDENTIDADE — alimenta o mapa coroplético */}
           <div className="space-y-3 mt-2 text-left">
+            {/* AVISO DE PRIVACIDADE — reforço institucional acima dos campos de endereço */}
+            <div className="flex items-start gap-2.5 rounded-md border border-orange-500/30 bg-orange-500/10 p-3">
+              <ShieldCheck className="w-4 h-4 mt-0.5 shrink-0 text-orange-500" />
+              <div className="space-y-1">
+                <p className="text-[11px] font-black uppercase tracking-tight leading-tight text-orange-500">
+                  Seu endereço nunca será divulgado
+                </p>
+                <p className="text-[10px] italic leading-relaxed opacity-80">
+                  O seu CEP nos ajuda a mapear a força da torcida na sua região para o Mapa de Calor Global do Heart Club. Sua privacidade é garantida.
+                </p>
+              </div>
+            </div>
+
             <p className="text-[11px] font-black italic uppercase opacity-70">
               {hasCepInProfile
                 ? "Confirme seu Bairro → Vote"
