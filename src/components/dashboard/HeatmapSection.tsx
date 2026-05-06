@@ -331,6 +331,13 @@ const HeatmapSection = () => {
           </div>
         </CardContent>
       </Card>
+
+      <AddressModal
+        open={addressModalOpen}
+        onOpenChange={setAddressModalOpen}
+        clubName={userClubName}
+        onSuccess={refreshAfterSave}
+      />
     </motion.div>
   );
 };
