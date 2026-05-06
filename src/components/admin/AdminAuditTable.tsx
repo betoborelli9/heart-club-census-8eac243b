@@ -1,10 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, Fragment } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Trash2, AlertTriangle, Shield, RefreshCw, Check } from "lucide-react";
+import { Loader2, Trash2, AlertTriangle, Shield, RefreshCw, Check, Heart, ChevronDown, ChevronUp } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface VoteRow {
@@ -33,6 +33,9 @@ const AdminAuditTable = () => {
   const [cleaning, setCleaning] = useState(false);
   const [actingId, setActingId] = useState<string | null>(null);
   const [approvedIds, setApprovedIds] = useState<Set<string>>(new Set());
+  const [openSympathyId, setOpenSympathyId] = useState<string | null>(null);
+  const [sympathyCache, setSympathyCache] = useState<Record<string, string[]>>({});
+  const [loadingSympathyId, setLoadingSympathyId] = useState<string | null>(null);
   const { toast } = useToast();
 
   // Group by fingerprint to detect duplicates
@@ -92,6 +95,27 @@ const AdminAuditTable = () => {
       toast({ title: "Voto aprovado", description: "Passa a contar normalmente no ranking." });
     }
     setActingId(null);
+  };
+
+  const handleToggleSympathy = async (votoId: string) => {
+    if (openSympathyId === votoId) {
+      setOpenSympathyId(null);
+      return;
+    }
+    if (!sympathyCache[votoId]) {
+      setLoadingSympathyId(votoId);
+      const { data, error } = await supabase.rpc("admin_get_vote_sympathies", { p_voto_id: votoId });
+      setLoadingSympathyId(null);
+      if (error) {
+        toast({ title: "Erro ao carregar simpatias", description: error.message, variant: "destructive" });
+        return;
+      }
+      const obj = (data || {}) as Record<string, string | null>;
+      const list = [obj.sympathy_1, obj.sympathy_2, obj.sympathy_3, obj.sympathy_4]
+        .filter((s): s is string => !!s && s.trim().length > 0);
+      setSympathyCache((prev) => ({ ...prev, [votoId]: list }));
+    }
+    setOpenSympathyId(votoId);
   };
 
   const handleDeleteOne = async (votoId: string) => {
@@ -199,8 +223,12 @@ const AdminAuditTable = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {votes.map((v) => (
-                  <TableRow key={v.voto_id} className={`border-border ${getRowClass(v)}`}>
+                {votes.map((v) => {
+                  const isOpen = openSympathyId === v.voto_id;
+                  const sympathies = sympathyCache[v.voto_id];
+                  return (
+                  <Fragment key={v.voto_id}>
+                  <TableRow className={`border-border ${getRowClass(v)}`}>
                     <TableCell>
                       {approvedIds.has(v.voto_id) ? (
                         <Badge variant="outline" className="border-green-600 text-green-500 text-[10px]">
@@ -235,6 +263,23 @@ const AdminAuditTable = () => {
                         <Button
                           size="sm"
                           variant="outline"
+                          className="h-8 px-2 border-primary/60 text-primary hover:bg-primary/10"
+                          disabled={loadingSympathyId === v.voto_id}
+                          onClick={() => handleToggleSympathy(v.voto_id)}
+                          title="Ver clubes de simpatia"
+                        >
+                          {loadingSympathyId === v.voto_id ? (
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          ) : (
+                            <>
+                              <Heart className="w-3.5 h-3.5 mr-1" />
+                              {isOpen ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                            </>
+                          )}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
                           className="h-8 px-2 border-green-600 text-green-500 hover:bg-green-500/10 hover:text-green-400"
                           disabled={actingId === v.voto_id || approvedIds.has(v.voto_id)}
                           onClick={() => handleApprove(v.voto_id)}
@@ -259,7 +304,28 @@ const AdminAuditTable = () => {
                       </div>
                     </TableCell>
                   </TableRow>
-                ))}
+                  {isOpen && (
+                    <TableRow key={v.voto_id + "-sym"} className="border-border bg-primary/5">
+                      <TableCell colSpan={8} className="py-3">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <Heart className="w-4 h-4 text-primary" />
+                          <span className="text-xs font-bold text-foreground italic">Simpatias de {v.user_nome || "torcedor"}:</span>
+                          {sympathies && sympathies.length > 0 ? (
+                            sympathies.map((club, i) => (
+                              <Badge key={i} variant="outline" className="border-primary/40 text-foreground">
+                                {i + 1}º {club}
+                              </Badge>
+                            ))
+                          ) : (
+                            <span className="text-xs text-muted-foreground italic">Nenhum clube de simpatia registrado.</span>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  )}
+                  </Fragment>
+                  );
+                })}
                 {votes.length === 0 && (
                   <TableRow>
                     <TableCell colSpan={8} className="text-center py-10 text-muted-foreground">
