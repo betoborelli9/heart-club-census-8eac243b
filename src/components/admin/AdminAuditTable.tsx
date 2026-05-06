@@ -33,6 +33,9 @@ const AdminAuditTable = () => {
   const [cleaning, setCleaning] = useState(false);
   const [actingId, setActingId] = useState<string | null>(null);
   const [approvedIds, setApprovedIds] = useState<Set<string>>(new Set());
+  const [openSympathyId, setOpenSympathyId] = useState<string | null>(null);
+  const [sympathyCache, setSympathyCache] = useState<Record<string, string[]>>({});
+  const [loadingSympathyId, setLoadingSympathyId] = useState<string | null>(null);
   const { toast } = useToast();
 
   // Group by fingerprint to detect duplicates
