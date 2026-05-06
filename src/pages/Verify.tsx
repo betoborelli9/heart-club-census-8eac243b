@@ -44,6 +44,24 @@ const Verify = () => {
         return;
       }
 
+      // Estabelecer sessão real no Supabase Auth via verifyOtp (token_hash do magic link admin)
+      if (data.token_hash) {
+        const { error: otpErr } = await supabase.auth.verifyOtp({
+          token_hash: data.token_hash,
+          type: "magiclink",
+        });
+        if (otpErr) {
+          console.error("[VERIFY] verifyOtp falhou", otpErr);
+          toast.error("Falha ao iniciar sessão. Tente novamente.");
+          navigate("/login");
+          return;
+        }
+      } else {
+        toast.error("Sessão não pôde ser criada.");
+        navigate("/login");
+        return;
+      }
+
       toast.success("Acesso autorizado! Bem-vindo ao Heart Club.");
       navigate(redirect);
     };
