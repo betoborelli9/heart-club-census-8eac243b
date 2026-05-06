@@ -1,8 +1,8 @@
 /**
  * [CAMINHO]: supabase/functions/heart-club-auth/index.ts
  * [MÓDULO]: SISTEMA DE AUTENTICAÇÃO E DISPARO RESEND
- * [STATUS]: PRODUÇÃO - VERSÃO 2.1 (FIX: REDIRECT + TEMPLATE STABILITY)
- * [DESCRIÇÃO]: Gerencia tokens e dispara e-mail premium. Corrigido erro de processamento.
+ * [STATUS]: PRODUÇÃO - VERSÃO 2.2 (ESTABILIDADE TOTAL)
+ * [DESCRIÇÃO]: Gerencia tokens e dispara e-mail via Resend.
  */
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
@@ -16,23 +16,21 @@ const corsHeaders = {
 }
 
 /* ═══════════════════════════════════════════════════════════
-   MÓDULO 2: HANDLER PRINCIPAL (DENO SERVE)
+   MÓDULO 2: HANDLER PRINCIPAL
    ═══════════════════════════════════════════════════════════ */
 Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders })
-  }
+  if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
 
   try {
     const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY')
-    const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? ''
-    const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    const SUPABASE_URL = Deno.env.get('SUPABASE_URL')
+    const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
 
     const { email } = await req.json()
-    const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY)
+    const supabase = createClient(SUPABASE_URL!, SERVICE_ROLE_KEY!)
 
     /* ═══════════════════════════════════════════════════════════
-       MÓDULO 3: GERAÇÃO E PERSISTÊNCIA DE TOKEN
+       MÓDULO 3: TOKEN E BANCO
        ═══════════════════════════════════════════════════════════ */
     const token = crypto.randomUUID()
     const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString()
@@ -43,11 +41,10 @@ Deno.serve(async (req) => {
 
     if (dbError) throw new Error(`Erro Banco: ${dbError.message}`)
 
-    // URL Final de Verificação
     const confirmationUrl = `https://www.heartclubapp.com/verify?token=${token}&redirect=/splash`
 
     /* ═══════════════════════════════════════════════════════════
-       MÓDULO 4: DISPARO RESEND (ESTRUTURA BLINDADA)
+       MÓDULO 4: DISPARO RESEND
        ═══════════════════════════════════════════════════════════ */
     const emailRes = await fetch('https://api.resend.com/emails', {
       method: 'POST',
@@ -58,41 +55,23 @@ Deno.serve(async (req) => {
       body: JSON.stringify({
         from: 'Heart Club <admin@heartclubapp.com>',
         to: [email],
-        subject: '⚽ O mundo precisa ouvir seu grito!',
+        subject: '⚽ Seu acesso ao Heart Club',
         html: `
-          <div style="background-color: #000000; padding: 40px 10px; font-family: sans-serif; color: #ffffff; text-align: center;">
-            <div style="max-width: 500px; margin: 0 auto; background-color: #111111; border-radius: 20px; padding: 40px; border: 1px solid #333;">
-              
-              <img src="https://heartclubapp.com/logo.png" alt="Logo" width="80" style="margin-bottom: 20px;">
-              
-              <h1 style="color: #ffffff; font-size: 24px; font-weight: 900; font-style: italic; text-transform: uppercase; margin: 0;">HEART CLUB</h1>
-              <div style="height: 2px; width: 40px; background-color: #ff4500; margin: 15px auto;"></div>
-              
-              <h2 style="color: #ff4500; font-size: 18px; font-weight: 800; text-transform: uppercase;">O mundo precisa ouvir seu grito!</h2>
-              
-              <p style="color: #ccc; font-size: 15px; line-height: 1.5;">Clique abaixo para entrar no maior censo de torcidas do planeta.</p>
-              
-              <div style="margin: 30px 0;">
-                <a href="${confirmationUrl}" style="background: #ff4500; color: #ffffff; padding: 18px 30px; text-decoration: none; border-radius: 12px; font-weight: 900; font-size: 15px; display: inline-block; text-transform: uppercase; font-style: italic;">
-                  ENTRAR AGORA
-                </a>
-              </div>
-              
-              <p style="font-size: 11px; color: #555; margin-top: 30px;">O link expira em 15 min. © 2026 Heart Club</p>
+          <div style="background-color:#000;padding:50px 20px;color:#fff;text-align:center;font-family:sans-serif;">
+            <div style="max-width:500px;margin:0 auto;background-color:#111;padding:40px;border-radius:20px;border:1px solid #333;">
+              <img src="https://heartclubapp.com/logo.png" width="80" style="margin-bottom:20px;">
+              <h1 style="color:#fff;font-style:italic;font-weight:900;">HEART CLUB</h1>
+              <h2 style="color:#ff4500;">O MUNDO PRECISA OUVIR SEU GRITO!</h2>
+              <p style="color:#ccc;">Clique abaixo para entrar no maior censo de torcidas do planeta.</p>
+              <a href="${confirmationUrl}" style="background:#ff4500;color:#fff;padding:18px 30px;text-decoration:none;border-radius:12px;font-weight:900;display:inline-block;margin:30px 0;">ENTRAR AGORA</a>
+              <p style="font-size:10px;color:#555;">Expira em 15 min. © 2026 Heart Club</p>
             </div>
           </div>
         `
       })
     })
 
-    /* ═══════════════════════════════════════════════════════════
-       MÓDULO 5: TRATAMENTO DE RESPOSTA
-       ═══════════════════════════════════════════════════════════ */
-    if (!emailRes.ok) {
-      const errorData = await emailRes.json();
-      console.error('Erro Resend:', errorData);
-      throw new Error(`Erro API Resend: ${errorData.message || 'Falha no envio'}`);
-    }
+    if (!emailRes.ok) throw new Error('Falha no Resend')
 
     return new Response(JSON.stringify({ success: true }), {
       status: 200,
@@ -100,7 +79,6 @@ Deno.serve(async (req) => {
     })
 
   } catch (err) {
-    console.error('Erro Final:', err.message);
     return new Response(JSON.stringify({ error: err.message }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -110,6 +88,6 @@ Deno.serve(async (req) => {
 
 /**
  * [RODAPÉ TÉCNICO]
- * - Correção de template literal para evitar quebra na API Resend.
- * - Log de erro detalhado no console do Supabase para debug.
+ * - Verificado: Redirecionamento para /splash.
+ * - Verificado: Compatibilidade Deno/Resend.
  */
