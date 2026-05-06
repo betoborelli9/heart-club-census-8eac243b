@@ -1,6 +1,6 @@
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Globe, MapPin, Users, ChevronRight } from "lucide-react";
+import { Globe, MapPin, Users, ChevronRight, Lock } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ComposableMap, Geographies, Geography, ZoomableGroup } from "react-simple-maps";
@@ -8,6 +8,7 @@ import { clubMapData } from "@/data/mockDashboard";
 import { CLUBS_DATA } from "@/clubes-data";
 import { useUser } from "@/contexts/UserContext";
 import { supabase } from "@/integrations/supabase/client";
+import AddressModal from "@/components/AddressModal";
 
 const WORLD_GEO_URL = "https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json";
 const BRAZIL_STATES_GEO_URL = "https://raw.githubusercontent.com/codeforamerica/click_that_hood/master/public/data/brazil-states.geojson";
@@ -39,7 +40,7 @@ function formatVotes(n: number): string {
 }
 
 const HeatmapSection = () => {
-  const { user } = useUser();
+  const { user, profile } = useUser();
   const [selectedClubId, setSelectedClubId] = useState("palmeiras");
   const [drillLevel, setDrillLevel] = useState<DrillLevel>("country");
   const [activeStateName, setActiveStateName] = useState<string | null>(null);
@@ -47,19 +48,48 @@ const HeatmapSection = () => {
   const [zoom, setZoom] = useState(1.15);
   const [tooltip, setTooltip] = useState<{ name: string; votes: number } | null>(null);
 
+  // Bloqueio do mapa: usuário precisa ter bairro registrado para interagir
+  const [userClubName, setUserClubName] = useState<string | null>(null);
+  const [hasAddress, setHasAddress] = useState<boolean>(true); // assume true até verificar
+  const [addressModalOpen, setAddressModalOpen] = useState(false);
+
   useEffect(() => {
     const loadUserVote = async () => {
       if (!user) return;
-      const { data } = await supabase.from("votos").select("clube_nome").eq("user_id", user.id).maybeSingle();
-      if (!data?.clube_nome) return;
+      const { data } = await supabase
+        .from("votos")
+        .select("clube_nome, bairro")
+        .eq("user_id", user.id)
+        .eq("is_original_vote", true)
+        .maybeSingle();
+      if (!data?.clube_nome) {
+        setHasAddress(false);
+        return;
+      }
+      setUserClubName(data.clube_nome);
       const club = CLUBS_DATA.find((c) => c.nome === data.clube_nome);
       if (club) {
         const slug = club.nome.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
         setSelectedClubId(slug);
       }
+      const profileCep = (profile as any)?.cep;
+      setHasAddress(!!(data.bairro && data.bairro.trim()) || !!profileCep);
     };
     loadUserVote();
-  }, [user]);
+  }, [user, profile]);
+
+  const refreshAfterSave = useCallback(() => {
+    setHasAddress(true);
+  }, []);
+
+  const requireAddress = useCallback(() => {
+    if (!hasAddress) {
+      setAddressModalOpen(true);
+      return true;
+    }
+    return false;
+  }, [hasAddress]);
+
 
   const mapData = clubMapData[selectedClubId] || clubMapData.palmeiras;
 
