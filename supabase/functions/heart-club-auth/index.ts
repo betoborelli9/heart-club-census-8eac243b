@@ -1,8 +1,8 @@
 /**
  * [CAMINHO]: supabase/functions/heart-club-auth/index.ts
  * [MÓDULO]: SISTEMA DE AUTENTICAÇÃO E DISPARO RESEND
- * [STATUS]: PRODUÇÃO - VERSÃO 2.0 (PREMIUM DESIGN + SPLASH REDIRECT)
- * [DESCRIÇÃO]: Gerencia tokens de acesso e dispara e-mails via Resend com branding Heart Club.
+ * [STATUS]: PRODUÇÃO - VERSÃO 2.1 (FIX: REDIRECT + TEMPLATE STABILITY)
+ * [DESCRIÇÃO]: Gerencia tokens e dispara e-mail premium. Corrigido erro de processamento.
  */
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
@@ -19,7 +19,6 @@ const corsHeaders = {
    MÓDULO 2: HANDLER PRINCIPAL (DENO SERVE)
    ═══════════════════════════════════════════════════════════ */
 Deno.serve(async (req) => {
-  // Tratamento de Preflight CORS
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
@@ -44,8 +43,11 @@ Deno.serve(async (req) => {
 
     if (dbError) throw new Error(`Erro Banco: ${dbError.message}`)
 
+    // URL Final de Verificação
+    const confirmationUrl = `https://www.heartclubapp.com/verify?token=${token}&redirect=/splash`
+
     /* ═══════════════════════════════════════════════════════════
-       MÓDULO 4: TEMPLATE DE E-MAIL PREMIUM (RESEND)
+       MÓDULO 4: DISPARO RESEND (ESTRUTURA BLINDADA)
        ═══════════════════════════════════════════════════════════ */
     const emailRes = await fetch('https://api.resend.com/emails', {
       method: 'POST',
@@ -56,55 +58,27 @@ Deno.serve(async (req) => {
       body: JSON.stringify({
         from: 'Heart Club <admin@heartclubapp.com>',
         to: [email],
-        subject: '⚽ O mundo precisa ouvir seu grito! - Heart Club',
+        subject: '⚽ O mundo precisa ouvir seu grito!',
         html: `
-          <div style="background-color: #000000; padding: 50px 10px; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #ffffff;">
-            <div style="max-width: 550px; margin: 0 auto; background-color: #111111; border-radius: 24px; padding: 40px; border: 1px solid #333333; text-align: center;">
+          <div style="background-color: #000000; padding: 40px 10px; font-family: sans-serif; color: #ffffff; text-align: center;">
+            <div style="max-width: 500px; margin: 0 auto; background-color: #111111; border-radius: 20px; padding: 40px; border: 1px solid #333;">
               
-              <div style="margin-bottom: 25px;">
-                <img src="https://heartclubapp.com/logo.png" alt="Heart Club" width="90" style="display: block; margin: 0 auto;">
-              </div>
-
-              <h1 style="color: #ffffff; font-size: 28px; margin-bottom: 10px; font-weight: 900; font-style: italic; text-transform: uppercase; letter-spacing: -1px;">
-                HEART CLUB
-              </h1>
+              <img src="https://heartclubapp.com/logo.png" alt="Logo" width="80" style="margin-bottom: 20px;">
               
-              <div style="height: 2px; width: 60px; background-color: #ff4500; margin: 0 auto 30px auto;"></div>
-
-              <h2 style="color: #ff4500; font-size: 20px; font-weight: 800; text-transform: uppercase; margin-bottom: 20px; letter-spacing: 1px;">
-                O MUNDO PRECISA OUVIR SEU GRITO!
-              </h2>
-
-              <p style="font-size: 16px; line-height: 1.6; color: #cccccc; margin-bottom: 35px;">
-                Você solicitou um acesso rápido ao maior censo de torcidas do planeta. Clique abaixo para entrar e marcar seu território no mapa.
-              </p>
+              <h1 style="color: #ffffff; font-size: 24px; font-weight: 900; font-style: italic; text-transform: uppercase; margin: 0;">HEART CLUB</h1>
+              <div style="height: 2px; width: 40px; background-color: #ff4500; margin: 15px auto;"></div>
               
-              <div style="margin: 40px 0;">
-                <a href="https://www.heartclubapp.com/verify?token=${token}&redirect=/splash" 
-                   style="background: #ff4500; 
-                          color: #ffffff; 
-                          padding: 20px 45px; 
-                          text-decoration: none; 
-                          border-radius: 14px; 
-                          font-weight: 900; 
-                          font-size: 16px;
-                          display: inline-block;
-                          text-transform: uppercase;
-                          font-style: italic;
-                          box-shadow: 0 4px 20px rgba(255, 69, 0, 0.4);">
-                    ENTRAR AGORA
+              <h2 style="color: #ff4500; font-size: 18px; font-weight: 800; text-transform: uppercase;">O mundo precisa ouvir seu grito!</h2>
+              
+              <p style="color: #ccc; font-size: 15px; line-height: 1.5;">Clique abaixo para entrar no maior censo de torcidas do planeta.</p>
+              
+              <div style="margin: 30px 0;">
+                <a href="${confirmationUrl}" style="background: #ff4500; color: #ffffff; padding: 18px 30px; text-decoration: none; border-radius: 12px; font-weight: 900; font-size: 15px; display: inline-block; text-transform: uppercase; font-style: italic;">
+                  ENTRAR AGORA
                 </a>
               </div>
               
-              <p style="font-size: 12px; color: #555555; line-height: 1.6; margin-top: 40px; font-style: italic;">
-                Jure lealdade ao seu clube e ajude a mapear a maior base de dados de torcedores do planeta.
-              </p>
-              
-              <div style="margin-top: 30px; border-top: 1px solid #222222; padding-top: 25px;">
-                <p style="font-size: 10px; color: #444444; text-transform: uppercase; letter-spacing: 1px;">
-                  Este link expira em 15 min | © 2026 HEART CLUB
-                </p>
-              </div>
+              <p style="font-size: 11px; color: #555; margin-top: 30px;">O link expira em 15 min. © 2026 Heart Club</p>
             </div>
           </div>
         `
@@ -115,8 +89,9 @@ Deno.serve(async (req) => {
        MÓDULO 5: TRATAMENTO DE RESPOSTA
        ═══════════════════════════════════════════════════════════ */
     if (!emailRes.ok) {
-      const errorText = await emailRes.text();
-      throw new Error(`Erro Resend: ${errorText}`);
+      const errorData = await emailRes.json();
+      console.error('Erro Resend:', errorData);
+      throw new Error(`Erro API Resend: ${errorData.message || 'Falha no envio'}`);
     }
 
     return new Response(JSON.stringify({ success: true }), {
@@ -125,6 +100,7 @@ Deno.serve(async (req) => {
     })
 
   } catch (err) {
+    console.error('Erro Final:', err.message);
     return new Response(JSON.stringify({ error: err.message }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -134,7 +110,6 @@ Deno.serve(async (req) => {
 
 /**
  * [RODAPÉ TÉCNICO]
- * - Template Black & Orange injetado com logo oficial.
- * - Parâmetro 'redirect=/splash' adicionado à URL de verificação.
- * - Modularização por blocos de lógica garantida.
+ * - Correção de template literal para evitar quebra na API Resend.
+ * - Log de erro detalhado no console do Supabase para debug.
  */
