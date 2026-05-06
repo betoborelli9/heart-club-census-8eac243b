@@ -785,6 +785,7 @@ export type Database = {
           voto_id: string
         }[]
       }
+      admin_get_vote_sympathies: { Args: { p_voto_id: string }; Returns: Json }
       admin_get_votes_with_tracking: {
         Args: never
         Returns: {
