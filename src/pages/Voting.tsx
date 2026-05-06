@@ -434,12 +434,23 @@ const Voting = () => {
               CONFIRMAR VOTO?
             </DialogTitle>
           </DialogHeader>
-          <p className="text-sm italic opacity-70 text-center">
+          <p className="text-sm italic opacity-70 text-center mb-4">
             Você jura lealdade ao <strong className="text-primary">{heartClub?.name}</strong>?
           </p>
 
-          {/* ENDEREÇO DE IDENTIDADE — alimenta o mapa coroplético */}
-          <div className="space-y-3 mt-2 text-left">
+          {/* NOVO BLOCO DE DESTAQUE PARA PRIVACIDADE */}
+          <div className="bg-primary/10 border border-primary/30 rounded-xl p-4 mb-6 backdrop-blur-sm">
+            <div className="flex items-start gap-3">
+              <ShieldCheck className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+              <p className="text-[11px] leading-relaxed text-gray-300">
+                <strong className="text-primary block mb-1 uppercase tracking-wider">Seu endereço nunca será divulgado.</strong> 
+                O seu CEP nos ajuda a mapear a força da torcida na sua região para o 
+                <span className="text-primary font-bold"> Mapa de Calor Global</span> do Heart Club. Sua privacidade é garantida.
+              </p>
+            </div>
+          </div>
+
+          <div className="space-y-3 text-left">
             <p className="text-[11px] font-black italic uppercase opacity-70">
               {hasCepInProfile
                 ? "Confirme seu Bairro → Vote"
@@ -463,9 +474,6 @@ const Voting = () => {
                   )}
                 </div>
                 {cepError && <p className="text-[10px] text-destructive italic">{cepError}</p>}
-                <p className="text-[10px] italic opacity-60 leading-relaxed mt-1">
-                  O seu CEP nos ajuda a mapear a força da torcida na sua região para o Mapa de Calor Global do Heart Club. Sua privacidade é garantida.
-                </p>
               </div>
             )}
 
@@ -520,10 +528,6 @@ const Voting = () => {
                 />
               </div>
             </div>
-
-            <p className="text-[9px] italic opacity-40 leading-relaxed">
-              🔒 Seu endereço completo nunca é exibido publicamente. Apenas o bairro alimenta o mapa de calor.
-            </p>
           </div>
 
           <DialogFooter className="flex-col gap-2 mt-4">
