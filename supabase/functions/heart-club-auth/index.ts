@@ -58,7 +58,7 @@ Deno.serve(async (req) => {
               </p>
              
               <div style="margin: 40px 0;">
-                <a href="https://www.heartclubapp.com/splash?token=${token}"
+                <a href="https://www.heartclubapp.com/dashboard?token=${token}"
                    style="background: #ff5722;
                           color: #ffffff;
                           padding: 18px 35px;
