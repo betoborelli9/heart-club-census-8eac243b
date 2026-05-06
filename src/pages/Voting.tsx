@@ -368,111 +368,18 @@ const Voting = () => {
               CONFIRMAR VOTO?
             </DialogTitle>
           </DialogHeader>
-          <p className="text-sm italic opacity-70 text-center">
-            Você jura lealdade ao <strong className="text-primary">{heartClub?.name}</strong>?
+          <p className="text-base italic opacity-80 text-center px-2">
+            Você jura lealdade ao{" "}
+            <strong className="text-primary not-italic uppercase">{heartClub?.name}</strong>?
           </p>
 
-          {/* ENDEREÇO DE IDENTIDADE — alimenta o mapa coroplético */}
-          <div className="space-y-3 mt-2 text-left">
-            {/* AVISO DE PRIVACIDADE — reforço institucional acima dos campos de endereço */}
-            <div className="flex items-start gap-2.5 rounded-md border border-orange-500/30 bg-orange-500/10 p-3">
-              <ShieldCheck className="w-4 h-4 mt-0.5 shrink-0 text-orange-500" />
-              <div className="space-y-1">
-                <p className="text-[11px] font-black uppercase tracking-tight leading-tight text-orange-500">
-                  Seu endereço nunca será divulgado
-                </p>
-                <p className="text-[10px] italic leading-relaxed opacity-80">
-                  O seu CEP nos ajuda a mapear a força da torcida na sua região para o Mapa de Calor Global do Heart Club. Sua privacidade é garantida.
-                </p>
-              </div>
-            </div>
-
-            <p className="text-[11px] font-black italic uppercase opacity-70">
-              Digite seu CEP → Confirme seu Bairro → Vote
-            </p>
-
-            <div className="space-y-1">
-              <label className="text-[10px] font-black italic uppercase opacity-60">CEP</label>
-              <div className="relative">
-                <Input
-                  inputMode="numeric"
-                  placeholder="00000-000"
-                  value={cep}
-                  onChange={(e) => handleCepLookup(e.target.value)}
-                  className="h-11 font-black italic uppercase bg-card border-white/5"
-                  maxLength={9}
-                />
-                {cepLoading && (
-                  <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 animate-spin text-primary" />
-                )}
-              </div>
-              {cepError && <p className="text-[10px] text-destructive italic">{cepError}</p>}
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-[10px] font-black italic uppercase opacity-60">Bairro *</label>
-              <Input
-                placeholder="Seu bairro"
-                value={bairro}
-                onChange={(e) => setBairro(e.target.value)}
-                className="h-11 font-black italic uppercase bg-card border-white/5"
-                required
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-2">
-              <div className="space-y-1">
-                <label className="text-[10px] font-black italic uppercase opacity-60">Cidade</label>
-                <Input
-                  value={cidadeAddr}
-                  onChange={(e) => setCidadeAddr(e.target.value)}
-                  className="h-11 font-bold italic uppercase bg-card border-white/5"
-                />
-              </div>
-              <div className="space-y-1">
-                <label className="text-[10px] font-black italic uppercase opacity-60">UF</label>
-                <Input
-                  value={estadoAddr}
-                  onChange={(e) => setEstadoAddr(e.target.value.toUpperCase().slice(0, 2))}
-                  className="h-11 font-black italic uppercase bg-card border-white/5"
-                  maxLength={2}
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-2">
-              <div className="space-y-1">
-                <label className="text-[10px] font-black italic uppercase opacity-60">Número</label>
-                <Input
-                  inputMode="numeric"
-                  value={numero}
-                  onChange={(e) => setNumero(e.target.value)}
-                  className="h-11 font-bold italic uppercase bg-card border-white/5"
-                />
-              </div>
-              <div className="space-y-1">
-                <label className="text-[10px] font-black italic uppercase opacity-60">Complemento</label>
-                <Input
-                  placeholder="Apto / Bloco"
-                  value={complemento}
-                  onChange={(e) => setComplemento(e.target.value)}
-                  className="h-11 font-bold italic uppercase bg-card border-white/5"
-                />
-              </div>
-            </div>
-
-            <p className="text-[9px] italic opacity-40 leading-relaxed">
-              🔒 Seu endereço completo nunca é exibido publicamente. Apenas o bairro alimenta o mapa de calor.
-            </p>
-          </div>
-
-          <DialogFooter className="flex-col gap-2 mt-4">
+          <DialogFooter className="flex-col gap-2 mt-2">
             <Button
-              className="w-full btn-orange-gradient h-12 font-black italic"
+              className="w-full btn-orange-gradient h-14 font-black italic text-lg uppercase"
               onClick={handleConfirmVote}
-              disabled={submitting || !bairro.trim()}
+              disabled={submitting}
             >
-              {submitting ? "PROCESSANDO..." : "EU JURO!"}
+              {submitting ? <Loader2 className="animate-spin" /> : "SIM, EU JURO!"}
             </Button>
             <Button
               variant="ghost"
