@@ -227,8 +227,8 @@ const AdminAuditTable = () => {
                   const isOpen = openSympathyId === v.voto_id;
                   const sympathies = sympathyCache[v.voto_id];
                   return (
-                  <>
-                  <TableRow key={v.voto_id} className={`border-border ${getRowClass(v)}`}>
+                  <Fragment key={v.voto_id}>
+                  <TableRow className={`border-border ${getRowClass(v)}`}>
                     <TableCell>
                       {approvedIds.has(v.voto_id) ? (
                         <Badge variant="outline" className="border-green-600 text-green-500 text-[10px]">
