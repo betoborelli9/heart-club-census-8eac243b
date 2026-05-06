@@ -231,6 +231,7 @@ const HeatmapSection = () => {
                           stroke="hsl(var(--border))"
                           strokeWidth={0.5}
                           onClick={() => {
+                            if (requireAddress()) return;
                             if (drillLevel === "country") handleWorldClick(geo);
                             else if (drillLevel === "state") handleBrazilStateClick(geo);
                           }}
