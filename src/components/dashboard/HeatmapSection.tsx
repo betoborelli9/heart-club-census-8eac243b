@@ -271,6 +271,28 @@ const HeatmapSection = () => {
                 <span>100+</span>
               </div>
             </div>
+
+            {/* OVERLAY ELEGANTE — bloqueia o mapa enquanto o usuário não informa endereço */}
+            {!hasAddress && (
+              <button
+                type="button"
+                onClick={() => setAddressModalOpen(true)}
+                className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-3 bg-black/60 backdrop-blur-md cursor-pointer group"
+              >
+                <div className="w-14 h-14 rounded-full bg-orange-500/20 border border-orange-500/40 flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <Lock className="w-6 h-6 text-orange-500" />
+                </div>
+                <p className="text-sm font-black italic uppercase tracking-tighter text-white px-6 text-center">
+                  Desbloqueie seu território
+                </p>
+                <p className="text-[11px] italic text-white/70 px-8 text-center max-w-xs">
+                  Informe seu CEP para ver a força da torcida na sua região.
+                </p>
+                <span className="mt-1 text-[10px] font-black italic uppercase text-orange-500 tracking-widest">
+                  Toque para liberar →
+                </span>
+              </button>
+            )}
           </div>
 
           <div className="p-4">
