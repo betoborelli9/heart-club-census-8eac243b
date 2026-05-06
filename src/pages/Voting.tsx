@@ -1,7 +1,7 @@
 /**
  * [CAMINHO]: src/pages/Voting.tsx
- * [STATUS]: PRODUÇÃO - VERSÃO 16.0 (OPTIMIZED SEARCH + SEQUENTIAL SYNC)
- * [CONTEXTO]: Sistema de Votação - Integração de Busca Validada + Investigação IA
+ * [STATUS]: PRODUÇÃO - VERSÃO 16.2 (UI REFINEMENT + PRIVACY ALERT)
+ * [CONTEXTO]: Sistema de Votação - Restauração de Fluxo de CEP + Alerta de Privacidade
  */
 
 import { useState, useEffect, useCallback, useRef } from "react";
@@ -33,7 +33,6 @@ const Voting = () => {
   const { toast } = useToast();
 
   const IS_MASTER_ADMIN = user?.email === "betoborelli9@gmail.com";
-  // Modo TESTE: master abre /voting?test=1 — fluxo idêntico, mas NÃO grava votos.
   const TEST_MODE = IS_MASTER_ADMIN && searchParams.get("test") === "1";
 
   const [heartSearch, setHeartSearch] = useState("");
@@ -52,7 +51,6 @@ const Voting = () => {
   const [submitting, setSubmitting] = useState(false);
   const [fingerprint, setFingerprint] = useState<string | null>(null);
 
-  // Endereço de Identidade (público, alimenta o mapa coroplético)
   const [cep, setCep] = useState("");
   const [bairro, setBairro] = useState("");
   const [cidadeAddr, setCidadeAddr] = useState("");
@@ -62,19 +60,15 @@ const Voting = () => {
   const [cepLoading, setCepLoading] = useState(false);
   const [cepError, setCepError] = useState<string | null>(null);
 
-  // Se o usuário JÁ tem CEP salvo no profile, não pedimos de novo (anti-redundância)
   const profileCep = ((profile as any)?.cep || "").toString();
   const hasCepInProfile = profileCep.replace(/\D/g, "").length === 8;
 
-  // Pré-preenche o CEP a partir do profile (apenas leitura, não exibido se já existe)
   useEffect(() => {
     if (hasCepInProfile && !cep) {
       setCep(formatCep(profileCep));
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hasCepInProfile, profileCep]);
 
-  // Refs para controle de concorrência de busca (Race Conditions)
   const heartReqId = useRef(0);
   const sympathyReqId = useRef(0);
 
@@ -112,10 +106,7 @@ const Voting = () => {
       setterLoading(true);
 
       try {
-        // Usando a lógica que funcionou na DebugApi: chamada direta ou via helper atualizado
         const results = await searchClubsWithFallback(term);
-
-        // Só aplica o resultado se for a última requisição disparada
         if (currentId === reqRef.current) {
           setterResults(results);
           setterOpen(true);
@@ -135,7 +126,7 @@ const Voting = () => {
     const timer = setTimeout(
       () => performSearch(heartSearch, setHeartResults, setHeartOpen, setHeartLoading, heartReqId),
       300,
-    ); // Debounce de 300ms conforme DebugApi
+    );
     return () => clearTimeout(timer);
   }, [heartSearch, performSearch]);
 
@@ -187,7 +178,6 @@ const Voting = () => {
       if (TEST_MODE) {
         toast({ title: "Modo teste — voto não contabilizado 🧪" });
         navigate(`/testar-clube?club=${encodeURIComponent(heartClub.name)}`);
-        // Enriquecimento em background (não bloqueia)
         persistClubsIfMissing(allSelected.map((v) => v.club)).catch(() => {});
         return;
       }
@@ -199,9 +189,6 @@ const Voting = () => {
       const cidadeFinal = cidadeAddr.trim() || profile.cidade || "";
       const estadoFinal = estadoAddr.trim() || profile.estado || "";
 
-      // AUDITORIA PASSIVA: voto sempre é gravado.
-      // status_integridade = 'pendente' permite revisão posterior pelo admin
-      // sem bloquear o fluxo de votação por IP/Fingerprint/Cookie.
       const mainVote = {
         user_id: user.id,
         clube_nome: heartClub.name,
@@ -224,7 +211,6 @@ const Voting = () => {
       const { error: voteError } = await supabase.from("votos").insert([mainVote]);
       if (voteError) throw voteError;
 
-      // Salva o CEP no profile (anti-redundância) — só se o usuário digitou agora
       const cepDigits = cep.replace(/\D/g, "");
       if (cepDigits.length === 8 && !hasCepInProfile) {
         supabase
@@ -236,11 +222,9 @@ const Voting = () => {
           });
       }
 
-      // Redireciona imediatamente — todo enriquecimento roda em background
       toast({ title: "Lealdade registada com sucesso! 🏟️" });
       navigate("/dashboard");
 
-      // Background (fire-and-forget): GPS, device, ISP, enrichment
       (async () => {
         try {
           const [audit, device_model] = await Promise.all([
@@ -434,29 +418,29 @@ const Voting = () => {
               CONFIRMAR VOTO?
             </DialogTitle>
           </DialogHeader>
-          <p className="text-sm italic opacity-70 text-center mb-4">
+          <p className="text-sm italic opacity-70 text-center">
             Você jura lealdade ao <strong className="text-primary">{heartClub?.name}</strong>?
           </p>
 
-          {/* NOVO BLOCO DE DESTAQUE PARA PRIVACIDADE */}
-          <div className="bg-primary/10 border border-primary/30 rounded-xl p-4 mb-6 backdrop-blur-sm">
-            <div className="flex items-start gap-3">
-              <ShieldCheck className="w-5 h-5 text-primary shrink-0 mt-0.5" />
-              <p className="text-[11px] leading-relaxed text-gray-300">
-                <strong className="text-primary block mb-1 uppercase tracking-wider">Seu endereço nunca será divulgado.</strong> 
-                O seu CEP nos ajuda a mapear a força da torcida na sua região para o 
-                <span className="text-primary font-bold"> Mapa de Calor Global</span> do Heart Club. Sua privacidade é garantida.
+          {/* NOVO INFORMATIVO LARANJA INTEGRADO */}
+          <div className="bg-orange-500/10 border border-orange-500/30 rounded-2xl p-4 mt-4 flex items-start gap-3">
+            <ShieldCheck className="w-5 h-5 text-orange-500 shrink-0 mt-0.5" />
+            <div className="space-y-1">
+              <p className="text-[11px] font-black uppercase text-orange-500 tracking-wider">Seu endereço nunca será divulgado.</p>
+              <p className="text-[10px] leading-relaxed text-gray-300">
+                O seu CEP nos ajuda a mapear a força da torcida na sua região para o <span className="text-orange-500 font-bold">Mapa de Calor Global</span> do Heart Club. Sua privacidade é garantida.
               </p>
             </div>
           </div>
 
-          <div className="space-y-3 text-left">
+          <div className="space-y-3 mt-4 text-left">
             <p className="text-[11px] font-black italic uppercase opacity-70">
               {hasCepInProfile
                 ? "Confirme seu Bairro → Vote"
                 : "Digite seu CEP → Confirme seu Bairro → Vote"}
             </p>
 
+            {/* FLUXO DE CEP RESTAURADO */}
             {!hasCepInProfile && (
               <div className="space-y-1">
                 <label className="text-[10px] font-black italic uppercase opacity-60">CEP</label>
@@ -557,9 +541,8 @@ export default Voting;
 
 /**
  * [RODAPÉ TÉCNICO]
- * Versão: 16.0
- * - Implementado controle de concorrência com heartReqId/sympathyReqId (padrão DebugApi).
- * - Ajustado debounce de busca para 300ms e mínimo de 3 caracteres.
- * - Mantida a lógica de loop sequencial com await para enriquecimento de dados.
- * - Sincronizado status IS_MASTER_ADMIN para o email betoborelli9@gmail.com.
+ * Versão: 16.2
+ * - Restaurado fluxo de CEP original com autocomplete via lookupCep.
+ * - Implementado alerta de privacidade integrado (estilo AlertCard).
+ * - Mantidos controles de concorrência e debounce de busca.
  */
