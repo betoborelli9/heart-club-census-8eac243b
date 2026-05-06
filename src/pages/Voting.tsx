@@ -454,30 +454,26 @@ const Voting = () => {
             </div>
 
             <p className="text-[11px] font-black italic uppercase opacity-70">
-              {hasCepInProfile
-                ? "Confirme seu Bairro → Vote"
-                : "Digite seu CEP → Confirme seu Bairro → Vote"}
+              Digite seu CEP → Confirme seu Bairro → Vote
             </p>
 
-            {!hasCepInProfile && (
-              <div className="space-y-1">
-                <label className="text-[10px] font-black italic uppercase opacity-60">CEP</label>
-                <div className="relative">
-                  <Input
-                    inputMode="numeric"
-                    placeholder="00000-000"
-                    value={cep}
-                    onChange={(e) => handleCepLookup(e.target.value)}
-                    className="h-11 font-black italic uppercase bg-card border-white/5"
-                    maxLength={9}
-                  />
-                  {cepLoading && (
-                    <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 animate-spin text-primary" />
-                  )}
-                </div>
-                {cepError && <p className="text-[10px] text-destructive italic">{cepError}</p>}
+            <div className="space-y-1">
+              <label className="text-[10px] font-black italic uppercase opacity-60">CEP</label>
+              <div className="relative">
+                <Input
+                  inputMode="numeric"
+                  placeholder="00000-000"
+                  value={cep}
+                  onChange={(e) => handleCepLookup(e.target.value)}
+                  className="h-11 font-black italic uppercase bg-card border-white/5"
+                  maxLength={9}
+                />
+                {cepLoading && (
+                  <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 animate-spin text-primary" />
+                )}
               </div>
-            )}
+              {cepError && <p className="text-[10px] text-destructive italic">{cepError}</p>}
+            </div>
 
             <div className="space-y-1">
               <label className="text-[10px] font-black italic uppercase opacity-60">Bairro *</label>
