@@ -131,7 +131,21 @@ const Voting = () => {
       Mapa de Calor (AddressModal).
      ═══════════════════════════════════════════════════════════ */
   const handleConfirmVote = async () => {
-    if (!heartClub || !user || !profile) return;
+    console.log("[VOTING] handleConfirmVote click", {
+      hasHeart: !!heartClub,
+      hasUser: !!user,
+      hasProfile: !!profile,
+      submitting,
+    });
+    if (!heartClub) {
+      toast({ variant: "destructive", title: "Selecione seu clube do coração" });
+      return;
+    }
+    if (!user) {
+      toast({ variant: "destructive", title: "Sessão expirada", description: "Faça login novamente." });
+      navigate("/login");
+      return;
+    }
     setSubmitting(true);
     try {
       const allSelected = [{ club: heartClub, main: true }, ...sympathyClubs.map((c) => ({ club: c, main: false }))];
@@ -147,13 +161,13 @@ const Voting = () => {
         await supabase.from("votos").delete().eq("user_id", user.id);
       }
 
-      // Voto minimalista — endereço como NULL.
+      // Voto minimalista — endereço como NULL. Profile é opcional (fallback "").
       const mainVote = {
         user_id: user.id,
         clube_nome: heartClub.name,
-        cidade: profile.cidade || "",
-        estado: profile.estado || "",
-        pais: profile.pais || "BR",
+        cidade: profile?.cidade || "",
+        estado: profile?.estado || "",
+        pais: profile?.pais || "BR",
         bairro: null,
         cep: null,
         numero: null,
