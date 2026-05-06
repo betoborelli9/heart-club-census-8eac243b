@@ -476,9 +476,6 @@ const Voting = () => {
                   )}
                 </div>
                 {cepError && <p className="text-[10px] text-destructive italic">{cepError}</p>}
-                <p className="text-[10px] italic opacity-60 leading-relaxed mt-1">
-                  O seu CEP nos ajuda a mapear a força da torcida na sua região para o Mapa de Calor Global do Heart Club. Sua privacidade é garantida.
-                </p>
               </div>
             )}
 
