@@ -223,7 +223,11 @@ const AdminAuditTable = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {votes.map((v) => (
+                {votes.map((v) => {
+                  const isOpen = openSympathyId === v.voto_id;
+                  const sympathies = sympathyCache[v.voto_id];
+                  return (
+                  <>
                   <TableRow key={v.voto_id} className={`border-border ${getRowClass(v)}`}>
                     <TableCell>
                       {approvedIds.has(v.voto_id) ? (
@@ -259,6 +263,23 @@ const AdminAuditTable = () => {
                         <Button
                           size="sm"
                           variant="outline"
+                          className="h-8 px-2 border-primary/60 text-primary hover:bg-primary/10"
+                          disabled={loadingSympathyId === v.voto_id}
+                          onClick={() => handleToggleSympathy(v.voto_id)}
+                          title="Ver clubes de simpatia"
+                        >
+                          {loadingSympathyId === v.voto_id ? (
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          ) : (
+                            <>
+                              <Heart className="w-3.5 h-3.5 mr-1" />
+                              {isOpen ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                            </>
+                          )}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
                           className="h-8 px-2 border-green-600 text-green-500 hover:bg-green-500/10 hover:text-green-400"
                           disabled={actingId === v.voto_id || approvedIds.has(v.voto_id)}
                           onClick={() => handleApprove(v.voto_id)}
@@ -283,7 +304,28 @@ const AdminAuditTable = () => {
                       </div>
                     </TableCell>
                   </TableRow>
-                ))}
+                  {isOpen && (
+                    <TableRow key={v.voto_id + "-sym"} className="border-border bg-primary/5">
+                      <TableCell colSpan={8} className="py-3">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <Heart className="w-4 h-4 text-primary" />
+                          <span className="text-xs font-bold text-foreground italic">Simpatias de {v.user_nome || "torcedor"}:</span>
+                          {sympathies && sympathies.length > 0 ? (
+                            sympathies.map((club, i) => (
+                              <Badge key={i} variant="outline" className="border-primary/40 text-foreground">
+                                {i + 1}º {club}
+                              </Badge>
+                            ))
+                          ) : (
+                            <span className="text-xs text-muted-foreground italic">Nenhum clube de simpatia registrado.</span>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  )}
+                  </>
+                  );
+                })}
                 {votes.length === 0 && (
                   <TableRow>
                     <TableCell colSpan={8} className="text-center py-10 text-muted-foreground">
