@@ -5,7 +5,7 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { Heart, Loader2, X, Search, Sparkles, ShieldCheck, PlusCircle } from "lucide-react";
+import { Heart, Loader2, X, Search, Sparkles, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -17,7 +17,7 @@ import { ClubLogo } from "@/components/ClubLogo";
 import logo from "@/assets/logo.png";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import FingerprintJS from "@fingerprintjs/fingerprintjs";
-import { lookupCep, formatCep, captureGpsAudit } from "@/lib/address";
+import { captureGpsAudit } from "@/lib/address";
 import { detectDeviceModel } from "@/lib/device-detect";
 
 /* ═══════════════════════════════════════════════════════════
@@ -51,28 +51,6 @@ const Voting = () => {
   const [showConfirm, setShowConfirm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [fingerprint, setFingerprint] = useState<string | null>(null);
-
-  // Endereço de Identidade (público, alimenta o mapa coroplético)
-  const [cep, setCep] = useState("");
-  const [bairro, setBairro] = useState("");
-  const [cidadeAddr, setCidadeAddr] = useState("");
-  const [estadoAddr, setEstadoAddr] = useState("");
-  const [numero, setNumero] = useState("");
-  const [complemento, setComplemento] = useState("");
-  const [cepLoading, setCepLoading] = useState(false);
-  const [cepError, setCepError] = useState<string | null>(null);
-
-  // Se o usuário JÁ tem CEP salvo no profile, não pedimos de novo (anti-redundância)
-  const profileCep = ((profile as any)?.cep || "").toString();
-  const hasCepInProfile = profileCep.replace(/\D/g, "").length === 8;
-
-  // Pré-preenche o CEP a partir do profile (apenas leitura, não exibido se já existe)
-  useEffect(() => {
-    if (hasCepInProfile && !cep) {
-      setCep(formatCep(profileCep));
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hasCepInProfile, profileCep]);
 
   // Refs para controle de concorrência de busca (Race Conditions)
   const heartReqId = useRef(0);
@@ -148,38 +126,12 @@ const Voting = () => {
   }, [sympathySearch, performSearch]);
 
   /* ═══════════════════════════════════════════════════════════
-      MÓDULO: BUSCA POR CEP (ViaCEP)
-     ═══════════════════════════════════════════════════════════ */
-  const handleCepLookup = useCallback(async (raw: string) => {
-    const formatted = formatCep(raw);
-    setCep(formatted);
-    setCepError(null);
-    const digits = formatted.replace(/\D/g, "");
-    if (digits.length !== 8) return;
-    setCepLoading(true);
-    try {
-      const found = await lookupCep(digits);
-      if (!found) {
-        setCepError("CEP não encontrado.");
-        return;
-      }
-      setBairro(found.bairro);
-      setCidadeAddr(found.cidade);
-      setEstadoAddr(found.estado);
-    } finally {
-      setCepLoading(false);
-    }
-  }, []);
-
-  /* ═══════════════════════════════════════════════════════════
-      MÓDULO: PROCESSAMENTO SEQUENCIAL (GARANTIA DE DADOS)
+      MÓDULO: PROCESSAMENTO DO VOTO (FLUXO SUAVE — 2 SEGUNDOS)
+      Endereço NÃO é mais coletado aqui. Ele vira "conquista" no
+      Mapa de Calor (AddressModal).
      ═══════════════════════════════════════════════════════════ */
   const handleConfirmVote = async () => {
     if (!heartClub || !user || !profile) return;
-    if (!bairro.trim()) {
-      toast({ variant: "destructive", title: "Informe seu bairro para registrar o voto." });
-      return;
-    }
     setSubmitting(true);
     try {
       const allSelected = [{ club: heartClub, main: true }, ...sympathyClubs.map((c) => ({ club: c, main: false }))];
@@ -187,7 +139,6 @@ const Voting = () => {
       if (TEST_MODE) {
         toast({ title: "Modo teste — voto não contabilizado 🧪" });
         navigate(`/testar-clube?club=${encodeURIComponent(heartClub.name)}`);
-        // Enriquecimento em background (não bloqueia)
         persistClubsIfMissing(allSelected.map((v) => v.club)).catch(() => {});
         return;
       }
@@ -196,22 +147,17 @@ const Voting = () => {
         await supabase.from("votos").delete().eq("user_id", user.id);
       }
 
-      const cidadeFinal = cidadeAddr.trim() || profile.cidade || "";
-      const estadoFinal = estadoAddr.trim() || profile.estado || "";
-
-      // AUDITORIA PASSIVA: voto sempre é gravado.
-      // status_integridade = 'pendente' permite revisão posterior pelo admin
-      // sem bloquear o fluxo de votação por IP/Fingerprint/Cookie.
+      // Voto minimalista — endereço como NULL.
       const mainVote = {
         user_id: user.id,
         clube_nome: heartClub.name,
-        cidade: cidadeFinal,
-        estado: estadoFinal,
+        cidade: profile.cidade || "",
+        estado: profile.estado || "",
         pais: profile.pais || "BR",
-        bairro: bairro.trim(),
-        cep: cep.replace(/\D/g, "") || null,
-        numero: numero.trim() || null,
-        complemento: complemento.trim() || null,
+        bairro: null,
+        cep: null,
+        numero: null,
+        complemento: null,
         is_original_vote: true,
         fingerprint: fingerprint || "web-client",
         status_integridade: "pendente",
@@ -223,18 +169,6 @@ const Voting = () => {
 
       const { error: voteError } = await supabase.from("votos").insert([mainVote]);
       if (voteError) throw voteError;
-
-      // Salva o CEP no profile (anti-redundância) — só se o usuário digitou agora
-      const cepDigits = cep.replace(/\D/g, "");
-      if (cepDigits.length === 8 && !hasCepInProfile) {
-        supabase
-          .from("profiles")
-          .update({ cep: cepDigits })
-          .eq("id", user.id)
-          .then(({ error }) => {
-            if (error) console.warn("[VOTING] falha ao salvar CEP no profile:", error);
-          });
-      }
 
       // Redireciona imediatamente — todo enriquecimento roda em background
       toast({ title: "Lealdade registada com sucesso! 🏟️" });
@@ -428,117 +362,24 @@ const Voting = () => {
       </div>
 
       <Dialog open={showConfirm} onOpenChange={setShowConfirm}>
-        <DialogContent className="max-w-md glass-card border-white/10 max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-sm glass-card border-white/10">
           <DialogHeader>
             <DialogTitle className="italic text-2xl font-black uppercase tracking-tighter text-center">
               CONFIRMAR VOTO?
             </DialogTitle>
           </DialogHeader>
-          <p className="text-sm italic opacity-70 text-center">
-            Você jura lealdade ao <strong className="text-primary">{heartClub?.name}</strong>?
+          <p className="text-base italic opacity-80 text-center px-2">
+            Você jura lealdade ao{" "}
+            <strong className="text-primary not-italic uppercase">{heartClub?.name}</strong>?
           </p>
 
-          {/* ENDEREÇO DE IDENTIDADE — alimenta o mapa coroplético */}
-          <div className="space-y-3 mt-2 text-left">
-            {/* AVISO DE PRIVACIDADE — reforço institucional acima dos campos de endereço */}
-            <div className="flex items-start gap-2.5 rounded-md border border-orange-500/30 bg-orange-500/10 p-3">
-              <ShieldCheck className="w-4 h-4 mt-0.5 shrink-0 text-orange-500" />
-              <div className="space-y-1">
-                <p className="text-[11px] font-black uppercase tracking-tight leading-tight text-orange-500">
-                  Seu endereço nunca será divulgado
-                </p>
-                <p className="text-[10px] italic leading-relaxed opacity-80">
-                  O seu CEP nos ajuda a mapear a força da torcida na sua região para o Mapa de Calor Global do Heart Club. Sua privacidade é garantida.
-                </p>
-              </div>
-            </div>
-
-            <p className="text-[11px] font-black italic uppercase opacity-70">
-              Digite seu CEP → Confirme seu Bairro → Vote
-            </p>
-
-            <div className="space-y-1">
-              <label className="text-[10px] font-black italic uppercase opacity-60">CEP</label>
-              <div className="relative">
-                <Input
-                  inputMode="numeric"
-                  placeholder="00000-000"
-                  value={cep}
-                  onChange={(e) => handleCepLookup(e.target.value)}
-                  className="h-11 font-black italic uppercase bg-card border-white/5"
-                  maxLength={9}
-                />
-                {cepLoading && (
-                  <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 animate-spin text-primary" />
-                )}
-              </div>
-              {cepError && <p className="text-[10px] text-destructive italic">{cepError}</p>}
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-[10px] font-black italic uppercase opacity-60">Bairro *</label>
-              <Input
-                placeholder="Seu bairro"
-                value={bairro}
-                onChange={(e) => setBairro(e.target.value)}
-                className="h-11 font-black italic uppercase bg-card border-white/5"
-                required
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-2">
-              <div className="space-y-1">
-                <label className="text-[10px] font-black italic uppercase opacity-60">Cidade</label>
-                <Input
-                  value={cidadeAddr}
-                  onChange={(e) => setCidadeAddr(e.target.value)}
-                  className="h-11 font-bold italic uppercase bg-card border-white/5"
-                />
-              </div>
-              <div className="space-y-1">
-                <label className="text-[10px] font-black italic uppercase opacity-60">UF</label>
-                <Input
-                  value={estadoAddr}
-                  onChange={(e) => setEstadoAddr(e.target.value.toUpperCase().slice(0, 2))}
-                  className="h-11 font-black italic uppercase bg-card border-white/5"
-                  maxLength={2}
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-2">
-              <div className="space-y-1">
-                <label className="text-[10px] font-black italic uppercase opacity-60">Número</label>
-                <Input
-                  inputMode="numeric"
-                  value={numero}
-                  onChange={(e) => setNumero(e.target.value)}
-                  className="h-11 font-bold italic uppercase bg-card border-white/5"
-                />
-              </div>
-              <div className="space-y-1">
-                <label className="text-[10px] font-black italic uppercase opacity-60">Complemento</label>
-                <Input
-                  placeholder="Apto / Bloco"
-                  value={complemento}
-                  onChange={(e) => setComplemento(e.target.value)}
-                  className="h-11 font-bold italic uppercase bg-card border-white/5"
-                />
-              </div>
-            </div>
-
-            <p className="text-[9px] italic opacity-40 leading-relaxed">
-              🔒 Seu endereço completo nunca é exibido publicamente. Apenas o bairro alimenta o mapa de calor.
-            </p>
-          </div>
-
-          <DialogFooter className="flex-col gap-2 mt-4">
+          <DialogFooter className="flex-col gap-2 mt-2">
             <Button
-              className="w-full btn-orange-gradient h-12 font-black italic"
+              className="w-full btn-orange-gradient h-14 font-black italic text-lg uppercase"
               onClick={handleConfirmVote}
-              disabled={submitting || !bairro.trim()}
+              disabled={submitting}
             >
-              {submitting ? "PROCESSANDO..." : "EU JURO!"}
+              {submitting ? <Loader2 className="animate-spin" /> : "SIM, EU JURO!"}
             </Button>
             <Button
               variant="ghost"

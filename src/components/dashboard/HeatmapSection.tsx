@@ -1,6 +1,6 @@
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Globe, MapPin, Users, ChevronRight } from "lucide-react";
+import { Globe, MapPin, Users, ChevronRight, Lock } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ComposableMap, Geographies, Geography, ZoomableGroup } from "react-simple-maps";
@@ -8,6 +8,7 @@ import { clubMapData } from "@/data/mockDashboard";
 import { CLUBS_DATA } from "@/clubes-data";
 import { useUser } from "@/contexts/UserContext";
 import { supabase } from "@/integrations/supabase/client";
+import AddressModal from "@/components/AddressModal";
 
 const WORLD_GEO_URL = "https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json";
 const BRAZIL_STATES_GEO_URL = "https://raw.githubusercontent.com/codeforamerica/click_that_hood/master/public/data/brazil-states.geojson";
@@ -39,7 +40,7 @@ function formatVotes(n: number): string {
 }
 
 const HeatmapSection = () => {
-  const { user } = useUser();
+  const { user, profile } = useUser();
   const [selectedClubId, setSelectedClubId] = useState("palmeiras");
   const [drillLevel, setDrillLevel] = useState<DrillLevel>("country");
   const [activeStateName, setActiveStateName] = useState<string | null>(null);
@@ -47,19 +48,48 @@ const HeatmapSection = () => {
   const [zoom, setZoom] = useState(1.15);
   const [tooltip, setTooltip] = useState<{ name: string; votes: number } | null>(null);
 
+  // Bloqueio do mapa: usuário precisa ter bairro registrado para interagir
+  const [userClubName, setUserClubName] = useState<string | null>(null);
+  const [hasAddress, setHasAddress] = useState<boolean>(true); // assume true até verificar
+  const [addressModalOpen, setAddressModalOpen] = useState(false);
+
   useEffect(() => {
     const loadUserVote = async () => {
       if (!user) return;
-      const { data } = await supabase.from("votos").select("clube_nome").eq("user_id", user.id).maybeSingle();
-      if (!data?.clube_nome) return;
+      const { data } = await supabase
+        .from("votos")
+        .select("clube_nome, bairro")
+        .eq("user_id", user.id)
+        .eq("is_original_vote", true)
+        .maybeSingle();
+      if (!data?.clube_nome) {
+        setHasAddress(false);
+        return;
+      }
+      setUserClubName(data.clube_nome);
       const club = CLUBS_DATA.find((c) => c.nome === data.clube_nome);
       if (club) {
         const slug = club.nome.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
         setSelectedClubId(slug);
       }
+      const profileCep = (profile as any)?.cep;
+      setHasAddress(!!(data.bairro && data.bairro.trim()) || !!profileCep);
     };
     loadUserVote();
-  }, [user]);
+  }, [user, profile]);
+
+  const refreshAfterSave = useCallback(() => {
+    setHasAddress(true);
+  }, []);
+
+  const requireAddress = useCallback(() => {
+    if (!hasAddress) {
+      setAddressModalOpen(true);
+      return true;
+    }
+    return false;
+  }, [hasAddress]);
+
 
   const mapData = clubMapData[selectedClubId] || clubMapData.palmeiras;
 
@@ -201,6 +231,7 @@ const HeatmapSection = () => {
                           stroke="hsl(var(--border))"
                           strokeWidth={0.5}
                           onClick={() => {
+                            if (requireAddress()) return;
                             if (drillLevel === "country") handleWorldClick(geo);
                             else if (drillLevel === "state") handleBrazilStateClick(geo);
                           }}
@@ -240,6 +271,28 @@ const HeatmapSection = () => {
                 <span>100+</span>
               </div>
             </div>
+
+            {/* OVERLAY ELEGANTE — bloqueia o mapa enquanto o usuário não informa endereço */}
+            {!hasAddress && (
+              <button
+                type="button"
+                onClick={() => setAddressModalOpen(true)}
+                className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-3 bg-black/60 backdrop-blur-md cursor-pointer group"
+              >
+                <div className="w-14 h-14 rounded-full bg-orange-500/20 border border-orange-500/40 flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <Lock className="w-6 h-6 text-orange-500" />
+                </div>
+                <p className="text-sm font-black italic uppercase tracking-tighter text-white px-6 text-center">
+                  Desbloqueie seu território
+                </p>
+                <p className="text-[11px] italic text-white/70 px-8 text-center max-w-xs">
+                  Informe seu CEP para ver a força da torcida na sua região.
+                </p>
+                <span className="mt-1 text-[10px] font-black italic uppercase text-orange-500 tracking-widest">
+                  Toque para liberar →
+                </span>
+              </button>
+            )}
           </div>
 
           <div className="p-4">
@@ -278,6 +331,13 @@ const HeatmapSection = () => {
           </div>
         </CardContent>
       </Card>
+
+      <AddressModal
+        open={addressModalOpen}
+        onOpenChange={setAddressModalOpen}
+        clubName={userClubName}
+        onSuccess={refreshAfterSave}
+      />
     </motion.div>
   );
 };
