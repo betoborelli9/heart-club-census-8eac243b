@@ -362,7 +362,7 @@ const Voting = () => {
       </div>
 
       <Dialog open={showConfirm} onOpenChange={setShowConfirm}>
-        <DialogContent className="max-w-md glass-card border-white/10 max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-sm glass-card border-white/10">
           <DialogHeader>
             <DialogTitle className="italic text-2xl font-black uppercase tracking-tighter text-center">
               CONFIRMAR VOTO?
