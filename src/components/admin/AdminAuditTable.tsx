@@ -323,7 +323,7 @@ const AdminAuditTable = () => {
                       </TableCell>
                     </TableRow>
                   )}
-                  </>
+                  </Fragment>
                   );
                 })}
                 {votes.length === 0 && (
