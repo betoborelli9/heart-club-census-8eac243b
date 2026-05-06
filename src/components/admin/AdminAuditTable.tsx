@@ -97,6 +97,27 @@ const AdminAuditTable = () => {
     setActingId(null);
   };
 
+  const handleToggleSympathy = async (votoId: string) => {
+    if (openSympathyId === votoId) {
+      setOpenSympathyId(null);
+      return;
+    }
+    if (!sympathyCache[votoId]) {
+      setLoadingSympathyId(votoId);
+      const { data, error } = await supabase.rpc("admin_get_vote_sympathies", { p_voto_id: votoId });
+      setLoadingSympathyId(null);
+      if (error) {
+        toast({ title: "Erro ao carregar simpatias", description: error.message, variant: "destructive" });
+        return;
+      }
+      const obj = (data || {}) as Record<string, string | null>;
+      const list = [obj.sympathy_1, obj.sympathy_2, obj.sympathy_3, obj.sympathy_4]
+        .filter((s): s is string => !!s && s.trim().length > 0);
+      setSympathyCache((prev) => ({ ...prev, [votoId]: list }));
+    }
+    setOpenSympathyId(votoId);
+  };
+
   const handleDeleteOne = async (votoId: string) => {
     if (!confirm("Deletar este voto definitivamente?")) return;
     setActingId(votoId);
