@@ -126,38 +126,12 @@ const Voting = () => {
   }, [sympathySearch, performSearch]);
 
   /* ═══════════════════════════════════════════════════════════
-      MÓDULO: BUSCA POR CEP (ViaCEP)
-     ═══════════════════════════════════════════════════════════ */
-  const handleCepLookup = useCallback(async (raw: string) => {
-    const formatted = formatCep(raw);
-    setCep(formatted);
-    setCepError(null);
-    const digits = formatted.replace(/\D/g, "");
-    if (digits.length !== 8) return;
-    setCepLoading(true);
-    try {
-      const found = await lookupCep(digits);
-      if (!found) {
-        setCepError("CEP não encontrado.");
-        return;
-      }
-      setBairro(found.bairro);
-      setCidadeAddr(found.cidade);
-      setEstadoAddr(found.estado);
-    } finally {
-      setCepLoading(false);
-    }
-  }, []);
-
-  /* ═══════════════════════════════════════════════════════════
-      MÓDULO: PROCESSAMENTO SEQUENCIAL (GARANTIA DE DADOS)
+      MÓDULO: PROCESSAMENTO DO VOTO (FLUXO SUAVE — 2 SEGUNDOS)
+      Endereço NÃO é mais coletado aqui. Ele vira "conquista" no
+      Mapa de Calor (AddressModal).
      ═══════════════════════════════════════════════════════════ */
   const handleConfirmVote = async () => {
     if (!heartClub || !user || !profile) return;
-    if (!bairro.trim()) {
-      toast({ variant: "destructive", title: "Informe seu bairro para registrar o voto." });
-      return;
-    }
     setSubmitting(true);
     try {
       const allSelected = [{ club: heartClub, main: true }, ...sympathyClubs.map((c) => ({ club: c, main: false }))];
@@ -165,7 +139,6 @@ const Voting = () => {
       if (TEST_MODE) {
         toast({ title: "Modo teste — voto não contabilizado 🧪" });
         navigate(`/testar-clube?club=${encodeURIComponent(heartClub.name)}`);
-        // Enriquecimento em background (não bloqueia)
         persistClubsIfMissing(allSelected.map((v) => v.club)).catch(() => {});
         return;
       }
@@ -174,22 +147,17 @@ const Voting = () => {
         await supabase.from("votos").delete().eq("user_id", user.id);
       }
 
-      const cidadeFinal = cidadeAddr.trim() || profile.cidade || "";
-      const estadoFinal = estadoAddr.trim() || profile.estado || "";
-
-      // AUDITORIA PASSIVA: voto sempre é gravado.
-      // status_integridade = 'pendente' permite revisão posterior pelo admin
-      // sem bloquear o fluxo de votação por IP/Fingerprint/Cookie.
+      // Voto minimalista — endereço como NULL.
       const mainVote = {
         user_id: user.id,
         clube_nome: heartClub.name,
-        cidade: cidadeFinal,
-        estado: estadoFinal,
+        cidade: profile.cidade || "",
+        estado: profile.estado || "",
         pais: profile.pais || "BR",
-        bairro: bairro.trim(),
-        cep: cep.replace(/\D/g, "") || null,
-        numero: numero.trim() || null,
-        complemento: complemento.trim() || null,
+        bairro: null,
+        cep: null,
+        numero: null,
+        complemento: null,
         is_original_vote: true,
         fingerprint: fingerprint || "web-client",
         status_integridade: "pendente",
@@ -201,18 +169,6 @@ const Voting = () => {
 
       const { error: voteError } = await supabase.from("votos").insert([mainVote]);
       if (voteError) throw voteError;
-
-      // Salva o CEP no profile (anti-redundância) — só se o usuário digitou agora
-      const cepDigits = cep.replace(/\D/g, "");
-      if (cepDigits.length === 8 && !hasCepInProfile) {
-        supabase
-          .from("profiles")
-          .update({ cep: cepDigits })
-          .eq("id", user.id)
-          .then(({ error }) => {
-            if (error) console.warn("[VOTING] falha ao salvar CEP no profile:", error);
-          });
-      }
 
       // Redireciona imediatamente — todo enriquecimento roda em background
       toast({ title: "Lealdade registada com sucesso! 🏟️" });
