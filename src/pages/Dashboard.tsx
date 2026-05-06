@@ -21,6 +21,7 @@ import ClubIdentityCard from "@/components/dashboard/ClubIdentityCard";
 import { useClubTheme } from "@/hooks/useClubTheme";
 import AffiliateStore from "@/components/store/AffiliateStore";
 import SympathyRanking from "@/components/dashboard/SympathyRanking";
+import HeatmapSection from "@/components/dashboard/HeatmapSection";
 import logo from "@/assets/logo.png";
 
 /* [MÓDULO: COMPONENTE DASHBOARD] */
@@ -119,6 +120,11 @@ const Dashboard = () => {
         <div className="pt-16 md:pt-24 grid grid-cols-1 md:grid-cols-2 gap-12 md:gap-16">
           <RivalsRadar excludeClub={clubeName} />
           <GeoLoyalty clubName={clubeName} />
+        </div>
+
+        {/* [MÓDULO: MAPA DE CALOR GLOBAL — Heatmap Brasa] */}
+        <div className="pt-16 md:pt-24">
+          <HeatmapSection />
         </div>
 
         {/* [MÓDULO: RANKING DE SIMPATIA — segundo time mais querido] */}
