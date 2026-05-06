@@ -51,7 +51,8 @@ const Verify = () => {
         .eq("id", data.id);
 
       toast.success("Acesso autorizado! Bem-vindo ao Heart Club.");
-      navigate("/dashboard"); 
+      const redirect = searchParams.get("redirect") || "/voting";
+      navigate(redirect);
     };
 
     validateToken();
