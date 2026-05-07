@@ -72,9 +72,29 @@ const Dashboard = () => {
     setViewedClubData(info || { nome: name });
   };
 
-  const viewedLogo = useMemo(() => {
-    return viewedTheme?.escudoUrl || (viewedClubData as any)?.logoUrl || null;
-  }, [viewedTheme, viewedClubData]);
+  const [viewedLogo, setViewedLogo] = useState<string | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    const fetchLogo = async () => {
+      if (!viewedClubName) {
+        setViewedLogo(null);
+        return;
+      }
+      const local = (viewedClubData as any)?.logoUrl;
+      if (local) {
+        setViewedLogo(local);
+        return;
+      }
+      const { data } = await supabase
+        .from("clubes_cache")
+        .select("escudo_url")
+        .ilike("nome", viewedClubName)
+        .maybeSingle();
+      if (!cancelled) setViewedLogo(data?.escudo_url || null);
+    };
+    fetchLogo();
+    return () => { cancelled = true; };
+  }, [viewedClubName, viewedClubData]);
 
   if (isLoading || !profile)
     return (
