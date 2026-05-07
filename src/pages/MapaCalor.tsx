@@ -2517,7 +2517,9 @@ const MapaCalor = () => {
 
         .war-tooltip::before { display: none !important; }
 
-        .leaflet-container { font-family: Verdana, sans-serif; }
+        .leaflet-container { font-family: Verdana, sans-serif; z-index: 0; }
+        .leaflet-pane, .leaflet-top, .leaflet-bottom, .leaflet-control { z-index: 1 !important; }
+        .leaflet-tooltip { z-index: 2 !important; }
 
       `}</style>
 

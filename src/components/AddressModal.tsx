@@ -120,7 +120,7 @@ const AddressModal = ({ open, onOpenChange, clubName, onSuccess }: AddressModalP
      ═══════════════════════════════════════════════════════════ */
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md border border-white/15 bg-black/60 backdrop-blur-2xl shadow-[0_8px_32px_rgba(255,98,0,0.15)] rounded-2xl">
+      <DialogContent className="max-w-md border border-white/15 bg-black/60 backdrop-blur-2xl shadow-[0_8px_32px_rgba(255,98,0,0.15)] rounded-2xl z-[10000]">
         <div className="space-y-5">
           {/* Header */}
           <div className="text-center space-y-2">
