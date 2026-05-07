@@ -1,108 +1,58 @@
+## Evolução do Dashboard — Caleidoscópio + Inteligência
 
+Vou reestruturar o Dashboard sem tocar em outras páginas (auth/Resend/Voting/Heatmap intactos). Trabalho 100% em `src/pages/Dashboard.tsx` e novos componentes em `src/components/dashboard/`.
 
-# Mapa Coropletico de Alta Performance com Drill-Down
+### 1. Caleidoscópio (estado `viewedClubId`)
+- Novo contexto leve `ViewedClubContext` em `src/contexts/ViewedClubContext.tsx`: `{ viewedClub, setViewedClub }`.
+- Banner do Coração (`ClubBanner`) permanece fixo no topo, **sempre** lendo o `heartClub` do usuário (não muda).
+- Demais blocos (notícias, probabilidades, rivais, concorrentes, fábrica de banners, calendário) leem `viewedClub`.
+- Default: `viewedClub = heartClub`. Clicar num clube de Simpatia ou pesquisar via `ClubSearch` chama `setViewedClub(club)`.
+- Skeleton loaders durante troca.
+- **Remover** `HeatmapSection` do Dashboard (mantenho o componente intocado — só removo o import/uso). Rota `/mapa-calor` continua funcionando.
 
-## Resumo
-Reescrever completamente o `HeatmapSection.tsx` como um sistema de mapa coropletico multi-nivel (Mundo > Continente > Pais > Estado > Cidade) com breadcrumbs, escala de cores laranja, search/autocomplete de clubes, tooltip dinamico que segue o cursor, e arquitetura preparada para Supabase.
+### 2. Notícias com imagens (`NewsFeedCards`)
+- Reutiliza edge function `club-news` (já existe, RSS Google News).
+- Card: `urlToImage` (og:image já capturado), título, fonte, data.
+- Botão "Saiba Mais" abre `Drawer` (shadcn) com iframe do conteúdo + botão "Abrir original".
 
-## Arquitetura de Navegacao (Drill-Down)
+### 3. Motor de Probabilidades (`LeagueObjectives`)
+- Novo componente que consulta uma edge function nova `league-standings` (RSS/JSON da ESPN ou API-Football fallback).
+- Identifica liga via `clubes_cache.division`.
+- Calcula objetivos: G6 / Libertadores (1-6) / Sul-Americana (7-12) / Z4 (últimos 4).
+- "Modo Desespero": se posição ≥ N-6, lista escudos dos concorrentes diretos.
+- **Para evitar criar API nova agora**, edge function retorna mock estruturado por divisão se API externa indisponível, e o componente já está pronto pra plugar dados reais depois.
 
-### Fluxo de Niveis
+### 4. Rivais vs. Concorrentes
+- `RivalsBlock`: usa `getHistoricalRivals(viewedClub.name, 4)` de `src/lib/rivalries.ts`. CTA "Convoque os torcedores" → link `/convite?ref={codigo_indicacao}`.
+- `CompetitorsBlock`: vem do `LeagueObjectives` (times ±2 posições na tabela).
+
+### 5. Fábrica de Banners (`BannerFactory`)
+- Instalar `html-to-image`.
+- Gera div oculto 1080x1920 com gradiente (cor do clube), logo Heart Club, escudo, frase dinâmica baseada no objetivo ("Rumo à Libertadores!", "Somos X mil vozes!").
+- Botões: "Baixar para Stories" (download PNG) e "Compartilhar no WhatsApp" (`navigator.share` ou `wa.me?text=`).
+
+### 6. Calendário (`MatchSchedule`)
+- Reusa/expande `MatchCenter` existente — mostra próximos 3 jogos com data/hora/emissora.
+- Se sem dados reais, mostra estado vazio elegante "Em breve: agenda oficial".
+
+### Layout Dashboard final (Dark Mode, laranja #ff4500)
 ```text
-Mundo (GeoJSON 110m) 
-  -> Continente (zoom animado na regiao)
-    -> Pais (GeoJSON 50m filtrado)
-      -> Estado (mock data, visual simulado)
-        -> Cidade (mock data, lista rankeada)
+[ClubBanner — Coração — FIXO]
+[ClubSearch (atualiza viewedClub)]
+[Tabs/Pills: Simpatias rápidas → setViewedClub]
+[Identidade do viewedClub — escudo, mascote, cidade]
+[NewsFeedCards]  [LeagueObjectives + CompetitorsBlock]
+[RivalsBlock]    [MatchSchedule]
+[BannerFactory]
 ```
 
-### Breadcrumbs
-- Componente de breadcrumbs no topo do mapa: `Mundo > America do Sul > Brasil > SP > Sao Paulo`
-- Cada item clicavel para retornar ao nivel correspondente
-- Estilo discreto com separadores `>` e item ativo em destaque
+### Restrições respeitadas
+- Não toco em: `Verify.tsx`, `verify-auth-token`, `heart-club-auth`, `Voting.tsx`, `HeatmapSection`, `MapaCalor`, auth Resend.
+- Sem mudanças de schema (uso só dados já existentes + edge functions já presentes).
+- Tokens semânticos do design system (laranja já em `index.css`).
 
-### Transicoes
-- Zoom animado via Framer Motion (scale + translate do `ZoomableGroup`)
-- Transicao de 600ms ease-in-out entre niveis
-- Fade-in dos dados do nivel seguinte
+### Arquivos
+**Novos:** `src/contexts/ViewedClubContext.tsx`, `src/components/dashboard/NewsFeedCards.tsx`, `src/components/dashboard/LeagueObjectives.tsx`, `src/components/dashboard/RivalsBlock.tsx`, `src/components/dashboard/CompetitorsBlock.tsx`, `src/components/dashboard/BannerFactory.tsx`, `src/components/dashboard/MatchSchedule.tsx`, `supabase/functions/league-standings/index.ts`.
+**Editados:** `src/pages/Dashboard.tsx` (orquestração + remoção do Heatmap), `src/App.tsx` (provider), `package.json` (html-to-image).
 
-## Escala de Cores (Choropleth Laranja)
-
-### Funcao de Coloracao
-- Calcular porcentagem: `regionVotes / totalWorldVotes`
-- Base sem votos: `#E5E7EB` (cinza claro)
-- Escala com votos: gradiente de laranja medio (`#FBB040`) ate laranja queimado (`#F36100`)
-- Funcao `getRegionColor(votes, maxVotes)` que retorna cor interpolada
-- Preparada para receber dados via prop (Supabase-ready)
-
-### Hover
-- Stroke branco/highlight na borda da regiao ao hover
-- Tooltip dinamico que segue o cursor (posicao via `onMouseMove`)
-- Conteudo: `[Nome da Regiao] | [Total de Votos]`
-
-## Componente Search/Autocomplete
-
-- Usar `Command` (cmdk) do Shadcn/UI posicionado acima do mapa
-- Lista de todos os clubes do `clubs.ts` como opcoes
-- Ao selecionar um clube, o mapa recarrega com os dados mockados daquele clube
-- Logica inicial: carrega dados do `heartClubId` do contexto do usuario
-- Placeholder: "Buscar clube..."
-
-## Dados Mock Hierarquicos
-
-Expandir `mockDashboard.ts` com estrutura hierarquica completa:
-
-```text
-clubMapData: Record<string, {
-  total: number,
-  continents: {
-    [continentId]: {
-      name: string,
-      votes: number,
-      countries: {
-        [iso]: {
-          name: string,
-          votes: number,
-          states?: { name: string, votes: number, cities?: { name: string, votes: number }[] }[]
-        }
-      }
-    }
-  }
-}>
-```
-
-- Dados completos para Palmeiras (club padrao)
-- Dados parciais para Flamengo e Corinthians (para demonstrar o autocomplete)
-- Estados e cidades detalhados apenas para o Brasil (pais principal)
-
-## Arquivos Modificados
-
-### 1. `src/data/mockDashboard.ts`
-- Adicionar interfaces: `ClubMapData`, `ContinentMapData`, `CountryMapData`, `StateMapData`, `CityMapData`
-- Adicionar `clubMapData` com dados hierarquicos para 3 clubes
-- Manter dados existentes para compatibilidade
-
-### 2. `src/components/dashboard/HeatmapSection.tsx`
-Reescrita completa:
-- Props: `data?: ClubMapData` (para futura integracao Supabase)
-- Estado: `drillLevel` (world/continent/country/state/city), `breadcrumbs[]`, `selectedClubId`
-- Componente `MapBreadcrumbs` inline
-- Componente `ClubSearch` usando Command/cmdk do Shadcn
-- `ComposableMap` com `ZoomableGroup` controlado por estado
-- `getRegionColor()` baseado em porcentagem de votos
-- Tooltip que segue cursor via `onMouseMove` no container
-- Legenda com gradiente laranja
-
-### 3. `src/pages/Dashboard.tsx`
-- Passar `heartClub` como contexto para o HeatmapSection (via prop ou contexto)
-
-## Detalhes Tecnicos
-
-- **GeoJSON**: Usar `countries-110m.json` para visao mundial e `countries-50m.json` para drill-down em continente (mais detalhe)
-- **Interpolacao de cor**: Funcao linear entre `#FBB040` e `#F36100` baseada em `votes/maxVotes`
-- **Tooltip**: `position: fixed`, coordenadas atualizadas via `onMouseMove` no container do mapa, com `pointer-events: none`
-- **Breadcrumbs**: Array de objetos `{ label, level, data }` que permite navegacao livre entre niveis
-- **Supabase-ready**: O componente aceita uma prop `data: ClubMapData` opcional; se nao fornecida, usa mock data. A funcao de coloracao `getRegionColor` e pura e recebe apenas votos e total
-- **Performance**: `useMemo` para calculos de cor por geografia, `useCallback` para handlers de click e hover
-- **Mobile**: Tooltip desabilitado em touch (usa click para exibir), breadcrumbs com scroll horizontal
-
+Confirma para eu implementar?
