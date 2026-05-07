@@ -1,9 +1,11 @@
 /**
  * [CAMINHO/ARQUIVO]: src/pages/Dashboard.tsx
- * [MÓDULO]: DASHBOARD CALEIDOSCÓPIO
+ * [MÓDULO]: DASHBOARD CALEIDOSCÓPIO — GRID 3 COLUNAS (25/45/30)
  * - Banner do Coração fixo no topo (intocável)
- * - Demais blocos dinâmicos via viewedClub (clube de simpatia ou pesquisado)
- * - Heatmap removido daqui (continua disponível em /mapa-calor)
+ * - Coluna 1: Rivalry Intelligence
+ * - Coluna 2: Caleidoscópio (Simpatias + Notícias)
+ * - Coluna 3: Cálculo de Objetivos + Z4 + Compartilhamento Social
+ * - Trocar viewedClubName aplica fade-in nas colunas 2 e 3 (col 1 também atualiza, mas o foco é centro/direita)
  */
 
 import { useEffect, useState } from "react";
@@ -15,29 +17,26 @@ import { supabase } from "@/integrations/supabase/client";
 import { CLUBS_DATA } from "@/clubes-data";
 import { ClubSearch } from "@/components/dashboard/ClubSearch";
 import ClubBanner from "@/components/dashboard/ClubBanner";
-import ClubIdentityCard from "@/components/dashboard/ClubIdentityCard";
 import { useClubTheme } from "@/hooks/useClubTheme";
-import AffiliateStore from "@/components/store/AffiliateStore";
-import SympathyRanking from "@/components/dashboard/SympathyRanking";
 import NewsFeedCards from "@/components/dashboard/NewsFeedCards";
-import LeagueObjectives from "@/components/dashboard/LeagueObjectives";
-import RivalsBlock from "@/components/dashboard/RivalsBlock";
-import MatchSchedule from "@/components/dashboard/MatchSchedule";
-import BannerFactory from "@/components/dashboard/BannerFactory";
+import RivalsColumn from "@/components/dashboard/RivalsColumn";
+import SympathyCarousel from "@/components/dashboard/SympathyCarousel";
+import ObjectivesPanel from "@/components/dashboard/ObjectivesPanel";
+import Z4Infographic from "@/components/dashboard/Z4Infographic";
+import SocialShareBanners from "@/components/dashboard/SocialShareBanners";
 import logo from "@/assets/logo.png";
 
 const Dashboard = () => {
   const navigate = useNavigate();
   const { user, profile, isLoading, signOut } = useUser();
 
-  // Clube do coração (fixo)
   const [heartClubName, setHeartClubName] = useState<string | null>(null);
   const [heartClubData, setHeartClubData] = useState<any>(null);
 
-  // Clube em visualização (caleidoscópio)
   const [viewedClubName, setViewedClubName] = useState<string | null>(null);
   const [viewedClubData, setViewedClubData] = useState<any>(null);
   const [sympathies, setSympathies] = useState<string[]>([]);
+  const [fadeKey, setFadeKey] = useState(0);
 
   useEffect(() => {
     const loadVoto = async () => {
@@ -70,6 +69,7 @@ const Dashboard = () => {
     setViewedClubName(name);
     const info = CLUBS_DATA.find((c) => c.nome.toLowerCase() === name.toLowerCase());
     setViewedClubData(info || { nome: name });
+    setFadeKey((k) => k + 1);
   };
 
   const [viewedLogo, setViewedLogo] = useState<string | null>(null);
@@ -105,16 +105,24 @@ const Dashboard = () => {
 
   const isViewingHeart = viewedClubName === heartClubName;
   const primary = viewedTheme?.primaryHex || "#ff6200";
+  const secondary = viewedTheme?.secondaryHex || "#000000";
 
   return (
     <div className="min-h-screen bg-black text-white font-sans">
-      <header className="h-16 border-b border-white/5 bg-black/80 backdrop-blur-xl sticky top-0 z-50">
-        <div className="max-w-6xl mx-auto px-4 h-full flex items-center justify-between gap-4">
+      <style>{`
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+        .fade-in { animation: fadeIn 0.4s ease-out; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+      `}</style>
+
+      <header className="h-14 border-b border-white/5 bg-black/80 backdrop-blur-xl sticky top-0 z-50">
+        <div className="max-w-[1400px] mx-auto px-4 h-full flex items-center justify-between gap-4">
           <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate("/dashboard")}>
-            <img src={logo} alt="Logo" className="h-8 md:h-10 w-auto" />
-            <span className="font-black italic text-lg tracking-tighter uppercase">Heart Club</span>
+            <img src={logo} alt="Logo" className="h-7 w-auto" />
+            <span className="font-black italic text-base tracking-tighter uppercase">Heart Club</span>
           </div>
-          <div className="flex-1 max-w-sm">
+          <div className="flex-1 max-w-md">
             <ClubSearch onSelect={(club) => handlePickClub(club.name)} />
           </div>
           {user?.email === "betoborelli9@gmail.com" && (
@@ -133,7 +141,7 @@ const Dashboard = () => {
         </div>
       </header>
 
-      <main className="max-w-6xl mx-auto px-2 md:px-4 py-6 space-y-0">
+      <main className="max-w-[1400px] mx-auto px-3 md:px-5 py-4 space-y-4">
         {/* BANNER MESTRE — SEMPRE DO CORAÇÃO */}
         <ClubBanner
           clubName={heartClubName || "SELECIONE SEU CLUBE"}
@@ -146,84 +154,77 @@ const Dashboard = () => {
           showProfileInfo={true}
         />
 
-        {/* SELETOR DE SIMPATIAS / VOLTAR AO CORAÇÃO */}
-        {(sympathies.length > 0 || !isViewingHeart) && (
-          <div className="px-2 md:px-4 mt-6 flex flex-wrap items-center gap-2">
-            <span className="text-[10px] font-black uppercase italic tracking-widest text-white/40">Visualizando:</span>
-            <button
-              onClick={() => heartClubName && handlePickClub(heartClubName)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-black italic uppercase transition-all ${
-                isViewingHeart ? "bg-[#ff6200] text-black" : "bg-white/5 text-white/60 hover:text-white"
-              }`}
-            >
-              <Heart className="w-3 h-3" /> {heartClubName || "Coração"}
-            </button>
-            {sympathies.map((s) => (
-              <button
-                key={s}
-                onClick={() => handlePickClub(s)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-black italic uppercase transition-all ${
-                  viewedClubName === s ? "bg-[#ff6200] text-black" : "bg-white/5 text-white/60 hover:text-white"
-                }`}
-              >
-                <Eye className="w-3 h-3" /> {s}
-              </button>
-            ))}
-          </div>
-        )}
+        {/* GRID PRINCIPAL 3 COLUNAS — 25 / 45 / 30 */}
+        <div className="grid grid-cols-1 lg:grid-cols-[25%_45%_30%] gap-4">
+          {/* COLUNA 1 — RIVALRY INTELLIGENCE */}
+          <aside className="lg:pr-2">
+            <div className="rounded-2xl bg-white/[0.02] border border-white/5 p-4 lg:sticky lg:top-20">
+              <RivalsColumn
+                clubName={viewedClubName}
+                refCode={profile.codigo_indicacao}
+                primaryColor={primary}
+              />
+            </div>
+          </aside>
 
-        {/* IDENTIDADE DO CLUBE EM VISUALIZAÇÃO */}
-        {viewedClubName && (
-          <div className="pt-6">
-            <ClubIdentityCard clubName={viewedClubName} />
-          </div>
-        )}
+          {/* COLUNA 2 — CALEIDOSCÓPIO (SIMPATIAS + NOTÍCIAS) */}
+          <section key={`col2-${fadeKey}`} className="fade-in space-y-4 min-w-0">
+            <div className="rounded-2xl bg-white/[0.02] border border-white/5 p-4">
+              <SympathyCarousel
+                sympathies={sympathies}
+                heartClubName={heartClubName}
+                viewedClubName={viewedClubName}
+                onPick={handlePickClub}
+              />
+            </div>
 
-        {/* NOTÍCIAS COM IMAGENS */}
-        <div className="pt-12 md:pt-16">
-          <NewsFeedCards
-            teamName={viewedClubName}
-            primaryColor={primary}
-            fallbackLogo={viewedLogo}
-          />
+            {/* Indicador de visualização atual (mini) */}
+            {!isViewingHeart && viewedClubName && (
+              <div className="flex items-center justify-between gap-2 px-2">
+                <div className="flex items-center gap-2 text-[10px] font-black italic uppercase tracking-widest text-white/60">
+                  <Eye className="w-3 h-3" style={{ color: primary }} />
+                  Visualizando: <span className="text-white">{viewedClubName}</span>
+                </div>
+                <button
+                  onClick={() => heartClubName && handlePickClub(heartClubName)}
+                  className="flex items-center gap-1 text-[10px] font-black italic uppercase text-white/40 hover:text-white"
+                >
+                  <Heart className="w-3 h-3" /> Voltar ao Coração
+                </button>
+              </div>
+            )}
+
+            <div className="rounded-2xl bg-white/[0.02] border border-white/5 p-4">
+              <NewsFeedCards
+                teamName={viewedClubName}
+                primaryColor={primary}
+                fallbackLogo={viewedLogo}
+              />
+            </div>
+          </section>
+
+          {/* COLUNA 3 — CÁLCULO + Z4 + SOCIAL */}
+          <aside key={`col3-${fadeKey}`} className="fade-in space-y-4 min-w-0">
+            <ObjectivesPanel
+              clubName={viewedClubName}
+              clubLogo={viewedLogo}
+              primaryColor={primary}
+            />
+            <Z4Infographic
+              clubName={viewedClubName}
+              clubLogo={viewedLogo}
+              primaryColor={primary}
+            />
+            <SocialShareBanners
+              clubName={viewedClubName}
+              clubLogo={viewedLogo}
+              primaryColor={primary}
+              secondaryColor={secondary}
+            />
+          </aside>
         </div>
 
-        {/* OBJETIVOS / RIVAIS */}
-        <div className="pt-12 md:pt-16 grid grid-cols-1 md:grid-cols-2 gap-8">
-          <LeagueObjectives clubName={viewedClubName} primaryColor={primary} />
-          <RivalsBlock
-            clubName={viewedClubName}
-            refCode={profile.codigo_indicacao}
-            primaryColor={primary}
-          />
-        </div>
-
-        {/* CALENDÁRIO */}
-        <div className="pt-12 md:pt-16">
-          <MatchSchedule clubName={viewedClubName} primaryColor={primary} />
-        </div>
-
-        {/* FÁBRICA DE BANNERS */}
-        <div className="pt-12 md:pt-16">
-          <BannerFactory
-            clubName={viewedClubName}
-            clubLogo={viewedLogo}
-            primaryColor={primary}
-            secondaryColor={viewedTheme?.secondaryHex || "#000000"}
-          />
-        </div>
-
-        {/* RANKING DE SIMPATIA */}
-        <div className="pt-12 md:pt-16">
-          <SympathyRanking />
-        </div>
-
-        {/* LOJA */}
-        <div className="pt-12 md:pt-16">
-          <AffiliateStore />
-        </div>
-
-        <div className="h-24" />
+        <div className="h-12" />
       </main>
     </div>
   );

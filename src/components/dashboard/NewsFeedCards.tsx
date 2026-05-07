@@ -72,9 +72,9 @@ export default function NewsFeedCards({ teamName, primaryColor = "#ff6200", fall
       </header>
 
       {loading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <Skeleton key={i} className="h-64 w-full bg-white/5 rounded-2xl" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Skeleton key={i} className="h-[260px] w-full bg-white/5 rounded-xl" />
           ))}
         </div>
       ) : items.length === 0 ? (
@@ -82,13 +82,16 @@ export default function NewsFeedCards({ teamName, primaryColor = "#ff6200", fall
           {teamName ? "Nenhuma notícia recente nas últimas 48h." : "Selecione um clube para ver as notícias."}
         </p>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {items.slice(0, 9).map((item, i) => (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {items.slice(0, 6).map((item, i) => (
             <article
               key={`${item.guid}-${i}`}
-              className="group relative overflow-hidden rounded-2xl bg-white/[0.03] border border-white/5 hover:border-white/20 transition-all duration-300 flex flex-col"
+              className="group relative overflow-hidden rounded-xl bg-white/[0.03] border border-white/5 hover:border-white/20 transition-all duration-300 flex flex-col"
             >
-              <div className="aspect-video bg-black/40 overflow-hidden relative">
+              <div
+                className="h-[160px] overflow-hidden relative"
+                style={{ background: "linear-gradient(135deg, #1a1a1a 0%, #000 100%)" }}
+              >
                 {item.imageUrl ? (
                   <img
                     src={item.imageUrl}
@@ -96,20 +99,24 @@ export default function NewsFeedCards({ teamName, primaryColor = "#ff6200", fall
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                     loading="lazy"
                     onError={(e) => {
-                      if (fallbackLogo) (e.currentTarget as HTMLImageElement).src = fallbackLogo;
-                      else (e.currentTarget.parentElement as HTMLElement).style.background = primaryColor + "22";
+                      const parent = e.currentTarget.parentElement as HTMLElement;
+                      e.currentTarget.style.display = "none";
+                      if (fallbackLogo) {
+                        parent.innerHTML += `<div class="absolute inset-0 flex items-center justify-center"><img src="${fallbackLogo}" class="w-1/2 h-1/2 object-contain opacity-20"/></div>`;
+                      }
                     }}
                   />
                 ) : (
-                  <div
-                    className="w-full h-full flex items-center justify-center"
-                    style={{ background: `linear-gradient(135deg, ${primaryColor}33, transparent)` }}
-                  >
-                    {fallbackLogo ? (
-                      <img src={fallbackLogo} alt="" className="w-20 h-20 object-contain opacity-70" />
-                    ) : (
-                      <Newspaper className="w-10 h-10 text-white/20" />
-                    )}
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <img
+                      src="/logos/heart-club-mark.png"
+                      alt=""
+                      className="w-1/3 h-1/3 object-contain opacity-20"
+                      onError={(e) => {
+                        if (fallbackLogo) (e.currentTarget as HTMLImageElement).src = fallbackLogo;
+                        else (e.currentTarget as HTMLImageElement).style.display = "none";
+                      }}
+                    />
                   </div>
                 )}
                 <div className="absolute top-2 left-2">
