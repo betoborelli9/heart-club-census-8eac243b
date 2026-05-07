@@ -1,7 +1,7 @@
 /**
  * [CAMINHO/ARQUIVO]: src/pages/Dashboard.tsx
- * [MÓDULO]: DASHBOARD CALEIDOSCÓPIO — REESTRUTURAÇÃO DE LAYOUT 2.3
- * [STATUS]: CORREÇÃO DE RENDERIZAÇÃO E POSICIONAMENTO FULL-WIDTH
+ * [MÓDULO]: DASHBOARD CALEIDOSCÓPIO — REESTRUTURAÇÃO COMPLETA
+ * [STATUS]: CORREÇÃO DE LARGURA, GRID 3 COLUNAS E RODAPÉ FIXO
  */
 
 import { useEffect, useState } from "react";
@@ -114,11 +114,12 @@ const Dashboard = () => {
     );
 
   return (
-    <div className="min-h-screen bg-[#050505] text-white font-sans">
+    <div className="min-h-screen bg-[#050505] text-white font-sans selection:bg-[#ff6200]/30 overflow-x-hidden">
       <style>{`
         @keyframes fadeInScale { from { opacity: 0; transform: scale(0.99) translateY(8px); } to { opacity: 1; transform: scale(1) translateY(0); } }
         .fade-in { animation: fadeInScale 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
         .glass-card { background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.05); }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
       `}</style>
 
       {/* HEADER */}
@@ -140,7 +141,7 @@ const Dashboard = () => {
       </header>
 
       <main className="max-w-[1440px] mx-auto px-4 md:px-6 py-6 space-y-6">
-        {/* MÓDULO A: BANNER (INTOCÁVEL) */}
+        {/* SEÇÃO 1: BANNER DO CORAÇÃO */}
         <ClubBanner
           clubName={heartClubName || "SELECIONE SEU CLUBE"}
           clubData={heartClubData}
@@ -152,9 +153,9 @@ const Dashboard = () => {
           showProfileInfo={true}
         />
 
-        {/* MÓDULO B: SIMPATIAS (LARGURA TOTAL DO BANNER) */}
-        <section className="fade-in">
-          <div className="glass-card rounded-[32px] p-6">
+        {/* SEÇÃO 2: SIMPATIAS (LARGURA TOTAL DO BANNER) */}
+        <section className="fade-in w-full">
+          <div className="glass-card rounded-[32px] p-4 md:p-6">
             <SympathyCarousel
               sympathies={sympathies}
               heartClubName={heartClubName}
@@ -164,8 +165,8 @@ const Dashboard = () => {
           </div>
         </section>
 
-        {/* MÓDULO C: GRID DE CONTEÚDO (3 COLUNAS) */}
-        <div className="grid grid-cols-1 lg:grid-cols-[26%_44%_30%] gap-6">
+        {/* SEÇÃO 3: GRID DE CONTEÚDO (3 COLUNAS) */}
+        <div className="grid grid-cols-1 lg:grid-cols-[26%_44%_30%] gap-6 pb-24">
           {/* COLUNA 1 — RIVALRY */}
           <aside className="space-y-4">
             <div className="glass-card rounded-3xl p-5 lg:sticky lg:top-24">
@@ -185,11 +186,11 @@ const Dashboard = () => {
               <div className="flex items-center justify-between gap-4 px-4 py-2 bg-[#ff6200]/5 border border-[#ff6200]/10 rounded-2xl">
                 <div className="flex items-center gap-3 text-[10px] font-black italic uppercase tracking-[0.15em] text-white/60">
                   <div className="w-2 h-2 rounded-full animate-pulse bg-[#ff6200]" />
-                  Radar: <span className="text-white">{viewedClubName}</span>
+                  Radar Ativo: <span className="text-white">{viewedClubName}</span>
                 </div>
                 <button
                   onClick={() => heartClubName && handlePickClub(heartClubName)}
-                  className="text-[10px] font-black italic uppercase text-[#ff6200] flex items-center gap-1"
+                  className="text-[10px] font-black italic uppercase text-[#ff6200] flex items-center gap-1 hover:brightness-125"
                 >
                   <Heart className="w-3 h-3 fill-current" /> Voltar ao Coração
                 </button>
@@ -217,11 +218,9 @@ const Dashboard = () => {
             </div>
           </aside>
         </div>
-
-        <div className="h-24" />
       </main>
 
-      {/* MÓDULO D: RODAPÉ ESTILIZADO (TAB BAR) */}
+      {/* RODAPÉ TAB BAR FIXO */}
       <footer className="fixed bottom-0 left-0 right-0 h-16 bg-black/80 backdrop-blur-2xl border-t border-white/5 z-[100] flex items-center justify-center">
         <nav className="flex items-center gap-8 md:gap-16">
           <button className="flex flex-col items-center gap-1 text-[#ff6200]">
@@ -229,21 +228,21 @@ const Dashboard = () => {
             <span className="text-[9px] font-bold uppercase tracking-widest">Início</span>
           </button>
           <button
-            className="flex flex-col items-center gap-1 text-white/40 hover:text-white transition-colors"
+            className="flex flex-col items-center gap-1 text-white/40 hover:text-white"
             onClick={() => navigate("/ranking")}
           >
             <BarChart3 className="w-5 h-5" />
             <span className="text-[9px] font-bold uppercase tracking-widest">Ranking</span>
           </button>
           <button
-            className="flex flex-col items-center gap-1 text-white/40 hover:text-white transition-colors"
+            className="flex flex-col items-center gap-1 text-white/40 hover:text-white"
             onClick={() => navigate("/mapa-calor")}
           >
             <Map className="w-5 h-5" />
             <span className="text-[9px] font-bold uppercase tracking-widest">Mapa</span>
           </button>
           <button
-            className="flex flex-col items-center gap-1 text-white/40 hover:text-white transition-colors"
+            className="flex flex-col items-center gap-1 text-white/40 hover:text-white"
             onClick={() => navigate("/embaixadores")}
           >
             <Users className="w-5 h-5" />
@@ -251,7 +250,7 @@ const Dashboard = () => {
           </button>
           {user?.email === "betoborelli9@gmail.com" && (
             <button
-              className="flex flex-col items-center gap-1 text-white/40 hover:text-white transition-colors"
+              className="flex flex-col items-center gap-1 text-white/40 hover:text-white"
               onClick={() => navigate("/painel")}
             >
               <LayoutDashboard className="w-5 h-5" />
