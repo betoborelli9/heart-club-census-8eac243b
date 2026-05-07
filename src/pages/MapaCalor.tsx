@@ -1119,17 +1119,20 @@ const MapaCalor = () => {
 
   const [heartCompareData, setHeartCompareData] = useState<ClubCompareData | null>(null);
 
-  /* ---------- Load heart club ---------- */
+  /* Address modal (CEP) */
+  const [addressOpen, setAddressOpen] = useState(false);
+  const [addressChecked, setAddressChecked] = useState(false);
+  const [addressReloadKey, setAddressReloadKey] = useState(0);
+
+  /* ---------- Load heart club + verifica endereço ---------- */
 
   useEffect(() => {
     const load = async () => {
       if (!user) return;
 
       const { data } = await supabase
-
         .from("votos")
-        .select("clube_nome")
-
+        .select("clube_nome, bairro, cep")
         .eq("user_id", user.id)
         .eq("is_original_vote", true)
         .maybeSingle();
@@ -1140,10 +1143,18 @@ const MapaCalor = () => {
       setActiveClubName(name);
 
       setActiveClubInfo(CLUBS_DATA.find((c) => c.nome === name) || null);
+
+      // Se ainda não registrou bairro/CEP, abre o modal
+      const semBairro = !data?.bairro || String(data.bairro).trim().length === 0;
+      const semCep = !data?.cep || String(data.cep).trim().length === 0;
+      if (semBairro || semCep) {
+        setAddressOpen(true);
+      }
+      setAddressChecked(true);
     };
 
     load();
-  }, [user]);
+  }, [user, addressReloadKey]);
 
   /* ---------- Fetch heatmap data ---------- */
 
