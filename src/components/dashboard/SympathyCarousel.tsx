@@ -1,9 +1,10 @@
 /**
  * [CAMINHO]: src/components/dashboard/SympathyCarousel.tsx
- * [MÓDULO]: Coluna 2 topo — "Meus Clubes de Simpatia" (carousel horizontal de cards 120px)
+ * [MÓDULO]: MINI BANNERS DE SIMPATIA — DESIGN VIDRO PREENCHIMENTO TOTAL
+ * [ALTERAÇÃO]: Troca de Carousel (120px) para Grid (Full Width) para alinhar com o Banner.
  */
-import { useEffect, useRef, useState } from "react";
-import { ChevronLeft, ChevronRight, Heart, Newspaper } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Heart, Newspaper } from "lucide-react";
 import { CLUBS_DATA } from "@/clubes-data";
 import { ClubLogo } from "@/components/ClubLogo";
 import { supabase } from "@/integrations/supabase/client";
@@ -16,99 +17,132 @@ interface Props {
 }
 
 const norm = (s: string) =>
-  (s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+  (s || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim();
 
 export default function SympathyCarousel({ sympathies, heartClubName, viewedClubName, onPick }: Props) {
-  const scrollRef = useRef<HTMLDivElement>(null);
   const [logos, setLogos] = useState<Record<string, string | null>>({});
+  const [votes, setVotes] = useState<Record<string, number>>({});
 
   useEffect(() => {
     let cancelled = false;
     const run = async () => {
-      const out: Record<string, string | null> = {};
-      for (const name of sympathies) {
+      const outLogos: Record<string, string | null> = {};
+      const outVotes: Record<string, number> = {};
+
+      // Criamos a lista de 5 clubes (Coração + Simpatias)
+      const allNames = heartClubName
+        ? [heartClubName, ...sympathies.filter((s) => norm(s) !== norm(heartClubName))]
+        : sympathies;
+      const targetNames = allNames.slice(0, 5);
+
+      for (const name of targetNames) {
         const local = CLUBS_DATA.find((c: any) => norm(c.nome) === norm(name));
         let url = (local as any)?.logoUrl || null;
-        if (!url) {
-          try {
-            const { data } = await supabase
-              .from("clubes_cache")
-              .select("escudo_url")
-              .ilike("nome", name)
-              .maybeSingle();
-            url = data?.escudo_url || null;
-          } catch { /* ignore */ }
+        let vts = 0;
+
+        try {
+          const { data } = await supabase
+            .from("clubes_cache")
+            .select("escudo_url, votos_contagem")
+            .ilike("nome", name)
+            .maybeSingle();
+
+          if (!url) url = data?.escudo_url || null;
+          vts = data?.votos_contagem || 0;
+        } catch {
+          /* ignore */
         }
-        out[name] = url;
+
+        outLogos[name] = url;
+        outVotes[name] = vts;
       }
-      if (!cancelled) setLogos(out);
+
+      if (!cancelled) {
+        setLogos(outLogos);
+        setVotes(outVotes);
+      }
     };
-    if (sympathies.length) run();
-    return () => { cancelled = true; };
-  }, [sympathies]);
+    if (sympathies.length || heartClubName) run();
+    return () => {
+      cancelled = true;
+    };
+  }, [sympathies, heartClubName]);
 
   if (!sympathies.length && !heartClubName) return null;
 
-  const scroll = (dir: "left" | "right") => {
-    scrollRef.current?.scrollBy({ left: dir === "left" ? -200 : 200, behavior: "smooth" });
-  };
-
-  const items = heartClubName ? [heartClubName, ...sympathies.filter((s) => norm(s) !== norm(heartClubName))] : sympathies;
+  // Garantimos exatamente 5 itens para o Grid preencher o espaço verde
+  const items = heartClubName
+    ? [heartClubName, ...sympathies.filter((s) => norm(s) !== norm(heartClubName))].slice(0, 5)
+    : sympathies.slice(0, 5);
 
   return (
-    <section className="space-y-2">
-      <header className="flex items-center justify-between gap-2">
-        <h2 className="text-[11px] font-black italic uppercase tracking-widest text-white">
+    <section className="w-full space-y-4">
+      <header className="flex items-center justify-between gap-2 px-2">
+        <h2 className="text-[10px] font-black italic uppercase tracking-[0.2em] text-white/50">
           Meus Clubes de Simpatia
         </h2>
-        <div className="flex items-center gap-1">
-          <span className="text-[9px] italic text-white/40 mr-2">Compartilhador de simpatia</span>
-          <button
-            onClick={() => scroll("left")}
-            className="w-6 h-6 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center"
-            aria-label="Anterior"
-          >
-            <ChevronLeft className="w-3 h-3 text-white/60" />
-          </button>
-          <button
-            onClick={() => scroll("right")}
-            className="w-6 h-6 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center"
-            aria-label="Próximo"
-          >
-            <ChevronRight className="w-3 h-3 text-white/60" />
-          </button>
-        </div>
+        <span className="text-[9px] italic text-white/20 uppercase font-bold tracking-widest">
+          Compartilhador de simpatia
+        </span>
       </header>
 
-      <div
-        ref={scrollRef}
-        className="flex gap-2 overflow-x-auto scroll-smooth no-scrollbar pb-2 snap-x"
-      >
+      {/* GRID DE 5 COLUNAS — Preenchimento total e idêntico ao Banner */}
+      <div className="grid grid-cols-5 gap-3 w-full">
         {items.map((name) => {
           const isHeart = heartClubName && norm(name) === norm(heartClubName);
           const isActive = viewedClubName && norm(name) === norm(viewedClubName);
+          const clubVotes = votes[name] || 0;
+
           return (
             <article
               key={name}
-              className={`snap-start shrink-0 w-[120px] rounded-xl p-2 flex flex-col items-center gap-1.5 border transition-all ${
+              onClick={() => onPick(name)}
+              className={`relative flex flex-col items-center justify-between p-4 rounded-[20px] transition-all duration-500 cursor-pointer group min-h-[150px] border ${
                 isActive
-                  ? "border-[#ff6200] bg-[#ff6200]/10"
-                  : "border-white/10 bg-white/[0.03] hover:border-white/20"
+                  ? "border-[#ff6200]/40 bg-[#ff6200]/10 shadow-[0_0_15px_rgba(255,98,0,0.1)]"
+                  : "border-white/5 bg-white/[0.03] hover:border-white/20 hover:bg-white/[0.08]"
               }`}
             >
-              <div className="w-12 h-12">
-                <ClubLogo src={logos[name]} alt={name} size="sm" className="w-12 h-12" />
+              {/* Ícone de Coração para o time principal */}
+              {isHeart && (
+                <div className="absolute top-2 left-2 text-[#ff6200]">
+                  <Heart className="w-3 h-3 fill-current" />
+                </div>
+              )}
+
+              {/* Escudo centralizado e maior */}
+              <div className="w-14 h-14 flex items-center justify-center">
+                <ClubLogo
+                  src={logos[name]}
+                  alt={name}
+                  size="sm"
+                  className="w-14 h-14 object-contain group-hover:scale-110 transition-transform duration-500"
+                />
               </div>
-              <p className="text-[10px] font-black italic uppercase text-center text-white leading-tight line-clamp-2 min-h-[2.2em]">
-                {name}
-              </p>
-              <button
-                onClick={() => onPick(name)}
-                className="mt-1 w-full flex items-center justify-center gap-1 px-2 py-1 rounded-md bg-white text-black text-[8px] font-black italic uppercase tracking-wider hover:bg-[#ff6200] hover:text-black transition-colors"
+
+              {/* Nome e Votos */}
+              <div className="text-center w-full space-y-1">
+                <p className="text-[11px] font-black italic uppercase text-white leading-tight line-clamp-1">{name}</p>
+                <p className="text-[9px] font-bold text-[#ff6200] uppercase tracking-tighter">
+                  {clubVotes.toLocaleString()} VOTOS
+                </p>
+              </div>
+
+              {/* Botão estilizado na base do retângulo */}
+              <div
+                className={`mt-2 w-full flex items-center justify-center gap-1.5 py-1.5 rounded-lg transition-all ${
+                  isActive
+                    ? "bg-[#ff6200] text-black"
+                    : "bg-white/5 text-white/60 group-hover:bg-white/10 group-hover:text-white"
+                }`}
               >
-                {isHeart ? <Heart className="w-2.5 h-2.5" /> : <Newspaper className="w-2.5 h-2.5" />}
-                Ver Notícias
-              </button>
+                <Newspaper className="w-3 h-3" />
+                <span className="text-[8px] font-black italic uppercase">Ver Notícias</span>
+              </div>
             </article>
           );
         })}
