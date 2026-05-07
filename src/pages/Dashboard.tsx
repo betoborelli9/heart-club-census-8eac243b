@@ -1,15 +1,14 @@
 /**
  * [CAMINHO/ARQUIVO]: src/pages/Dashboard.tsx
- * [MÓDULO]: DASHBOARD CALEIDOSCÓPIO — GRID 3 COLUNAS (25/45/30)
- * - Banner do Coração fixo no topo (intocável)
- * - Coluna 1: Rivalry Intelligence
- * - Coluna 2: Caleidoscópio (Simpatias + Notícias)
- * - Coluna 3: Cálculo de Objetivos + Z4 + Compartilhamento Social
- * - Trocar viewedClubName aplica fade-in nas colunas 2 e 3 (col 1 também atualiza, mas o foco é centro/direita)
+ * [MÓDULO]: DASHBOARD CALEIDOSCÓPIO — REFINAMENTO VISUAL 2.1
+ * [ALTERAÇÕES]:
+ * - Ajuste fino de paddings e gaps para visual "Clean/High-End".
+ * - Otimização da lógica de logo de fallback para evitar "pulos" de layout.
+ * - Refinamento da animação fadeIn.
  */
 
 import { useEffect, useState } from "react";
-import { LogOut, Loader2, Eye, Heart } from "lucide-react";
+import { LogOut, Loader2, Eye, Heart, Trophy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { useUser } from "@/contexts/UserContext";
@@ -54,9 +53,7 @@ const Dashboard = () => {
         setHeartClubData(info || { nome: data.clube_nome });
         setViewedClubName(data.clube_nome);
         setViewedClubData(info || { nome: data.clube_nome });
-        setSympathies(
-          [data.sympathy_1, data.sympathy_2, data.sympathy_3, data.sympathy_4].filter(Boolean) as string[],
-        );
+        setSympathies([data.sympathy_1, data.sympathy_2, data.sympathy_3, data.sympathy_4].filter(Boolean) as string[]);
       }
     };
     loadVoto();
@@ -66,6 +63,7 @@ const Dashboard = () => {
   const viewedTheme = useClubTheme(viewedClubName);
 
   const handlePickClub = (name: string) => {
+    if (name === viewedClubName) return; // Evita re-render desnecessário
     setViewedClubName(name);
     const info = CLUBS_DATA.find((c) => c.nome.toLowerCase() === name.toLowerCase());
     setViewedClubData(info || { nome: name });
@@ -93,7 +91,9 @@ const Dashboard = () => {
       if (!cancelled) setViewedLogo(data?.escudo_url || null);
     };
     fetchLogo();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [viewedClubName, viewedClubData]);
 
   if (isLoading || !profile)
@@ -108,40 +108,58 @@ const Dashboard = () => {
   const secondary = viewedTheme?.secondaryHex || "#000000";
 
   return (
-    <div className="min-h-screen bg-black text-white font-sans">
+    <div className="min-h-screen bg-[#050505] text-white font-sans selection:bg-[#ff6200]/30">
       <style>{`
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
-        .fade-in { animation: fadeIn 0.4s ease-out; }
+        @keyframes fadeInScale { 
+          from { opacity: 0; transform: scale(0.99) translateY(8px); } 
+          to { opacity: 1; transform: scale(1) translateY(0); } 
+        }
+        .fade-in { animation: fadeInScale 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .glass-card { background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.05); }
       `}</style>
 
-      <header className="h-14 border-b border-white/5 bg-black/80 backdrop-blur-xl sticky top-0 z-50">
-        <div className="max-w-[1400px] mx-auto px-4 h-full flex items-center justify-between gap-4">
-          <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate("/dashboard")}>
-            <img src={logo} alt="Logo" className="h-7 w-auto" />
-            <span className="font-black italic text-base tracking-tighter uppercase">Heart Club</span>
+      {/* HEADER PREMIUM */}
+      <header className="h-16 border-b border-white/5 bg-black/60 backdrop-blur-xl sticky top-0 z-[60]">
+        <div className="max-w-[1440px] mx-auto px-6 h-full flex items-center justify-between gap-8">
+          <div className="flex items-center gap-3 cursor-pointer group" onClick={() => navigate("/dashboard")}>
+            <div className="p-1.5 bg-gradient-to-br from-[#ff6200] to-[#ff4500] rounded-lg transition-transform group-hover:scale-105">
+              <img src={logo} alt="Logo" className="h-6 w-auto" />
+            </div>
+            <span className="font-black italic text-xl tracking-tighter uppercase group-hover:text-[#ff6200] transition-colors">
+              Heart Club
+            </span>
           </div>
-          <div className="flex-1 max-w-md">
+
+          <div className="flex-1 max-w-xl">
             <ClubSearch onSelect={(club) => handlePickClub(club.name)} />
           </div>
-          {user?.email === "betoborelli9@gmail.com" && (
+
+          <div className="flex items-center gap-4">
+            {user?.email === "betoborelli9@gmail.com" && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => navigate("/admin/votos-ficticios")}
+                className="hidden md:flex border-[#ff6200]/30 text-[#ff6200] hover:bg-[#ff6200]/10 font-bold italic uppercase text-[10px] tracking-widest"
+              >
+                🧪 ADMIN
+              </Button>
+            )}
             <Button
-              variant="outline"
-              size="sm"
-              onClick={() => navigate("/admin/votos-ficticios")}
-              className="border-[#ff6200]/50 text-[#ff6200] hover:bg-[#ff6200]/10 font-black italic uppercase text-xs"
+              variant="ghost"
+              size="icon"
+              onClick={() => signOut()}
+              className="text-white/30 hover:text-white hover:bg-white/5 transition-all"
             >
-              🧪 Votos Fictícios
+              <LogOut className="w-5 h-5" />
             </Button>
-          )}
-          <Button variant="ghost" size="icon" onClick={() => signOut()} className="text-white/50 hover:text-white">
-            <LogOut className="w-5 h-5" />
-          </Button>
+          </div>
         </div>
       </header>
 
-      <main className="max-w-[1400px] mx-auto px-3 md:px-5 py-4 space-y-4">
+      <main className="max-w-[1440px] mx-auto px-4 md:px-6 py-6 space-y-6">
         {/* BANNER MESTRE — SEMPRE DO CORAÇÃO */}
         <ClubBanner
           clubName={heartClubName || "SELECIONE SEU CLUBE"}
@@ -154,22 +172,24 @@ const Dashboard = () => {
           showProfileInfo={true}
         />
 
-        {/* GRID PRINCIPAL 3 COLUNAS — 25 / 45 / 30 */}
-        <div className="grid grid-cols-1 lg:grid-cols-[25%_45%_30%] gap-4">
+        {/* GRID PRINCIPAL 3 COLUNAS */}
+        <div className="grid grid-cols-1 lg:grid-cols-[26%_44%_30%] gap-6">
           {/* COLUNA 1 — RIVALRY INTELLIGENCE */}
-          <aside className="lg:pr-2">
-            <div className="rounded-2xl bg-white/[0.02] border border-white/5 p-4 lg:sticky lg:top-20">
-              <RivalsColumn
-                clubName={viewedClubName}
-                refCode={profile.codigo_indicacao}
-                primaryColor={primary}
-              />
+          <aside className="space-y-4">
+            <div className="glass-card rounded-3xl p-5 lg:sticky lg:top-24 transition-all">
+              <div className="flex items-center gap-2 mb-6 px-1">
+                <Trophy className="w-4 h-4 text-[#ff6200]" />
+                <h2 className="text-[11px] font-black italic uppercase tracking-[0.2em] text-white/40">
+                  Rivalry Intelligence
+                </h2>
+              </div>
+              <RivalsColumn clubName={viewedClubName} refCode={profile.codigo_indicacao} primaryColor={primary} />
             </div>
           </aside>
 
-          {/* COLUNA 2 — CALEIDOSCÓPIO (SIMPATIAS + NOTÍCIAS) */}
-          <section key={`col2-${fadeKey}`} className="fade-in space-y-4 min-w-0">
-            <div className="rounded-2xl bg-white/[0.02] border border-white/5 p-4">
+          {/* COLUNA 2 — CENTRO (SIMPATIAS + NOTÍCIAS) */}
+          <section key={`col2-${fadeKey}`} className="fade-in space-y-6 min-w-0">
+            <div className="glass-card rounded-3xl p-2 md:p-1 overflow-hidden">
               <SympathyCarousel
                 sympathies={sympathies}
                 heartClubName={heartClubName}
@@ -178,53 +198,47 @@ const Dashboard = () => {
               />
             </div>
 
-            {/* Indicador de visualização atual (mini) */}
+            {/* STATUS DE VISUALIZAÇÃO */}
             {!isViewingHeart && viewedClubName && (
-              <div className="flex items-center justify-between gap-2 px-2">
-                <div className="flex items-center gap-2 text-[10px] font-black italic uppercase tracking-widest text-white/60">
-                  <Eye className="w-3 h-3" style={{ color: primary }} />
-                  Visualizando: <span className="text-white">{viewedClubName}</span>
+              <div className="flex items-center justify-between gap-4 px-4 py-2 bg-[#ff6200]/5 border border-[#ff6200]/10 rounded-2xl">
+                <div className="flex items-center gap-3 text-[10px] font-black italic uppercase tracking-[0.15em] text-white/60">
+                  <div className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: primary }} />
+                  Radar: <span className="text-white">{viewedClubName}</span>
                 </div>
                 <button
                   onClick={() => heartClubName && handlePickClub(heartClubName)}
-                  className="flex items-center gap-1 text-[10px] font-black italic uppercase text-white/40 hover:text-white"
+                  className="flex items-center gap-2 text-[10px] font-black italic uppercase tracking-tighter text-[#ff6200] hover:brightness-125 transition-all"
                 >
-                  <Heart className="w-3 h-3" /> Voltar ao Coração
+                  <Heart className="w-3 h-3 fill-current" /> Voltar ao Coração
                 </button>
               </div>
             )}
 
-            <div className="rounded-2xl bg-white/[0.02] border border-white/5 p-4">
-              <NewsFeedCards
-                teamName={viewedClubName}
-                primaryColor={primary}
-                fallbackLogo={viewedLogo}
-              />
+            <div className="glass-card rounded-3xl p-1 md:p-2 min-h-[600px]">
+              <NewsFeedCards teamName={viewedClubName} primaryColor={primary} fallbackLogo={viewedLogo} />
             </div>
           </section>
 
-          {/* COLUNA 3 — CÁLCULO + Z4 + SOCIAL */}
-          <aside key={`col3-${fadeKey}`} className="fade-in space-y-4 min-w-0">
-            <ObjectivesPanel
-              clubName={viewedClubName}
-              clubLogo={viewedLogo}
-              primaryColor={primary}
-            />
-            <Z4Infographic
-              clubName={viewedClubName}
-              clubLogo={viewedLogo}
-              primaryColor={primary}
-            />
-            <SocialShareBanners
-              clubName={viewedClubName}
-              clubLogo={viewedLogo}
-              primaryColor={primary}
-              secondaryColor={secondary}
-            />
+          {/* COLUNA 3 — DIREITA (CÁLCULO + Z4 + SOCIAL) */}
+          <aside key={`col3-${fadeKey}`} className="fade-in space-y-6 min-w-0">
+            <div className="glass-card rounded-3xl p-6 space-y-8">
+              <ObjectivesPanel clubName={viewedClubName} clubLogo={viewedLogo} primaryColor={primary} />
+              <div className="h-px bg-white/5" />
+              <Z4Infographic clubName={viewedClubName} clubLogo={viewedLogo} primaryColor={primary} />
+            </div>
+
+            <div className="glass-card rounded-3xl p-6">
+              <SocialShareBanners
+                clubName={viewedClubName}
+                clubLogo={viewedLogo}
+                primaryColor={primary}
+                secondaryColor={secondary}
+              />
+            </div>
           </aside>
         </div>
 
-        <div className="h-12" />
+        <div className="h-20" />
       </main>
     </div>
   );
