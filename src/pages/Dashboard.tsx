@@ -9,7 +9,7 @@
  */
 
 import { useEffect, useState } from "react";
-import { LogOut, Loader2, Eye, Heart, Trophy, Home, BarChart3, Map, Users, LayoutDashboard } from "lucide-react";
+import { LogOut, Loader2, Eye, Heart, Trophy, Home, BarChart3, Map, Users, LayoutDashboard, Beaker } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { useUser } from "@/contexts/UserContext";
