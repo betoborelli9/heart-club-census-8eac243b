@@ -1,143 +1,267 @@
 /**
- * [CAMINHO/ARQUIVO]: src/components/dashboard/SympathyCarousel.tsx
- * [MÓDULO]: MINI BANNERS DE SIMPATIA (RETÂNGULOS IDENTICOS)
- * [FIX]: Removido Loop Eterno / Adicionado Fallback de Segurança
+ * [CAMINHO/ARQUIVO]: src/pages/Dashboard.tsx
+ * [MÓDULO]: DASHBOARD CALEIDOSCÓPIO — REESTRUTURAÇÃO DE LAYOUT 2.3
+ * [STATUS]: CORREÇÃO DE RENDERIZAÇÃO E POSICIONAMENTO FULL-WIDTH
  */
 
 import { useEffect, useState } from "react";
+import { LogOut, Loader2, Eye, Heart, Trophy, Home, BarChart3, Map, Users, LayoutDashboard } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { useNavigate } from "react-router-dom";
+import { useUser } from "@/contexts/UserContext";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Newspaper } from "lucide-react";
+import { CLUBS_DATA } from "@/clubes-data";
 
-interface SympathyCarouselProps {
-  sympathies: string[];
-  heartClubName: string | null;
-  viewedClubName: string | null;
-  onPick: (name: string) => void;
-}
+/* ═══════════════════════════════════════════════════════════
+   MÓDULO 1: COMPONENTES DO DASHBOARD
+   ═══════════════════════════════════════════════════════════ */
+import { ClubSearch } from "@/components/dashboard/ClubSearch";
+import ClubBanner from "@/components/dashboard/ClubBanner";
+import NewsFeedCards from "@/components/dashboard/NewsFeedCards";
+import RivalsColumn from "@/components/dashboard/RivalsColumn";
+import SympathyCarousel from "@/components/dashboard/SympathyCarousel";
+import ObjectivesPanel from "@/components/dashboard/ObjectivesPanel";
+import Z4Infographic from "@/components/dashboard/Z4Infographic";
+import SocialShareBanners from "@/components/dashboard/SocialShareBanners";
 
-const SympathyCarousel = ({ sympathies, heartClubName, viewedClubName, onPick }: SympathyCarouselProps) => {
-  const [clubsInfo, setClubsInfo] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+/* ═══════════════════════════════════════════════════════════
+   MÓDULO 2: HOOKS E ASSETS
+   ═══════════════════════════════════════════════════════════ */
+import { useClubTheme } from "@/hooks/useClubTheme";
+import logo from "@/assets/logo.png";
 
+const Dashboard = () => {
+  const navigate = useNavigate();
+  const { user, profile, isLoading, signOut } = useUser();
+
+  const [heartClubName, setHeartClubName] = useState<string | null>(null);
+  const [heartClubData, setHeartClubData] = useState<any>(null);
+  const [viewedClubName, setViewedClubName] = useState<string | null>(null);
+  const [viewedClubData, setViewedClubData] = useState<any>(null);
+  const [sympathies, setSympathies] = useState<string[]>([]);
+  const [fadeKey, setFadeKey] = useState(0);
+  const [viewedLogo, setViewedLogo] = useState<string | null>(null);
+
+  /* ═══════════════════════════════════════════════════════════
+     MÓDULO 3: LOGICA DE ESTADO E CARREGAMENTO
+     ═══════════════════════════════════════════════════════════ */
   useEffect(() => {
-    let isMounted = true;
+    const loadVoto = async () => {
+      if (!user) return;
+      const { data } = await supabase
+        .from("votos")
+        .select("clube_nome, sympathy_1, sympathy_2, sympathy_3, sympathy_4")
+        .eq("user_id", user.id)
+        .eq("is_original_vote", true)
+        .maybeSingle();
 
-    const fetchClubsData = async () => {
-      try {
-        if (!sympathies || sympathies.length === 0) {
-          if (isMounted) setLoading(false);
-          return;
-        }
-
-        const { data, error } = await supabase
-          .from("clubes_cache")
-          .select("nome, escudo_url, votos_contagem")
-          .in("nome", sympathies);
-
-        if (error) throw error;
-
-        if (isMounted) {
-          const orderedData = sympathies.map((name) => {
-            const found = data?.find((d) => d.nome.toLowerCase() === name.toLowerCase());
-            return found || { nome: name, escudo_url: null, votos_contagem: 0 };
-          });
-          setClubsInfo(orderedData);
-        }
-      } catch (err) {
-        console.error("Erro no Carrossel:", err);
-        // Fallback: Se der erro no banco, mostra apenas os nomes para não travar a página
-        if (isMounted) {
-          setClubsInfo(sympathies.map((name) => ({ nome: name, escudo_url: null, votos_contagem: 0 })));
-        }
-      } finally {
-        if (isMounted) setLoading(false);
+      if (data?.clube_nome) {
+        setHeartClubName(data.clube_nome);
+        const info = CLUBS_DATA.find((c) => c.nome.toLowerCase() === data.clube_nome.toLowerCase());
+        setHeartClubData(info || { nome: data.clube_nome });
+        setViewedClubName(data.clube_nome);
+        setViewedClubData(info || { nome: data.clube_nome });
+        setSympathies([data.sympathy_1, data.sympathy_2, data.sympathy_3, data.sympathy_4].filter(Boolean) as string[]);
       }
     };
+    loadVoto();
+  }, [user]);
 
-    fetchClubsData();
-    return () => {
-      isMounted = false;
+  useEffect(() => {
+    let cancelled = false;
+    const fetchLogo = async () => {
+      if (!viewedClubName) {
+        setViewedLogo(null);
+        return;
+      }
+      const local = (viewedClubData as any)?.logoUrl;
+      if (local) {
+        setViewedLogo(local);
+        return;
+      }
+      const { data } = await supabase
+        .from("clubes_cache")
+        .select("escudo_url")
+        .ilike("nome", viewedClubName)
+        .maybeSingle();
+      if (!cancelled) setViewedLogo(data?.escudo_url || null);
     };
-  }, [sympathies]);
+    fetchLogo();
+    return () => {
+      cancelled = true;
+    };
+  }, [viewedClubName, viewedClubData]);
 
-  // Se demorar mais de 5 segundos, o "finally" acima já terá liberado a página
-  if (loading)
+  const handlePickClub = (name: string) => {
+    if (name === viewedClubName) return;
+    setViewedClubName(name);
+    const info = CLUBS_DATA.find((c) => c.nome.toLowerCase() === name.toLowerCase());
+    setViewedClubData(info || { nome: name });
+    setFadeKey((k) => k + 1);
+  };
+
+  const heartTheme = useClubTheme(heartClubName);
+  const viewedTheme = useClubTheme(viewedClubName);
+  const primary = viewedTheme?.primaryHex || "#ff6200";
+  const secondary = viewedTheme?.secondaryHex || "#000000";
+  const isViewingHeart = viewedClubName === heartClubName;
+
+  if (isLoading || !profile)
     return (
-      <div className="h-24 flex items-center justify-center bg-white/[0.02] rounded-3xl border border-white/5">
-        <Loader2 className="animate-spin text-[#ff6200] w-6 h-6" />
-        <span className="ml-3 text-[10px] font-black italic uppercase text-white/40">Sincronizando Censo...</span>
+      <div className="h-screen flex items-center justify-center bg-black">
+        <Loader2 className="animate-spin text-[#ff6200] w-10 h-10" />
       </div>
     );
 
   return (
-    <section className="w-full fade-in">
-      <div className="flex items-center gap-2 mb-4 px-4">
-        <h2 className="text-[10px] font-black italic uppercase tracking-[0.2em] text-[#ff6200]">
-          Meus Clubes de Simpatia
-        </h2>
-        <div className="h-px flex-1 bg-gradient-to-r from-[#ff6200]/20 to-transparent" />
-      </div>
+    <div className="min-h-screen bg-[#050505] text-white font-sans">
+      <style>{`
+        @keyframes fadeInScale { from { opacity: 0; transform: scale(0.99) translateY(8px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+        .fade-in { animation: fadeInScale 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        .glass-card { background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.05); }
+      `}</style>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 px-2">
-        {clubsInfo.map((club) => {
-          const isActive = viewedClubName === club.nome;
+      {/* HEADER */}
+      <header className="h-16 border-b border-white/5 bg-black/60 backdrop-blur-xl sticky top-0 z-[60]">
+        <div className="max-w-[1440px] mx-auto px-6 h-full flex items-center justify-between gap-8">
+          <div className="flex items-center gap-3 cursor-pointer group" onClick={() => navigate("/dashboard")}>
+            <img src={logo} alt="Logo" className="h-7 w-auto" />
+            <span className="font-black italic text-xl tracking-tighter uppercase">Heart Club</span>
+          </div>
+          <div className="flex-1 max-w-xl">
+            <ClubSearch onSelect={(club) => handlePickClub(club.name)} />
+          </div>
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" size="icon" onClick={() => signOut()} className="text-white/30 hover:text-white">
+              <LogOut className="w-5 h-5" />
+            </Button>
+          </div>
+        </div>
+      </header>
 
-          return (
-            <div
-              key={club.nome}
-              onClick={() => onPick(club.nome)}
-              className={`
-                relative flex items-center gap-4 p-4 rounded-[24px] transition-all duration-500 cursor-pointer group
-                ${
-                  isActive
-                    ? "bg-[#ff6200]/10 border border-[#ff6200]/40 shadow-[0_0_20px_rgba(255,98,0,0.1)]"
-                    : "bg-white/[0.03] border border-white/5 hover:bg-white/[0.07] hover:border-white/10"
-                }
-              `}
-            >
-              <div className="relative h-12 w-12 flex-shrink-0 bg-black/20 rounded-xl p-1.5 border border-white/5">
-                <img
-                  src={club.escudo_url || "/placeholder-club.png"}
-                  alt={club.nome}
-                  className="h-full w-full object-contain group-hover:scale-110 transition-transform duration-500"
-                />
+      <main className="max-w-[1440px] mx-auto px-4 md:px-6 py-6 space-y-6">
+        {/* MÓDULO A: BANNER (INTOCÁVEL) */}
+        <ClubBanner
+          clubName={heartClubName || "SELECIONE SEU CLUBE"}
+          clubData={heartClubData}
+          theme={heartTheme}
+          profileName={profile.nome_exibicao || "TORCEDOR"}
+          profileCity={profile.cidade || "BRASIL"}
+          profileState={profile.estado || ""}
+          ambassadorLevel={profile.nivel_embaixador || "BRONZE"}
+          showProfileInfo={true}
+        />
+
+        {/* MÓDULO B: SIMPATIAS (LARGURA TOTAL DO BANNER) */}
+        <section className="fade-in">
+          <div className="glass-card rounded-[32px] p-6">
+            <SympathyCarousel
+              sympathies={sympathies}
+              heartClubName={heartClubName}
+              viewedClubName={viewedClubName}
+              onPick={handlePickClub}
+            />
+          </div>
+        </section>
+
+        {/* MÓDULO C: GRID DE CONTEÚDO (3 COLUNAS) */}
+        <div className="grid grid-cols-1 lg:grid-cols-[26%_44%_30%] gap-6">
+          {/* COLUNA 1 — RIVALRY */}
+          <aside className="space-y-4">
+            <div className="glass-card rounded-3xl p-5 lg:sticky lg:top-24">
+              <div className="flex items-center gap-2 mb-6 px-1">
+                <Trophy className="w-4 h-4 text-[#ff6200]" />
+                <h2 className="text-[11px] font-black italic uppercase tracking-[0.2em] text-white/40">
+                  Rivalry Intelligence
+                </h2>
               </div>
-
-              <div className="flex flex-col min-w-0">
-                <span className="text-[12px] font-black italic uppercase tracking-tighter text-white truncate">
-                  {club.nome}
-                </span>
-
-                <div className="flex items-center gap-1.5 mt-1">
-                  <span className="text-[10px] font-bold text-[#ff6200]">
-                    {Number(club.votos_contagem || 0).toLocaleString()}
-                  </span>
-                  <span className="text-[8px] font-black italic uppercase text-white/30 tracking-widest">VOTOS</span>
-                </div>
-
-                <div
-                  className={`flex items-center gap-1 mt-2 transition-all duration-300 ${isActive ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}
-                >
-                  <Newspaper className="w-2.5 h-2.5 text-[#ff6200]" />
-                  <span className="text-[8px] font-black italic uppercase text-white/60">Ver Notícias</span>
-                </div>
-              </div>
-
-              {isActive && (
-                <div className="absolute top-3 right-3 w-2 h-2 bg-[#ff6200] rounded-full shadow-[0_0_10px_#ff6200] animate-pulse" />
-              )}
+              <RivalsColumn clubName={viewedClubName} refCode={profile.codigo_indicacao} primaryColor={primary} />
             </div>
-          );
-        })}
-      </div>
-    </section>
+          </aside>
+
+          {/* COLUNA 2 — NOTÍCIAS */}
+          <section key={`col2-${fadeKey}`} className="fade-in space-y-6 min-w-0">
+            {!isViewingHeart && viewedClubName && (
+              <div className="flex items-center justify-between gap-4 px-4 py-2 bg-[#ff6200]/5 border border-[#ff6200]/10 rounded-2xl">
+                <div className="flex items-center gap-3 text-[10px] font-black italic uppercase tracking-[0.15em] text-white/60">
+                  <div className="w-2 h-2 rounded-full animate-pulse bg-[#ff6200]" />
+                  Radar: <span className="text-white">{viewedClubName}</span>
+                </div>
+                <button
+                  onClick={() => heartClubName && handlePickClub(heartClubName)}
+                  className="text-[10px] font-black italic uppercase text-[#ff6200] flex items-center gap-1"
+                >
+                  <Heart className="w-3 h-3 fill-current" /> Voltar ao Coração
+                </button>
+              </div>
+            )}
+            <div className="glass-card rounded-3xl p-4 min-h-[600px]">
+              <NewsFeedCards teamName={viewedClubName} primaryColor={primary} fallbackLogo={viewedLogo} />
+            </div>
+          </section>
+
+          {/* COLUNA 3 — MATEMÁTICA / SOCIAL */}
+          <aside key={`col3-${fadeKey}`} className="fade-in space-y-6 min-w-0">
+            <div className="glass-card rounded-3xl p-6 space-y-8">
+              <ObjectivesPanel clubName={viewedClubName} clubLogo={viewedLogo} primaryColor={primary} />
+              <div className="h-px bg-white/5" />
+              <Z4Infographic clubName={viewedClubName} clubLogo={viewedLogo} primaryColor={primary} />
+            </div>
+            <div className="glass-card rounded-3xl p-6">
+              <SocialShareBanners
+                clubName={viewedClubName}
+                clubLogo={viewedLogo}
+                primaryColor={primary}
+                secondaryColor={secondary}
+              />
+            </div>
+          </aside>
+        </div>
+
+        <div className="h-24" />
+      </main>
+
+      {/* MÓDULO D: RODAPÉ ESTILIZADO (TAB BAR) */}
+      <footer className="fixed bottom-0 left-0 right-0 h-16 bg-black/80 backdrop-blur-2xl border-t border-white/5 z-[100] flex items-center justify-center">
+        <nav className="flex items-center gap-8 md:gap-16">
+          <button className="flex flex-col items-center gap-1 text-[#ff6200]">
+            <Home className="w-5 h-5" />
+            <span className="text-[9px] font-bold uppercase tracking-widest">Início</span>
+          </button>
+          <button
+            className="flex flex-col items-center gap-1 text-white/40 hover:text-white transition-colors"
+            onClick={() => navigate("/ranking")}
+          >
+            <BarChart3 className="w-5 h-5" />
+            <span className="text-[9px] font-bold uppercase tracking-widest">Ranking</span>
+          </button>
+          <button
+            className="flex flex-col items-center gap-1 text-white/40 hover:text-white transition-colors"
+            onClick={() => navigate("/mapa-calor")}
+          >
+            <Map className="w-5 h-5" />
+            <span className="text-[9px] font-bold uppercase tracking-widest">Mapa</span>
+          </button>
+          <button
+            className="flex flex-col items-center gap-1 text-white/40 hover:text-white transition-colors"
+            onClick={() => navigate("/embaixadores")}
+          >
+            <Users className="w-5 h-5" />
+            <span className="text-[9px] font-bold uppercase tracking-widest">Embaixadores</span>
+          </button>
+          {user?.email === "betoborelli9@gmail.com" && (
+            <button
+              className="flex flex-col items-center gap-1 text-white/40 hover:text-white transition-colors"
+              onClick={() => navigate("/painel")}
+            >
+              <LayoutDashboard className="w-5 h-5" />
+              <span className="text-[9px] font-bold uppercase tracking-widest">Painel</span>
+            </button>
+          )}
+        </nav>
+      </footer>
+    </div>
   );
 };
 
-/**
- * [RODAPÉ TÉCNICO]
- * - GRID: 4 colunas identicas (Retângulos).
- * - SEGURANÇA: Try/Catch adicionado para evitar travamento da página.
- * - DESIGN: Efeito de pulso e sombra no clube ativo.
- */
-export default SympathyCarousel;
+export default Dashboard;
