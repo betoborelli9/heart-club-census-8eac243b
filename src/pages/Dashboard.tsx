@@ -1,7 +1,11 @@
 /**
  * [CAMINHO/ARQUIVO]: src/pages/Dashboard.tsx
- * [MÓDULO]: DASHBOARD CALEIDOSCÓPIO — REESTRUTURAÇÃO COMPLETA
- * [STATUS]: CORREÇÃO DE LARGURA, GRID 3 COLUNAS E RODAPÉ FIXO
+ * [MÓDULO]: DASHBOARD CALEIDOSCÓPIO — REESTRUTURAÇÃO FINAL 3.0
+ * [STATUS]: CORREÇÃO DE LARGURA, GRID 3 COLUNAS E RODAPÉ FIXO PREMIUM
+ * [LOG]:
+ * - Seção de Simpatias agora full-width alinhada ao banner.
+ * - Grid principal 26/44/30.
+ * - Rodapé Mobile Tab Bar fixado.
  */
 
 import { useEffect, useState } from "react";
@@ -118,7 +122,7 @@ const Dashboard = () => {
       <style>{`
         @keyframes fadeInScale { from { opacity: 0; transform: scale(0.99) translateY(8px); } to { opacity: 1; transform: scale(1) translateY(0); } }
         .fade-in { animation: fadeInScale 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-        .glass-card { background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.05); }
+        .glass-card { background: rgba(255, 255, 255, 0.015); border: 1px solid rgba(255, 255, 255, 0.05); }
         .no-scrollbar::-webkit-scrollbar { display: none; }
       `}</style>
 
@@ -140,8 +144,8 @@ const Dashboard = () => {
         </div>
       </header>
 
-      <main className="max-w-[1440px] mx-auto px-4 md:px-6 py-6 space-y-6">
-        {/* SEÇÃO 1: BANNER DO CORAÇÃO */}
+      <main className="max-w-[1440px] mx-auto px-4 md:px-6 py-6 space-y-6 pb-24">
+        {/* BANNER MESTRE (LARGURA CONTAINER) */}
         <ClubBanner
           clubName={heartClubName || "SELECIONE SEU CLUBE"}
           clubData={heartClubData}
@@ -153,7 +157,7 @@ const Dashboard = () => {
           showProfileInfo={true}
         />
 
-        {/* SEÇÃO 2: SIMPATIAS (LARGURA TOTAL DO BANNER) */}
+        {/* SEÇÃO SIMPATIAS - FULL WIDTH ALINHADO */}
         <section className="fade-in w-full">
           <div className="glass-card rounded-[32px] p-4 md:p-6">
             <SympathyCarousel
@@ -165,43 +169,37 @@ const Dashboard = () => {
           </div>
         </section>
 
-        {/* SEÇÃO 3: GRID DE CONTEÚDO (3 COLUNAS) */}
-        <div className="grid grid-cols-1 lg:grid-cols-[26%_44%_30%] gap-6 pb-24">
-          {/* COLUNA 1 — RIVALRY */}
+        {/* GRID PRINCIPAL 3 COLUNAS */}
+        <div className="grid grid-cols-1 lg:grid-cols-[26%_44%_30%] gap-6">
+          {/* COLUNA 1 — TIMES RIVAIS */}
           <aside className="space-y-4">
             <div className="glass-card rounded-3xl p-5 lg:sticky lg:top-24">
-              <div className="flex items-center gap-2 mb-6 px-1">
-                <Trophy className="w-4 h-4 text-[#ff6200]" />
-                <h2 className="text-[11px] font-black italic uppercase tracking-[0.2em] text-white/40">
-                  Rivalry Intelligence
-                </h2>
-              </div>
               <RivalsColumn clubName={viewedClubName} refCode={profile.codigo_indicacao} primaryColor={primary} />
             </div>
           </aside>
 
-          {/* COLUNA 2 — NOTÍCIAS */}
+          {/* COLUNA 2 — NOTÍCIAS (CALEIDOSCÓPIO) */}
           <section key={`col2-${fadeKey}`} className="fade-in space-y-6 min-w-0">
             {!isViewingHeart && viewedClubName && (
-              <div className="flex items-center justify-between gap-4 px-4 py-2 bg-[#ff6200]/5 border border-[#ff6200]/10 rounded-2xl">
+              <div className="flex items-center justify-between gap-4 px-4 py-3 bg-[#ff6200]/5 border border-[#ff6200]/10 rounded-2xl">
                 <div className="flex items-center gap-3 text-[10px] font-black italic uppercase tracking-[0.15em] text-white/60">
                   <div className="w-2 h-2 rounded-full animate-pulse bg-[#ff6200]" />
                   Radar Ativo: <span className="text-white">{viewedClubName}</span>
                 </div>
                 <button
                   onClick={() => heartClubName && handlePickClub(heartClubName)}
-                  className="text-[10px] font-black italic uppercase text-[#ff6200] flex items-center gap-1 hover:brightness-125"
+                  className="text-[10px] font-black italic uppercase text-[#ff6200] flex items-center gap-1"
                 >
                   <Heart className="w-3 h-3 fill-current" /> Voltar ao Coração
                 </button>
               </div>
             )}
-            <div className="glass-card rounded-3xl p-4 min-h-[600px]">
+            <div className="glass-card rounded-[32px] p-2 min-h-[600px]">
               <NewsFeedCards teamName={viewedClubName} primaryColor={primary} fallbackLogo={viewedLogo} />
             </div>
           </section>
 
-          {/* COLUNA 3 — MATEMÁTICA / SOCIAL */}
+          {/* COLUNA 3 — MATEMÁTICA E SOCIAL */}
           <aside key={`col3-${fadeKey}`} className="fade-in space-y-6 min-w-0">
             <div className="glass-card rounded-3xl p-6 space-y-8">
               <ObjectivesPanel clubName={viewedClubName} clubLogo={viewedLogo} primaryColor={primary} />
@@ -220,7 +218,7 @@ const Dashboard = () => {
         </div>
       </main>
 
-      {/* RODAPÉ TAB BAR FIXO */}
+      {/* RODAPÉ TAB BAR - FIXO ESTILIZADO */}
       <footer className="fixed bottom-0 left-0 right-0 h-16 bg-black/80 backdrop-blur-2xl border-t border-white/5 z-[100] flex items-center justify-center">
         <nav className="flex items-center gap-8 md:gap-16">
           <button className="flex flex-col items-center gap-1 text-[#ff6200]">
