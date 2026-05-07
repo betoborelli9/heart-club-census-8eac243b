@@ -867,7 +867,15 @@ export type Database = {
         Args: { p_city_query: string; p_club_name: string; p_limit?: number }
         Returns: Json
       }
-      seed_fake_votes: { Args: { p_quantidade?: number }; Returns: Json }
+      seed_fake_votes: {
+        Args: {
+          p_city?: string
+          p_country?: string
+          p_quantidade?: number
+          p_state?: string
+        }
+        Returns: Json
+      }
       unaccent: { Args: { "": string }; Returns: string }
     }
     Enums: {

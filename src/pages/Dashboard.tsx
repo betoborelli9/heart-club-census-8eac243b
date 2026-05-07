@@ -9,7 +9,7 @@
  */
 
 import { useEffect, useState } from "react";
-import { LogOut, Loader2, Eye, Heart, Trophy, Home, BarChart3, Map, Users, LayoutDashboard } from "lucide-react";
+import { LogOut, Loader2, Eye, Heart, Trophy, Home, BarChart3, Map, Users, LayoutDashboard, Beaker } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { useUser } from "@/contexts/UserContext";
@@ -247,13 +247,22 @@ const Dashboard = () => {
             <span className="text-[9px] font-bold uppercase tracking-widest">Embaixadores</span>
           </button>
           {user?.email === "betoborelli9@gmail.com" && (
-            <button
-              className="flex flex-col items-center gap-1 text-white/40 hover:text-white"
-              onClick={() => navigate("/painel")}
-            >
-              <LayoutDashboard className="w-5 h-5" />
-              <span className="text-[9px] font-bold uppercase tracking-widest">Painel</span>
-            </button>
+            <>
+              <button
+                className="flex flex-col items-center gap-1 text-white/40 hover:text-white"
+                onClick={() => navigate("/painel")}
+              >
+                <LayoutDashboard className="w-5 h-5" />
+                <span className="text-[9px] font-bold uppercase tracking-widest">Painel</span>
+              </button>
+              <button
+                className="flex flex-col items-center gap-1 text-[#ff6200] hover:text-white"
+                onClick={() => navigate("/admin/votos-ficticios")}
+              >
+                <Beaker className="w-5 h-5" />
+                <span className="text-[9px] font-bold uppercase tracking-widest">Fictícios</span>
+              </button>
+            </>
           )}
         </nav>
       </footer>
