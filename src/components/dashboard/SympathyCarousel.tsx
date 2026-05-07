@@ -43,11 +43,11 @@ export default function SympathyCarousel({ sympathies, heartClubName, viewedClub
         try {
           const { data } = await supabase
             .from("clubes_cache")
-            .select("escudo_url, votos_contagem")
+            .select("escudo_url")
             .ilike("nome", name)
             .maybeSingle();
-          if (!url) url = data?.escudo_url || null;
-          vts = data?.votos_contagem || 0;
+          if (!url) url = (data as any)?.escudo_url || null;
+          vts = 0;
         } catch {}
         outLogos[name] = url;
         outVotes[name] = vts;
