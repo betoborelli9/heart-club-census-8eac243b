@@ -1,10 +1,7 @@
 /**
  * [CAMINHO/ARQUIVO]: src/pages/Dashboard.tsx
- * [MÓDULO]: DASHBOARD CALEIDOSCÓPIO — REFINAMENTO VISUAL 2.1
- * [ALTERAÇÕES]:
- * - Ajuste fino de paddings e gaps para visual "Clean/High-End".
- * - Otimização da lógica de logo de fallback para evitar "pulos" de layout.
- * - Refinamento da animação fadeIn.
+ * [MÓDULO]: DASHBOARD CALEIDOSCÓPIO — REFINAMENTO VISUAL 2.2
+ * [CONTEXTO]: Reestruturação de Layout para Simpatias Full-Width e Grid 3 Colunas.
  */
 
 import { useEffect, useState } from "react";
@@ -14,15 +11,23 @@ import { useNavigate } from "react-router-dom";
 import { useUser } from "@/contexts/UserContext";
 import { supabase } from "@/integrations/supabase/client";
 import { CLUBS_DATA } from "@/clubes-data";
+
+/* ═══════════════════════════════════════════════════════════
+   MÓDULO 1: IMPORTAÇÃO DE COMPONENTES DE DASHBOARD
+   ═══════════════════════════════════════════════════════════ */
 import { ClubSearch } from "@/components/dashboard/ClubSearch";
 import ClubBanner from "@/components/dashboard/ClubBanner";
-import { useClubTheme } from "@/hooks/useClubTheme";
 import NewsFeedCards from "@/components/dashboard/NewsFeedCards";
 import RivalsColumn from "@/components/dashboard/RivalsColumn";
 import SympathyCarousel from "@/components/dashboard/SympathyCarousel";
 import ObjectivesPanel from "@/components/dashboard/ObjectivesPanel";
 import Z4Infographic from "@/components/dashboard/Z4Infographic";
 import SocialShareBanners from "@/components/dashboard/SocialShareBanners";
+
+/* ═══════════════════════════════════════════════════════════
+   MÓDULO 2: ASSETS E HOOKS
+   ═══════════════════════════════════════════════════════════ */
+import { useClubTheme } from "@/hooks/useClubTheme";
 import logo from "@/assets/logo.png";
 
 const Dashboard = () => {
@@ -37,6 +42,9 @@ const Dashboard = () => {
   const [sympathies, setSympathies] = useState<string[]>([]);
   const [fadeKey, setFadeKey] = useState(0);
 
+  /* ═══════════════════════════════════════════════════════════
+     MÓDULO 3: LÓGICA DE CARREGAMENTO DE DADOS (SUPABASE)
+     ═══════════════════════════════════════════════════════════ */
   useEffect(() => {
     const loadVoto = async () => {
       if (!user) return;
@@ -63,7 +71,7 @@ const Dashboard = () => {
   const viewedTheme = useClubTheme(viewedClubName);
 
   const handlePickClub = (name: string) => {
-    if (name === viewedClubName) return; // Evita re-render desnecessário
+    if (name === viewedClubName) return;
     setViewedClubName(name);
     const info = CLUBS_DATA.find((c) => c.nome.toLowerCase() === name.toLowerCase());
     setViewedClubData(info || { nome: name });
@@ -107,6 +115,9 @@ const Dashboard = () => {
   const primary = viewedTheme?.primaryHex || "#ff6200";
   const secondary = viewedTheme?.secondaryHex || "#000000";
 
+  /* ═══════════════════════════════════════════════════════════
+     MÓDULO 4: RENDERIZAÇÃO DA PÁGINA (UI)
+     ═══════════════════════════════════════════════════════════ */
   return (
     <div className="min-h-screen bg-[#050505] text-white font-sans selection:bg-[#ff6200]/30">
       <style>{`
@@ -160,7 +171,7 @@ const Dashboard = () => {
       </header>
 
       <main className="max-w-[1440px] mx-auto px-4 md:px-6 py-6 space-y-6">
-        {/* BANNER MESTRE — SEMPRE DO CORAÇÃO */}
+        {/* BANNER MESTRE — INTOCÁVEL */}
         <ClubBanner
           clubName={heartClubName || "SELECIONE SEU CLUBE"}
           clubData={heartClubData}
@@ -172,7 +183,35 @@ const Dashboard = () => {
           showProfileInfo={true}
         />
 
-        {/* GRID PRINCIPAL 3 COLUNAS */}
+        {/* MÓDULO DE SIMPATIAS: LARGURA TOTAL (FULL WIDTH) */}
+        <section className="fade-in">
+          <div className="glass-card rounded-[32px] p-1 overflow-hidden">
+            <SympathyCarousel
+              sympathies={sympathies}
+              heartClubName={heartClubName}
+              viewedClubName={viewedClubName}
+              onPick={handlePickClub}
+            />
+          </div>
+        </section>
+
+        {/* STATUS DE RADAR (SOMENTE QUANDO FORA DO CORAÇÃO) */}
+        {!isViewingHeart && viewedClubName && (
+          <div className="fade-in flex items-center justify-between gap-4 px-6 py-3 bg-[#ff6200]/5 border border-[#ff6200]/10 rounded-2xl mx-1">
+            <div className="flex items-center gap-3 text-[10px] font-black italic uppercase tracking-[0.15em] text-white/60">
+              <div className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: primary }} />
+              Radar Ativo: <span className="text-white">{viewedClubName}</span>
+            </div>
+            <button
+              onClick={() => heartClubName && handlePickClub(heartClubName)}
+              className="flex items-center gap-2 text-[10px] font-black italic uppercase tracking-tighter text-[#ff6200] hover:brightness-125 transition-all"
+            >
+              <Heart className="w-3 h-3 fill-current" /> Voltar ao Coração
+            </button>
+          </div>
+        )}
+
+        {/* GRID PRINCIPAL DE CONTEÚDO (3 COLUNAS) */}
         <div className="grid grid-cols-1 lg:grid-cols-[26%_44%_30%] gap-6">
           {/* COLUNA 1 — RIVALRY INTELLIGENCE */}
           <aside className="space-y-4">
@@ -187,39 +226,14 @@ const Dashboard = () => {
             </div>
           </aside>
 
-          {/* COLUNA 2 — CENTRO (SIMPATIAS + NOTÍCIAS) */}
-          <section key={`col2-${fadeKey}`} className="fade-in space-y-6 min-w-0">
-            <div className="glass-card rounded-3xl p-2 md:p-1 overflow-hidden">
-              <SympathyCarousel
-                sympathies={sympathies}
-                heartClubName={heartClubName}
-                viewedClubName={viewedClubName}
-                onPick={handlePickClub}
-              />
-            </div>
-
-            {/* STATUS DE VISUALIZAÇÃO */}
-            {!isViewingHeart && viewedClubName && (
-              <div className="flex items-center justify-between gap-4 px-4 py-2 bg-[#ff6200]/5 border border-[#ff6200]/10 rounded-2xl">
-                <div className="flex items-center gap-3 text-[10px] font-black italic uppercase tracking-[0.15em] text-white/60">
-                  <div className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: primary }} />
-                  Radar: <span className="text-white">{viewedClubName}</span>
-                </div>
-                <button
-                  onClick={() => heartClubName && handlePickClub(heartClubName)}
-                  className="flex items-center gap-2 text-[10px] font-black italic uppercase tracking-tighter text-[#ff6200] hover:brightness-125 transition-all"
-                >
-                  <Heart className="w-3 h-3 fill-current" /> Voltar ao Coração
-                </button>
-              </div>
-            )}
-
-            <div className="glass-card rounded-3xl p-1 md:p-2 min-h-[600px]">
+          {/* COLUNA 2 — NOTÍCIAS (CENTRO) */}
+          <section key={`col2-${fadeKey}`} className="fade-in min-w-0">
+            <div className="glass-card rounded-3xl p-2 md:p-3 min-h-[600px]">
               <NewsFeedCards teamName={viewedClubName} primaryColor={primary} fallbackLogo={viewedLogo} />
             </div>
           </section>
 
-          {/* COLUNA 3 — DIREITA (CÁLCULO + Z4 + SOCIAL) */}
+          {/* COLUNA 3 — MATEMÁTICA E SOCIAL (DIREITA) */}
           <aside key={`col3-${fadeKey}`} className="fade-in space-y-6 min-w-0">
             <div className="glass-card rounded-3xl p-6 space-y-8">
               <ObjectivesPanel clubName={viewedClubName} clubLogo={viewedLogo} primaryColor={primary} />
@@ -244,4 +258,10 @@ const Dashboard = () => {
   );
 };
 
+/**
+ * [RODAPÉ TÉCNICO]
+ * - GRID: 26% (Rivalidade) | 44% (Notícias) | 30% (Objetivos).
+ * - SYMPATHY: Posicionamento Full Width para equilíbrio visual.
+ * - IDENTIDADE: Banner persistente no topo conforme solicitado.
+ */
 export default Dashboard;
