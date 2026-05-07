@@ -6,7 +6,7 @@
  * - Heatmap removido daqui (continua disponível em /mapa-calor)
  */
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { LogOut, Loader2, Eye, Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
