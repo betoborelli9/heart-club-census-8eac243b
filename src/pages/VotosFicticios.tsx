@@ -27,7 +27,7 @@ interface Summary {
 const VotosFicticios = () => {
   const navigate = useNavigate();
   const { user, isLoading } = useUser();
-  const [quantidade, setQuantidade] = useState(5000);
+  const [quantidade, setQuantidade] = useState(1000);
   const [syncCity, setSyncCity] = useState("Goiânia");
   const [syncState, setSyncState] = useState("Goiás");
   const [syncCountry, setSyncCountry] = useState("Brazil");
