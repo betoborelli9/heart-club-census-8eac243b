@@ -1,61 +1,81 @@
 /**
  * [CAMINHO/ARQUIVO]: src/pages/Dashboard.tsx
- * [MÓDULO]: DASHBOARD PRINCIPAL (INTEGRAÇÃO MESTRE)
- * [STATUS]: UNIFICADO (BANNER + NAVBAR + NEWS)
+ * [MÓDULO]: DASHBOARD CALEIDOSCÓPIO
+ * - Banner do Coração fixo no topo (intocável)
+ * - Demais blocos dinâmicos via viewedClub (clube de simpatia ou pesquisado)
+ * - Heatmap removido daqui (continua disponível em /mapa-calor)
  */
 
-/* [MÓDULO: IMPORTS] */
-import { useEffect, useState } from "react";
-import { LogOut, Loader2 } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { LogOut, Loader2, Eye, Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { useUser } from "@/contexts/UserContext";
 import { supabase } from "@/integrations/supabase/client";
 import { CLUBS_DATA } from "@/clubes-data";
 import { ClubSearch } from "@/components/dashboard/ClubSearch";
-import EditorialNews from "@/components/dashboard/EditorialNews";
-import RivalsRadar from "@/components/dashboard/RivalsRadar";
-import GeoLoyalty from "@/components/dashboard/GeoLoyalty";
 import ClubBanner from "@/components/dashboard/ClubBanner";
 import ClubIdentityCard from "@/components/dashboard/ClubIdentityCard";
 import { useClubTheme } from "@/hooks/useClubTheme";
 import AffiliateStore from "@/components/store/AffiliateStore";
 import SympathyRanking from "@/components/dashboard/SympathyRanking";
-import HeatmapSection from "@/components/dashboard/HeatmapSection";
+import NewsFeedCards from "@/components/dashboard/NewsFeedCards";
+import LeagueObjectives from "@/components/dashboard/LeagueObjectives";
+import RivalsBlock from "@/components/dashboard/RivalsBlock";
+import MatchSchedule from "@/components/dashboard/MatchSchedule";
+import BannerFactory from "@/components/dashboard/BannerFactory";
 import logo from "@/assets/logo.png";
 
-/* [MÓDULO: COMPONENTE DASHBOARD] */
 const Dashboard = () => {
   const navigate = useNavigate();
   const { user, profile, isLoading, signOut } = useUser();
-  const [activeClub, setActiveClub] = useState<any>(null);
-  const [clubeName, setClubeName] = useState<string | null>(null);
-  const [queriedTeam, setQueriedTeam] = useState<any>(null);
 
-  /* [MÓDULO: LÓGICA DE CARREGAMENTO DE VOTO] */
+  // Clube do coração (fixo)
+  const [heartClubName, setHeartClubName] = useState<string | null>(null);
+  const [heartClubData, setHeartClubData] = useState<any>(null);
+
+  // Clube em visualização (caleidoscópio)
+  const [viewedClubName, setViewedClubName] = useState<string | null>(null);
+  const [viewedClubData, setViewedClubData] = useState<any>(null);
+  const [sympathies, setSympathies] = useState<string[]>([]);
+
   useEffect(() => {
     const loadVoto = async () => {
       if (!user) return;
       const { data } = await supabase
         .from("votos")
-        .select("clube_nome")
+        .select("clube_nome, sympathy_1, sympathy_2, sympathy_3, sympathy_4")
         .eq("user_id", user.id)
         .eq("is_original_vote", true)
         .maybeSingle();
 
       if (data?.clube_nome) {
-        setClubeName(data.clube_nome);
-        const clubInfo = CLUBS_DATA.find((c) => c.nome.toLowerCase() === data.clube_nome.toLowerCase());
-        setActiveClub(clubInfo || { nome: data.clube_nome });
+        setHeartClubName(data.clube_nome);
+        const info = CLUBS_DATA.find((c) => c.nome.toLowerCase() === data.clube_nome.toLowerCase());
+        setHeartClubData(info || { nome: data.clube_nome });
+        setViewedClubName(data.clube_nome);
+        setViewedClubData(info || { nome: data.clube_nome });
+        setSympathies(
+          [data.sympathy_1, data.sympathy_2, data.sympathy_3, data.sympathy_4].filter(Boolean) as string[],
+        );
       }
     };
     loadVoto();
   }, [user]);
 
-  /* [MÓDULO: TEMA DINÂMICO] */
-  const theme = useClubTheme(clubeName);
+  const heartTheme = useClubTheme(heartClubName);
+  const viewedTheme = useClubTheme(viewedClubName);
 
-  /* [MÓDULO: ESTADO DE LOADING] */
+  const handlePickClub = (name: string) => {
+    setViewedClubName(name);
+    const info = CLUBS_DATA.find((c) => c.nome.toLowerCase() === name.toLowerCase());
+    setViewedClubData(info || { nome: name });
+  };
+
+  const viewedLogo = useMemo(() => {
+    return viewedTheme?.escudoUrl || (viewedClubData as any)?.logoUrl || null;
+  }, [viewedTheme, viewedClubData]);
+
   if (isLoading || !profile)
     return (
       <div className="h-screen flex items-center justify-center bg-black">
@@ -63,9 +83,11 @@ const Dashboard = () => {
       </div>
     );
 
+  const isViewingHeart = viewedClubName === heartClubName;
+  const primary = viewedTheme?.primaryHex || "#ff6200";
+
   return (
     <div className="min-h-screen bg-black text-white font-sans">
-      {/* [MÓDULO: HEADER DE NAVEGAÇÃO] */}
       <header className="h-16 border-b border-white/5 bg-black/80 backdrop-blur-xl sticky top-0 z-50">
         <div className="max-w-6xl mx-auto px-4 h-full flex items-center justify-between gap-4">
           <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate("/dashboard")}>
@@ -73,7 +95,7 @@ const Dashboard = () => {
             <span className="font-black italic text-lg tracking-tighter uppercase">Heart Club</span>
           </div>
           <div className="flex-1 max-w-sm">
-            <ClubSearch onSelect={(club) => setQueriedTeam(club)} />
+            <ClubSearch onSelect={(club) => handlePickClub(club.name)} />
           </div>
           {user?.email === "betoborelli9@gmail.com" && (
             <Button
@@ -91,13 +113,12 @@ const Dashboard = () => {
         </div>
       </header>
 
-      {/* [MÓDULO: CONTEÚDO PRINCIPAL] */}
       <main className="max-w-6xl mx-auto px-2 md:px-4 py-6 space-y-0">
-        {/* [MÓDULO: BANNER MESTRE IMUTÁVEL — NÃO ALTERAR] */}
+        {/* BANNER MESTRE — SEMPRE DO CORAÇÃO */}
         <ClubBanner
-          clubName={clubeName || "SELECIONE SEU CLUBE"}
-          clubData={activeClub}
-          theme={theme}
+          clubName={heartClubName || "SELECIONE SEU CLUBE"}
+          clubData={heartClubData}
+          theme={heartTheme}
           profileName={profile.nome_exibicao || "TORCEDOR"}
           profileCity={profile.cidade || "BRASIL"}
           profileState={profile.estado || ""}
@@ -105,39 +126,83 @@ const Dashboard = () => {
           showProfileInfo={true}
         />
 
-        {/* [MÓDULO: IDENTIDADE DO CLUBE — NÃO ALTERAR] */}
-        {clubeName && <ClubIdentityCard clubName={clubeName} />}
+        {/* SELETOR DE SIMPATIAS / VOLTAR AO CORAÇÃO */}
+        {(sympathies.length > 0 || !isViewingHeart) && (
+          <div className="px-2 md:px-4 mt-6 flex flex-wrap items-center gap-2">
+            <span className="text-[10px] font-black uppercase italic tracking-widest text-white/40">Visualizando:</span>
+            <button
+              onClick={() => heartClubName && handlePickClub(heartClubName)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-black italic uppercase transition-all ${
+                isViewingHeart ? "bg-[#ff6200] text-black" : "bg-white/5 text-white/60 hover:text-white"
+              }`}
+            >
+              <Heart className="w-3 h-3" /> {heartClubName || "Coração"}
+            </button>
+            {sympathies.map((s) => (
+              <button
+                key={s}
+                onClick={() => handlePickClub(s)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-black italic uppercase transition-all ${
+                  viewedClubName === s ? "bg-[#ff6200] text-black" : "bg-white/5 text-white/60 hover:text-white"
+                }`}
+              >
+                <Eye className="w-3 h-3" /> {s}
+              </button>
+            ))}
+          </div>
+        )}
 
-        {/* [MÓDULO: FEED EDITORIAL — radar de notícias clean] */}
-        <div className="pt-14 md:pt-20">
-          <EditorialNews
-            teamName={queriedTeam?.name || clubeName || null}
-            primaryColor={theme?.primaryHex || "#ff6200"}
+        {/* IDENTIDADE DO CLUBE EM VISUALIZAÇÃO */}
+        {viewedClubName && (
+          <div className="pt-6">
+            <ClubIdentityCard clubName={viewedClubName} />
+          </div>
+        )}
+
+        {/* NOTÍCIAS COM IMAGENS */}
+        <div className="pt-12 md:pt-16">
+          <NewsFeedCards
+            teamName={viewedClubName}
+            primaryColor={primary}
+            fallbackLogo={viewedLogo}
           />
         </div>
 
-        {/* [MÓDULO: INTELIGÊNCIA — Rivais + Geografia] */}
-        <div className="pt-16 md:pt-24 grid grid-cols-1 md:grid-cols-2 gap-12 md:gap-16">
-          <RivalsRadar excludeClub={clubeName} />
-          <GeoLoyalty clubName={clubeName} />
+        {/* OBJETIVOS / RIVAIS */}
+        <div className="pt-12 md:pt-16 grid grid-cols-1 md:grid-cols-2 gap-8">
+          <LeagueObjectives clubName={viewedClubName} primaryColor={primary} />
+          <RivalsBlock
+            clubName={viewedClubName}
+            refCode={profile.codigo_indicacao}
+            primaryColor={primary}
+          />
         </div>
 
-        {/* [MÓDULO: MAPA DE CALOR GLOBAL — Heatmap Brasa] */}
-        <div className="pt-16 md:pt-24">
-          <HeatmapSection />
+        {/* CALENDÁRIO */}
+        <div className="pt-12 md:pt-16">
+          <MatchSchedule clubName={viewedClubName} primaryColor={primary} />
         </div>
 
-        {/* [MÓDULO: RANKING DE SIMPATIA — segundo time mais querido] */}
-        <div className="pt-16 md:pt-24">
+        {/* FÁBRICA DE BANNERS */}
+        <div className="pt-12 md:pt-16">
+          <BannerFactory
+            clubName={viewedClubName}
+            clubLogo={viewedLogo}
+            primaryColor={primary}
+            secondaryColor={viewedTheme?.secondaryHex || "#000000"}
+          />
+        </div>
+
+        {/* RANKING DE SIMPATIA */}
+        <div className="pt-12 md:pt-16">
           <SympathyRanking />
         </div>
 
-        {/* [MÓDULO: LOJA DO TORCEDOR — Marketplace de Afiliados dinâmico] */}
-        <div className="pt-16 md:pt-24">
+        {/* LOJA */}
+        <div className="pt-12 md:pt-16">
           <AffiliateStore />
         </div>
 
-        {/* [MÓDULO: RESPIRO INFERIOR] */}
         <div className="h-24" />
       </main>
     </div>
@@ -145,10 +210,3 @@ const Dashboard = () => {
 };
 
 export default Dashboard;
-
-/**
- * [RODAPÉ TÉCNICO]
- * ARQUIVO: src/pages/Dashboard.tsx
- * MÓDULO: DASHBOARD PRINCIPAL
- * VERIFICAÇÃO: Build sincronizado com ClubBanner v2.0.
- */
