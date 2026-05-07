@@ -127,11 +127,9 @@ const REGION_SUFFIXES = [
   " municipality",
 ];
 
-const NEIGHBORHOOD_PREFIXES = [
-  "setor ", "jardim ", "residencial ", "parque ", "vila ", "chacara ",
-  "conjunto ", "loteamento ", "prive ", "condominio ", "alameda ", "fazenda ",
-  "bairro ",
-];
+// IMPORTANT: never strip neighborhood prefixes (Setor / Chácara / Jardim / Vila…).
+// "Setor Coimbra" and "Chácara Coimbra" são bairros DIFERENTES — não podem colidir.
+// Match estrito pelo nome completo normalizado.
 
 function regionLookupKeys(value: string): string[] {
   const base = normalize(value);
@@ -148,13 +146,10 @@ function regionLookupKeys(value: string): string[] {
 
   REGION_ALIASES[base]?.forEach(add);
 
+  // Suffixes only apply to country/state level (e.g. "State of X" → "x"),
+  // they are safe because they don't overlap with neighborhood naming.
   for (const suffix of REGION_SUFFIXES) {
     if (base.endsWith(suffix)) add(base.slice(0, -suffix.length));
-  }
-
-  // Strip neighborhood prefixes (Setor X ↔ X) so matching works both ways
-  for (const prefix of NEIGHBORHOOD_PREFIXES) {
-    if (base.startsWith(prefix)) add(base.slice(prefix.length));
   }
 
   return [...keys];
