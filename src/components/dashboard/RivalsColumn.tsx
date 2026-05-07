@@ -1,6 +1,7 @@
 /**
  * [CAMINHO]: src/components/dashboard/RivalsColumn.tsx
- * [MÓDULO]: Coluna 1 — Rivalry Intelligence (cards verticais 80px + CTA gradiente)
+ * [MÓDULO]: TIMES RIVAIS — INTELIGÊNCIA DE RIVALIDADE
+ * [FIX]: Tradução para PT-BR, busca de votos em 'clubes_cache' e lógica de rivais de Goiás.
  */
 import { Swords, Megaphone } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -24,7 +25,11 @@ interface RivalRow {
 }
 
 const norm = (s: string) =>
-  (s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+  (s || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim();
 
 export default function RivalsColumn({ clubName, refCode, primaryColor = "#ff6200" }: Props) {
   const navigate = useNavigate();
@@ -37,33 +42,49 @@ export default function RivalsColumn({ clubName, refCode, primaryColor = "#ff620
         setRows([]);
         return;
       }
-      const rivals = getHistoricalRivals(clubName, 4);
-      if (!rivals.length) {
+
+      // Lógica específica para times de Goiás (ACG, GEC, VILA)
+      let rivalNames: string[] = [];
+      const nomeLimpo = norm(clubName);
+
+      if (nomeLimpo.includes("atletico goianiense") || nomeLimpo === "atletico-go") {
+        rivalNames = ["Goiás", "Vila Nova"];
+      } else if (nomeLimpo.includes("goias")) {
+        rivalNames = ["Vila Nova", "Atlético Goianiense"];
+      } else if (nomeLimpo.includes("vila nova")) {
+        rivalNames = ["Goiás", "Atlético Goianiense"];
+      } else {
+        // Fallback para outros clubes
+        rivalNames = getHistoricalRivals(clubName, 4);
+      }
+
+      if (!rivalNames.length) {
         setRows([]);
         return;
       }
 
-      // Tenta resolver logos do Supabase + dados locais
       const enriched: RivalRow[] = await Promise.all(
-        rivals.map(async (name) => {
+        rivalNames.map(async (name) => {
           const local = CLUBS_DATA.find((c: any) => norm(c.nome) === norm(name));
           let logo = (local as any)?.logoUrl || null;
           let votes: number | null = null;
+
           try {
+            // Busca escudo e contagem de votos consolidada no clubes_cache
             const { data } = await supabase
               .from("clubes_cache")
-              .select("escudo_url")
+              .select("escudo_url, votos_contagem")
               .ilike("nome", name)
               .maybeSingle();
-            if (!logo) logo = data?.escudo_url || null;
-          } catch { /* ignore */ }
-          try {
-            const { count } = await supabase
-              .from("votos")
-              .select("*", { count: "exact", head: true })
-              .ilike("clube_nome", name);
-            votes = count ?? null;
-          } catch { /* ignore */ }
+
+            if (data) {
+              if (!logo) logo = data.escudo_url;
+              votes = data.votos_contagem ?? 0;
+            }
+          } catch (err) {
+            console.error("Erro ao buscar dados do rival:", name, err);
+          }
+
           return {
             name,
             logo,
@@ -72,52 +93,52 @@ export default function RivalsColumn({ clubName, refCode, primaryColor = "#ff620
           };
         }),
       );
+
       if (!cancelled) setRows(enriched);
     };
     run();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [clubName]);
 
   return (
     <section className="space-y-3">
       <header className="flex items-center gap-2">
         <Swords className="w-4 h-4" style={{ color: primaryColor }} />
-        <h2 className="text-[11px] font-black italic uppercase tracking-widest text-white">
-          Rivalry Intelligence
-        </h2>
+        <h2 className="text-[11px] font-black italic uppercase tracking-widest text-white">Times Rivais</h2>
       </header>
-      <p className="text-[10px] italic text-white/40">
-        Até 4 rivais pesquisados para {clubName || "—"}
-      </p>
+      <p className="text-[10px] italic text-white/40">Monitoramento de rivalidade para {clubName || "—"}</p>
 
       <div className="space-y-2">
         {rows.length === 0 ? (
           <div className="text-[11px] italic text-white/40 py-3">
-            {clubName ? "Sem rivalidades cadastradas." : "Selecione um clube."}
+            {clubName ? "Sem rivalidades mapeadas para este clube." : "Selecione um clube."}
           </div>
         ) : (
           rows.map((r, i) => (
             <div
               key={`${r.name}-${i}`}
-              className="h-20 w-full flex items-center gap-3 px-3 rounded-xl bg-white/[0.03] border border-white/5 hover:border-white/15 transition-all"
+              className="h-20 w-full flex items-center gap-3 px-3 rounded-xl bg-white/[0.03] border border-white/5 hover:border-[#ff6200]/30 transition-all group"
             >
-              <div className="w-10 h-10 shrink-0">
-                <ClubLogo src={r.logo} alt={r.name} size="sm" className="w-10 h-10" />
+              <div className="w-10 h-10 shrink-0 flex items-center justify-center bg-black/20 rounded-lg p-1">
+                <ClubLogo
+                  src={r.logo}
+                  alt={r.name}
+                  size="sm"
+                  className="w-full h-full object-contain group-hover:scale-110 transition-transform"
+                />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-xs font-black italic uppercase truncate text-white leading-tight">
-                  {r.name}
-                </p>
+                <p className="text-xs font-black italic uppercase truncate text-white leading-tight">{r.name}</p>
                 <p className="text-[10px] italic text-white/50 truncate">{r.label}</p>
               </div>
-              {r.votes !== null && (
-                <div className="text-right shrink-0">
-                  <p className="text-[10px] font-mono text-white/50">
-                    {r.votes.toLocaleString("pt-BR")}
-                  </p>
-                  <p className="text-[8px] uppercase font-black italic text-white/30">votos</p>
-                </div>
-              )}
+              <div className="text-right shrink-0">
+                <p className="text-[10px] font-mono text-[#ff6200] font-bold">
+                  {r.votes !== null ? r.votes.toLocaleString("pt-BR") : "0"}
+                </p>
+                <p className="text-[8px] uppercase font-black italic text-white/30 tracking-tighter">votos</p>
+              </div>
             </div>
           ))
         )}
@@ -133,9 +154,7 @@ export default function RivalsColumn({ clubName, refCode, primaryColor = "#ff620
         <Megaphone className="w-4 h-4" />
         Convocar a Tropa
       </button>
-      <p className="text-[9px] italic text-center text-white/30">
-        Gera link de referência
-      </p>
+      <p className="text-[9px] italic text-center text-white/30">Gera link de referência para o censo</p>
     </section>
   );
 }
