@@ -70,17 +70,13 @@ export default function RivalsColumn({ clubName, refCode, primaryColor = "#ff620
           let votes: number | null = null;
 
           try {
-            // Busca escudo e contagem de votos consolidada no clubes_cache
             const { data } = await supabase
               .from("clubes_cache")
-              .select("escudo_url, votos_contagem")
+              .select("escudo_url")
               .ilike("nome", name)
               .maybeSingle();
 
-            if (data) {
-              if (!logo) logo = data.escudo_url;
-              votes = data.votos_contagem ?? 0;
-            }
+            if (data && !logo) logo = data.escudo_url;
           } catch (err) {
             console.error("Erro ao buscar dados do rival:", name, err);
           }
