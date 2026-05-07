@@ -253,7 +253,7 @@ const VotosFicticios = () => {
             </Button>
           </div>
           <div className="flex flex-wrap gap-2 pt-2">
-            {[1000, 5000, 10000, 25000].map((n) => (
+            {[100, 500, 1000, 5000].map((n) => (
               <Button
                 key={n}
                 size="sm"
