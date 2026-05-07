@@ -56,8 +56,8 @@ const VotosFicticios = () => {
   }, [user]);
 
   const handleSeed = async () => {
-    if (quantidade < 1 || quantidade > 50000) {
-      toast.error("Quantidade entre 1 e 50.000.");
+    if (quantidade < 1 || quantidade > 10000) {
+      toast.error("Quantidade entre 1 e 10.000 (modo bulk).");
       return;
     }
     setWorking(true);
@@ -72,14 +72,19 @@ const VotosFicticios = () => {
       return;
     }
     toast.loading(`${count.toLocaleString("pt-BR")} bairros sincronizados (${source}). Gerando votos...`, { id: toastId });
-    const { data, error } = await supabase.rpc("seed_fake_votes", { p_quantidade: quantidade });
+    const { data, error } = await supabase.rpc("seed_fake_votes", {
+      p_quantidade: quantidade,
+      p_city: syncCity,
+      p_state: syncState,
+      p_country: syncCountry,
+    } as any);
     setWorking(false);
     if (error) {
       toast.error("Falha ao gerar votos: " + error.message, { id: toastId });
       return;
     }
     const inseridos = (data as any)?.inseridos ?? quantidade;
-    toast.success(`✅ ${inseridos.toLocaleString("pt-BR")} votos fictícios gerados com bairros reais!`, { id: toastId });
+    toast.success(`✅ ${inseridos.toLocaleString("pt-BR")} votos fictícios gerados em ${cityLabel}!`, { id: toastId });
     fetchSummary();
   };
 
