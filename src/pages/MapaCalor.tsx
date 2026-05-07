@@ -2520,6 +2520,14 @@ const MapaCalor = () => {
         .leaflet-container { font-family: Verdana, sans-serif; }
 
       `}</style>
+
+      {/* Modal de captura de CEP/Bairro — abre se o usuário ainda não registrou endereço */}
+      <AddressModal
+        open={addressOpen}
+        onOpenChange={setAddressOpen}
+        clubName={heartClubName}
+        onSuccess={() => setAddressReloadKey((k) => k + 1)}
+      />
     </div>
   );
 };
