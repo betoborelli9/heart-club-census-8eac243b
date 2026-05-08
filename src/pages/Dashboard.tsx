@@ -158,6 +158,9 @@ const Dashboard = () => {
           showProfileInfo={true}
         />
 
+        {/* IDENTIDADE DO CLUBE DO CORAÇÃO */}
+        {heartClubName && <ClubIdentityCard clubName={heartClubName} />}
+
         {/* SEÇÃO SIMPATIAS - FULL WIDTH ALINHADO */}
         <section className="fade-in w-full">
           <div className="glass-card rounded-[32px] p-4 md:p-6">
