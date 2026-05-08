@@ -18,6 +18,7 @@ import BehavioralAudit from "@/components/admin/BehavioralAudit";
 import FanaticCities from "@/components/ambassador/FanaticCities";
 import ExecutiveReportButton from "@/components/admin/ExecutiveReportButton";
 import ResetTestDataButton from "@/components/admin/ResetTestDataButton";
+import ResetMyVoteButton from "@/components/admin/ResetMyVoteButton";
 import logo from "@/assets/logo.png";
 
 const Admin = () => {
@@ -77,6 +78,7 @@ const Admin = () => {
           </div>
           <div className="flex items-center gap-2">
             <ExecutiveReportButton days={30} />
+            {user?.email === "betoborelli9@gmail.com" && <ResetMyVoteButton />}
             {user?.email === "betoborelli9@gmail.com" && <ResetTestDataButton />}
             <Button variant="ghost" size="sm" onClick={() => navigate("/dashboard")}>
               <ArrowLeft className="w-4 h-4 mr-1" /> Dashboard
