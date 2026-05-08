@@ -1,7 +1,7 @@
 /**
  * [CAMINHO]: src/pages/Voting.tsx
- * [STATUS]: PRODUÇÃO - VERSÃO 16.0 (OPTIMIZED SEARCH + SEQUENTIAL SYNC)
- * [CONTEXTO]: Sistema de Votação - Integração de Busca Validada + Investigação IA
+ * [STATUS]: PRODUÇÃO - VERSÃO 17.0 (AUDITORIA DE DUPLICIDADE IP/DISPOSITIVO)
+ * [CONTEXTO]: Blindagem contra votos múltiplos no mesmo clube via mesma rede/ID.
  */
 
 import { useState, useEffect, useCallback, useRef } from "react";
@@ -33,7 +33,6 @@ const Voting = () => {
   const { toast } = useToast();
 
   const IS_MASTER_ADMIN = user?.email === "betoborelli9@gmail.com";
-  // Modo TESTE: master abre /voting?test=1 — fluxo idêntico, mas NÃO grava votos.
   const TEST_MODE = IS_MASTER_ADMIN && searchParams.get("test") === "1";
 
   const [heartSearch, setHeartSearch] = useState("");
@@ -52,7 +51,6 @@ const Voting = () => {
   const [submitting, setSubmitting] = useState(false);
   const [fingerprint, setFingerprint] = useState<string | null>(null);
 
-  // Refs para controle de concorrência de busca (Race Conditions)
   const heartReqId = useRef(0);
   const sympathyReqId = useRef(0);
 
@@ -69,7 +67,7 @@ const Voting = () => {
   }, []);
 
   /* ═══════════════════════════════════════════════════════════
-      MÓDULO: BUSCA OTIMIZADA (LOGICA DEBUG_API)
+      MÓDULO: BUSCA OTIMIZADA
      ═══════════════════════════════════════════════════════════ */
   const performSearch = useCallback(
     async (
@@ -90,10 +88,7 @@ const Voting = () => {
       setterLoading(true);
 
       try {
-        // Usando a lógica que funcionou na DebugApi: chamada direta ou via helper atualizado
         const results = await searchClubsWithFallback(term);
-
-        // Só aplica o resultado se for a última requisição disparada
         if (currentId === reqRef.current) {
           setterResults(results);
           setterOpen(true);
@@ -113,7 +108,7 @@ const Voting = () => {
     const timer = setTimeout(
       () => performSearch(heartSearch, setHeartResults, setHeartOpen, setHeartLoading, heartReqId),
       300,
-    ); // Debounce de 300ms conforme DebugApi
+    );
     return () => clearTimeout(timer);
   }, [heartSearch, performSearch]);
 
@@ -126,17 +121,9 @@ const Voting = () => {
   }, [sympathySearch, performSearch]);
 
   /* ═══════════════════════════════════════════════════════════
-      MÓDULO: PROCESSAMENTO DO VOTO (FLUXO SUAVE — 2 SEGUNDOS)
-      Endereço NÃO é mais coletado aqui. Ele vira "conquista" no
-      Mapa de Calor (AddressModal).
+      MÓDULO: PROCESSAMENTO DO VOTO (TRAVA DE INTEGRIDADE)
      ═══════════════════════════════════════════════════════════ */
   const handleConfirmVote = async () => {
-    console.log("[VOTING] handleConfirmVote click", {
-      hasHeart: !!heartClub,
-      hasUser: !!user,
-      hasProfile: !!profile,
-      submitting,
-    });
     if (!heartClub) {
       toast({ variant: "destructive", title: "Selecione seu clube do coração" });
       return;
@@ -161,78 +148,83 @@ const Voting = () => {
         await supabase.from("votos").delete().eq("user_id", user.id);
       }
 
-      // Voto minimalista — endereço como NULL. Profile é opcional (fallback "").
-      const mainVote = {
+      const fpId = fingerprint || "web-client";
+      const ipAudit = await captureIpAudit().catch(() => null);
+      const callerIp = ipAudit?.ip || null;
+
+      // 1) TRAVA DE AUDITORIA: Checa se este IP ou Dispositivo já votou NESTE CLUBE
+      let pendente = false;
+      let motivo = null;
+
+      if (fpId || callerIp) {
+        const orConditions = [];
+        if (fpId && fpId !== "web-client") orConditions.push(`fingerprint.eq.${fpId}`);
+        if (callerIp) orConditions.push(`ip_address.eq.${callerIp}`);
+
+        if (orConditions.length > 0) {
+          const { data: duplicate } = await supabase
+            .from("votos")
+            .select("id")
+            .eq("clube_nome", heartClub.name)
+            .or(orConditions.join(","))
+            .limit(1);
+
+          if (duplicate && duplicate.length > 0) {
+            pendente = true;
+            motivo = "Multi-e-mail detectado no mesmo IP/Dispositivo para este clube";
+          }
+        }
+      }
+
+      // 2) Objeto do Voto
+      const mainVote: any = {
         user_id: user.id,
         clube_nome: heartClub.name,
         cidade: profile?.cidade || "",
         estado: profile?.estado || "",
         pais: profile?.pais || "BR",
-        bairro: null,
-        cep: null,
-        numero: null,
-        complemento: null,
         is_original_vote: true,
-        fingerprint: fingerprint || "web-client",
-        status_integridade: "pendente",
+        fingerprint: fpId,
+        ip_address: callerIp,
+        status_aprovacao: pendente ? "pendente" : "aprovado",
+        is_suspicious: pendente,
+        motivo_suspicao: motivo,
         sympathy_1: sympathyClubs[0]?.name ?? null,
         sympathy_2: sympathyClubs[1]?.name ?? null,
         sympathy_3: sympathyClubs[2]?.name ?? null,
         sympathy_4: sympathyClubs[3]?.name ?? null,
+        voto_bairro_gps: ipAudit?.bairro ?? null,
+        voto_cidade_gps: ipAudit?.cidade ?? null,
+        voto_lat: ipAudit?.lat ?? null,
+        voto_lng: ipAudit?.lng ?? null,
+        voto_pais: ipAudit?.pais ?? null,
+        voto_continente: ipAudit?.continente ?? null,
+        isp: ipAudit?.isp ?? null,
       };
-
-      // 1) Captura IP geo + fingerprint para detectar duplicidade
-      const fpId = fingerprint || "web-client";
-      const ipAudit = await captureIpAudit().catch(() => null);
-      const callerIp = ipAudit?.ip || null;
-
-      // 2) Verifica purgatório: fingerprint OU IP já usados
-      let pendente = false;
-      try {
-        const orFilter = [
-          fpId ? `fingerprint.eq.${fpId}` : null,
-          callerIp ? `ip_address.eq.${callerIp}` : null,
-        ].filter(Boolean).join(",");
-        if (orFilter) {
-          const { data: dup } = await supabase
-            .from("votos_tracking")
-            .select("id")
-            .or(orFilter)
-            .limit(1);
-          if (dup && dup.length > 0) pendente = true;
-        }
-      } catch { /* ignore — não bloquear */ }
-
-      // 3) Insere voto (com geo do IP como fonte invisível)
-      mainVote.fingerprint = fpId;
-      (mainVote as any).ip_address = callerIp;
-      (mainVote as any).status_aprovacao = pendente ? "pendente" : "aprovado";
-      (mainVote as any).is_suspicious = pendente;
-      (mainVote as any).voto_bairro_gps = ipAudit?.bairro ?? null;
-      (mainVote as any).voto_cidade_gps = ipAudit?.cidade ?? null;
-      (mainVote as any).voto_lat = ipAudit?.lat ?? null;
-      (mainVote as any).voto_lng = ipAudit?.lng ?? null;
-      (mainVote as any).voto_pais = ipAudit?.pais ?? null;
-      (mainVote as any).voto_continente = ipAudit?.continente ?? null;
-      (mainVote as any).isp = ipAudit?.isp ?? null;
 
       const { error: voteError } = await supabase.from("votos").insert([mainVote]);
       if (voteError) throw voteError;
 
-      // Redireciona imediatamente — todo enriquecimento roda em background
       toast({
-        title: pendente ? "Voto registrado para auditoria 🔍" : "Lealdade registada com sucesso! 🏟️",
-        description: pendente ? "Detectamos um registro anterior deste dispositivo. Sua entrada será revisada." : undefined,
+        title: pendente ? "Voto registrado para auditoria 🔍" : "Lealdade registrada com sucesso! 🏟️",
+        description: pendente
+          ? "Detectamos um registro anterior deste dispositivo. Sua entrada será revisada."
+          : undefined,
       });
+
       navigate("/dashboard");
 
-      // Background (fire-and-forget): device + enrichment
+      // Background Actions
       (async () => {
         try {
           const device_model = await detectDeviceModel().catch(() => null);
-          await supabase.from("votos").update({
-            device_model: device_model ?? null,
-          }).eq("user_id", user.id).eq("clube_nome", heartClub.name);
+          await supabase
+            .from("votos")
+            .update({
+              device_model: device_model ?? null,
+            })
+            .eq("user_id", user.id)
+            .eq("clube_nome", heartClub.name);
         } catch (e) {
           console.error("[VOTING][bg-audit]", e);
         }
@@ -240,9 +232,11 @@ const Voting = () => {
         try {
           await persistClubsIfMissing(allSelected.map((v) => v.club));
           for (const item of allSelected) {
-            supabase.functions.invoke("enrich-club-colors", {
-              body: { club_name: item.club.name, api_id: item.club.api_id },
-            }).catch(() => {});
+            supabase.functions
+              .invoke("enrich-club-colors", {
+                body: { club_name: item.club.name, api_id: item.club.api_id },
+              })
+              .catch(() => {});
           }
         } catch (e) {
           console.error("[VOTING][bg-enrich]", e);
@@ -250,7 +244,6 @@ const Voting = () => {
 
         refreshProfile().catch(() => {});
       })();
-
     } catch (err) {
       console.error("[VOTING] erro:", err);
       toast({ variant: "destructive", title: "Erro ao processar votos" });
@@ -298,9 +291,6 @@ const Voting = () => {
     );
   };
 
-  /* ═══════════════════════════════════════════════════════════
-      MÓDULO: RENDERIZAÇÃO PRINCIPAL
-     ═══════════════════════════════════════════════════════════ */
   return (
     <div className="min-h-screen bg-background flex flex-col items-center px-4 py-6">
       <div className="w-full max-w-lg space-y-6">
@@ -314,7 +304,6 @@ const Voting = () => {
           )}
         </div>
 
-        {/* CLUBE DO CORAÇÃO */}
         <div className="space-y-2 relative">
           <label className="text-xs font-black uppercase opacity-60 italic flex items-center gap-2">
             <Heart size={14} className="text-primary" /> Clube do Coração
@@ -349,7 +338,6 @@ const Voting = () => {
           )}
         </div>
 
-        {/* SIMPATIAS */}
         <div className="space-y-3">
           <label className="text-xs font-black uppercase italic flex items-center gap-2 opacity-60">
             <Sparkles size={14} className="text-primary" /> Simpatias ({sympathyClubs.length}/{MAX_SYMPATHY_CLUBS})
@@ -405,8 +393,7 @@ const Voting = () => {
             </DialogTitle>
           </DialogHeader>
           <p className="text-base italic opacity-80 text-center px-2">
-            Você jura lealdade ao{" "}
-            <strong className="text-primary not-italic uppercase">{heartClub?.name}</strong>?
+            Você jura lealdade ao <strong className="text-primary not-italic uppercase">{heartClub?.name}</strong>?
           </p>
 
           <DialogFooter className="flex-col gap-2 mt-2">
@@ -433,12 +420,3 @@ const Voting = () => {
 };
 
 export default Voting;
-
-/**
- * [RODAPÉ TÉCNICO]
- * Versão: 16.0
- * - Implementado controle de concorrência com heartReqId/sympathyReqId (padrão DebugApi).
- * - Ajustado debounce de busca para 300ms e mínimo de 3 caracteres.
- * - Mantida a lógica de loop sequencial com await para enriquecimento de dados.
- * - Sincronizado status IS_MASTER_ADMIN para o email betoborelli9@gmail.com.
- */
