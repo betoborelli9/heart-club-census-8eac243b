@@ -116,7 +116,7 @@ serve(async (req) => {
     // 1. Cache
     const { data: row } = await admin
       .from("clubes_cache")
-      .select("id, rivais, pais")
+      .select("id, rivais, pais, cidade, estadio_cidade")
       .ilike("nome", clubName)
       .maybeSingle();
 
@@ -127,8 +127,9 @@ serve(async (req) => {
       });
     }
 
-    // 2. IA
-    const rivals = await aiFetchRivals(clubName, country || row?.pais || null);
+    // 2. IA — passa país + cidade para forçar prioridade regional
+    const cityCtx = row?.cidade || row?.estadio_cidade || null;
+    const rivals = await aiFetchRivals(clubName, country || row?.pais || null, cityCtx);
 
     // 3. Persiste se houver clube no cache
     if (row?.id && rivals.length > 0) {
