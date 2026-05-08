@@ -37,6 +37,7 @@ interface CacheRow {
   tem_feminino: boolean | null;
   nome_curto: string | null;
   division: string | null;
+  rivais: string[] | null;
 }
 
 export default function Correcao() {
@@ -212,6 +213,26 @@ export default function Correcao() {
             <Field label="Capacidade do estádio" placeholder={cache?.estadio_capacidade ? String(cache.estadio_capacidade) : ""} value={form.estadio_capacidade} onChange={(v) => set("estadio_capacidade", v)} />
             <Field label="Nome curto" placeholder={cache?.nome_curto || ""} value={form.nome_curto} onChange={(v) => set("nome_curto", v)} />
             <Field label="Divisão atual" placeholder={cache?.division || "Ex.: Série A"} value={form.division} onChange={(v) => set("division", v)} />
+
+            <div className="md:col-span-2">
+              <Label className="text-[10px] uppercase tracking-wider text-white/50">
+                Rivais históricos (separados por vírgula){" "}
+                <span className="text-[#ff6200] font-bold not-italic">— sua palavra sobrepõe a IA</span>
+              </Label>
+              <Input
+                placeholder={
+                  cache?.rivais && cache.rivais.length > 0
+                    ? `Atual: ${cache.rivais.join(", ")}`
+                    : "Ex.: Goiás, Atlético-GO, Goianésia"
+                }
+                value={form.rivais || ""}
+                onChange={(e) => set("rivais", e.target.value)}
+                className="bg-white/5 border-[#ff6200]/40 text-white mt-1 focus-visible:ring-[#ff6200]"
+              />
+              <p className="text-[10px] italic text-white/40 mt-1">
+                A correção do torcedor é aplicada direto, sem validação da IA, e fica sinalizada no painel admin.
+              </p>
+            </div>
 
             <div className="flex items-center justify-between bg-white/5 border border-white/10 rounded-lg px-3 py-2">
               <div>
