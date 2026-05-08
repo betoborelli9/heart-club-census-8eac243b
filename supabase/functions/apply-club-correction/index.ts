@@ -45,7 +45,11 @@ const ALLOWED_FIELDS = new Set([
   "estadio_capacidade",
   "nome_curto",
   "division",
+  "rivais",
 ]);
+
+// Campos onde a palavra do torcedor SOBREPÕE a IA (apenas log, sem validação)
+const USER_OVERRIDE_FIELDS = new Set(["rivais"]);
 
 const COLOR_FIELDS = new Set([
   "cor_primaria",

@@ -32,15 +32,20 @@ function rateLimited(ip: string, limit = 30, windowMs = 60_000): boolean {
 async function aiFetchRivals(clubName: string, country?: string | null): Promise<string[]> {
   if (!LOVABLE_KEY) return [];
   const ctx = country ? ` (${country})` : "";
-  const prompt = `Você é um especialista em rivalidades históricas do futebol. Use Google Search se necessário.
+  const prompt = `Você é um especialista em rivalidades HISTÓRICAS do futebol. Cruze obrigatoriamente Google Search + Wikipédia (PT e EN) antes de responder.
 
 Clube: ${clubName}${ctx}
 
-Liste os RIVAIS HISTÓRICOS oficiais deste clube (clássicos regionais e nacionais), em ordem de importância.
+Tarefa: liste APENAS os rivais HISTÓRICOS oficiais (clássicos regionais consagrados e clássicos nacionais reconhecidos pela imprensa esportiva), em ordem de importância.
+
+REGRAS DURAS:
+- Pesquise: "rivais do ${clubName}", "clássico ${clubName}", "${clubName} rivalry wikipedia".
+- PROIBIDO incluir clubes pequenos da mesma cidade que NÃO disputam clássico oficial reconhecido. Ex.: para Vila Nova-GO os rivais corretos são Goiás e Atlético-GO; "Anápolis" NÃO é rival principal.
+- Se o clube for de capital de estado brasileiro, priorize os outros 2-3 grandes do mesmo estado.
+- Se for clube europeu/sul-americano, use o derby clássico reconhecido (ex.: Boca → River; Real Madrid → Barcelona, Atlético de Madrid).
 - Mínimo 2, máximo 4 rivais.
-- Apenas o NOME do clube como é popularmente conhecido (ex.: "Goiás", "Vila Nova", "Atlético Goianiense").
-- Sem comentários.
-- Se o clube for muito pequeno e não tiver rivais conhecidos, retorne lista vazia.
+- Apenas o NOME popular do clube (ex.: "Goiás", "Atlético-GO", "Atlético Goianiense").
+- Se o clube for obscuro e não tiver rivalidade documentada, retorne lista vazia.
 
 Responda APENAS em JSON válido sem markdown:
 {"rivals":["Nome 1","Nome 2","Nome 3"]}`;
