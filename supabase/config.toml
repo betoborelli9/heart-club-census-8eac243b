@@ -30,5 +30,8 @@ verify_jwt = false
 [functions.heart-club-auth]
 verify_jwt = false
 
+[functions.geo-ip]
+verify_jwt = false
+
 [functions.league-standings]
 verify_jwt = false

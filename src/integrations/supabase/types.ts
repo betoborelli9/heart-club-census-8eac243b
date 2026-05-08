@@ -508,6 +508,7 @@ export type Database = {
           numero: string | null
           pais: string
           potential_duplicate_user: boolean
+          status_aprovacao: string
           status_integridade: string | null
           sympathy_1: string | null
           sympathy_2: string | null
@@ -545,6 +546,7 @@ export type Database = {
           numero?: string | null
           pais: string
           potential_duplicate_user?: boolean
+          status_aprovacao?: string
           status_integridade?: string | null
           sympathy_1?: string | null
           sympathy_2?: string | null
@@ -582,6 +584,7 @@ export type Database = {
           numero?: string | null
           pais?: string
           potential_duplicate_user?: boolean
+          status_aprovacao?: string
           status_integridade?: string | null
           sympathy_1?: string | null
           sympathy_2?: string | null
@@ -857,6 +860,7 @@ export type Database = {
         Args: { p_level: string; p_limit?: number; p_value: string }
         Returns: Json
       }
+      master_reset_my_vote: { Args: never; Returns: Json }
       purge_fake_votes: { Args: never; Returns: Json }
       purge_invalid_fake_votes: { Args: never; Returns: Json }
       register_referral_from_code: {
