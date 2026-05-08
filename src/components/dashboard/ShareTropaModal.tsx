@@ -101,10 +101,9 @@ export default function ShareTropaModal({ open, onOpenChange, refCode }: Props) 
           </div>
         </DialogHeader>
 
-        <div className="grid grid-cols-3 gap-3 mt-2">
+        <div className="grid grid-cols-2 gap-3 mt-2">
           <Btn icon={MessageCircle} label="WhatsApp" color="#25D366" onClick={handleWhats} />
           <Btn icon={Send} label="Telegram" color="#0088CC" onClick={handleTelegram} />
-          <Btn icon={Mail} label="E-mail" color="#ff6200" onClick={handleEmail} />
         </div>
 
         <div className="mt-4 space-y-2">
