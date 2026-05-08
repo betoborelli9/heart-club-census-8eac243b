@@ -20,6 +20,7 @@ interface Props {
   teamName: string | null;
   primaryColor?: string;
   fallbackLogo?: string;
+  hideExternalLogos?: boolean;
 }
 
 /** BLOQUEIO RADICAL DE LOGOS DE PORTAIS EXTERNOS */
