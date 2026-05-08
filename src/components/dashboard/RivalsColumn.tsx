@@ -15,6 +15,7 @@ type RivalItem = {
   city?: string | null;
   country?: string | null;
   source?: "cache" | "api" | "missing";
+  votes?: number;
 };
 
 export default function RivalsColumn({ clubName, refCode, primaryColor = "#ff6200" }: any) {
@@ -44,11 +45,25 @@ export default function RivalsColumn({ clubName, refCode, primaryColor = "#ff620
       } else {
         const details = Array.isArray((data as any)?.rivalDetails) ? (data as any).rivalDetails : [];
         const names = Array.isArray((data as any)?.rivals) ? (data as any).rivals : [];
-        setRivals(
-          (details.length ? details : names.map((name: string) => ({ name, logo: null })))
-            .filter((r: RivalItem) => r?.name)
-            .slice(0, 4),
-        );
+        const baseList: RivalItem[] = (details.length ? details : names.map((name: string) => ({ name, logo: null })))
+          .filter((r: RivalItem) => r?.name)
+          .slice(0, 4);
+
+        // Buscar votos oficiais (is_original_vote) para cada rival
+        const rivalNames = baseList.map((r) => r.name);
+        let votesMap: Record<string, number> = {};
+        if (rivalNames.length) {
+          const { data: votos } = await supabase
+            .from("votos")
+            .select("clube_nome")
+            .in("clube_nome", rivalNames)
+            .eq("is_original_vote", true);
+          (votos || []).forEach((v: any) => {
+            votesMap[v.clube_nome] = (votesMap[v.clube_nome] || 0) + 1;
+          });
+        }
+        if (cancelled) return;
+        setRivals(baseList.map((r) => ({ ...r, votes: votesMap[r.name] || 0 })));
       }
       setLoading(false);
     };
