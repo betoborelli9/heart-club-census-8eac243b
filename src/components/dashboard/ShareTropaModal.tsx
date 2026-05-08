@@ -37,10 +37,6 @@ export default function ShareTropaModal({ open, onOpenChange, refCode }: Props) 
     openUrl(
       `https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent(TEXT)}`,
     );
-  const handleEmail = () =>
-    openUrl(
-      `mailto:?subject=${encodeURIComponent("Convite Heart Club")}&body=${encodeURIComponent(fullText)}`,
-    );
 
   const handleNative = async () => {
     if (navigator.share) {
