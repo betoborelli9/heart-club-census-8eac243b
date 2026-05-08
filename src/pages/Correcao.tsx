@@ -96,11 +96,43 @@ export default function Correcao() {
   const handleSubmit = async () => {
     if (!cache) return;
     const corrections: Array<{ field: string; value: string }> = [];
+    const newColorErrors: Record<string, string> = {};
 
     for (const [k, v] of Object.entries(form)) {
       const val = (v ?? "").trim();
       if (!val) continue;
+
+      // Cores: aceita HEX OU nome ("preto", "azul marinho", "verde bandeira"...).
+      if ((COLOR_FIELDS as readonly string[]).includes(k)) {
+        const hex = resolveColorToHex(val);
+        if (!hex) {
+          newColorErrors[k] = `Cor "${val}" não reconhecida. Use HEX (#RRGGBB) ou nome (ex.: preto, azul, vermelho).`;
+          continue;
+        }
+        corrections.push({ field: k, value: hex });
+        continue;
+      }
+
       corrections.push({ field: k, value: val });
+    }
+
+    setColorErrors(newColorErrors);
+    if (Object.keys(newColorErrors).length > 0) {
+      toast({
+        title: "Cor inválida",
+        description: "Confira os campos de cor destacados.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Rivais (multi-select) — só envia se a lista mudou em relação ao cache
+    const rivaisAtuais = Array.isArray(cache.rivais) ? cache.rivais : [];
+    const rivaisChanged =
+      rivais.length !== rivaisAtuais.length ||
+      rivais.some((r, i) => r !== rivaisAtuais[i]);
+    if (rivaisChanged) {
+      corrections.push({ field: "rivais", value: rivais.join(", ") });
     }
 
     // Campo booleano (tem_feminino) — sempre envia se mudou
@@ -132,6 +164,7 @@ export default function Correcao() {
         .ilike("nome", cache.nome)
         .maybeSingle();
       setCache((fresh as CacheRow) || null);
+      setRivais(Array.isArray(fresh?.rivais) ? (fresh!.rivais as string[]) : []);
       setForm({});
     } catch (e: any) {
       toast({ title: "Falha ao enviar", description: e?.message || "Tente novamente.", variant: "destructive" });
