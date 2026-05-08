@@ -1,7 +1,7 @@
 /**
  * [CAMINHO]: src/pages/Voting.tsx
- * [STATUS]: PRODUÇÃO - VERSÃO 20.0 (AUDITORIA REFINADA + ESTABILIDADE)
- * [CONTEXTO]: Blindagem contra votos múltiplos com verificação pré-insert.
+ * [STATUS]: PRODUÇÃO - VERSÃO 21.0 (FIX: AUDITORIA RIGOROSA)
+ * [CONTEXTO]: Integrando lógica sugerida para detecção real de fraude.
  */
 
 import { useState, useEffect, useCallback, useRef } from "react";
@@ -126,16 +126,20 @@ const Voting = () => {
       const ipAudit = await captureIpAudit().catch(() => null);
       const callerIp = ipAudit?.ip || null;
 
-      // --- LÓGICA DE AUDITORIA ---
+      // --- LÓGICA DE AUDITORIA (CUIDADOSAMENTE REVISADA) ---
       let isSuspicious = false;
       let motivo: string | null = null;
+
+      // Monta a query de busca de fraude
+      let orFilter = `fingerprint.eq.${fpId}`;
+      if (callerIp) orFilter += `,ip_address.eq.${callerIp}`;
 
       const { data: dup } = await supabase
         .from("votos")
         .select("id, email")
         .eq("clube_nome", heartClub.name)
-        .or(`fingerprint.eq.${fpId},ip_address.eq.${callerIp}`)
-        .neq("email", user.email)
+        .or(orFilter)
+        .neq("email", user.email) // Crucial: Só é golpe se o e-mail for outro
         .limit(1);
 
       if (dup && dup.length > 0) {
