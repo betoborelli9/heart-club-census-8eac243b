@@ -112,14 +112,14 @@ const Login = () => {
         {/* GOOGLE LOGIN — DESTAQUE PRINCIPAL */}
         <Button
           variant="outline"
-          className="w-full h-14 font-bold text-sm border-white/20 bg-white/[0.04] text-white hover:bg-white/[0.08] hover:border-white/30 transition-all duration-300 shadow-[0_0_20px_rgba(255,255,255,0.03)]"
+          className="w-full h-16 font-bold text-base border-white/20 bg-white/[0.04] text-white hover:bg-white/[0.08] hover:border-white/30 transition-all duration-300 shadow-[0_0_20px_rgba(255,255,255,0.03)]"
           onClick={() => handleOAuth("google")}
           disabled={!!loadingProvider}
         >
           {loadingProvider === "google" ? (
-            <Loader2 className="mr-2 animate-spin" />
+            <Loader2 className="mr-3 w-7 h-7 animate-spin" />
           ) : (
-            <svg className="w-5 h-5 mr-2.5" viewBox="0 0 24 24">
+            <svg className="w-7 h-7 mr-3" viewBox="0 0 24 24">
               <path
                 fill="#4285F4"
                 d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"
