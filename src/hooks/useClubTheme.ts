@@ -9,6 +9,9 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { type TeamTheme, defaultTeamTheme, teamColors, hexToTeamTheme } from "@/data/teamColors";
 
+/* Tema fallback "Chumbo" enquanto enriquecimento não retornou cores reais */
+const chumboTheme: TeamTheme = hexToTeamTheme("#111111", "#2a2a2a");
+
 /* [MÓDULO: CACHE EM MEMÓRIA] */
 const themeCache = new Map<string, TeamTheme>();
 
@@ -17,8 +20,8 @@ export function useClubTheme(clubName: string | null | undefined): TeamTheme {
   const [theme, setTheme] = useState<TeamTheme>(() => {
     if (!clubName) return defaultTeamTheme;
     if (themeCache.has(clubName)) return themeCache.get(clubName)!;
-    // Fallback imediato à lista estática enquanto busca no banco
-    return teamColors[clubName] ?? defaultTeamTheme;
+    // Fallback imediato à lista estática; senão tema chumbo (sem orange acidental)
+    return teamColors[clubName] ?? chumboTheme;
   });
 
   useEffect(() => {
