@@ -119,12 +119,13 @@ export default function ClubIdentityCard({ clubName }: Props) {
           <Pill icon={Heart}>Feminino: {data.tem_feminino ? "Sim" : "Não"}</Pill>
         </div>
 
-        {/* LINK DISCRETO — Corrigir dados */}
+        {/* BOTÃO DE DESTAQUE — Corrigir dados */}
         <Link
           to="/correcao"
-          className="absolute top-2 right-3 inline-flex items-center gap-1 text-[10px] font-bold uppercase italic text-white/40 hover:text-[#ff6200] transition"
+          title="Algo errado? Corrija aqui"
+          className="absolute top-2 right-3 inline-flex items-center gap-1.5 text-[11px] font-black uppercase italic tracking-wider text-white bg-[#ff6200] hover:bg-[#ff7a1f] px-3 py-1.5 rounded-full shadow-[0_0_18px_rgba(255,98,0,0.55)] hover:shadow-[0_0_24px_rgba(255,98,0,0.85)] transition-all"
         >
-          <Pencil className="w-3 h-3" />
+          <Pencil className="w-3.5 h-3.5" />
           Corrigir
         </Link>
       </div>
