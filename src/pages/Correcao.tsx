@@ -86,6 +86,7 @@ export default function Correcao() {
 
       setCache((data as CacheRow) || null);
       setFeminino(Boolean(data?.tem_feminino));
+      setRivais(Array.isArray(data?.rivais) ? (data!.rivais as string[]) : []);
       setLoading(false);
     })();
   }, [user, isLoading, navigate, toast]);
