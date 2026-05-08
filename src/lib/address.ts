@@ -55,52 +55,48 @@ export function formatCep(value: string): string {
 }
 
 /* ═══════════════════════════════════════════════════════════
-   GPS de auditoria silenciosa (Nominatim reverse geocoding).
-   Falhas (permissão negada, timeout, offline) retornam nulls
-   — NUNCA bloqueiam o voto.
+   GPS de auditoria silenciosa — DEPRECADO.
+   O app agora usa exclusivamente captureIpAudit() (IP-based,
+   sem prompt de permissão do navegador).
+   Mantido apenas como stub no-op para retrocompatibilidade.
    ═══════════════════════════════════════════════════════════ */
-export async function captureGpsAudit(timeoutMs = 6000): Promise<GpsAudit> {
-  const empty: GpsAudit = { lat: null, lng: null, voto_bairro_gps: null, voto_cidade_gps: null };
-  if (typeof navigator === "undefined" || !navigator.geolocation) return empty;
+export async function captureGpsAudit(): Promise<GpsAudit> {
+  return { lat: null, lng: null, voto_bairro_gps: null, voto_cidade_gps: null };
+}
 
-  const coords = await new Promise<GeolocationCoordinates | null>((resolve) => {
-    const tid = setTimeout(() => resolve(null), timeoutMs + 500);
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        clearTimeout(tid);
-        resolve(pos.coords);
-      },
-      () => {
-        clearTimeout(tid);
-        resolve(null);
-      },
-      { enableHighAccuracy: false, timeout: timeoutMs, maximumAge: 60000 },
-    );
-  });
+/* ═══════════════════════════════════════════════════════════
+   Captura geográfica via IP (edge function geo-ip → ip-api.com).
+   Nunca pede permissão ao navegador. Falha vira nulls.
+   ═══════════════════════════════════════════════════════════ */
+export interface IpAudit {
+  ip: string | null;
+  continente: string | null;
+  pais: string | null;
+  estado: string | null;
+  cidade: string | null;
+  bairro: string | null;
+  lat: number | null;
+  lng: number | null;
+  isp: string | null;
+}
 
-  if (!coords) return empty;
-  const { latitude, longitude } = coords;
-
+export async function captureIpAudit(): Promise<IpAudit> {
+  const empty: IpAudit = {
+    ip: null, continente: null, pais: null, estado: null,
+    cidade: null, bairro: null, lat: null, lng: null, isp: null,
+  };
   try {
-    const res = await fetch(
-      `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json&accept-language=pt-BR`,
-      { headers: { "User-Agent": "HeartClubApp/1.0" } },
-    );
-    if (!res.ok) {
-      return { lat: latitude, lng: longitude, voto_bairro_gps: null, voto_cidade_gps: null };
-    }
-    const data = await res.json();
-    const a = data.address || {};
-    const bairro =
-      a.suburb || a.neighbourhood || a.quarter || a.city_district || a.borough || a.hamlet || null;
-    const cidade = a.city || a.town || a.municipality || a.village || null;
-    return {
-      lat: latitude,
-      lng: longitude,
-      voto_bairro_gps: bairro,
-      voto_cidade_gps: cidade,
-    };
+    const projectId = (import.meta as any).env?.VITE_SUPABASE_PROJECT_ID;
+    if (!projectId) return empty;
+    const res = await fetch(`https://${projectId}.supabase.co/functions/v1/geo-ip`, {
+      method: "GET",
+      headers: { "Content-Type": "application/json" },
+    });
+    if (!res.ok) return empty;
+    const j = await res.json();
+    return { ...empty, ...j };
   } catch {
-    return { lat: latitude, lng: longitude, voto_bairro_gps: null, voto_cidade_gps: null };
+    return empty;
   }
 }
+
