@@ -81,7 +81,7 @@ const AddressModal = ({ open, onOpenChange, clubName, onSuccess }: AddressModalP
     setSubmitting(true);
     try {
       // Atualiza o voto original do usuário (preenche endereço)
-      const updates: Record<string, any> = {
+      const updates: Record<string, string> = {
         bairro: bairro.trim(),
         cep: cepDigits,
       };
@@ -98,7 +98,7 @@ const AddressModal = ({ open, onOpenChange, clubName, onSuccess }: AddressModalP
 
       // Atualiza/cria o profile do usuário logado: é este registro que impede
       // o mesmo e-mail de ver o pedido de CEP novamente.
-      const profileUpdate: Record<string, any> = { cep: cepDigits };
+      const profileUpdate: Record<string, string> = { cep: cepDigits };
       if (cidadeAddr.trim()) profileUpdate.cidade = cidadeAddr.trim();
       if (estadoAddr.trim()) profileUpdate.estado = estadoAddr.trim();
 
