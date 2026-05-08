@@ -27,6 +27,7 @@ import SympathyCarousel from "@/components/dashboard/SympathyCarousel";
 import ObjectivesPanel from "@/components/dashboard/ObjectivesPanel";
 import Z4Infographic from "@/components/dashboard/Z4Infographic";
 import SocialShareBanners from "@/components/dashboard/SocialShareBanners";
+import ClubIdentityCard from "@/components/dashboard/ClubIdentityCard";
 
 /* ═══════════════════════════════════════════════════════════
    MÓDULO 2: HOOKS E ASSETS
@@ -156,6 +157,9 @@ const Dashboard = () => {
           ambassadorLevel={profile.nivel_embaixador || "BRONZE"}
           showProfileInfo={true}
         />
+
+        {/* IDENTIDADE DO CLUBE DO CORAÇÃO */}
+        {heartClubName && <ClubIdentityCard clubName={heartClubName} />}
 
         {/* SEÇÃO SIMPATIAS - FULL WIDTH ALINHADO */}
         <section className="fade-in w-full">
