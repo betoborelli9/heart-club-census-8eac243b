@@ -7,6 +7,7 @@ import { useMemo } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { MessageCircle, Send, Mail, Copy, Share2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import logo from "@/assets/logo.png";
 
 interface Props {
   open: boolean;
@@ -89,12 +90,19 @@ export default function ShareTropaModal({ open, onOpenChange, refCode }: Props) 
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="bg-black border-white/10 max-w-md">
         <DialogHeader>
-          <DialogTitle className="text-white font-black italic uppercase tracking-tight text-lg">
-            Convocar a Tropa
-          </DialogTitle>
-          <DialogDescription className="text-white/60 text-sm italic">
-            Escolha por onde compartilhar seu link de embaixador.
-          </DialogDescription>
+          <div className="flex items-center gap-3 mb-1">
+            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-[#ff6200] to-[#ff8533] flex items-center justify-center shadow-lg shadow-[#ff6200]/30 shrink-0">
+              <img src={logo} alt="Heart Club" className="w-7 h-7 object-contain" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <DialogTitle className="text-white font-black italic uppercase tracking-tight text-lg">
+                Convocar a Tropa
+              </DialogTitle>
+              <DialogDescription className="text-white/60 text-xs italic">
+                Heart Club · Censo Global do Futebol
+              </DialogDescription>
+            </div>
+          </div>
         </DialogHeader>
 
         <div className="grid grid-cols-3 gap-3 mt-2">
