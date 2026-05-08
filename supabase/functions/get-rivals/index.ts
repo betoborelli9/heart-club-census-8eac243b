@@ -29,23 +29,32 @@ function rateLimited(ip: string, limit = 30, windowMs = 60_000): boolean {
   return arr.length > limit;
 }
 
-async function aiFetchRivals(clubName: string, country?: string | null): Promise<string[]> {
+async function aiFetchRivals(
+  clubName: string,
+  country?: string | null,
+  city?: string | null,
+): Promise<string[]> {
   if (!LOVABLE_KEY) return [];
-  const ctx = country ? ` (${country})` : "";
+  const ctx = [city, country].filter(Boolean).join(", ");
+  const ctxStr = ctx ? ` (${ctx})` : "";
   const prompt = `Você é um especialista em rivalidades HISTÓRICAS do futebol. Cruze obrigatoriamente Google Search + Wikipédia (PT e EN) antes de responder.
 
-Clube: ${clubName}${ctx}
+Clube: ${clubName}${ctxStr}
 
 Tarefa: liste APENAS os rivais HISTÓRICOS oficiais (clássicos regionais consagrados e clássicos nacionais reconhecidos pela imprensa esportiva), em ordem de importância.
 
-REGRAS DURAS:
-- Pesquise: "rivais do ${clubName}", "clássico ${clubName}", "${clubName} rivalry wikipedia".
-- PROIBIDO incluir clubes pequenos da mesma cidade que NÃO disputam clássico oficial reconhecido. Ex.: para Vila Nova-GO os rivais corretos são Goiás e Atlético-GO; "Anápolis" NÃO é rival principal.
-- Se o clube for de capital de estado brasileiro, priorize os outros 2-3 grandes do mesmo estado.
-- Se for clube europeu/sul-americano, use o derby clássico reconhecido (ex.: Boca → River; Real Madrid → Barcelona, Atlético de Madrid).
-- Mínimo 2, máximo 4 rivais.
-- Apenas o NOME popular do clube (ex.: "Goiás", "Atlético-GO", "Atlético Goianiense").
-- Se o clube for obscuro e não tiver rivalidade documentada, retorne lista vazia.
+REGRAS DURAS DE PRIORIZAÇÃO:
+1. PRIORIDADE ABSOLUTA = MESMO ESTADO/REGIÃO. Identifique o ESTADO/UF do clube e liste primeiro os rivais do MESMO ESTADO. Se houver 2+ rivais estaduais consagrados, eles ocupam TODAS as vagas — NÃO inclua rivais interestaduais.
+   - Exemplo: Vasco da Gama é do Rio de Janeiro → rivais corretos: Flamengo, Fluminense, Botafogo. PROIBIDO listar Corinthians (SP) como rival principal do Vasco.
+   - Exemplo: Vila Nova-GO → Goiás, Atlético-GO. NÃO inclua Anápolis (não disputa clássico oficial reconhecido).
+   - Exemplo: Grêmio → Internacional (Gre-Nal). NÃO listar Palmeiras como rival principal.
+2. Só inclua rival INTERESTADUAL se NÃO houver rivais consagrados no mesmo estado (ex.: clube único de uma UF) OU se for um clássico nacional histórico reconhecido pela imprensa (ex.: clássicos da Copa Libertadores entre clubes de países distintos).
+3. PROIBIDO incluir clubes pequenos/sem expressão da mesma cidade que NÃO disputam clássico oficial reconhecido.
+4. Para clubes europeus/sul-americanos, use o derby clássico reconhecido (ex.: Boca → River; Real Madrid → Barcelona, Atlético de Madrid).
+5. Mínimo 2, máximo 4 rivais. Se houver menos de 2 rivais documentados, retorne lista vazia.
+6. Apenas o NOME popular do clube (ex.: "Flamengo", "Atlético-GO", "Atlético Goianiense").
+
+Pesquise: "rivais do ${clubName}", "clássico ${clubName}", "${clubName} rivalry wikipedia", "estado ${clubName}".
 
 Responda APENAS em JSON válido sem markdown:
 {"rivals":["Nome 1","Nome 2","Nome 3"]}`;
