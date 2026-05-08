@@ -1,6 +1,7 @@
 /**
  * [CAMINHO]: src/components/dashboard/NewsFeedCards.tsx
- * [MÓDULO]: Feed de notícias visuais (com imagem, fonte, drawer interno)
+ * [MÓDULO]: Feed de notícias — abre SEMPRE a URL original em nova aba.
+ * Sem Drawer interno, sem Google Search, sem logos externas.
  */
 import { useEffect, useState } from "react";
 import { ExternalLink, Newspaper } from "lucide-react";
