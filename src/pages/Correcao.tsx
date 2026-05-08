@@ -8,7 +8,7 @@
 
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Loader2, Send, CheckCircle2, XCircle, Sparkles } from "lucide-react";
+import { ArrowLeft, Loader2, Send, CheckCircle2, XCircle, Sparkles, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,6 +16,8 @@ import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { useUser } from "@/contexts/UserContext";
 import { supabase } from "@/integrations/supabase/client";
+import { resolveColorToHex } from "@/lib/color-names";
+import RivalsCombobox from "@/components/correcao/RivalsCombobox";
 import logo from "@/assets/logo.png";
 
 const COLOR_FIELDS = ["cor_primaria", "cor_secundaria", "cor_terciaria", "cor_quarta"] as const;
