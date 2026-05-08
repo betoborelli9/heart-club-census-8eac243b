@@ -1,7 +1,7 @@
 /**
  * [CAMINHO]: src/pages/Voting.tsx
- * [STATUS]: PRODUÇÃO - VERSÃO 19.0 (AUDITORIA REFORÇADA + FIX DB SCHEMA)
- * [CONTEXTO]: Blindagem contra votos múltiplos e correção de erro de inserção.
+ * [STATUS]: PRODUÇÃO - VERSÃO 20.0 (AUDITORIA REFINADA + ESTABILIDADE)
+ * [CONTEXTO]: Blindagem contra votos múltiplos com verificação pré-insert.
  */
 
 import { useState, useEffect, useCallback, useRef } from "react";
@@ -128,9 +128,8 @@ const Voting = () => {
 
       // --- LÓGICA DE AUDITORIA ---
       let isSuspicious = false;
-      let motivo = null;
+      let motivo: string | null = null;
 
-      // Busca se já existe voto deste IP ou Fingerprint para o mesmo clube com outro e-mail
       const { data: dup } = await supabase
         .from("votos")
         .select("id, email")
@@ -141,10 +140,10 @@ const Voting = () => {
 
       if (dup && dup.length > 0) {
         isSuspicious = true;
-        motivo = "Múltiplos e-mails detectados no mesmo IP/Dispositivo";
+        motivo = "Mesmo IP/Dispositivo com e-mail diferente";
       }
 
-      const mainVote: any = {
+      const mainVote = {
         user_id: user.id,
         email: user.email,
         clube_nome: heartClub.name,
