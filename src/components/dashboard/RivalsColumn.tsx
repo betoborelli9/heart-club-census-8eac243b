@@ -1,143 +1,81 @@
 /**
  * [CAMINHO]: src/components/dashboard/RivalsColumn.tsx
- * [MÓDULO]: TIMES RIVAIS — INTELIGÊNCIA DINÂMICA (CORREÇÃO DE ESCUDOS E LOGICA)
+ * [MÓDULO]: TIMES RIVAIS — CORREÇÃO DE ESCUDOS E LOGICA DE CACHE
  */
 import { Swords, Megaphone } from "lucide-react";
 import { useEffect, useState } from "react";
-import { getHistoricalRivals } from "@/lib/rivalries";
-import { ClubLogo } from "@/components/ClubLogo";
 import { supabase } from "@/integrations/supabase/client";
+import { ClubLogo } from "@/components/ClubLogo";
 import ShareTropaModal from "@/components/dashboard/ShareTropaModal";
-
-interface Props {
-  clubName: string | null;
-  refCode?: string | null;
-  primaryColor?: string;
-}
 
 interface RivalRow {
   name: string;
   logo: string | null;
-  label: string;
 }
 
-export default function RivalsColumn({ clubName, refCode, primaryColor = "#ff6200" }: Props) {
+export default function RivalsColumn({ clubName, refCode, primaryColor = "#ff6200" }: any) {
   const [rows, setRows] = useState<RivalRow[]>([]);
   const [shareOpen, setShareOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    let cancelled = false;
-    const run = async () => {
-      if (!clubName) {
-        setRows([]);
-        return;
-      }
-      setLoading(true);
+    const fetchRivals = async () => {
+      if (!clubName) return;
 
-      let rivalNames: string[] = [];
+      // 1. Pega os nomes dos rivais salvos para o clube
+      const { data: club } = await supabase.from("clubes_cache").select("rivais").ilike("nome", clubName).maybeSingle();
 
-      // 1. Busca lista de nomes de rivais no Cache
-      const { data: clubRow } = await supabase
-        .from("clubes_cache")
-        .select("rivais, pais")
-        .ilike("nome", clubName)
-        .maybeSingle();
+      if (club?.rivais?.length) {
+        // 2. BUSCA OS ESCUDOS DIRETAMENTE PELO NOME NA TABELA CACHE
+        const { data: shields } = await supabase
+          .from("clubes_cache")
+          .select("nome, escudo_url")
+          .in("nome", club.rivais);
 
-      if (clubRow?.rivais && Array.isArray(clubRow.rivais) && clubRow.rivais.length > 0) {
-        rivalNames = clubRow.rivais;
-      } else {
-        // 2. IA Gemini (Edge Function) apenas se cache estiver vazio
-        try {
-          const { data: rv } = await supabase.functions.invoke("get-rivals", {
-            body: { club_name: clubName, country: clubRow?.pais || null },
-          });
-          if (Array.isArray(rv?.rivals)) rivalNames = rv.rivals;
-        } catch (e) {
-          console.error("Erro IA Rivais:", e);
-        }
-      }
-
-      // 3. Fallback histórico se tudo falhar
-      if (!rivalNames.length) {
-        rivalNames = getHistoricalRivals(clubName, 4);
-      }
-
-      if (!rivalNames.length || cancelled) {
-        setRows([]);
-        setLoading(false);
-        return;
-      }
-
-      // 4. BUSCA DE ESCUDOS EM LOTE (Evita múltiplos requests)
-      const { data: rivalsDetails } = await supabase
-        .from("clubes_cache")
-        .select("nome, escudo_url")
-        .in("nome", rivalNames);
-
-      const enriched: RivalRow[] = rivalNames.map((name) => {
-        const detail = rivalsDetails?.find((d) => d.nome.toLowerCase() === name.toLowerCase());
-        return {
-          name,
-          logo: detail?.escudo_url || null,
-          label: "Rival Histórico",
-        };
-      });
-
-      if (!cancelled) {
-        setRows(enriched);
-        setLoading(false);
+        const mapped = club.rivais.map((name: string) => {
+          const s = shields?.find((x) => x.nome.toLowerCase() === name.toLowerCase());
+          return { name, logo: s?.escudo_url || null };
+        });
+        setRows(mapped);
       }
     };
-
-    run();
-    return () => {
-      cancelled = true;
-    };
+    fetchRivals();
   }, [clubName]);
 
   return (
-    <section className="space-y-3 rounded-2xl p-4 bg-white/[0.03] backdrop-blur-xl border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.4)]">
+    <section className="space-y-4 rounded-2xl p-4 bg-white/[0.02] border border-white/5 shadow-2xl">
       <header className="flex items-center gap-2">
-        <Swords className="w-4 h-4" style={{ color: primaryColor }} />
-        <h2 className="text-[11px] font-black italic uppercase tracking-widest text-white">Times Rivais</h2>
+        <Swords className="w-4 h-4 text-[#ff6200]" />
+        <h2 className="text-[11px] font-black italic uppercase tracking-widest text-white/70">Times Rivais</h2>
       </header>
 
-      <p className="text-[10px] italic text-white/40">Monitoramento para {clubName || "—"}</p>
-
       <div className="space-y-2">
-        {loading ? (
-          <div className="flex justify-center py-4 opacity-20 animate-pulse">
-            <Swords className="w-6 h-6 animate-spin" />
-          </div>
-        ) : rows.length === 0 ? (
-          <div className="text-[11px] italic text-white/40 py-3">Sem rivalidades mapeadas.</div>
-        ) : (
-          rows.map((r, i) => (
-            <div
-              key={`${r.name}-${i}`}
-              className="h-16 w-full flex items-center gap-3 px-3 rounded-xl bg-white/[0.04] border border-white/5 hover:border-[#ff6200]/40 transition-all group"
-            >
-              <div className="w-10 h-10 shrink-0 flex items-center justify-center bg-black/20 rounded-lg p-1">
-                <ClubLogo
-                  src={r.logo}
-                  alt={r.name}
-                  size="sm"
-                  className="w-full h-full object-contain group-hover:scale-110 transition-transform"
-                />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-[11px] font-black italic uppercase truncate text-white leading-tight">{r.name}</p>
-                <p className="text-[9px] italic text-white/30 uppercase tracking-tighter">{r.label}</p>
-              </div>
+        {rows.map((r, i) => (
+          <div
+            key={i}
+            className="h-16 flex items-center gap-3 px-3 rounded-xl bg-white/[0.03] border border-white/5 hover:border-[#ff6200]/30 transition-all group"
+          >
+            <div className="w-10 h-10 shrink-0 flex items-center justify-center bg-black/40 rounded-lg p-1.5">
+              {/* FORÇANDO O COMPONENTE A RENDERIZAR O SRC DO BANCO */}
+              <img
+                src={r.logo || "/placeholder-shield.png"}
+                alt={r.name}
+                className="w-full h-full object-contain group-hover:scale-110 transition-transform"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = "https://heartclubapp.com/logo.png";
+                }}
+              />
             </div>
-          ))
-        )}
+            <div className="flex-1 min-w-0">
+              <p className="text-[11px] font-black italic uppercase truncate text-white">{r.name}</p>
+              <p className="text-[9px] text-white/20 uppercase font-bold">Rival Histórico</p>
+            </div>
+          </div>
+        ))}
       </div>
 
       <button
         onClick={() => setShareOpen(true)}
-        className="w-full mt-3 flex items-center justify-center gap-2 py-3 rounded-xl font-black italic uppercase text-xs text-black hover:brightness-110 active:scale-95 transition-all shadow-lg"
+        className="w-full mt-2 flex items-center justify-center gap-2 py-3 rounded-xl font-black italic uppercase text-xs text-black transition-all hover:brightness-110"
         style={{ background: `linear-gradient(135deg, #f5c252 0%, ${primaryColor} 100%)` }}
       >
         <Megaphone className="w-4 h-4" /> Convocar a Tropa
