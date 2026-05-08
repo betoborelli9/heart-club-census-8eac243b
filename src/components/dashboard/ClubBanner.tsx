@@ -13,7 +13,7 @@
    ═══════════════════════════════════════════════════════════ */
 import { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { Flame, BarChart3, Crown, Users, MapPin, Trophy, ShieldAlert, Vote, FlaskConical } from "lucide-react";
+import { Flame, BarChart3, Crown, Users, MapPin, Trophy, ShieldAlert, Vote, FlaskConical, Sparkles } from "lucide-react";
 import { ClubLogo } from "@/components/ClubLogo";
 import { useUser } from "@/contexts/UserContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -61,13 +61,18 @@ const ClubBanner = ({
   const location = useLocation();
   const { user } = useUser();
 
+  // Tema chumbo (fallback enquanto enriquecimento não retornou)
+  const CHUMBO_PRIMARY = "#111111";
+  const CHUMBO_SECONDARY = "#2a2a2a";
+
   const [theme, setTheme] = useState({
-    cor_primaria: "#1a1a1a",
-    cor_secundaria: "#ffffff",
+    cor_primaria: CHUMBO_PRIMARY,
+    cor_secundaria: CHUMBO_SECONDARY,
     cor_terciaria: "",
     cor_quarta: "",
     escudo_url: "",
   });
+  const [enriching, setEnriching] = useState(true);
 
   const IS_MASTER = user?.email === "betoborelli9@gmail.com";
   const hasLevel = ambassadorLevel && ambassadorLevel.toUpperCase() !== "NONE";
@@ -76,6 +81,7 @@ const ClubBanner = ({
 
   useEffect(() => {
     if (!clubName) return;
+    let cancelled = false;
     const fetchTheme = async () => {
       const { data } = await supabase
         .from("clubes_cache")
@@ -83,17 +89,46 @@ const ClubBanner = ({
         .ilike("nome", `%${clubName}%`)
         .maybeSingle();
 
-      if (data) {
+      if (cancelled) return;
+
+      const primaria = data?.cor_primaria || "";
+      const escudo = data?.escudo_url || "";
+      const ready = !!primaria && !!escudo;
+
+      if (ready) {
         setTheme({
-          cor_primaria: data.cor_primaria || "#1a1a1a",
-          cor_secundaria: data.cor_secundaria || "#ffffff",
-          cor_terciaria: data.cor_terciaria || "",
+          cor_primaria: primaria,
+          cor_secundaria: data!.cor_secundaria || "#ffffff",
+          cor_terciaria: data!.cor_terciaria || "",
           cor_quarta: (data as any).cor_quarta || "",
-          escudo_url: data.escudo_url || "",
+          escudo_url: escudo,
         });
+        setEnriching(false);
+      } else {
+        // Mantém chumbo, dispara enrichment e re-tenta uma vez
+        setEnriching(true);
+        try {
+          await supabase.functions.invoke("enrich-club-colors", { body: { club_name: clubName } });
+          const { data: d2 } = await supabase
+            .from("clubes_cache")
+            .select("cor_primaria, cor_secundaria, cor_terciaria, cor_quarta, escudo_url")
+            .ilike("nome", `%${clubName}%`)
+            .maybeSingle();
+          if (!cancelled && d2?.cor_primaria) {
+            setTheme({
+              cor_primaria: d2.cor_primaria,
+              cor_secundaria: d2.cor_secundaria || "#ffffff",
+              cor_terciaria: d2.cor_terciaria || "",
+              cor_quarta: (d2 as any).cor_quarta || "",
+              escudo_url: d2.escudo_url || "",
+            });
+            setEnriching(false);
+          }
+        } catch { /* mantém chumbo */ }
       }
     };
     fetchTheme();
+    return () => { cancelled = true; };
   }, [clubName]);
 
   const buildFlagGradient = (): string => {
