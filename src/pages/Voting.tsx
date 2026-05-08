@@ -1,7 +1,7 @@
 /**
  * [CAMINHO]: src/pages/Voting.tsx
- * [STATUS]: PRODUÇÃO - VERSÃO 18.0 (AUDITORIA DE DUPLICIDADE REFORÇADA)
- * [CONTEXTO]: Blindagem total contra votos múltiplos no mesmo clube via mesma rede/dispositivo.
+ * [STATUS]: PRODUÇÃO - VERSÃO 19.0 (AUDITORIA REFORÇADA + FIX DB SCHEMA)
+ * [CONTEXTO]: Blindagem contra votos múltiplos e correção de erro de inserção.
  */
 
 import { useState, useEffect, useCallback, useRef } from "react";
@@ -112,35 +112,34 @@ const Voting = () => {
     setSubmitting(true);
     try {
       const allSelected = [{ club: heartClub, main: true }, ...sympathyClubs.map((c) => ({ club: c, main: false }))];
+
       if (TEST_MODE) {
         navigate(`/testar-clube?club=${encodeURIComponent(heartClub.name)}`);
         return;
       }
 
-      if (IS_MASTER_ADMIN) await supabase.from("votos").delete().eq("user_id", user.id);
+      if (IS_MASTER_ADMIN) {
+        await supabase.from("votos").delete().eq("user_id", user.id);
+      }
 
       const fpId = fingerprint || "web-client";
       const ipAudit = await captureIpAudit().catch(() => null);
       const callerIp = ipAudit?.ip || null;
 
-      // --- LOGICA CERTEIRA DE DUPLICIDADE ---
+      // --- LÓGICA DE AUDITORIA ---
       let isSuspicious = false;
       let motivo = null;
 
-      // Criamos o filtro para buscar IP ou Fingerprint
-      let filterString = "";
-      if (fpId && fpId !== "web-client") filterString += `fingerprint.eq.${fpId}`;
-      if (callerIp) filterString += `${filterString ? "," : ""}ip_address.eq.${callerIp}`;
-
+      // Busca se já existe voto deste IP ou Fingerprint para o mesmo clube com outro e-mail
       const { data: dup } = await supabase
         .from("votos")
         .select("id, email")
         .eq("clube_nome", heartClub.name)
-        .or(filterString)
+        .or(`fingerprint.eq.${fpId},ip_address.eq.${callerIp}`)
+        .neq("email", user.email)
         .limit(1);
 
-      // Se achou alguém no mesmo IP/FP mas com EMAIL diferente, é fraude.
-      if (dup && dup.length > 0 && dup[0].email !== user.email) {
+      if (dup && dup.length > 0) {
         isSuspicious = true;
         motivo = "Múltiplos e-mails detectados no mesmo IP/Dispositivo";
       }
@@ -166,7 +165,6 @@ const Voting = () => {
         voto_cidade_gps: ipAudit?.cidade ?? null,
         voto_lat: ipAudit?.lat ?? null,
         voto_lng: ipAudit?.lng ?? null,
-        isp: ipAudit?.isp ?? null,
       };
 
       const { error: voteError } = await supabase.from("votos").insert([mainVote]);
@@ -174,16 +172,20 @@ const Voting = () => {
 
       toast({
         title: isSuspicious ? "Voto registrado para auditoria 🔍" : "Lealdade registrada com sucesso! 🏟️",
-        description: isSuspicious ? "Sua entrada será revisada pela moderação." : undefined,
+        description: isSuspicious ? "Detectamos múltiplos acessos. Sua entrada será revisada." : undefined,
       });
 
       navigate("/dashboard");
 
       (async () => {
-        const device_model = await detectDeviceModel().catch(() => null);
-        await supabase.from("votos").update({ device_model }).eq("user_id", user.id).eq("clube_nome", heartClub.name);
-        await persistClubsIfMissing(allSelected.map((v) => v.club));
-        refreshProfile().catch(() => {});
+        try {
+          const device_model = await detectDeviceModel().catch(() => null);
+          await supabase.from("votos").update({ device_model }).eq("user_id", user.id).eq("clube_nome", heartClub.name);
+          await persistClubsIfMissing(allSelected.map((v) => v.club));
+          refreshProfile().catch(() => {});
+        } catch (e) {
+          console.error("BG error", e);
+        }
       })();
     } catch (err) {
       console.error("[VOTING] erro:", err);
