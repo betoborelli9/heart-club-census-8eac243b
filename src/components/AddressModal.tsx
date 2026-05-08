@@ -96,12 +96,17 @@ const AddressModal = ({ open, onOpenChange, clubName, onSuccess }: AddressModalP
 
       if (voteErr) throw voteErr;
 
-      // Atualiza o profile (anti-redundância)
+      // Atualiza/cria o profile do usuário logado: é este registro que impede
+      // o mesmo e-mail de ver o pedido de CEP novamente.
       const profileUpdate: Record<string, any> = { cep: cepDigits };
       if (cidadeAddr.trim()) profileUpdate.cidade = cidadeAddr.trim();
       if (estadoAddr.trim()) profileUpdate.estado = estadoAddr.trim();
 
-      await supabase.from("profiles").update(profileUpdate).eq("id", user.id);
+      const { error: profileErr } = await supabase
+        .from("profiles")
+        .upsert({ id: user.id, ...profileUpdate }, { onConflict: "id" });
+
+      if (profileErr) throw profileErr;
 
       toast({ title: "Território liberado! 🔥" });
       refreshProfile().catch(() => {});
