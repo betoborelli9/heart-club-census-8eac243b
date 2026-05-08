@@ -60,10 +60,10 @@ serve(async (req) => {
       has_feminino: extra?.has_feminino ?? false
     };
 
-    // 5. SALVA
+    // 5. SALVA (upsert por nome para evitar duplicidades)
     const { data: salvo } = await supabase
       .from("clubes_cache")
-      .insert(novoClube)
+      .upsert(novoClube, { onConflict: "nome" })
       .select()
       .single();
 

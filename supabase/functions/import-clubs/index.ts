@@ -43,7 +43,7 @@ serve(async () => {
         cor_secundaria: null,
         cor_terciaria: null,
         has_feminino: null
-      });
+      }, { onConflict: "nome" });
     }
 
     return new Response(
