@@ -210,30 +210,51 @@ export default function Correcao() {
         <div className="rounded-2xl border border-white/5 bg-white/[0.02] p-5 md:p-6 space-y-5">
           {/* CORES */}
           <section>
-            <h2 className="text-xs font-black uppercase tracking-widest text-white/70 mb-3">Cores oficiais</h2>
+            <h2 className="text-xs font-black uppercase tracking-widest text-white/70 mb-1">Cores oficiais</h2>
+            <p className="text-[11px] italic text-white/50 mb-3">
+              Aceita HEX (<span className="font-mono text-white/70">#RRGGBB</span>) ou nome em PT-BR
+              (<span className="text-white/70">preto, branco, vermelho, azul marinho, verde bandeira...</span>).
+            </p>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               {COLOR_FIELDS.map((f, i) => {
                 const labels = ["Primária", "Secundária", "Terciária", "Quarta"];
                 const current = (cache as any)?.[f] || "";
+                const typed = form[f] || "";
+                const previewHex = resolveColorToHex(typed) || (typed ? null : current || null);
+                const err = colorErrors[f];
                 return (
                   <div key={f}>
                     <Label className="text-[10px] uppercase tracking-wider text-white/50">
                       {labels[i]} <span className="text-white/30">(atual: {current || "—"})</span>
                     </Label>
                     <div className="flex items-center gap-2 mt-1">
-                      <input
-                        type="color"
-                        value={form[f]?.match(/^#[0-9a-fA-F]{6}$/) ? form[f] : current || "#000000"}
-                        onChange={(e) => set(f, e.target.value.toUpperCase())}
-                        className="w-10 h-10 rounded-md border border-white/10 bg-transparent cursor-pointer"
+                      <div
+                        className="w-10 h-10 rounded-md border border-white/10 shrink-0"
+                        style={{ background: previewHex || "transparent" }}
+                        title={previewHex || "sem cor"}
                       />
                       <Input
-                        placeholder="#RRGGBB"
-                        value={form[f] || ""}
-                        onChange={(e) => set(f, e.target.value.toUpperCase())}
-                        className="bg-white/5 border-white/10 text-white font-mono"
+                        placeholder='#RRGGBB ou "preto"'
+                        value={typed}
+                        onChange={(e) => {
+                          set(f, e.target.value);
+                          if (colorErrors[f]) {
+                            setColorErrors((p) => {
+                              const n = { ...p };
+                              delete n[f];
+                              return n;
+                            });
+                          }
+                        }}
+                        className={`bg-white/5 text-white ${err ? "border-red-500" : "border-white/10"}`}
                       />
                     </div>
+                    {err && (
+                      <p className="text-[10px] text-red-400 mt-1 flex items-start gap-1">
+                        <AlertTriangle className="w-3 h-3 mt-0.5 shrink-0" />
+                        <span>{err}</span>
+                      </p>
+                    )}
                   </div>
                 );
               })}
