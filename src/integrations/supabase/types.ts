@@ -194,6 +194,7 @@ export type Database = {
           nome: string
           nome_curto: string | null
           pais: string
+          rivais: string[] | null
           tem_feminino: boolean | null
         }
         Insert: {
@@ -216,6 +217,7 @@ export type Database = {
           nome: string
           nome_curto?: string | null
           pais: string
+          rivais?: string[] | null
           tem_feminino?: boolean | null
         }
         Update: {
@@ -238,6 +240,7 @@ export type Database = {
           nome?: string
           nome_curto?: string | null
           pais?: string
+          rivais?: string[] | null
           tem_feminino?: boolean | null
         }
         Relationships: []
