@@ -1147,7 +1147,6 @@ const MapaCalor = () => {
         .maybeSingle();
 
       const votoCep = data?.cep && String(data.cep).trim().length > 0;
-      const votoBairro = data?.bairro && String(data.bairro).trim().length > 0;
       const profileCep = profileData?.cep && String(profileData.cep).trim().length > 0;
 
       // Se voto não tem CEP mas profile tem, faz backfill silencioso
@@ -1162,9 +1161,10 @@ const MapaCalor = () => {
           .eq("is_original_vote", true);
       }
 
-      // Só abre o modal se não há CEP em lugar nenhum E falta bairro
+      // CEP é pedido apenas uma vez por torcedor/e-mail: se ficou gravado no profile,
+      // nunca reabre, mesmo que o voto antigo ainda não tenha bairro preenchido.
       const temCep = votoCep || profileCep;
-      if (!temCep || !votoBairro) {
+      if (!temCep) {
         setAddressOpen(true);
       }
       setAddressChecked(true);
