@@ -4,9 +4,7 @@
  */
 import { useEffect, useState } from "react";
 import { ExternalLink, Newspaper } from "lucide-react";
-import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription } from "@/components/ui/drawer";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 
 interface NewsItem {
