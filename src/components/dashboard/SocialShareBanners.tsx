@@ -98,7 +98,22 @@ export default function SocialShareBanners({
   const slug = (clubName || "heart-club").toLowerCase().replace(/[^a-z0-9]+/g, "-");
 
   const handleAction = async (idx: number, action: "post" | "download") => {
-    toast({ title: "Gerando banner...", description: "Aguarde alguns segundos." });
+    if (action === "post") {
+      toast({
+        title: "✨ Gerando seu banner...",
+        description: "Agora basta selecionar o Instagram na lista e postar nos Stories.",
+        className:
+          "border border-[#ff6200]/40 bg-gradient-to-br from-black via-zinc-900 to-black text-white shadow-[0_0_30px_rgba(255,98,0,0.25)] backdrop-blur-xl",
+      });
+    } else {
+      toast({
+        title: "Preparando seu banner...",
+        description: "O download começará em instantes.",
+        className:
+          "border border-[#ff6200]/40 bg-gradient-to-br from-black via-zinc-900 to-black text-white shadow-[0_0_30px_rgba(255,98,0,0.25)] backdrop-blur-xl",
+      });
+    }
+
     const blob = await captureBanner(idx);
     if (!blob) {
       toast({ variant: "destructive", title: "Falha ao gerar banner." });
@@ -126,6 +141,8 @@ export default function SocialShareBanners({
         action === "post"
           ? "Abra o Instagram e poste como Stories. (postagem direta requer compartilhar pelo celular)"
           : "Pronto para postar nos seus Stories.",
+      className:
+        "border border-[#ff6200]/40 bg-gradient-to-br from-black via-zinc-900 to-black text-white shadow-[0_0_30px_rgba(255,98,0,0.25)] backdrop-blur-xl",
     });
   };
 
