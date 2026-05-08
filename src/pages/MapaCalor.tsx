@@ -1139,10 +1139,32 @@ const MapaCalor = () => {
 
       setActiveClubInfo(CLUBS_DATA.find((c) => c.nome === name) || null);
 
-      // Se ainda não registrou bairro/CEP, abre o modal
-      const semBairro = !data?.bairro || String(data.bairro).trim().length === 0;
-      const semCep = !data?.cep || String(data.cep).trim().length === 0;
-      if (semBairro || semCep) {
+      // Fallback: se profile já tem CEP, considera resolvido (e backfill no voto)
+      const { data: profileData } = await supabase
+        .from("profiles")
+        .select("cep, cidade, estado")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      const votoCep = data?.cep && String(data.cep).trim().length > 0;
+      const votoBairro = data?.bairro && String(data.bairro).trim().length > 0;
+      const profileCep = profileData?.cep && String(profileData.cep).trim().length > 0;
+
+      // Se voto não tem CEP mas profile tem, faz backfill silencioso
+      if (!votoCep && profileCep) {
+        const updates: Record<string, any> = { cep: profileData!.cep };
+        if (profileData?.cidade) updates.cidade = profileData.cidade;
+        if (profileData?.estado) updates.estado = profileData.estado;
+        await supabase
+          .from("votos")
+          .update(updates)
+          .eq("user_id", user.id)
+          .eq("is_original_vote", true);
+      }
+
+      // Só abre o modal se não há CEP em lugar nenhum E falta bairro
+      const temCep = votoCep || profileCep;
+      if (!temCep || !votoBairro) {
         setAddressOpen(true);
       }
       setAddressChecked(true);
