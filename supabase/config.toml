@@ -35,3 +35,6 @@ verify_jwt = false
 
 [functions.league-standings]
 verify_jwt = false
+
+[functions.get-rivals]
+verify_jwt = false

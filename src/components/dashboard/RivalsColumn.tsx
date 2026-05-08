@@ -3,46 +3,60 @@
  * [MÓDULO]: TIMES RIVAIS — UNIFICAÇÃO E RECUPERAÇÃO DE ESCUDOS
  * [LOG]: Removida dependência de blocos redundantes. Busca direta no cache.
  */
-import { Swords, Megaphone } from "lucide-react";
+import { Swords, Megaphone, Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import ShareTropaModal from "@/components/dashboard/ShareTropaModal";
+import { ClubLogo } from "@/components/ClubLogo";
+
+type RivalItem = {
+  name: string;
+  logo: string | null;
+  city?: string | null;
+  country?: string | null;
+  source?: "cache" | "api" | "missing";
+};
 
 export default function RivalsColumn({ clubName, refCode, primaryColor = "#ff6200" }: any) {
-  const [rivals, setRivals] = useState<any[]>([]);
+  const [rivals, setRivals] = useState<RivalItem[]>([]);
+  const [loading, setLoading] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
 
   useEffect(() => {
+    let cancelled = false;
+
     const fetchRivals = async () => {
-      if (!clubName) return;
-
-      // 1. Busca os nomes dos rivais registrados para o clube atual
-      const { data: clubCache } = await supabase
-        .from("clubes_cache")
-        .select("rivais")
-        .ilike("nome", clubName)
-        .maybeSingle();
-
-      if (clubCache?.rivais && Array.isArray(clubCache.rivais)) {
-        // 2. Busca os dados (ESCUDOS) de todos esses rivais de uma vez só
-        const { data: rivalsData } = await supabase
-          .from("clubes_cache")
-          .select("nome, escudo_url")
-          .in("nome", clubCache.rivais);
-
-        const finalRivals = clubCache.rivais.map((name) => {
-          const match = rivalsData?.find((r) => r.nome.toLowerCase() === name.toLowerCase());
-          return {
-            name: name,
-            // Fallback: Se não tem no banco, tenta a logo do Heart Club para não ficar vazio
-            logo: match?.escudo_url || "https://www.heartclubapp.com/logo.png",
-          };
-        });
-        setRivals(finalRivals);
+      if (!clubName) {
+        setRivals([]);
+        return;
       }
+
+      setLoading(true);
+      const { data, error } = await supabase.functions.invoke("get-rivals", {
+        body: { club_name: clubName, force_refresh: true },
+      });
+
+      if (cancelled) return;
+
+      if (error) {
+        console.error("[RivalsColumn] get-rivals", error);
+        setRivals([]);
+      } else {
+        const details = Array.isArray((data as any)?.rivalDetails) ? (data as any).rivalDetails : [];
+        const names = Array.isArray((data as any)?.rivals) ? (data as any).rivals : [];
+        setRivals(
+          (details.length ? details : names.map((name: string) => ({ name, logo: null })))
+            .filter((r: RivalItem) => r?.name)
+            .slice(0, 4),
+        );
+      }
+      setLoading(false);
     };
 
     fetchRivals();
+    return () => {
+      cancelled = true;
+    };
   }, [clubName]);
 
   return (
@@ -55,29 +69,36 @@ export default function RivalsColumn({ clubName, refCode, primaryColor = "#ff620
       </header>
 
       <div className="space-y-3">
-        {rivals.length === 0 ? (
-          <div className="py-4 text-center text-[10px] text-white/20 uppercase font-black italic">
-            Mapeando rivalidades locais...
+        {loading ? (
+          <div className="py-4 flex items-center justify-center gap-2 text-[10px] text-white/35 uppercase font-black italic">
+            <Loader2 className="w-3.5 h-3.5 animate-spin" style={{ color: primaryColor }} />
+            Validando clássicos reais...
+          </div>
+        ) : rivals.length === 0 ? (
+          <div className="py-4 text-center text-[10px] text-white/25 uppercase font-black italic">
+            Nenhuma rivalidade histórica confirmada.
           </div>
         ) : (
           rivals.map((rival, i) => (
             <div
               key={i}
-              className="flex items-center gap-4 p-3 rounded-2xl bg-white/[0.03] border border-white/5 hover:bg-white/[0.06] transition-all group"
+              className="flex items-center gap-4 p-3 rounded-2xl bg-white/[0.04] border border-white/10 backdrop-blur-xl hover:bg-white/[0.07] hover:border-white/20 transition-all group"
             >
-              <div className="w-12 h-12 shrink-0 flex items-center justify-center bg-black/40 rounded-xl p-2 border border-white/10">
-                <img
-                  src={rival.logo}
-                  alt={rival.name}
-                  className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-500"
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).src = "https://www.heartclubapp.com/logo.png";
-                  }}
+              <div className="w-12 h-12 shrink-0 flex items-center justify-center bg-black/40 rounded-xl p-1.5 border border-white/10 group-hover:border-white/20 transition-colors">
+                <ClubLogo
+                  src={rival.logo || undefined}
+                  alt={`Escudo do ${rival.name}`}
+                  size="md"
+                  className="w-full h-full rounded-lg bg-transparent group-hover:scale-110 transition-transform duration-500"
+                  loading="eager"
+                  fetchPriority="high"
                 />
               </div>
               <div className="flex-1 min-w-0">
                 <h3 className="text-xs font-black uppercase italic text-white truncate">{rival.name}</h3>
-                <span className="text-[9px] font-bold text-white/20 uppercase">Rival Histórico</span>
+                <span className="text-[9px] font-bold text-white/30 uppercase truncate block">
+                  {[rival.city, rival.country].filter(Boolean).join(" • ") || "Rival Histórico"}
+                </span>
               </div>
             </div>
           ))
