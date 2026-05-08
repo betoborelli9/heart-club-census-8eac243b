@@ -274,19 +274,15 @@ export default function Correcao() {
             <Field label="Divisão atual" placeholder={cache?.division || "Ex.: Série A"} value={form.division} onChange={(v) => set("division", v)} />
 
             <div className="md:col-span-2">
-              <Label className="text-[10px] uppercase tracking-wider text-white/50">
-                Rivais históricos (separados por vírgula){" "}
+              <Label className="text-[10px] uppercase tracking-wider text-white/50 mb-2 block">
+                Rivais históricos{" "}
                 <span className="text-[#ff6200] font-bold not-italic">— sua palavra sobrepõe a IA</span>
               </Label>
-              <Input
-                placeholder={
-                  cache?.rivais && cache.rivais.length > 0
-                    ? `Atual: ${cache.rivais.join(", ")}`
-                    : "Ex.: Goiás, Atlético-GO, Goianésia"
-                }
-                value={form.rivais || ""}
-                onChange={(e) => set("rivais", e.target.value)}
-                className="bg-white/5 border-[#ff6200]/40 text-white mt-1 focus-visible:ring-[#ff6200]"
+              <RivalsCombobox
+                value={rivais}
+                onChange={setRivais}
+                excludeName={clubName || undefined}
+                placeholder="Buscar clube rival no banco (escudo garantido)..."
               />
               <p className="text-[10px] italic text-white/40 mt-1">
                 A correção do torcedor é aplicada direto, sem validação da IA, e fica sinalizada no painel admin.
