@@ -181,36 +181,57 @@ const Voting = () => {
         sympathy_4: sympathyClubs[3]?.name ?? null,
       };
 
+      // 1) Captura IP geo + fingerprint para detectar duplicidade
+      const fpId = fingerprint || "web-client";
+      const ipAudit = await captureIpAudit().catch(() => null);
+      const callerIp = ipAudit?.ip || null;
+
+      // 2) Verifica purgatório: fingerprint OU IP já usados
+      let pendente = false;
+      try {
+        const orFilter = [
+          fpId ? `fingerprint.eq.${fpId}` : null,
+          callerIp ? `ip_address.eq.${callerIp}` : null,
+        ].filter(Boolean).join(",");
+        if (orFilter) {
+          const { data: dup } = await supabase
+            .from("votos_tracking")
+            .select("id")
+            .or(orFilter)
+            .limit(1);
+          if (dup && dup.length > 0) pendente = true;
+        }
+      } catch { /* ignore — não bloquear */ }
+
+      // 3) Insere voto (com geo do IP como fonte invisível)
+      mainVote.fingerprint = fpId;
+      mainVote.ip_address = callerIp;
+      (mainVote as any).status_aprovacao = pendente ? "pendente" : "aprovado";
+      (mainVote as any).is_suspicious = pendente;
+      (mainVote as any).voto_bairro_gps = ipAudit?.bairro ?? null;
+      (mainVote as any).voto_cidade_gps = ipAudit?.cidade ?? null;
+      (mainVote as any).voto_lat = ipAudit?.lat ?? null;
+      (mainVote as any).voto_lng = ipAudit?.lng ?? null;
+      (mainVote as any).voto_pais = ipAudit?.pais ?? null;
+      (mainVote as any).voto_continente = ipAudit?.continente ?? null;
+      (mainVote as any).isp = ipAudit?.isp ?? null;
+
       const { error: voteError } = await supabase.from("votos").insert([mainVote]);
       if (voteError) throw voteError;
 
       // Redireciona imediatamente — todo enriquecimento roda em background
-      toast({ title: "Lealdade registada com sucesso! 🏟️" });
+      toast({
+        title: pendente ? "Voto registrado para auditoria 🔍" : "Lealdade registada com sucesso! 🏟️",
+        description: pendente ? "Detectamos um registro anterior deste dispositivo. Sua entrada será revisada." : undefined,
+      });
       navigate("/dashboard");
 
-      // Background (fire-and-forget): GPS, device, ISP, enrichment
+      // Background (fire-and-forget): device + enrichment
       (async () => {
         try {
-          const [audit, device_model] = await Promise.all([
-            captureGpsAudit().catch(() => null),
-            detectDeviceModel().catch(() => null),
-          ]);
-          let isp: string | null = null;
-          try {
-            const r = await fetch("https://ipapi.co/json/", { cache: "no-store" });
-            if (r.ok) {
-              const j = await r.json();
-              isp = j.org || j.asn || null;
-            }
-          } catch { /* ignore */ }
-
+          const device_model = await detectDeviceModel().catch(() => null);
           await supabase.from("votos").update({
-            voto_bairro_gps: audit?.voto_bairro_gps ?? null,
-            voto_cidade_gps: audit?.voto_cidade_gps ?? null,
-            voto_lat: audit?.lat ?? null,
-            voto_lng: audit?.lng ?? null,
             device_model: device_model ?? null,
-            isp,
           }).eq("user_id", user.id).eq("clube_nome", heartClub.name);
         } catch (e) {
           console.error("[VOTING][bg-audit]", e);
@@ -229,6 +250,7 @@ const Voting = () => {
 
         refreshProfile().catch(() => {});
       })();
+
     } catch (err) {
       console.error("[VOTING] erro:", err);
       toast({ variant: "destructive", title: "Erro ao processar votos" });
