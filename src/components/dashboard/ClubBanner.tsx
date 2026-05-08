@@ -306,6 +306,19 @@ const ClubBanner = ({
             </>
           )}
         </nav>
+
+        {enriching && (
+          <div className="px-5 py-3 bg-gradient-to-r from-[#ff6200]/10 via-[#ff6200]/5 to-transparent border-t border-[#ff6200]/20">
+            <div className="flex items-start gap-3">
+              <div className="mt-0.5 shrink-0">
+                <Sparkles size={16} className="text-[#ff6200] animate-pulse" />
+              </div>
+              <p className="text-[12px] md:text-[13px] italic font-semibold text-white/85 leading-snug" style={{ fontFamily: "Verdana, sans-serif" }}>
+                O manto está chegando! O <span className="text-[#ff6200] not-italic font-black uppercase">{clubName}</span> é uma nova força no Censo Global e estamos processando as cores e o escudo oficial. Continue navegando, daqui a pouco seu Dashboard estará com a cara da sua paixão!
+              </p>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
