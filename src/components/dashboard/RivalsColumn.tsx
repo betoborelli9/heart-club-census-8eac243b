@@ -115,6 +115,17 @@ export default function RivalsColumn({ clubName, refCode, primaryColor = "#ff620
                   {[rival.city, rival.country].filter(Boolean).join(" • ") || "Rival Histórico"}
                 </span>
               </div>
+              <div className="shrink-0 flex flex-col items-end leading-none">
+                <span
+                  className="text-base font-black italic tabular-nums"
+                  style={{ color: primaryColor }}
+                >
+                  {(rival.votes ?? 0).toLocaleString("pt-BR")}
+                </span>
+                <span className="text-[8px] font-black uppercase italic text-white/40 tracking-widest mt-0.5">
+                  Votos
+                </span>
+              </div>
             </div>
           ))
         )}
