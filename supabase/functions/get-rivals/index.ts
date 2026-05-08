@@ -121,6 +121,30 @@ async function apiFootballSearch(query: string): Promise<RivalDetail | null> {
   }
 }
 
+async function wikipediaLogoSearch(query: string): Promise<RivalDetail | null> {
+  const title = encodeURIComponent(cleanName(query).replace(/\s+/g, "_"));
+  try {
+    const res = await fetch(`https://pt.wikipedia.org/api/rest_v1/page/summary/${title}`, {
+      headers: { "User-Agent": "HeartClub/1.0 (escudos@heartclubapp.com)" },
+    });
+    if (!res.ok) return null;
+    const json = await res.json();
+    const logo = json?.thumbnail?.source || json?.originalimage?.source || null;
+    if (!logo || !/upload\.wikimedia\.org/i.test(String(logo))) return null;
+
+    return {
+      name: cleanName(json?.title || query),
+      logo,
+      city: null,
+      country: null,
+      source: "api",
+    };
+  } catch (err) {
+    console.error("[get-rivals] Wikipedia logo error:", (err as Error).message);
+    return null;
+  }
+}
+
 async function resolveRivalDetail(admin: any, rivalName: string): Promise<RivalDetail> {
   const requested = cleanName(rivalName);
   const { data: exact } = await admin
@@ -139,7 +163,7 @@ async function resolveRivalDetail(admin: any, rivalName: string): Promise<RivalD
     };
   }
 
-  const api = await apiFootballSearch(requested);
+  const api = await apiFootballSearch(requested) || await wikipediaLogoSearch(requested);
   if (api?.logo) {
     await admin.from("clubes_cache").upsert(
       {
