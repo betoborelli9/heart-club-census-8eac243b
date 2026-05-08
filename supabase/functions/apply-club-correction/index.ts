@@ -256,10 +256,51 @@ serve(async (req) => {
       if (!ALLOWED_FIELDS.has(field) || suggested === "") continue;
 
       const oldValueRaw = cache ? (cache as any)[field] : null;
-      const oldValue = oldValueRaw === null || oldValueRaw === undefined ? null : String(oldValueRaw);
+      const oldValue =
+        oldValueRaw === null || oldValueRaw === undefined
+          ? null
+          : Array.isArray(oldValueRaw)
+            ? oldValueRaw.join(", ")
+            : String(oldValueRaw);
 
       // se igual ao atual, pula
       if (oldValue !== null && oldValue.toLowerCase() === suggested.toLowerCase()) continue;
+
+      // ── OVERRIDE DO TORCEDOR (rivais) — sem IA, apenas registra ──
+      if (USER_OVERRIDE_FIELDS.has(field)) {
+        let finalArr: string[] = [];
+        if (field === "rivais") {
+          finalArr = suggested
+            .split(",")
+            .map((s) => s.trim())
+            .filter((s) => s.length > 0 && s.length <= 80)
+            .slice(0, 6);
+        }
+        updatePayload[field] = finalArr;
+
+        await admin.from("club_corrections").insert({
+          user_id: user.id,
+          user_display_name: profile?.nome_exibicao || user.email || null,
+          clube_nome: clubName,
+          field_name: field,
+          old_value: oldValue,
+          suggested_value: suggested,
+          applied_value: finalArr.join(", "),
+          ai_verdict: "user_override",
+          ai_reasoning: "Sobreposição manual do torcedor (sem validação de IA).",
+          status: "applied",
+        });
+
+        results.push({
+          field,
+          suggested,
+          applied: finalArr.join(", "),
+          verdict: "user_override",
+          reasoning: "Aplicado conforme indicação do torcedor.",
+          status: "applied",
+        });
+        continue;
+      }
 
       const verdict = await aiValidateField(clubName, country, field, suggested);
       const finalValue = verdict.verdict === "rejected" ? null : coerceValue(field, verdict.value ?? suggested);
