@@ -1,15 +1,11 @@
 /**
  * [CAMINHO/ARQUIVO]: src/pages/Dashboard.tsx
- * [MÓDULO]: DASHBOARD CALEIDOSCÓPIO — REESTRUTURAÇÃO FINAL 3.0
- * [STATUS]: CORREÇÃO DE LARGURA, GRID 3 COLUNAS E RODAPÉ FIXO PREMIUM
- * [LOG]:
- * - Seção de Simpatias agora full-width alinhada ao banner.
- * - Grid principal 26/44/30.
- * - Rodapé Mobile Tab Bar fixado.
+ * [MÓDULO]: DASHBOARD CALEIDOSCÓPIO — REESTRUTURAÇÃO FINAL 4.0
+ * [STATUS]: BLINDAGEM ADMIN, REMOÇÃO DE LOGOS E GARANTIA DE ESCUDOS
  */
 
 import { useEffect, useState } from "react";
-import { LogOut, Loader2, Eye, Heart, Trophy, Home, BarChart3, Map, Users, LayoutDashboard, Beaker } from "lucide-react";
+import { LogOut, Loader2, Heart, Home, BarChart3, Map, Users, LayoutDashboard, Beaker } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { useUser } from "@/contexts/UserContext";
@@ -47,9 +43,8 @@ const Dashboard = () => {
   const [fadeKey, setFadeKey] = useState(0);
   const [viewedLogo, setViewedLogo] = useState<string | null>(null);
 
-  /* ═══════════════════════════════════════════════════════════
-     MÓDULO 3: LOGICA DE ESTADO E CARREGAMENTO
-     ═══════════════════════════════════════════════════════════ */
+  const isAdmin = user?.email === "betoborelli9@gmail.com";
+
   useEffect(() => {
     const loadVoto = async () => {
       if (!user) return;
@@ -105,8 +100,8 @@ const Dashboard = () => {
     setFadeKey((k) => k + 1);
   };
 
-  const heartTheme = useClubTheme(heartClubName);
   const viewedTheme = useClubTheme(viewedClubName);
+  const heartTheme = useClubTheme(heartClubName);
   const primary = viewedTheme?.primaryHex || "#ff6200";
   const secondary = viewedTheme?.secondaryHex || "#000000";
   const isViewingHeart = viewedClubName === heartClubName;
@@ -124,7 +119,6 @@ const Dashboard = () => {
         @keyframes fadeInScale { from { opacity: 0; transform: scale(0.99) translateY(8px); } to { opacity: 1; transform: scale(1) translateY(0); } }
         .fade-in { animation: fadeInScale 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
         .glass-card { background: rgba(255, 255, 255, 0.015); border: 1px solid rgba(255, 255, 255, 0.05); }
-        .no-scrollbar::-webkit-scrollbar { display: none; }
       `}</style>
 
       {/* HEADER */}
@@ -138,6 +132,17 @@ const Dashboard = () => {
             <ClubSearch onSelect={(club) => handlePickClub(club.name)} />
           </div>
           <div className="flex items-center gap-4">
+            {/* BOTÃO VOTAÇÃO - EXCLUSIVO ADMIN */}
+            {isAdmin && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => navigate("/votação")}
+                className="border-[#ff6200] text-[#ff6200] hover:bg-[#ff6200] hover:text-white font-black italic uppercase text-[10px]"
+              >
+                Votação
+              </Button>
+            )}
             <Button variant="ghost" size="icon" onClick={() => signOut()} className="text-white/30 hover:text-white">
               <LogOut className="w-5 h-5" />
             </Button>
@@ -146,7 +151,6 @@ const Dashboard = () => {
       </header>
 
       <main className="max-w-[1440px] mx-auto px-4 md:px-6 py-6 space-y-6 pb-24">
-        {/* BANNER MESTRE (LARGURA CONTAINER) */}
         <ClubBanner
           clubName={heartClubName || "SELECIONE SEU CLUBE"}
           clubData={heartClubData}
@@ -158,10 +162,8 @@ const Dashboard = () => {
           showProfileInfo={true}
         />
 
-        {/* IDENTIDADE DO CLUBE DO CORAÇÃO */}
         {heartClubName && <ClubIdentityCard clubName={heartClubName} />}
 
-        {/* SEÇÃO SIMPATIAS - FULL WIDTH ALINHADO */}
         <section className="fade-in w-full">
           <div className="glass-card rounded-[32px] p-4 md:p-6">
             <SympathyCarousel
@@ -173,16 +175,13 @@ const Dashboard = () => {
           </div>
         </section>
 
-        {/* GRID PRINCIPAL 3 COLUNAS */}
         <div className="grid grid-cols-1 lg:grid-cols-[26%_44%_30%] gap-6">
-          {/* COLUNA 1 — TIMES RIVAIS */}
           <aside className="space-y-4">
             <div className="glass-card rounded-3xl p-5 lg:sticky lg:top-24">
               <RivalsColumn clubName={viewedClubName} refCode={profile.codigo_indicacao} primaryColor={primary} />
             </div>
           </aside>
 
-          {/* COLUNA 2 — NOTÍCIAS (CALEIDOSCÓPIO) */}
           <section key={`col2-${fadeKey}`} className="fade-in space-y-6 min-w-0">
             {!isViewingHeart && viewedClubName && (
               <div className="flex items-center justify-between gap-4 px-4 py-3 bg-[#ff6200]/5 border border-[#ff6200]/10 rounded-2xl">
@@ -199,11 +198,16 @@ const Dashboard = () => {
               </div>
             )}
             <div className="glass-card rounded-[32px] p-2 min-h-[600px]">
-              <NewsFeedCards teamName={viewedClubName} primaryColor={primary} fallbackLogo={viewedLogo} />
+              {/* NEWSFEED - FORÇANDO REMOÇÃO DE LOGOS EXTERNAS */}
+              <NewsFeedCards
+                teamName={viewedClubName}
+                primaryColor={primary}
+                fallbackLogo={viewedLogo}
+                hideExternalLogos={true}
+              />
             </div>
           </section>
 
-          {/* COLUNA 3 — MATEMÁTICA E SOCIAL */}
           <aside key={`col3-${fadeKey}`} className="fade-in space-y-6 min-w-0">
             <div className="glass-card rounded-3xl p-6 space-y-8">
               <ObjectivesPanel clubName={viewedClubName} clubLogo={viewedLogo} primaryColor={primary} />
@@ -222,7 +226,7 @@ const Dashboard = () => {
         </div>
       </main>
 
-      {/* RODAPÉ TAB BAR - FIXO ESTILIZADO */}
+      {/* RODAPÉ TAB BAR */}
       <footer className="fixed bottom-0 left-0 right-0 h-16 bg-black/80 backdrop-blur-2xl border-t border-white/5 z-[100] flex items-center justify-center">
         <nav className="flex items-center gap-8 md:gap-16">
           <button className="flex flex-col items-center gap-1 text-[#ff6200]">
@@ -250,7 +254,7 @@ const Dashboard = () => {
             <Users className="w-5 h-5" />
             <span className="text-[9px] font-bold uppercase tracking-widest">Embaixadores</span>
           </button>
-          {user?.email === "betoborelli9@gmail.com" && (
+          {isAdmin && (
             <>
               <button
                 className="flex flex-col items-center gap-1 text-white/40 hover:text-white"
