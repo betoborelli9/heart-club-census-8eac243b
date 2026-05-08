@@ -1,15 +1,14 @@
 /**
  * [CAMINHO]: src/components/dashboard/RivalsColumn.tsx
- * [MÓDULO]: TIMES RIVAIS — INTELIGÊNCIA DE RIVALIDADE
- * [FIX]: Tradução para PT-BR, busca de votos em 'clubes_cache' e lógica de rivais de Goiás.
+ * [MÓDULO]: TIMES RIVAIS — INTELIGÊNCIA DINÂMICA POR CLUBE (cache + IA)
  */
 import { Swords, Megaphone } from "lucide-react";
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { getHistoricalRivals } from "@/lib/rivalries";
 import { CLUBS_DATA } from "@/clubes-data";
 import { ClubLogo } from "@/components/ClubLogo";
 import { supabase } from "@/integrations/supabase/client";
+import ShareTropaModal from "@/components/dashboard/ShareTropaModal";
 
 interface Props {
   clubName: string | null;
@@ -25,15 +24,11 @@ interface RivalRow {
 }
 
 const norm = (s: string) =>
-  (s || "")
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .trim();
+  (s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
 
 export default function RivalsColumn({ clubName, refCode, primaryColor = "#ff6200" }: Props) {
-  const navigate = useNavigate();
   const [rows, setRows] = useState<RivalRow[]>([]);
+  const [shareOpen, setShareOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -43,23 +38,34 @@ export default function RivalsColumn({ clubName, refCode, primaryColor = "#ff620
         return;
       }
 
-      // Lógica específica para times de Goiás (ACG, GEC, VILA)
+      // 1) Cache: clubes_cache.rivais
       let rivalNames: string[] = [];
-      const nomeLimpo = norm(clubName);
+      try {
+        const { data: row } = await supabase
+          .from("clubes_cache")
+          .select("rivais, pais")
+          .ilike("nome", clubName)
+          .maybeSingle();
+        if (row?.rivais && Array.isArray(row.rivais) && row.rivais.length > 0) {
+          rivalNames = row.rivais as string[];
+        } else {
+          // 2) Edge function get-rivals (IA Gemini)
+          try {
+            const { data: rv } = await supabase.functions.invoke("get-rivals", {
+              body: { club_name: clubName, country: row?.pais || null },
+            });
+            if (Array.isArray(rv?.rivals)) rivalNames = rv.rivals;
+          } catch {}
+        }
+      } catch {}
 
-      if (nomeLimpo.includes("atletico goianiense") || nomeLimpo === "atletico-go") {
-        rivalNames = ["Goiás", "Vila Nova"];
-      } else if (nomeLimpo.includes("goias")) {
-        rivalNames = ["Vila Nova", "Atlético Goianiense"];
-      } else if (nomeLimpo.includes("vila nova")) {
-        rivalNames = ["Goiás", "Atlético Goianiense"];
-      } else {
-        // Fallback para outros clubes
+      // 3) Fallback histórico hardcoded
+      if (!rivalNames.length) {
         rivalNames = getHistoricalRivals(clubName, 4);
       }
 
       if (!rivalNames.length) {
-        setRows([]);
+        if (!cancelled) setRows([]);
         return;
       }
 
@@ -67,26 +73,15 @@ export default function RivalsColumn({ clubName, refCode, primaryColor = "#ff620
         rivalNames.map(async (name) => {
           const local = CLUBS_DATA.find((c: any) => norm(c.nome) === norm(name));
           let logo = (local as any)?.logoUrl || null;
-          let votes: number | null = null;
-
           try {
             const { data } = await supabase
               .from("clubes_cache")
               .select("escudo_url")
               .ilike("nome", name)
               .maybeSingle();
-
             if (data && !logo) logo = data.escudo_url;
-          } catch (err) {
-            console.error("Erro ao buscar dados do rival:", name, err);
-          }
-
-          return {
-            name,
-            logo,
-            votes,
-            label: "Rival Histórico",
-          };
+          } catch {}
+          return { name, logo, votes: null, label: "Rival Histórico" };
         }),
       );
 
@@ -129,28 +124,22 @@ export default function RivalsColumn({ clubName, refCode, primaryColor = "#ff620
                 <p className="text-xs font-black italic uppercase truncate text-white leading-tight">{r.name}</p>
                 <p className="text-[10px] italic text-white/50 truncate">{r.label}</p>
               </div>
-              <div className="text-right shrink-0">
-                <p className="text-[10px] font-mono text-[#ff6200] font-bold">
-                  {r.votes !== null ? r.votes.toLocaleString("pt-BR") : "0"}
-                </p>
-                <p className="text-[8px] uppercase font-black italic text-white/30 tracking-tighter">votos</p>
-              </div>
             </div>
           ))
         )}
       </div>
 
       <button
-        onClick={() => navigate(refCode ? `/convite?ref=${refCode}` : "/convite")}
+        onClick={() => setShareOpen(true)}
         className="w-full mt-3 flex items-center justify-center gap-2 py-3 rounded-xl font-black italic uppercase text-xs text-black hover:scale-[1.02] transition-transform shadow-lg"
-        style={{
-          background: `linear-gradient(135deg, #f5c252 0%, ${primaryColor} 100%)`,
-        }}
+        style={{ background: `linear-gradient(135deg, #f5c252 0%, ${primaryColor} 100%)` }}
       >
-        <Megaphone className="w-4 h-4" />
-        Convocar a Tropa
+        <Megaphone className="w-4 h-4" /> Convocar a Tropa
       </button>
-      <p className="text-[9px] italic text-center text-white/30">Gera link de referência para o censo</p>
+      <p className="text-[9px] italic text-center text-white/30">Compartilhe seu link de embaixador</p>
+
+      <ShareTropaModal open={shareOpen} onOpenChange={setShareOpen} refCode={refCode} />
     </section>
   );
 }
+

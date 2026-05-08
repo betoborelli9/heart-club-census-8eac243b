@@ -1,0 +1,1 @@
+ALTER TABLE public.clubes_cache ADD COLUMN IF NOT EXISTS rivais text[] DEFAULT '{}'::text[];

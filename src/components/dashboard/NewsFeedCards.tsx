@@ -4,9 +4,7 @@
  */
 import { useEffect, useState } from "react";
 import { ExternalLink, Newspaper } from "lucide-react";
-import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription } from "@/components/ui/drawer";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 
 interface NewsItem {
@@ -37,7 +35,6 @@ const timeAgo = (d: string) => {
 export default function NewsFeedCards({ teamName, primaryColor = "#ff6200", fallbackLogo }: Props) {
   const [items, setItems] = useState<NewsItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [active, setActive] = useState<NewsItem | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -63,6 +60,10 @@ export default function NewsFeedCards({ teamName, primaryColor = "#ff6200", fall
     };
   }, [teamName]);
 
+  // Separa itens com imagem (cards) dos sem imagem (lista limpa)
+  const withImg = items.filter((n) => !!n.imageUrl);
+  const noImg = items.filter((n) => !n.imageUrl);
+
   return (
     <section className="space-y-4">
       <header className="flex items-center gap-2">
@@ -82,100 +83,97 @@ export default function NewsFeedCards({ teamName, primaryColor = "#ff6200", fall
           {teamName ? "Nenhuma notícia recente nas últimas 48h." : "Selecione um clube para ver as notícias."}
         </p>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {items.slice(0, 6).map((item, i) => (
-            <article
-              key={`${item.guid}-${i}`}
-              className="group relative overflow-hidden rounded-xl bg-white/[0.03] border border-white/5 hover:border-white/20 transition-all duration-300 flex flex-col"
-            >
-              <div
-                className="h-[160px] overflow-hidden relative"
-                style={{ background: "linear-gradient(135deg, #1a1a1a 0%, #000 100%)" }}
-              >
-                {item.imageUrl ? (
-                  <img
-                    src={item.imageUrl}
-                    alt={item.title}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                    loading="lazy"
-                    onError={(e) => {
-                      const parent = e.currentTarget.parentElement as HTMLElement;
-                      e.currentTarget.style.display = "none";
-                      if (fallbackLogo) {
-                        parent.innerHTML += `<div class="absolute inset-0 flex items-center justify-center"><img src="${fallbackLogo}" class="w-1/2 h-1/2 object-contain opacity-20"/></div>`;
-                      }
-                    }}
-                  />
-                ) : (
-                  <div className="absolute inset-0 flex items-center justify-center">
+        <div className="space-y-4">
+          {/* CARDS COM IMAGEM */}
+          {withImg.length > 0 && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {withImg.slice(0, 6).map((item, i) => (
+                <article
+                  key={`${item.guid}-${i}`}
+                  className="group relative overflow-hidden rounded-xl bg-white/[0.03] border border-white/5 hover:border-white/20 transition-all duration-300 flex flex-col"
+                >
+                  <div
+                    className="h-[160px] overflow-hidden relative"
+                    style={{ background: "linear-gradient(135deg, #1a1a1a 0%, #000 100%)" }}
+                  >
                     <img
-                      src="/logos/heart-club-mark.png"
-                      alt=""
-                      className="w-1/3 h-1/3 object-contain opacity-20"
+                      src={item.imageUrl!}
+                      alt={item.title}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                      loading="lazy"
                       onError={(e) => {
-                        if (fallbackLogo) (e.currentTarget as HTMLImageElement).src = fallbackLogo;
-                        else (e.currentTarget as HTMLImageElement).style.display = "none";
+                        const parent = e.currentTarget.parentElement as HTMLElement;
+                        e.currentTarget.style.display = "none";
+                        if (fallbackLogo) {
+                          parent.innerHTML += `<div class="absolute inset-0 flex items-center justify-center"><img src="${fallbackLogo}" class="w-1/2 h-1/2 object-contain opacity-20"/></div>`;
+                        }
                       }}
                     />
+                    <div className="absolute top-2 left-2">
+                      <span
+                        className="text-[9px] font-black uppercase italic tracking-widest px-2 py-1 rounded-full bg-black/70 backdrop-blur"
+                        style={{ color: primaryColor }}
+                      >
+                        {item.source}
+                      </span>
+                    </div>
                   </div>
-                )}
-                <div className="absolute top-2 left-2">
-                  <span
-                    className="text-[9px] font-black uppercase italic tracking-widest px-2 py-1 rounded-full bg-black/70 backdrop-blur"
-                    style={{ color: primaryColor }}
-                  >
-                    {item.source}
-                  </span>
-                </div>
-              </div>
 
-              <div className="p-4 flex flex-col flex-1">
-                <h3 className="text-sm font-black italic uppercase leading-snug text-white line-clamp-3 flex-1">
-                  {item.title}
-                </h3>
-                <div className="mt-3 flex items-center justify-between gap-2">
-                  <span className="text-[10px] font-mono text-white/40">{timeAgo(item.pubDate)}</span>
-                  <button
-                    onClick={() => setActive(item)}
-                    className="text-[10px] font-black uppercase italic tracking-wider px-3 py-1.5 rounded-full hover:scale-105 transition-transform"
-                    style={{ background: primaryColor, color: "#000" }}
+                  <div className="p-4 flex flex-col flex-1">
+                    <h3 className="text-sm font-black italic uppercase leading-snug text-white line-clamp-3 flex-1">
+                      {item.title}
+                    </h3>
+                    <div className="mt-3 flex items-center justify-between gap-2">
+                      <span className="text-[10px] font-mono text-white/40">{timeAgo(item.pubDate)}</span>
+                      <a
+                        href={item.link}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[10px] font-black uppercase italic tracking-wider px-3 py-1.5 rounded-full hover:scale-105 transition-transform inline-flex items-center gap-1"
+                        style={{ background: primaryColor, color: "#000" }}
+                      >
+                        Saiba Mais <ExternalLink className="w-3 h-3" />
+                      </a>
+                    </div>
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
+
+          {/* LISTA LIMPA — SEM IMAGEM */}
+          {noImg.length > 0 && (
+            <ul className="divide-y divide-white/5 border border-white/5 rounded-xl bg-white/[0.02]">
+              {noImg.slice(0, 8).map((item, i) => (
+                <li key={`np-${item.guid}-${i}`} className="p-4 hover:bg-white/[0.04] transition">
+                  <a
+                    href={item.link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex flex-col gap-1.5 group"
                   >
-                    Saiba Mais
-                  </button>
-                </div>
-              </div>
-            </article>
-          ))}
+                    <span
+                      className="text-[9px] font-black uppercase italic tracking-widest"
+                      style={{ color: primaryColor }}
+                    >
+                      {item.source}
+                    </span>
+                    <h3 className="text-sm font-black italic uppercase leading-snug text-white group-hover:text-[#ff6200] transition-colors line-clamp-3">
+                      {item.title}
+                    </h3>
+                    <div className="flex items-center justify-between gap-2 mt-1">
+                      <span className="text-[10px] font-mono text-white/40">{timeAgo(item.pubDate)}</span>
+                      <span className="text-[10px] font-bold uppercase italic text-white/40 group-hover:text-[#ff6200] inline-flex items-center gap-1">
+                        Abrir <ExternalLink className="w-3 h-3" />
+                      </span>
+                    </div>
+                  </a>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       )}
-
-      <Drawer open={!!active} onOpenChange={(o) => !o && setActive(null)}>
-        <DrawerContent className="bg-black border-white/10 max-h-[90vh]">
-          <DrawerHeader>
-            <DrawerTitle className="text-white font-black italic uppercase text-base">{active?.title}</DrawerTitle>
-            <DrawerDescription className="text-white/50 text-xs">
-              {active?.source} • {active && timeAgo(active.pubDate)}
-            </DrawerDescription>
-          </DrawerHeader>
-          <div className="px-4 pb-6 flex-1 overflow-hidden flex flex-col gap-4">
-            {active?.imageUrl && (
-              <img src={active.imageUrl} alt="" className="w-full max-h-64 object-cover rounded-xl" />
-            )}
-            <p className="text-sm text-white/70 italic">
-              Por questões de licenciamento, abrimos o conteúdo completo direto na fonte original.
-            </p>
-            <Button
-              asChild
-              className="w-full font-black italic uppercase"
-              style={{ background: primaryColor, color: "#000" }}
-            >
-              <a href={active?.link} target="_blank" rel="noopener noreferrer">
-                <ExternalLink className="w-4 h-4 mr-2" /> Abrir matéria original
-              </a>
-            </Button>
-          </div>
-        </DrawerContent>
-      </Drawer>
     </section>
   );
 }

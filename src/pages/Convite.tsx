@@ -76,7 +76,7 @@ const Convite = () => {
     load();
   }, [ref]);
 
-  const ctaGo = () => navigate(ref ? `/splash?ref=${encodeURIComponent(ref)}` : "/splash");
+  const ctaGo = () => navigate(ref ? `/login?ref=${encodeURIComponent(ref)}` : "/login");
 
   const refShort = useMemo(() => (ref ? ref.slice(0, 8).toUpperCase() : "—"), [ref]);
   const inviterFirst = inviterName?.split(" ")[0] || "Um torcedor";
