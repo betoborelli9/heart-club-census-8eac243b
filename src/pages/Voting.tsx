@@ -1,7 +1,7 @@
 /**
  * [CAMINHO]: src/pages/Voting.tsx
- * [STATUS]: PRODUÇÃO - VERSÃO 17.0 (AUDITORIA DE DUPLICIDADE INTEGRADA)
- * [CONTEXTO]: Blindagem contra votos múltiplos no mesmo clube via mesma rede/ID.
+ * [STATUS]: PRODUÇÃO - VERSÃO 18.0 (AUDITORIA DE DUPLICIDADE REFORÇADA)
+ * [CONTEXTO]: Blindagem total contra votos múltiplos no mesmo clube via mesma rede/dispositivo.
  */
 
 import { useState, useEffect, useCallback, useRef } from "react";
@@ -85,9 +85,7 @@ const Voting = () => {
       } catch (err) {
         console.error("[Search Error]", err);
       } finally {
-        if (currentId === reqRef.current) {
-          setterLoading(false);
-        }
+        if (currentId === reqRef.current) setterLoading(false);
       }
     },
     [],
@@ -110,52 +108,46 @@ const Voting = () => {
   }, [sympathySearch, performSearch]);
 
   const handleConfirmVote = async () => {
-    if (!heartClub) {
-      toast({ variant: "destructive", title: "Selecione seu clube do coração" });
-      return;
-    }
-    if (!user) {
-      toast({ variant: "destructive", title: "Sessão expirada", description: "Faça login novamente." });
-      navigate("/login");
-      return;
-    }
+    if (!heartClub || !user) return;
     setSubmitting(true);
     try {
       const allSelected = [{ club: heartClub, main: true }, ...sympathyClubs.map((c) => ({ club: c, main: false }))];
-
       if (TEST_MODE) {
-        toast({ title: "Modo teste — voto não contabilizado 🧪" });
         navigate(`/testar-clube?club=${encodeURIComponent(heartClub.name)}`);
-        persistClubsIfMissing(allSelected.map((v) => v.club)).catch(() => {});
         return;
       }
 
-      if (IS_MASTER_ADMIN) {
-        await supabase.from("votos").delete().eq("user_id", user.id);
-      }
+      if (IS_MASTER_ADMIN) await supabase.from("votos").delete().eq("user_id", user.id);
 
       const fpId = fingerprint || "web-client";
       const ipAudit = await captureIpAudit().catch(() => null);
       const callerIp = ipAudit?.ip || null;
 
-      // --- LÓGICA DE AUDITORIA SILENCIOSA ---
+      // --- LOGICA CERTEIRA DE DUPLICIDADE ---
       let isSuspicious = false;
       let motivo = null;
 
+      // Criamos o filtro para buscar IP ou Fingerprint
+      let filterString = "";
+      if (fpId && fpId !== "web-client") filterString += `fingerprint.eq.${fpId}`;
+      if (callerIp) filterString += `${filterString ? "," : ""}ip_address.eq.${callerIp}`;
+
       const { data: dup } = await supabase
         .from("votos")
-        .select("id")
+        .select("id, email")
         .eq("clube_nome", heartClub.name)
-        .or(`fingerprint.eq.${fpId},ip_address.eq.${callerIp}`)
+        .or(filterString)
         .limit(1);
 
-      if (dup && dup.length > 0) {
+      // Se achou alguém no mesmo IP/FP mas com EMAIL diferente, é fraude.
+      if (dup && dup.length > 0 && dup[0].email !== user.email) {
         isSuspicious = true;
         motivo = "Múltiplos e-mails detectados no mesmo IP/Dispositivo";
       }
 
       const mainVote: any = {
         user_id: user.id,
+        email: user.email,
         clube_nome: heartClub.name,
         cidade: profile?.cidade || "",
         estado: profile?.estado || "",
@@ -174,8 +166,6 @@ const Voting = () => {
         voto_cidade_gps: ipAudit?.cidade ?? null,
         voto_lat: ipAudit?.lat ?? null,
         voto_lng: ipAudit?.lng ?? null,
-        voto_pais: ipAudit?.pais ?? null,
-        voto_continente: ipAudit?.continente ?? null,
         isp: ipAudit?.isp ?? null,
       };
 
@@ -184,22 +174,16 @@ const Voting = () => {
 
       toast({
         title: isSuspicious ? "Voto registrado para auditoria 🔍" : "Lealdade registrada com sucesso! 🏟️",
-        description: isSuspicious
-          ? "Detectamos um registro anterior deste dispositivo. Sua entrada será revisada."
-          : undefined,
+        description: isSuspicious ? "Sua entrada será revisada pela moderação." : undefined,
       });
 
       navigate("/dashboard");
 
       (async () => {
-        try {
-          const device_model = await detectDeviceModel().catch(() => null);
-          await supabase.from("votos").update({ device_model }).eq("user_id", user.id).eq("clube_nome", heartClub.name);
-          await persistClubsIfMissing(allSelected.map((v) => v.club));
-          refreshProfile().catch(() => {});
-        } catch (e) {
-          console.error("Background Audit Error", e);
-        }
+        const device_model = await detectDeviceModel().catch(() => null);
+        await supabase.from("votos").update({ device_model }).eq("user_id", user.id).eq("clube_nome", heartClub.name);
+        await persistClubsIfMissing(allSelected.map((v) => v.club));
+        refreshProfile().catch(() => {});
       })();
     } catch (err) {
       console.error("[VOTING] erro:", err);
