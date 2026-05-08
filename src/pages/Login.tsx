@@ -109,17 +109,17 @@ const Login = () => {
           <p className="text-sm text-muted-foreground">O maior censo de torcidas do mundo</p>
         </div>
 
-        {/* GOOGLE LOGIN */}
+        {/* GOOGLE LOGIN — DESTAQUE PRINCIPAL */}
         <Button
           variant="outline"
-          className="w-full h-13 font-medium border-border/50 text-foreground"
+          className="w-full h-14 font-bold text-sm border-white/20 bg-white/[0.04] text-white hover:bg-white/[0.08] hover:border-white/30 transition-all duration-300 shadow-[0_0_20px_rgba(255,255,255,0.03)]"
           onClick={() => handleOAuth("google")}
           disabled={!!loadingProvider}
         >
           {loadingProvider === "google" ? (
             <Loader2 className="mr-2 animate-spin" />
           ) : (
-            <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
+            <svg className="w-5 h-5 mr-2.5" viewBox="0 0 24 24">
               <path
                 fill="#4285F4"
                 d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"
@@ -141,13 +141,13 @@ const Login = () => {
           Entrar com Google
         </Button>
 
-        {/* DIVISOR */}
+        {/* DIVISOR DISCRETO */}
         <div className="relative">
           <div className="absolute inset-0 flex items-center">
-            <span className="w-full border-t border-border/50" />
+            <span className="w-full border-t border-white/5" />
           </div>
-          <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-background px-3 text-muted-foreground font-medium">ou entrar com email</span>
+          <div className="relative flex justify-center text-[10px] uppercase tracking-widest">
+            <span className="bg-background px-3 text-white/20 font-medium italic">ou entrar com email</span>
           </div>
         </div>
 
