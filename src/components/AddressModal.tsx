@@ -203,10 +203,12 @@ const AddressModal = ({ open, onOpenChange, clubName, onSuccess }: AddressModalP
           </div>
 
           {/* Privacidade */}
-          <div className="flex items-start gap-2 rounded-lg border border-white/10 bg-white/5 p-2.5">
-            <ShieldCheck className="w-3.5 h-3.5 mt-0.5 shrink-0 text-orange-500" />
-            <p className="text-[10px] italic leading-relaxed text-white/60">
-              Seu endereço nunca será divulgado. Apenas o bairro alimenta o Mapa de Calor.
+          <div className="relative flex items-start gap-2.5 rounded-xl border border-orange-500/20 bg-gradient-to-r from-orange-500/[0.06] to-transparent p-3">
+            <span className="absolute left-0 top-2 bottom-2 w-[2px] rounded-full bg-orange-500/60" />
+            <ShieldCheck className="w-4 h-4 mt-0.5 shrink-0 text-orange-400" />
+            <p className="text-[11px] italic leading-relaxed text-orange-50/80">
+              <span className="text-orange-300 not-italic font-semibold">Seu endereço nunca será divulgado.</span>{" "}
+              Apenas o bairro alimenta o Mapa de Calor.
             </p>
           </div>
 
