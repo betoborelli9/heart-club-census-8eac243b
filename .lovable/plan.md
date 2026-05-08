@@ -1,58 +1,42 @@
-## Evolução do Dashboard — Caleidoscópio + Inteligência
+## Plano — Localização Invisível, Auditoria, Admin e UX de Cores
 
-Vou reestruturar o Dashboard sem tocar em outras páginas (auth/Resend/Voting/Heatmap intactos). Trabalho 100% em `src/pages/Dashboard.tsx` e novos componentes em `src/components/dashboard/`.
+### 1. Localização invisível por IP
+- Criar edge function `geo-ip` (sem JWT) que lê o IP do request (`x-forwarded-for`) e consulta `ip-api.com` (free, sem chave) retornando `{ continente, pais, estado, cidade, bairro, lat, lng, isp }`.
+- Em `src/pages/Voting.tsx` (no submit do voto), substituir `captureGpsAudit()` por `fetch` da edge `geo-ip`. Gravar em `voto_bairro_gps`, `voto_cidade_gps`, `voto_lat`, `voto_lng`, `voto_pais`, `voto_continente`, `isp`.
+- Remover qualquer chamada a `navigator.geolocation` do app (Voting, MapaCalor e helpers). Manter `lookupCep` como fonte oficial quando o torcedor digitar o CEP no Mapa de Calor — esse passa a ser o dado canônico (`bairro`, `cidade`, `estado`, `cep`).
+- `src/lib/address.ts`: deprecar `captureGpsAudit`, exportar nova `captureIpAudit()` que chama a edge `geo-ip`.
 
-### 1. Caleidoscópio (estado `viewedClubId`)
-- Novo contexto leve `ViewedClubContext` em `src/contexts/ViewedClubContext.tsx`: `{ viewedClub, setViewedClub }`.
-- Banner do Coração (`ClubBanner`) permanece fixo no topo, **sempre** lendo o `heartClub` do usuário (não muda).
-- Demais blocos (notícias, probabilidades, rivais, concorrentes, fábrica de banners, calendário) leem `viewedClub`.
-- Default: `viewedClub = heartClub`. Clicar num clube de Simpatia ou pesquisar via `ClubSearch` chama `setViewedClub(club)`.
-- Skeleton loaders durante troca.
-- **Remover** `HeatmapSection` do Dashboard (mantenho o componente intocado — só removo o import/uso). Rota `/mapa-calor` continua funcionando.
+### 2. Auditoria (Purgatório) com FingerprintJS
+- Migration: adicionar coluna `status_aprovacao text default 'aprovado'` em `votos` (valores: `aprovado` | `pendente`). Index em `(status_aprovacao)`.
+- No fluxo de voto (`Voting.tsx`):
+  1. Capturar `visitorId` via `@fingerprintjs/fingerprintjs` (já instalado no projeto).
+  2. Capturar IP via edge `geo-ip`.
+  3. Antes de inserir, consultar `votos_tracking` por fingerprint OU IP existentes.
+  4. Se já existir → inserir voto com `status_aprovacao='pendente'` e `is_suspicious=true`. Não bloquear: redirecionar normalmente ao Dashboard.
+  5. Se não existir → `status_aprovacao='aprovado'` (fluxo atual).
+- Excluir votos `pendente` das RPCs públicas de ranking/heatmap (`get_club_vote_summary`, `get_heatmap_*`, `get_*_ranking`, `admin_get_*` mantém todos para análise). Atualizar funções para filtrar `status_aprovacao = 'aprovado'` (junto com `is_original_vote = true`).
+- Página admin: nova aba "Auditoria de Votos" em `src/pages/Admin.tsx` listando `status_aprovacao='pendente'` com botões **Aprovar** (chama `admin_approve_vote` já existente, ajustada para setar `status_aprovacao='aprovado'`) e **Excluir** (chama `admin_delete_vote` já existente).
 
-### 2. Notícias com imagens (`NewsFeedCards`)
-- Reutiliza edge function `club-news` (já existe, RSS Google News).
-- Card: `urlToImage` (og:image já capturado), título, fonte, data.
-- Botão "Saiba Mais" abre `Drawer` (shadcn) com iframe do conteúdo + botão "Abrir original".
+### 3. Whitelist Admin & Reset de testes
+- Garantir que `betoborelli9@gmail.com` tenha `role='admin'` no `profiles` (insert idempotente via migration).
+- Nova RPC `master_reset_my_vote()` (SECURITY DEFINER): se `auth.email() = 'betoborelli9@gmail.com'`, deleta APENAS os votos do próprio user_id (e linhas em `votos_tracking`). Não toca em nenhum voto de terceiros.
+- Adicionar botão "Resetar meu voto (teste)" no painel admin, visível só para o master, que chama essa RPC.
 
-### 3. Motor de Probabilidades (`LeagueObjectives`)
-- Novo componente que consulta uma edge function nova `league-standings` (RSS/JSON da ESPN ou API-Football fallback).
-- Identifica liga via `clubes_cache.division`.
-- Calcula objetivos: G6 / Libertadores (1-6) / Sul-Americana (7-12) / Z4 (últimos 4).
-- "Modo Desespero": se posição ≥ N-6, lista escudos dos concorrentes diretos.
-- **Para evitar criar API nova agora**, edge function retorna mock estruturado por divisão se API externa indisponível, e o componente já está pronto pra plugar dados reais depois.
+### 4. Performance de cores — Tema Chumbo + frase de espera
+- `src/hooks/useClubTheme.ts`: quando `clubeData` ainda não retornou cores reais (cor primária ausente ou igual ao default), aplicar tema fallback **Cinza Chumbo** (`#111111` / `#2a2a2a`) imediatamente em vez de esperar.
+- Em `src/components/dashboard/ClubBanner.tsx` (ou onde o banner do clube renderiza), exibir um aviso elegante quando o clube ainda está sendo enriquecido (cor primária = chumbo OU `enrich-club-colors` em andamento):
 
-### 4. Rivais vs. Concorrentes
-- `RivalsBlock`: usa `getHistoricalRivals(viewedClub.name, 4)` de `src/lib/rivalries.ts`. CTA "Convoque os torcedores" → link `/convite?ref={codigo_indicacao}`.
-- `CompetitorsBlock`: vem do `LeagueObjectives` (times ±2 posições na tabela).
+  > "O manto está chegando! O **{clubName}** é uma nova força no Censo Global e estamos processando as cores e o escudo oficial. Continue navegando, daqui a pouco seu Dashboard estará com a cara da sua paixão!"
 
-### 5. Fábrica de Banners (`BannerFactory`)
-- Instalar `html-to-image`.
-- Gera div oculto 1080x1920 com gradiente (cor do clube), logo Heart Club, escudo, frase dinâmica baseada no objetivo ("Rumo à Libertadores!", "Somos X mil vozes!").
-- Botões: "Baixar para Stories" (download PNG) e "Compartilhar no WhatsApp" (`navigator.share` ou `wa.me?text=`).
+  Estilo: card sutil com gradiente laranja translúcido sobre o fundo chumbo, texto em itálico Verdana, ícone Sparkles.
+- Quando `enrich-club-colors` responde, refetch do `useClubTheme` e o aviso some automaticamente.
 
-### 6. Calendário (`MatchSchedule`)
-- Reusa/expande `MatchCenter` existente — mostra próximos 3 jogos com data/hora/emissora.
-- Se sem dados reais, mostra estado vazio elegante "Em breve: agenda oficial".
+### Detalhes técnicos
+- Edge function `geo-ip`: `verify_jwt = false`, rate limit por IP (10/min), cache em memória de 1h por IP. Sem dependência de secret.
+- FingerprintJS: usar `@fingerprintjs/fingerprintjs` (já no `package.json` segundo memória). Hash do visitorId com `FINGERPRINT_SALT` antes de salvar (já existe no padrão de segurança).
+- Todos os filtros de RPC continuam excluindo `status_integridade='ficticio'` quando aplicável.
 
-### Layout Dashboard final (Dark Mode, laranja #ff4500)
-```text
-[ClubBanner — Coração — FIXO]
-[ClubSearch (atualiza viewedClub)]
-[Tabs/Pills: Simpatias rápidas → setViewedClub]
-[Identidade do viewedClub — escudo, mascote, cidade]
-[NewsFeedCards]  [LeagueObjectives + CompetitorsBlock]
-[RivalsBlock]    [MatchSchedule]
-[BannerFactory]
-```
-
-### Restrições respeitadas
-- Não toco em: `Verify.tsx`, `verify-auth-token`, `heart-club-auth`, `Voting.tsx`, `HeatmapSection`, `MapaCalor`, auth Resend.
-- Sem mudanças de schema (uso só dados já existentes + edge functions já presentes).
-- Tokens semânticos do design system (laranja já em `index.css`).
-
-### Arquivos
-**Novos:** `src/contexts/ViewedClubContext.tsx`, `src/components/dashboard/NewsFeedCards.tsx`, `src/components/dashboard/LeagueObjectives.tsx`, `src/components/dashboard/RivalsBlock.tsx`, `src/components/dashboard/CompetitorsBlock.tsx`, `src/components/dashboard/BannerFactory.tsx`, `src/components/dashboard/MatchSchedule.tsx`, `supabase/functions/league-standings/index.ts`.
-**Editados:** `src/pages/Dashboard.tsx` (orquestração + remoção do Heatmap), `src/App.tsx` (provider), `package.json` (html-to-image).
-
-Confirma para eu implementar?
+### Arquivos afetados
+- novo: `supabase/functions/geo-ip/index.ts`, `supabase/config.toml` (entry)
+- migration: `votos.status_aprovacao` + atualizar 6 RPCs de leitura pública + RPC `master_reset_my_vote` + atualizar `admin_approve_vote`
+- editar: `src/lib/address.ts`, `src/pages/Voting.tsx`, `src/pages/MapaCalor.tsx`, `src/hooks/useClubTheme.ts`, `src/components/dashboard/ClubBanner.tsx`, `src/pages/Admin.tsx` (nova aba Auditoria + botão master reset)
