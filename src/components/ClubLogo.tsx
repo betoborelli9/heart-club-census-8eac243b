@@ -30,9 +30,11 @@ interface ClubLogoProps {
   alt: string;
   size?: LogoSize;
   className?: string;
+  loading?: "lazy" | "eager";
+  fetchPriority?: "high" | "low" | "auto";
 }
 
-export const ClubLogo = ({ src, alt, size = "md", className }: ClubLogoProps) => {
+export const ClubLogo = ({ src, alt, size = "md", className, loading = "lazy", fetchPriority = "auto" }: ClubLogoProps) => {
   const [error, setError] = useState(false);
 
   /* ═══════════════════════════════════════════════════════════
@@ -73,7 +75,9 @@ export const ClubLogo = ({ src, alt, size = "md", className }: ClubLogoProps) =>
         className="w-full h-full object-contain p-0.5"
         referrerPolicy="no-referrer"
         onError={() => setError(true)}
-        loading="lazy"
+        loading={loading}
+        // @ts-expect-error fetchpriority é atributo HTML válido, suportado em React 18.3+
+        fetchpriority={fetchPriority}
       />
     </div>
   );

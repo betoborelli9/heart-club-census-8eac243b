@@ -69,6 +69,7 @@ export default function RivalsColumn({ clubName, refCode, primaryColor = "#ff620
         return;
       }
 
+      // Carrega escudos em paralelo + dispara enriquecimento se faltar
       const enriched: RivalRow[] = await Promise.all(
         rivalNames.map(async (name) => {
           const local = CLUBS_DATA.find((c: any) => norm(c.nome) === norm(name));
@@ -79,7 +80,19 @@ export default function RivalsColumn({ clubName, refCode, primaryColor = "#ff620
               .select("escudo_url")
               .ilike("nome", name)
               .maybeSingle();
-            if (data && !logo) logo = data.escudo_url;
+            if (data?.escudo_url && !logo) logo = data.escudo_url;
+            // Sem escudo? Dispara enriquecimento (fire-and-forget) e tenta de novo
+            if (!logo) {
+              try {
+                await supabase.functions.invoke("enrich-club-colors", { body: { club_name: name } });
+                const { data: refreshed } = await supabase
+                  .from("clubes_cache")
+                  .select("escudo_url")
+                  .ilike("nome", name)
+                  .maybeSingle();
+                if (refreshed?.escudo_url) logo = refreshed.escudo_url;
+              } catch {}
+            }
           } catch {}
           return { name, logo, votes: null, label: "Rival Histórico" };
         }),
@@ -94,7 +107,7 @@ export default function RivalsColumn({ clubName, refCode, primaryColor = "#ff620
   }, [clubName]);
 
   return (
-    <section className="space-y-3">
+    <section className="space-y-3 rounded-2xl p-4 bg-white/[0.03] backdrop-blur-xl border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.4)]">
       <header className="flex items-center gap-2">
         <Swords className="w-4 h-4" style={{ color: primaryColor }} />
         <h2 className="text-[11px] font-black italic uppercase tracking-widest text-white">Times Rivais</h2>
@@ -110,13 +123,15 @@ export default function RivalsColumn({ clubName, refCode, primaryColor = "#ff620
           rows.map((r, i) => (
             <div
               key={`${r.name}-${i}`}
-              className="h-20 w-full flex items-center gap-3 px-3 rounded-xl bg-white/[0.03] border border-white/5 hover:border-[#ff6200]/30 transition-all group"
+              className="h-20 w-full flex items-center gap-3 px-3 rounded-xl bg-white/[0.04] backdrop-blur-md border border-white/10 hover:border-[#ff6200]/40 hover:bg-white/[0.07] transition-all group shadow-inner"
             >
-              <div className="w-10 h-10 shrink-0 flex items-center justify-center bg-black/20 rounded-lg p-1">
+              <div className="w-12 h-12 shrink-0 flex items-center justify-center bg-white/5 backdrop-blur rounded-lg p-1 ring-1 ring-white/10">
                 <ClubLogo
                   src={r.logo}
                   alt={r.name}
                   size="sm"
+                  loading="eager"
+                  fetchPriority="high"
                   className="w-full h-full object-contain group-hover:scale-110 transition-transform"
                 />
               </div>
