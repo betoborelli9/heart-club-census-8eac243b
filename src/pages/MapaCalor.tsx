@@ -1127,7 +1127,7 @@ const MapaCalor = () => {
 
       const { data } = await supabase
         .from("votos")
-        .select("clube_nome, bairro, cep")
+        .select("clube_nome, bairro, cep, cidade, estado")
         .eq("user_id", user.id)
         .eq("is_original_vote", true)
         .maybeSingle();
@@ -1148,12 +1148,35 @@ const MapaCalor = () => {
 
       const votoCep = data?.cep && String(data.cep).trim().length > 0;
       const profileCep = profileData?.cep && String(profileData.cep).trim().length > 0;
+      const votoBairro = data?.bairro && String(data.bairro).trim().length > 0;
 
-      // Se voto não tem CEP mas profile tem, faz backfill silencioso
+      // Backfill silencioso de CEP/cidade/estado a partir do profile
+      const updates: Record<string, any> = {};
       if (!votoCep && profileCep) {
-        const updates: Record<string, any> = { cep: profileData!.cep };
+        updates.cep = profileData!.cep;
         if (profileData?.cidade) updates.cidade = profileData.cidade;
         if (profileData?.estado) updates.estado = profileData.estado;
+      }
+
+      // Backfill de BAIRRO via ViaCEP quando o voto está sem bairro mas há CEP disponível
+      if (!votoBairro) {
+        const cepRaw = (data?.cep || profileData?.cep || updates.cep || "").toString().replace(/\D/g, "");
+        if (cepRaw.length === 8) {
+          try {
+            const r = await fetch(`https://viacep.com.br/ws/${cepRaw}/json/`);
+            const j = await r.json();
+            if (j?.bairro && String(j.bairro).trim()) {
+              updates.bairro = String(j.bairro).trim();
+              if (!data?.cidade && j.localidade) updates.cidade = j.localidade;
+              if (!data?.estado && j.uf) updates.estado = j.uf;
+            }
+          } catch (e) {
+            console.warn("ViaCEP backfill failed", e);
+          }
+        }
+      }
+
+      if (Object.keys(updates).length > 0) {
         await supabase
           .from("votos")
           .update(updates)
@@ -1993,7 +2016,7 @@ const MapaCalor = () => {
 
             <img src={logo} alt="Heart Club" className="h-8 w-auto" />
 
-            <span className="font-black italic text-sm tracking-tighter hidden sm:block">WAR ROOM</span>
+            <span className="font-black italic text-sm tracking-tighter hidden sm:block">MAPA DE CALOR</span>
           </div>
 
           <Button variant="ghost" size="icon" onClick={() => signOut()}>
