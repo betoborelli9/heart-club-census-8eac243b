@@ -5,7 +5,7 @@
  */
 import { useMemo } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { MessageCircle, Send, Mail, Copy, Share2 } from "lucide-react";
+import { MessageCircle, Send, Copy, Share2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import logo from "@/assets/logo.png";
 
