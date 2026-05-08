@@ -50,10 +50,12 @@ export default function Correcao() {
   const [clubName, setClubName] = useState<string | null>(null);
   const [cache, setCache] = useState<CacheRow | null>(null);
   const [form, setForm] = useState<Record<string, string>>({});
+  const [rivais, setRivais] = useState<string[]>([]);
   const [feminino, setFeminino] = useState<boolean>(false);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [results, setResults] = useState<any[] | null>(null);
+  const [colorErrors, setColorErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (isLoading) return;
