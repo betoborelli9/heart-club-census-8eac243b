@@ -205,7 +205,7 @@ const Voting = () => {
 
       // 3) Insere voto (com geo do IP como fonte invisível)
       mainVote.fingerprint = fpId;
-      mainVote.ip_address = callerIp;
+      (mainVote as any).ip_address = callerIp;
       (mainVote as any).status_aprovacao = pendente ? "pendente" : "aprovado";
       (mainVote as any).is_suspicious = pendente;
       (mainVote as any).voto_bairro_gps = ipAudit?.bairro ?? null;
