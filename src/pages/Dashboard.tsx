@@ -199,12 +199,7 @@ const Dashboard = () => {
             )}
             <div className="glass-card rounded-[32px] p-2 min-h-[600px]">
               {/* NEWSFEED - FORÇANDO REMOÇÃO DE LOGOS EXTERNAS */}
-              <NewsFeedCards
-                teamName={viewedClubName}
-                primaryColor={primary}
-                fallbackLogo={viewedLogo}
-                hideExternalLogos={true}
-              />
+              <NewsFeedCards teamName={viewedClubName} primaryColor={primary} />
             </div>
           </section>
 
