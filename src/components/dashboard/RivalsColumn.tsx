@@ -15,6 +15,7 @@ type RivalItem = {
   city?: string | null;
   country?: string | null;
   source?: "cache" | "api" | "missing";
+  votes?: number;
 };
 
 export default function RivalsColumn({ clubName, refCode, primaryColor = "#ff6200" }: any) {
@@ -44,11 +45,25 @@ export default function RivalsColumn({ clubName, refCode, primaryColor = "#ff620
       } else {
         const details = Array.isArray((data as any)?.rivalDetails) ? (data as any).rivalDetails : [];
         const names = Array.isArray((data as any)?.rivals) ? (data as any).rivals : [];
-        setRivals(
-          (details.length ? details : names.map((name: string) => ({ name, logo: null })))
-            .filter((r: RivalItem) => r?.name)
-            .slice(0, 4),
-        );
+        const baseList: RivalItem[] = (details.length ? details : names.map((name: string) => ({ name, logo: null })))
+          .filter((r: RivalItem) => r?.name)
+          .slice(0, 4);
+
+        // Buscar votos oficiais (is_original_vote) para cada rival
+        const rivalNames = baseList.map((r) => r.name);
+        let votesMap: Record<string, number> = {};
+        if (rivalNames.length) {
+          const { data: votos } = await supabase
+            .from("votos")
+            .select("clube_nome")
+            .in("clube_nome", rivalNames)
+            .eq("is_original_vote", true);
+          (votos || []).forEach((v: any) => {
+            votesMap[v.clube_nome] = (votesMap[v.clube_nome] || 0) + 1;
+          });
+        }
+        if (cancelled) return;
+        setRivals(baseList.map((r) => ({ ...r, votes: votesMap[r.name] || 0 })));
       }
       setLoading(false);
     };
@@ -98,6 +113,17 @@ export default function RivalsColumn({ clubName, refCode, primaryColor = "#ff620
                 <h3 className="text-xs font-black uppercase italic text-white truncate">{rival.name}</h3>
                 <span className="text-[9px] font-bold text-white/30 uppercase truncate block">
                   {[rival.city, rival.country].filter(Boolean).join(" • ") || "Rival Histórico"}
+                </span>
+              </div>
+              <div className="shrink-0 flex flex-col items-end leading-none">
+                <span
+                  className="text-base font-black italic tabular-nums"
+                  style={{ color: primaryColor }}
+                >
+                  {(rival.votes ?? 0).toLocaleString("pt-BR")}
+                </span>
+                <span className="text-[8px] font-black uppercase italic text-white/40 tracking-widest mt-0.5">
+                  Votos
                 </span>
               </div>
             </div>
