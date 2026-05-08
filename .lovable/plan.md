@@ -1,42 +1,93 @@
-## Plano — Localização Invisível, Auditoria, Admin e UX de Cores
 
-### 1. Localização invisível por IP
-- Criar edge function `geo-ip` (sem JWT) que lê o IP do request (`x-forwarded-for`) e consulta `ip-api.com` (free, sem chave) retornando `{ continente, pais, estado, cidade, bairro, lat, lng, isp }`.
-- Em `src/pages/Voting.tsx` (no submit do voto), substituir `captureGpsAudit()` por `fetch` da edge `geo-ip`. Gravar em `voto_bairro_gps`, `voto_cidade_gps`, `voto_lat`, `voto_lng`, `voto_pais`, `voto_continente`, `isp`.
-- Remover qualquer chamada a `navigator.geolocation` do app (Voting, MapaCalor e helpers). Manter `lookupCep` como fonte oficial quando o torcedor digitar o CEP no Mapa de Calor — esse passa a ser o dado canônico (`bairro`, `cidade`, `estado`, `cep`).
-- `src/lib/address.ts`: deprecar `captureGpsAudit`, exportar nova `captureIpAudit()` que chama a edge `geo-ip`.
+# Heart Club — Expansão Viral, Dashboard Dinâmico e Refinamentos
 
-### 2. Auditoria (Purgatório) com FingerprintJS
-- Migration: adicionar coluna `status_aprovacao text default 'aprovado'` em `votos` (valores: `aprovado` | `pendente`). Index em `(status_aprovacao)`.
-- No fluxo de voto (`Voting.tsx`):
-  1. Capturar `visitorId` via `@fingerprintjs/fingerprintjs` (já instalado no projeto).
-  2. Capturar IP via edge `geo-ip`.
-  3. Antes de inserir, consultar `votos_tracking` por fingerprint OU IP existentes.
-  4. Se já existir → inserir voto com `status_aprovacao='pendente'` e `is_suspicious=true`. Não bloquear: redirecionar normalmente ao Dashboard.
-  5. Se não existir → `status_aprovacao='aprovado'` (fluxo atual).
-- Excluir votos `pendente` das RPCs públicas de ranking/heatmap (`get_club_vote_summary`, `get_heatmap_*`, `get_*_ranking`, `admin_get_*` mantém todos para análise). Atualizar funções para filtrar `status_aprovacao = 'aprovado'` (junto com `is_original_vote = true`).
-- Página admin: nova aba "Auditoria de Votos" em `src/pages/Admin.tsx` listando `status_aprovacao='pendente'` com botões **Aprovar** (chama `admin_approve_vote` já existente, ajustada para setar `status_aprovacao='aprovado'`) e **Excluir** (chama `admin_delete_vote` já existente).
+Pacote grande dividido em 6 frentes. Vou implementar todas em sequência após sua aprovação.
 
-### 3. Whitelist Admin & Reset de testes
-- Garantir que `betoborelli9@gmail.com` tenha `role='admin'` no `profiles` (insert idempotente via migration).
-- Nova RPC `master_reset_my_vote()` (SECURITY DEFINER): se `auth.email() = 'betoborelli9@gmail.com'`, deleta APENAS os votos do próprio user_id (e linhas em `votos_tracking`). Não toca em nenhum voto de terceiros.
-- Adicionar botão "Resetar meu voto (teste)" no painel admin, visível só para o master, que chama essa RPC.
+## 1. Notícias — limpar logo do Google e fallback sem imagem
+- Remover badge/logo "Google" no card e no botão "Saiba Mais".
+- "Saiba Mais" abre direto a URL original em nova aba (`target="_blank" rel="noopener"`), sem intermediário.
+- Quando `urlToImage`/`og:image` estiver ausente: ocultar o container de imagem e renderizar layout de **lista limpa** (título em destaque, fonte e data).
 
-### 4. Performance de cores — Tema Chumbo + frase de espera
-- `src/hooks/useClubTheme.ts`: quando `clubeData` ainda não retornou cores reais (cor primária ausente ou igual ao default), aplicar tema fallback **Cinza Chumbo** (`#111111` / `#2a2a2a`) imediatamente em vez de esperar.
-- Em `src/components/dashboard/ClubBanner.tsx` (ou onde o banner do clube renderiza), exibir um aviso elegante quando o clube ainda está sendo enriquecido (cor primária = chumbo OU `enrich-club-colors` em andamento):
+## 2. Dashboard Dinâmico (autonomia por clube selecionado)
+- Estado global `clubeAtivo` (default = clube do coração).
+- Ao clicar num clube no `SympathyCarousel`, atualizar **Notícias, Rivais e Banners Sociais** para esse clube.
+- **Imutável:** o `ClubBanner` principal (banner do clube do coração) **não muda** — continua sempre o do coração.
+- `RivalsBlock`/`RivalsRadar` passam a aceitar `clubeAtivo` e buscam rivais via:
+  1. Cache em `clubes_cache.rivais` (novo array text[]).
+  2. Se vazio → edge function `get-rivals` que consulta **Lovable AI Gateway (Gemini)** e persiste no cache.
+- Adicionar campo "Rivais (separados por vírgula)" na página **/correcao** para permitir override manual.
 
-  > "O manto está chegando! O **{clubName}** é uma nova força no Censo Global e estamos processando as cores e o escudo oficial. Continue navegando, daqui a pouco seu Dashboard estará com a cara da sua paixão!"
+## 3. Convocar a Tropa + Landing /convite
+### 3a. Modal de compartilhamento
+- Botão "Convocar a Tropa" abre modal com **WhatsApp, Telegram, E-mail** (e Web Share nativo no mobile).
+- Link gerado: `https://heartclubapp.com/convite?ref={profile.codigo_indicacao}`.
+- Texto: *"Estou te convocando para o Censo Global do Futebol no Heart Club! Clique no link e registre sua paixão pelo nosso time."*
 
-  Estilo: card sutil com gradiente laranja translúcido sobre o fundo chumbo, texto em itálico Verdana, ícone Sparkles.
-- Quando `enrich-club-colors` responde, refetch do `useClubTheme` e o aviso some automaticamente.
+### 3b. Landing `/convite` (já existe — refinar)
+- Hero com **Banner Explicativo** centralizado (apenas nesta rota).
+- Botão único e gigante: **"ENTRAR E VOTAR AGORA"** → `/login?ref={ref}`.
+- Login preserva `ref` em `localStorage` e dispara `register_referral_from_code` após autenticação.
 
-### Detalhes técnicos
-- Edge function `geo-ip`: `verify_jwt = false`, rate limit por IP (10/min), cache em memória de 1h por IP. Sem dependência de secret.
-- FingerprintJS: usar `@fingerprintjs/fingerprintjs` (já no `package.json` segundo memória). Hash do visitorId com `FINGERPRINT_SALT` antes de salvar (já existe no padrão de segurança).
-- Todos os filtros de RPC continuam excluindo `status_integridade='ficticio'` quando aplicável.
+### 3c. Open Graph
+- Meta tags dinâmicas em `/convite` (og:title, og:description, og:image apontando para o banner).
+- Como é SPA, vou criar `public/convite.html` estático com OG tags + redirect via JS, OR usar `react-helmet-async` se já presente — verificar e escolher o caminho mais simples.
 
-### Arquivos afetados
-- novo: `supabase/functions/geo-ip/index.ts`, `supabase/config.toml` (entry)
-- migration: `votos.status_aprovacao` + atualizar 6 RPCs de leitura pública + RPC `master_reset_my_vote` + atualizar `admin_approve_vote`
-- editar: `src/lib/address.ts`, `src/pages/Voting.tsx`, `src/pages/MapaCalor.tsx`, `src/hooks/useClubTheme.ts`, `src/components/dashboard/ClubBanner.tsx`, `src/pages/Admin.tsx` (nova aba Auditoria + botão master reset)
+### 3d. Restrição
+- Banner Explicativo + botão "Votar Agora" **só** aparecem em `/convite`. Removidos de qualquer dashboard logado.
+
+## 4. Banners sociais — Postar Agora via Web Share API
+- "Postar Agora" usa `navigator.share({ files: [bannerBlob], text, url: refLink })`.
+- Fallback: download da imagem + copy do texto para clipboard com toast.
+
+## 5. Lógica Coração vs Simpatia
+- Auditar `clubes_cache.votos_contagem`: incrementar **somente** quando `is_original_vote = true` E o clube for `clube_nome` (coração).
+- Simpatias (`sympathy_1..4`) ficam só em `votos` para estatísticas secundárias (já é o caso nos rankings; vou garantir que nenhum trigger/RPC esteja contando simpatia no `votos_contagem`).
+- `get_club_vote_summary`/`ranking` continuam filtrando `is_original_vote = true` (já fazem).
+
+## 6. Correção de Cores (UX)
+- Link/botão "Corrigir dados do clube" no Dashboard com destaque **laranja sutil + negrito**.
+- Inputs de cor na `/correcao` aceitam **nomes** ("vermelho", "preto", "azul marinho", etc.).
+- Mapa interno PT-BR → HEX (~80 cores comuns) + fallback para CSS named colors via `<canvas>` parser.
+- Conversão executada antes do submit; salva sempre HEX no `clubes_cache`.
+
+## Detalhes técnicos
+
+### Migração DB
+```sql
+ALTER TABLE clubes_cache ADD COLUMN IF NOT EXISTS rivais text[] DEFAULT '{}';
+```
+
+### Nova edge function: `get-rivals`
+- Input: `{ club_name, country }`.
+- Chama Lovable AI (`google/gemini-2.5-flash`) com prompt estruturado JSON.
+- Retorna até 4 rivais; persiste em `clubes_cache.rivais` com upsert.
+- Rate-limit + validação de input (padrões já usados no projeto).
+
+### Arquivos novos
+- `supabase/functions/get-rivals/index.ts`
+- `src/components/dashboard/ShareTropaModal.tsx`
+- `src/lib/color-names.ts` (mapa PT-BR → HEX)
+- `public/convite.html` (OG estático com redirect)
+
+### Arquivos editados
+- `src/components/dashboard/NewsFeedCards.tsx` / `EditorialNews.tsx` (logo Google + fallback)
+- `src/components/dashboard/SympathyCarousel.tsx` (emite `onClubChange`)
+- `src/pages/Dashboard.tsx` (estado `clubeAtivo`, propaga para News/Rivais/Banners)
+- `src/components/dashboard/RivalsBlock.tsx` + `RivalsRadar.tsx` (aceita clube ativo)
+- `src/components/dashboard/AmbassadorCard.tsx` ou onde estiver "Convocar a Tropa" → abre `ShareTropaModal`
+- `src/components/dashboard/SocialShareBanners.tsx` (Web Share API)
+- `src/pages/Convite.tsx` (refino do hero + preservação do ref)
+- `src/pages/Login.tsx` (preserva `?ref` no fluxo)
+- `src/pages/Correcao.tsx` (aceita nomes de cor)
+- `src/integrations/supabase/types.ts` (regenerado pela migração)
+
+## Ordem de execução
+1. Migração `clubes_cache.rivais` (aprovação).
+2. Edge function `get-rivals`.
+3. Frontend: News fix → SympathyCarousel/Dashboard dinâmico → Rivais.
+4. Convite: modal + landing + OG + Login ref.
+5. Banners Web Share.
+6. Correção de cores PT-BR.
+7. Auditoria votos coração vs simpatia.
+
+Aprovar para começar?
