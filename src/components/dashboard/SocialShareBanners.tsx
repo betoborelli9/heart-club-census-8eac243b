@@ -1,9 +1,14 @@
 /**
  * [CAMINHO]: src/components/dashboard/SocialShareBanners.tsx
  * [MÓDULO]: Coluna 3 — 3 banners verticais 9:16 prontos para Stories
+ * Postar Agora: tenta Web Share API com arquivo (Instagram via mobile) e fallback para download.
+ * Baixar Stories: gera PNG 1080x1920 do banner.
  */
+import { useRef } from "react";
 import { Instagram, Send, MessageCircle, Download, Share2 } from "lucide-react";
+import { toPng } from "html-to-image";
 import { ClubLogo } from "@/components/ClubLogo";
+import { useToast } from "@/hooks/use-toast";
 
 interface Props {
   clubName: string | null;
@@ -19,7 +24,7 @@ interface BannerSpec {
   subtitle: string;
   cta: string;
   bg: (primary: string, secondary: string) => string;
-  action: "post" | "post" | "download";
+  action: "post" | "download";
   actionLabel: string;
 }
 
@@ -29,8 +34,10 @@ export default function SocialShareBanners({
   primaryColor = "#ff6200",
   secondaryColor = "#000000",
   censusCount,
-  onShare,
 }: Props) {
+  const { toast } = useToast();
+  const bannerRefs = useRef<(HTMLDivElement | null)[]>([]);
+
   const banners: BannerSpec[] = [
     {
       title: "VOTE PELO",
@@ -58,6 +65,70 @@ export default function SocialShareBanners({
     },
   ];
 
+  const captureBanner = async (idx: number): Promise<Blob | null> => {
+    const node = bannerRefs.current[idx];
+    if (!node) return null;
+    try {
+      const rect = node.getBoundingClientRect();
+      const scale = 1080 / rect.width;
+      const dataUrl = await toPng(node, {
+        cacheBust: true,
+        pixelRatio: scale,
+        backgroundColor: "#000000",
+      });
+      const res = await fetch(dataUrl);
+      return await res.blob();
+    } catch (e) {
+      console.error("[SocialShareBanners] capture failed", e);
+      return null;
+    }
+  };
+
+  const downloadBlob = (blob: Blob, filename: string) => {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  };
+
+  const slug = (clubName || "heart-club").toLowerCase().replace(/[^a-z0-9]+/g, "-");
+
+  const handleAction = async (idx: number, action: "post" | "download") => {
+    toast({ title: "Gerando banner...", description: "Aguarde alguns segundos." });
+    const blob = await captureBanner(idx);
+    if (!blob) {
+      toast({ variant: "destructive", title: "Falha ao gerar banner." });
+      return;
+    }
+    const filename = `heart-club-${slug}-${idx + 1}.png`;
+    const file = new File([blob], filename, { type: "image/png" });
+
+    if (action === "post" && navigator.canShare?.({ files: [file] })) {
+      try {
+        await navigator.share({
+          files: [file],
+          title: "Heart Club",
+          text: `${clubName || "Heart Club"} · Censo Global do Futebol`,
+        });
+        return;
+      } catch {
+        // user cancelled or unsupported — fallback to download
+      }
+    }
+    downloadBlob(blob, filename);
+    toast({
+      title: action === "post" ? "Banner baixado!" : "Banner salvo!",
+      description:
+        action === "post"
+          ? "Abra o Instagram e poste como Stories. (postagem direta requer compartilhar pelo celular)"
+          : "Pronto para postar nos seus Stories.",
+    });
+  };
+
   return (
     <section className="rounded-2xl bg-white/[0.03] border border-white/10 p-4 space-y-3">
       <header className="flex items-center gap-2 pb-2 border-b border-white/5">
@@ -75,13 +146,13 @@ export default function SocialShareBanners({
           <div key={idx} className="space-y-2">
             {/* Banner vertical 9:16 */}
             <div
+              ref={(el) => (bannerRefs.current[idx] = el)}
               className="relative aspect-[9/16] rounded-lg overflow-hidden flex flex-col items-center justify-between p-2 text-white"
               style={{ background: b.bg(primaryColor, secondaryColor) }}
             >
-              <div className="absolute inset-0 opacity-10 mix-blend-overlay bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]" />
               {clubLogo && (
                 <div className="absolute inset-0 flex items-center justify-center opacity-20">
-                  <img src={clubLogo} alt="" className="w-3/4 h-3/4 object-contain" />
+                  <img src={clubLogo} alt="" crossOrigin="anonymous" className="w-3/4 h-3/4 object-contain" />
                 </div>
               )}
               <div className="relative z-10 flex flex-col items-center text-center">
@@ -112,7 +183,7 @@ export default function SocialShareBanners({
 
             {/* Botão */}
             <button
-              onClick={() => onShare?.(idx)}
+              onClick={() => handleAction(idx, b.action)}
               className="w-full py-1.5 rounded-md text-[8px] font-black italic uppercase tracking-wider flex items-center justify-center gap-1 hover:scale-105 transition-transform"
               style={{
                 background: b.action === "download" ? "transparent" : primaryColor,
@@ -120,7 +191,7 @@ export default function SocialShareBanners({
                 border: b.action === "download" ? `1px solid ${primaryColor}` : "none",
               }}
             >
-              {b.action === "download" ? <Download className="w-2.5 h-2.5" /> : <Share2 className="w-2.5 h-2.5" />}
+              {b.action === "download" ? <Download className="w-2.5 h-2.5" /> : <Instagram className="w-2.5 h-2.5" />}
               {b.actionLabel}
             </button>
           </div>
