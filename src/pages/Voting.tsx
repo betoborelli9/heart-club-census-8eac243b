@@ -1,6 +1,6 @@
 /**
  * [CAMINHO]: src/pages/Voting.tsx
- * [STATUS]: PRODUÇÃO - VERSÃO 17.0 (AUDITORIA DE DUPLICIDADE IP/DISPOSITIVO)
+ * [STATUS]: PRODUÇÃO - VERSÃO 17.0 (AUDITORIA DE DUPLICIDADE INTEGRADA)
  * [CONTEXTO]: Blindagem contra votos múltiplos no mesmo clube via mesma rede/ID.
  */
 
@@ -20,9 +20,6 @@ import FingerprintJS from "@fingerprintjs/fingerprintjs";
 import { captureIpAudit } from "@/lib/address";
 import { detectDeviceModel } from "@/lib/device-detect";
 
-/* ═══════════════════════════════════════════════════════════
-    MÓDULO: CONFIGURAÇÕES E ESTADOS
-   ═══════════════════════════════════════════════════════════ */
 type ClubResult = ClubSearchResult;
 const MAX_SYMPATHY_CLUBS = 4;
 
@@ -54,9 +51,6 @@ const Voting = () => {
   const heartReqId = useRef(0);
   const sympathyReqId = useRef(0);
 
-  /* ═══════════════════════════════════════════════════════════
-      MÓDULO: SEGURANÇA E FINGERPRINT
-     ═══════════════════════════════════════════════════════════ */
   useEffect(() => {
     const initFP = async () => {
       const fp = await FingerprintJS.load();
@@ -66,9 +60,6 @@ const Voting = () => {
     initFP();
   }, []);
 
-  /* ═══════════════════════════════════════════════════════════
-      MÓDULO: BUSCA OTIMIZADA
-     ═══════════════════════════════════════════════════════════ */
   const performSearch = useCallback(
     async (
       query: string,
@@ -83,10 +74,8 @@ const Voting = () => {
         setterOpen(false);
         return;
       }
-
       const currentId = ++reqRef.current;
       setterLoading(true);
-
       try {
         const results = await searchClubsWithFallback(term);
         if (currentId === reqRef.current) {
@@ -120,9 +109,6 @@ const Voting = () => {
     return () => clearTimeout(timer);
   }, [sympathySearch, performSearch]);
 
-  /* ═══════════════════════════════════════════════════════════
-      MÓDULO: PROCESSAMENTO DO VOTO (TRAVA DE INTEGRIDADE)
-     ═══════════════════════════════════════════════════════════ */
   const handleConfirmVote = async () => {
     if (!heartClub) {
       toast({ variant: "destructive", title: "Selecione seu clube do coração" });
@@ -152,31 +138,22 @@ const Voting = () => {
       const ipAudit = await captureIpAudit().catch(() => null);
       const callerIp = ipAudit?.ip || null;
 
-      // 1) TRAVA DE AUDITORIA: Checa se este IP ou Dispositivo já votou NESTE CLUBE
-      let pendente = false;
+      // --- LÓGICA DE AUDITORIA SILENCIOSA ---
+      let isSuspicious = false;
       let motivo = null;
 
-      if (fpId || callerIp) {
-        const orConditions = [];
-        if (fpId && fpId !== "web-client") orConditions.push(`fingerprint.eq.${fpId}`);
-        if (callerIp) orConditions.push(`ip_address.eq.${callerIp}`);
+      const { data: dup } = await supabase
+        .from("votos")
+        .select("id")
+        .eq("clube_nome", heartClub.name)
+        .or(`fingerprint.eq.${fpId},ip_address.eq.${callerIp}`)
+        .limit(1);
 
-        if (orConditions.length > 0) {
-          const { data: duplicate } = await supabase
-            .from("votos")
-            .select("id")
-            .eq("clube_nome", heartClub.name)
-            .or(orConditions.join(","))
-            .limit(1);
-
-          if (duplicate && duplicate.length > 0) {
-            pendente = true;
-            motivo = "Multi-e-mail detectado no mesmo IP/Dispositivo para este clube";
-          }
-        }
+      if (dup && dup.length > 0) {
+        isSuspicious = true;
+        motivo = "Múltiplos e-mails detectados no mesmo IP/Dispositivo";
       }
 
-      // 2) Objeto do Voto
       const mainVote: any = {
         user_id: user.id,
         clube_nome: heartClub.name,
@@ -186,8 +163,8 @@ const Voting = () => {
         is_original_vote: true,
         fingerprint: fpId,
         ip_address: callerIp,
-        status_aprovacao: pendente ? "pendente" : "aprovado",
-        is_suspicious: pendente,
+        status_aprovacao: isSuspicious ? "pendente" : "aprovado",
+        is_suspicious: isSuspicious,
         motivo_suspicao: motivo,
         sympathy_1: sympathyClubs[0]?.name ?? null,
         sympathy_2: sympathyClubs[1]?.name ?? null,
@@ -206,43 +183,23 @@ const Voting = () => {
       if (voteError) throw voteError;
 
       toast({
-        title: pendente ? "Voto registrado para auditoria 🔍" : "Lealdade registrada com sucesso! 🏟️",
-        description: pendente
+        title: isSuspicious ? "Voto registrado para auditoria 🔍" : "Lealdade registrada com sucesso! 🏟️",
+        description: isSuspicious
           ? "Detectamos um registro anterior deste dispositivo. Sua entrada será revisada."
           : undefined,
       });
 
       navigate("/dashboard");
 
-      // Background Actions
       (async () => {
         try {
           const device_model = await detectDeviceModel().catch(() => null);
-          await supabase
-            .from("votos")
-            .update({
-              device_model: device_model ?? null,
-            })
-            .eq("user_id", user.id)
-            .eq("clube_nome", heartClub.name);
-        } catch (e) {
-          console.error("[VOTING][bg-audit]", e);
-        }
-
-        try {
+          await supabase.from("votos").update({ device_model }).eq("user_id", user.id).eq("clube_nome", heartClub.name);
           await persistClubsIfMissing(allSelected.map((v) => v.club));
-          for (const item of allSelected) {
-            supabase.functions
-              .invoke("enrich-club-colors", {
-                body: { club_name: item.club.name, api_id: item.club.api_id },
-              })
-              .catch(() => {});
-          }
+          refreshProfile().catch(() => {});
         } catch (e) {
-          console.error("[VOTING][bg-enrich]", e);
+          console.error("Background Audit Error", e);
         }
-
-        refreshProfile().catch(() => {});
       })();
     } catch (err) {
       console.error("[VOTING] erro:", err);
@@ -395,7 +352,6 @@ const Voting = () => {
           <p className="text-base italic opacity-80 text-center px-2">
             Você jura lealdade ao <strong className="text-primary not-italic uppercase">{heartClub?.name}</strong>?
           </p>
-
           <DialogFooter className="flex-col gap-2 mt-2">
             <Button
               className="w-full btn-orange-gradient h-14 font-black italic text-lg uppercase"
