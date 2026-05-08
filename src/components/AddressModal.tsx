@@ -130,13 +130,16 @@ const AddressModal = ({ open, onOpenChange, clubName, onSuccess }: AddressModalP
             <h2 className="text-xl font-black italic uppercase tracking-tighter text-white">
               Onde pulsa o seu coração?
             </h2>
-            <p className="text-[12px] italic leading-relaxed text-white/70 px-2">
-              Para pintarmos o mapa com as cores do{" "}
-              <strong className="text-orange-500 not-italic uppercase">
-                {clubName || "seu clube"}
-              </strong>
-              , precisamos localizar o seu grito de gol. Informe seu CEP e veja a força da sua torcida agora mesmo!
-            </p>
+            <div className="relative mx-1 rounded-xl border border-orange-500/25 bg-gradient-to-br from-orange-500/[0.08] via-orange-500/[0.04] to-transparent px-3 py-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
+              <span className="absolute left-0 top-2 bottom-2 w-[2px] rounded-full bg-gradient-to-b from-orange-500/0 via-orange-500/80 to-orange-500/0" />
+              <p className="text-[12px] italic leading-relaxed text-orange-50/90">
+                Para pintarmos o mapa com as cores do{" "}
+                <strong className="text-orange-400 not-italic uppercase tracking-wide">
+                  {clubName || "seu clube"}
+                </strong>
+                , precisamos localizar o seu <span className="text-orange-300/90 font-semibold not-italic">grito de gol</span>. Informe seu CEP e veja a força da sua torcida agora mesmo!
+              </p>
+            </div>
           </div>
 
           {/* CEP */}
