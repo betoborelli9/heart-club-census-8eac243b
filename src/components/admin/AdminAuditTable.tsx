@@ -1,7 +1,7 @@
 /**
  * [CAMINHO]: src/components/admin/AdminAuditTable.tsx
- * [STATUS]: PRODUÇÃO - VERSÃO 7.8 (SINAL VERMELHO + MOTIVO DETALHADO)
- * [OBJETIVO]: Identificar fraudes visualmente com alerta berrante para o Moderador.
+ * [STATUS]: PRODUÇÃO - VERSÃO 8.0 (SINAL VERMELHO PULSANTE)
+ * [OBJETIVO]: Visualização Master com alerta visual berrante para fraude.
  */
 
 import { useEffect, useState, Fragment } from "react";
@@ -34,18 +34,13 @@ const AdminAuditTable = () => {
   const [votes, setVotes] = useState<VoteRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [actingId, setActingId] = useState<string | null>(null);
-  const [approvedIds, setApprovedIds] = useState<Set<string>>(new Set());
-  const [rejectedIds, setRejectedIds] = useState<Set<string>>(new Set());
   const { toast } = useToast();
 
   const fetchVotes = async () => {
     setLoading(true);
     const { data, error } = await supabase.rpc("admin_get_votes_with_tracking");
-    if (error) {
-      toast({ title: "Erro ao buscar", variant: "destructive" });
-    } else {
-      setVotes((data as unknown as VoteRow[]) || []);
-    }
+    if (error) toast({ title: "Erro ao buscar dados", variant: "destructive" });
+    else setVotes((data as unknown as VoteRow[]) || []);
     setLoading(false);
   };
 
@@ -55,28 +50,26 @@ const AdminAuditTable = () => {
     setActingId(id);
     const { error } = await supabase.rpc("admin_approve_vote", { p_voto_id: id });
     if (!error) {
-      setApprovedIds(s => new Set(s).add(id));
       setVotes(prev => prev.map(v => v.voto_id === id ? { ...v, status_aprovacao: 'aprovado', is_suspicious: false } : v));
-      toast({ title: "Voto Aprovado" });
+      toast({ title: "Voto Aprovado!" });
     }
     setActingId(null);
   };
 
   const handleReject = async (id: string) => {
     setActingId(id);
-    const { error } = await supabase.from("votos").update({ status_aprovacao: "recusado", is_suspicious: true, motivo_suspicao: "Recusado pelo Moderador (Lista Negra)." }).eq("id", id);
+    const { error } = await supabase.from("votos").update({ status_aprovacao: "recusado", is_suspicious: true, motivo_suspicao: "Recusado pelo Moderador." }).eq("id", id);
     if (!error) {
-      setRejectedIds(s => new Set(s).add(id));
       setVotes(prev => prev.map(v => v.voto_id === id ? { ...v, status_aprovacao: 'recusado', is_suspicious: true } : v));
-      toast({ title: "Voto Recusado" });
+      toast({ title: "Voto Recusado!" });
     }
     setActingId(null);
   };
 
   const getRowClass = (vote: VoteRow): string => {
-    if (approvedIds.has(vote.voto_id) || vote.status_aprovacao === 'aprovado') return "border-l-4 border-l-green-500 bg-green-500/10";
-    if (rejectedIds.has(vote.voto_id) || vote.status_aprovacao === 'recusado') return "border-l-4 border-l-red-500 bg-red-500/10 opacity-70";
-    if (vote.is_suspicious) return "bg-red-500/5 border-l-4 border-l-red-500 animate-pulse";
+    if (vote.status_aprovacao === 'aprovado') return "border-l-4 border-l-green-500 bg-green-500/10";
+    if (vote.status_aprovacao === 'recusado') return "border-l-4 border-l-red-500 bg-red-500/10 opacity-70";
+    if (vote.is_suspicious) return "bg-red-500/5 border-l-4 border-l-red-500";
     return "";
   };
 
@@ -90,17 +83,17 @@ const AdminAuditTable = () => {
         <Table>
           <TableHeader>
             <TableRow className="bg-muted/20 border-border">
-              <TableHead className="text-[10px] font-black uppercase text-muted-foreground">Status / Alerta</TableHead>
-              <TableHead className="text-[10px] font-black uppercase text-muted-foreground">Clube / Torcedor</TableHead>
-              <TableHead className="text-[10px] font-black uppercase text-muted-foreground">IP Address</TableHead>
-              <TableHead className="text-[10px] font-black uppercase text-muted-foreground">Localização</TableHead>
-              <TableHead className="text-[10px] font-black uppercase text-muted-foreground text-right">Ações</TableHead>
+              <TableHead className="text-[10px] font-black uppercase">Status / Alerta</TableHead>
+              <TableHead className="text-[10px] font-black uppercase">Clube / Torcedor</TableHead>
+              <TableHead className="text-[10px] font-black uppercase">IP Address</TableHead>
+              <TableHead className="text-[10px] font-black uppercase">Localização</TableHead>
+              <TableHead className="text-[10px] font-black uppercase text-right">Ações</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {votes.map((v) => {
-              const isApproved = approvedIds.has(v.voto_id) || v.status_aprovacao === 'aprovado';
-              const isRejected = rejectedIds.has(v.voto_id) || v.status_aprovacao === 'recusado';
+              const isApproved = v.status_aprovacao === 'aprovado';
+              const isRejected = v.status_aprovacao === 'recusado';
               return (
                 <TableRow key={v.voto_id} className={`border-border ${getRowClass(v)}`}>
                   <TableCell>
@@ -109,7 +102,7 @@ const AdminAuditTable = () => {
                        isApproved ? <Badge className="bg-green-600 text-[8px]">APROVADO</Badge> :
                        v.is_suspicious ? (
                          <>
-                           <Badge className="bg-red-500 animate-pulse text-[8px] font-black text-white">SUSPEITO</Badge>
+                           <Badge className="bg-red-500 animate-pulse text-[8px] font-black text-white shadow-[0_0_10px_rgba(239,68,68,0.5)]">SUSPEITO</Badge>
                            <span className="text-[7px] text-red-400 font-bold leading-none uppercase max-w-[100px]">{v.motivo_suspicao}</span>
                          </>
                        ) : (
@@ -151,5 +144,5 @@ export default AdminAuditTable;
 /**
  * [RODAPÉ TÉCNICO]
  * ARQUIVO: src/components/admin/AdminAuditTable.tsx
- * VERSÃO: 7.8 - Badge vermelho pulsante para fraude detectada.
+ * VERSÃO: 8.0
  */
