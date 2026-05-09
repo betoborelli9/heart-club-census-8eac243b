@@ -1,95 +1,85 @@
 /**
  * [CAMINHO]: src/lib/vote-auditor.ts
- * [MÓDULO]: AUDITORIA DE IDENTIDADE (GPS, IP, FINGERPRINT, CEP)
- * [OBJETIVO]: Centralizar verificação de fraudes e histórico de votos reais.
+ * [STATUS]: PRODUÇÃO - VERSÃO 7.0 (BLINDAGEM TOTAL)
+ * [OBJETIVO]: Impedir votação em massa no mesmo local/dispositivo.
  */
 
 import FingerprintJS from "@fingerprintjs/fingerprintjs";
 
-export interface VoteIdentity {
-  fingerprint: string;
-  ip_address: string | null;
-  isp: string | null;
-  lat: number | null;
-  lng: number | null;
-  bairro: string | null;
-  cep: string | null;
-}
-
-// --- MÓDULO 1: IDENTIDADE DO HARDWARE ---
+/* ═══════════════════════════════════════════════════════════
+    MÓDULO 1: DNA DO HARDWARE (MAIS RIGOROSO)
+   ═══════════════════════════════════════════════════════════ */
 export async function getFingerprint(): Promise<string> {
-  const fp = await FingerprintJS.load();
-  const result = await fp.get();
-  return result.visitorId;
-}
-
-// --- MÓDULO 2: IDENTIDADE DE REDE (WIFI/ISP) ---
-export async function getNetworkData() {
   try {
-    const res = await fetch("https://ipapi.co/json/");
-    const data = await res.json();
-    return {
-      ip: data.ip || null,
-      isp: data.org || null // Aqui pega o nome do WiFi/Provedor
-    };
-  } catch (error) {
-    console.error("Erro ao capturar rede", error);
-    return { ip: null, isp: null };
+    const fp = await FingerprintJS.load();
+    // Usamos o visitorId como base, mas ele precisa ser persistente
+    const result = await fp.get();
+    return result.visitorId;
+  } catch {
+    return "id-local-" + window.screen.width + window.screen.height;
   }
 }
 
-// --- MÓDULO 3: GEOLOCALIZAÇÃO (GPS) ---
-export async function getGpsCoords(): Promise<{lat: number, lng: number} | null> {
-  return new Promise((resolve) => {
-    if (!navigator.geolocation) return resolve(null);
-    navigator.geolocation.getCurrentPosition(
-      (p) => resolve({ lat: p.coords.latitude, lng: p.coords.longitude }),
-      () => resolve(null),
-      { timeout: 5000 }
-    );
-  });
-}
-
-// --- MÓDULO 4: LOCALIZAÇÃO POSTAL (CEP/BAIRRO) ---
-export async function getPostalData(cep: string) {
-  const cleanCep = cep.replace(/\D/g, "");
-  if (cleanCep.length !== 8) return null;
+/* ═══════════════════════════════════════════════════════════
+    MÓDULO 2: DNA DE REDE (A FONTE DA VERDADE)
+   ═══════════════════════════════════════════════════════════ */
+export async function getFastIP() {
   try {
-    const res = await fetch(`https://viacep.com.br/ws/${cleanCep}/json/`);
-    return await res.json();
+    // Ipify é o mais estável para capturar o IP real do Wi-Fi
+    const res = await fetch("https://api.ipify.org?format=json");
+    const data = await res.json();
+    return data.ip || null;
   } catch { return null; }
 }
 
-// --- MÓDULO 5: AUDITORIA HISTÓRICA (A SEQUÊNCIA QUE O MODERADOR VÊ) ---
-export async function auditRealVote(supabase: any, clubName: string, identity: VoteIdentity) {
-  // Proteção: Se não tiver IP nem Fingerprint, não busca duplicidade para não travar
-  if (!identity.fingerprint && !identity.ip_address) return { isSuspicious: false, history: [] };
+/* ═══════════════════════════════════════════════════════════
+    MÓDULO 3: AUDITORIA IMPLACÁVEL (DETECTOR DE MASSA)
+   ═══════════════════════════════════════════════════════════ */
+export async function runSilentAudit(supabase: any, voteId: string, clubName: string, ip: string | null, fp: string) {
+  if (!ip) return; // Sem IP não há auditoria de rede
 
-  // Busca votos anteriores do mesmo clube vindos do mesmo IP ou Aparelho
-  const { data: history } = await supabase
+  // BUSCA QUALQUER VOTO REAL COM O MESMO IP (Independente do Fingerprint)
+  const { data: duplicates } = await supabase
     .from("votos")
-    .select("id, created_at, email")
-    .eq("clube_nome", clubName)
-    // Garante que ignore os votos de teste/fictícios na auditoria real
-    .neq("status_aprovacao", "ficticio") 
-    .or(`fingerprint.eq.${identity.fingerprint},ip_address.eq.${identity.ip_address}`)
-    .order('created_at', { ascending: false });
+    .select("id, email, created_at")
+    .eq("ip_address", ip)
+    .neq("id", voteId) // Ignora o voto atual
+    .neq("status_aprovacao", "ficticio")
+    .limit(1);
 
-  return {
-    isSuspicious: history && history.length > 0,
-    history: history || []
-  };
+  if (duplicates && duplicates.length > 0) {
+    // Se achou alguém no mesmo IP, marca como SUSPEITO na hora
+    await supabase.from("votos").update({
+      is_suspicious: true,
+      status_aprovacao: "pendente",
+      motivo_suspicao: `Votação em massa detectada no IP: ${ip}`
+    }).eq("id", voteId);
+    
+    console.log(`[AUDITORIA]: Voto ${voteId} marcado como suspeito por IP repetido.`);
+  }
 }
 
-// --- MÓDULO 6: ENRIQUECIMENTO DE ENDEREÇO AUTÔNOMO ---
+/* ═══════════════════════════════════════════════════════════
+    MÓDULO 4: ENRIQUECIMENTO POSTAL
+   ═══════════════════════════════════════════════════════════ */
 export async function getFullAddress(cep: string) {
-  const data = await getPostalData(cep);
-  if (!data || data.erro) return null;
-  
-  return {
-    bairro: data.bairro || "Não informado",
-    cidade: data.localidade,
-    estado: data.uf,
-    logradouro: data.logradouro
-  };
+  const cleanCep = cep.replace(/\D/g, "");
+  try {
+    const res = await fetch(`https://viacep.com.br/ws/${cleanCep}/json/`);
+    const data = await res.json();
+    if (data.erro) return null;
+    return {
+      bairro: data.bairro || "Não informado",
+      cidade: data.localidade,
+      estado: data.uf
+    };
+  } catch { return null; }
 }
+
+/**
+ * [RODAPÉ TÉCNICO]
+ * ARQUIVO: src/lib/vote-auditor.ts
+ * VERSÃO: 7.0
+ * - Prioridade absoluta ao IP para detecção de fraude em Wi-Fi compartilhado.
+ * - Descarte de filtros que tornavam a busca "gentil" demais.
+ */

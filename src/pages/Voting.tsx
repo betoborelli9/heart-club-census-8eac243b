@@ -1,7 +1,7 @@
 /**
  * [CAMINHO]: src/pages/Voting.tsx
- * [STATUS]: PRODUÇÃO - VERSÃO 22.0 (CENTRALIZAÇÃO EM VOTE-AUDITOR)
- * [CONTEXTO]: Auditoria unificada de integridade (GPS, IP, ISP, Fingerprint).
+ * [STATUS]: PRODUÇÃO - VERSÃO 23.0 (FIX: VOTO INSTANTÂNEO + AUDITORIA SILENCIOSA)
+ * [CONTEXTO]: Registro de lealdade com auditoria assíncrona para eliminar lentidão.
  */
 
 import { useState, useEffect, useCallback, useRef } from "react";
@@ -20,10 +20,8 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 // IMPORTAÇÃO DO MÓDULO ÚNICO DE AUDITORIA
 import { 
   getFingerprint, 
-  getNetworkData, 
-  getGpsCoords, 
-  auditRealVote,
-  VoteIdentity 
+  getFastIP, 
+  runSilentAudit 
 } from "@/lib/vote-auditor";
 
 type ClubResult = ClubSearchResult;
@@ -92,15 +90,13 @@ const Voting = () => {
   }, [sympathySearch, performSearch]);
 
   /* ═══════════════════════════════════════════════════════════
-      PROCESSAMENTO DO VOTO COM AUDITORIA UNIFICADA
+      MÓDULO: PROCESSO DE VOTO INSTANTÂNEO (VELOCIDADE MÁXIMA)
      ═══════════════════════════════════════════════════════════ */
   const handleConfirmVote = async () => {
     if (!heartClub || !user) return;
     setSubmitting(true);
     
     try {
-      const allSelected = [{ club: heartClub, main: true }, ...sympathyClubs.map((c) => ({ club: c, main: false }))];
-
       if (TEST_MODE) {
         navigate(`/testar-clube?club=${encodeURIComponent(heartClub.name)}`);
         return;
@@ -110,24 +106,7 @@ const Voting = () => {
         await supabase.from("votos").delete().eq("user_id", user.id);
       }
 
-      // 1. CAPTURA DO DNA DIGITAL (Módulo Único)
-      const fp = await getFingerprint();
-      const net = await getNetworkData();
-      const gps = await getGpsCoords();
-
-      const identity: VoteIdentity = {
-        fingerprint: fp,
-        ip_address: net.ip,
-        isp: net.isp,
-        lat: gps?.lat || null,
-        lng: gps?.lng || null,
-        bairro: null, // Será preenchido no AddressModal posteriormente
-        cep: null
-      };
-
-      // 2. AUDITORIA DE REINCIDÊNCIA (Histórico Real)
-      const audit = await auditRealVote(supabase, heartClub.name, identity);
-
+      // 1. MONTAGEM DO VOTO BÁSICO (O que precisa para salvar na hora)
       const mainVote: any = {
         user_id: user.id,
         email: user.email,
@@ -136,37 +115,47 @@ const Voting = () => {
         estado: profile?.estado || "",
         pais: profile?.pais || "BR",
         is_original_vote: true,
-        fingerprint: identity.fingerprint,
-        ip_address: identity.ip_address,
-        isp: identity.isp,
-        voto_lat: identity.lat,
-        voto_lng: identity.lng,
-        status_aprovacao: audit.isSuspicious ? "pendente" : "aprovado",
-        is_suspicious: audit.isSuspicious,
-        motivo_suspicao: audit.isSuspicious ? "Reincidência detectada no mesmo local/dispositivo." : null,
+        status_aprovacao: "aprovado", // Entra aprovado por padrão para velocidade
+        is_suspicious: false,
         sympathy_1: sympathyClubs[0]?.name ?? null,
         sympathy_2: sympathyClubs[1]?.name ?? null,
         sympathy_3: sympathyClubs[2]?.name ?? null,
         sympathy_4: sympathyClubs[3]?.name ?? null,
       };
 
-      const { error: voteError } = await supabase.from("votos").insert([mainVote]);
+      // 2. SALVAMENTO RELÂMPAGO
+      const { data: newVote, error: voteError } = await supabase
+        .from("votos")
+        .insert([mainVote])
+        .select("id")
+        .single();
+
       if (voteError) throw voteError;
 
-      toast({
-        title: audit.isSuspicious ? "Voto em análise de integridade 🔍" : "Lealdade registrada com sucesso! 🏟️",
-        description: audit.isSuspicious ? "Detectamos múltiplos acessos. Sua entrada será revisada." : undefined,
-      });
-
+      // 3. LIBERAÇÃO IMEDIATA DO TORCEDOR
+      toast({ title: "Lealdade registrada com sucesso! 🏟️" });
       navigate("/dashboard");
 
-      // BACKGROUND: Persistência de clubes e atualização de perfil
+      // 4. [AUDITORIA SILENCIOSA] - Roda em background após o redirect
       (async () => {
         try {
-          await persistClubsIfMissing(allSelected.map((v) => v.club));
+          const [ip, fp] = await Promise.all([getFastIP(), getFingerprint()]);
+          
+          // Registra os dados técnicos coletados
+          await supabase.from("votos").update({ 
+            ip_address: ip, 
+            fingerprint: fp 
+          }).eq("id", newVote.id);
+
+          // Executa a conferência de fraude sem o usuário esperar
+          await runSilentAudit(supabase, newVote.id, heartClub.name, ip, fp);
+          
+          // Sincroniza dados complementares
+          const allClubs = [{ club: heartClub, main: true }, ...sympathyClubs.map((c) => ({ club: c, main: false }))];
+          await persistClubsIfMissing(allClubs.map((v) => v.club));
           refreshProfile().catch(() => {});
         } catch (e) {
-          console.error("BG sync error", e);
+          console.error("[BG-AUDIT] Erro silencioso:", e);
         }
       })();
 
@@ -318,3 +307,11 @@ const Voting = () => {
 };
 
 export default Voting;
+
+/**
+ * [RODAPÉ TÉCNICO]
+ * ARQUIVO: src/pages/Voting.tsx
+ * VERSÃO: 23.0
+ * - Implementado insert instantâneo com auditoria em segundo plano.
+ * - Resolvida lentidão do clique no botão "Sim, eu juro!".
+ */
