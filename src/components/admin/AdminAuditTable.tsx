@@ -2,7 +2,7 @@
  * ═══════════════════════════════════════════════════════════════
  * 📁 CAMINHO: src/components/admin/AdminAuditTable.tsx
  * 🧠 MÓDULO: CENTRAL DE AUDITORIA E CONTROLE DE FRAUDES
- * 🔥 STATUS: PRODUÇÃO — VERSÃO 10.6 (FINAL RECOVERY)
+ * 🔥 STATUS: PRODUÇÃO — VERSÃO 10.7 (ESTRUTURA MESTRE)
  * ═══════════════════════════════════════════════════════════════
  */
 
@@ -34,7 +34,7 @@ interface VoteRow {
 }
 
 /* ═══════════════════════════════════════════════════════════
-    🧠 MÓDULO 2: COMPONENTE DE AUDITORIA
+    🧠 MÓDULO 2: COMPONENTE PRINCIPAL
    ═══════════════════════════════════════════════════════════ */
 const AdminAuditTable = () => {
   const [votes, setVotes] = useState<VoteRow[]>([]);
@@ -51,7 +51,7 @@ const AdminAuditTable = () => {
       setVotes((data as unknown as VoteRow[]) || []);
     } else {
       console.error("[RPC ERROR]:", error);
-      toast({ title: "Erro na Auditoria", description: "Execute o SQL de DROP/CREATE no Supabase.", variant: "destructive" });
+      toast({ title: "Erro na Auditoria", description: "Verifique a função SQL.", variant: "destructive" });
     }
     setLoading(false);
   };
@@ -73,7 +73,7 @@ const AdminAuditTable = () => {
     const { error } = await supabase.from("votos").update({ 
       status_aprovacao: "recusado", 
       is_suspicious: true, 
-      motivo_suspicao: "Recusado pelo Moderador." 
+      motivo_suspicao: "Fraude manual confirmada." 
     }).eq("id", id);
     if (!error) {
       setVotes(prev => prev.map(v => v.voto_id === id ? { ...v, status_aprovacao: 'recusado', is_suspicious: true } : v));
@@ -113,7 +113,7 @@ const AdminAuditTable = () => {
       <Card className="overflow-hidden border-border bg-card">
         <Table>
           <TableHeader>
-            <TableRow className="border-border bg-muted/20 text-[10px] font-black uppercase">
+            <TableRow className="border-border bg-muted/20 text-[10px] font-black uppercase italic">
               <TableHead>Status / Alerta</TableHead>
               <TableHead>Clube / Torcedor</TableHead>
               <TableHead>IP Address</TableHead>
@@ -132,20 +132,20 @@ const AdminAuditTable = () => {
                   <TableRow className={`border-border transition-all ${isSuspicious ? "bg-red-500/5 animate-pulse" : ""}`}>
                     <TableCell>
                       <div className="flex flex-col gap-1">
-                        {isRejected ? <Badge className="bg-red-600 font-black">RECUSADO</Badge> :
-                         isApproved ? <Badge className="bg-green-600 font-black">APROVADO</Badge> :
+                        {isRejected ? <Badge className="bg-red-600 font-black italic">RECUSADO</Badge> :
+                         isApproved ? <Badge className="bg-green-600 font-black italic">APROVADO</Badge> :
                          isSuspicious ? (
                            <>
-                             <Badge className="bg-red-500 animate-pulse font-black text-white shadow-[0_0_10px_rgba(255,0,0,0.3)]">SUSPEITO</Badge>
-                             <span className="text-[8px] font-bold uppercase text-red-400">{v.motivo_suspicao || "IP/ID REPETIDO"}</span>
+                             <Badge className="bg-red-500 animate-pulse font-black text-white shadow-[0_0_10px_rgba(255,0,0,0.3)] italic">SUSPEITO</Badge>
+                             <span className="text-[7px] text-red-400 font-black uppercase leading-none">{v.motivo_suspicao}</span>
                            </>
-                         ) : <Badge className="bg-green-600 font-black">OK</Badge>}
+                         ) : <Badge className="bg-green-600 font-black italic">OK</Badge>}
                       </div>
                     </TableCell>
                     <TableCell>
                       <p className="text-xs font-black italic uppercase text-primary leading-tight">{v.clube_nome}</p>
                       <p className="text-[10px] font-black uppercase leading-tight">{v.user_nome || "—"}</p>
-                      <p className="text-[9px] italic opacity-60">{v.user_email}</p>
+                      <p className="text-[9px] italic opacity-60 font-bold">{v.user_email}</p>
                     </TableCell>
                     <TableCell className="font-mono text-[10px] text-cyan-500">{v.ip_address || "—"}</TableCell>
                     <TableCell>
@@ -153,7 +153,7 @@ const AdminAuditTable = () => {
                         <MapPin size={10} className="text-muted-foreground" />
                         <span className="text-[10px] font-black">{v.cep || "—"}</span>
                       </div>
-                      <p className="text-[9px] uppercase opacity-60 leading-tight">{v.cidade}, {v.estado}</p>
+                      <p className="text-[9px] uppercase opacity-60 leading-tight font-bold">{v.cidade}, {v.estado}</p>
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-1.5">
@@ -166,8 +166,8 @@ const AdminAuditTable = () => {
                   </TableRow>
                   {openSympathyId === v.voto_id && (
                     <TableRow className="bg-primary/5">
-                      <TableCell colSpan={5} className="px-4 py-2 text-[10px] italic text-primary font-bold uppercase text-center">
-                        SIMPATIAS: {sympathyCache[v.voto_id]?.join(", ") || "NENHUMA REGISTRADA"}
+                      <TableCell colSpan={5} className="px-4 py-2 text-[10px] italic text-primary font-black uppercase text-center">
+                        Simpatias: {sympathyCache[v.voto_id]?.join(", ") || "Nenhuma Registrada"}
                       </TableCell>
                     </TableRow>
                   )}
@@ -187,8 +187,8 @@ export default AdminAuditTable;
  * ═══════════════════════════════════════════════════════════════
  * 📌 RODAPÉ TÉCNICO | HEART CLUB INTELLIGENCE
  * ═══════════════════════════════════════════════════════════════
- * VERSÃO: 10.6 (FINAL)
- * MÓDULO: AdminAuditTable
+ * VERSÃO: 10.7 (ESTRUTURA MESTRE)
+ * MÓDULO: AdminAuditTable (Painel de Auditoria Antifraude)
  * COMPATIBILIDADE: admin_get_votes_with_tracking
  * ═══════════════════════════════════════════════════════════════
  */
