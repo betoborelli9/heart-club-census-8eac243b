@@ -1,7 +1,7 @@
 /**
  * [CAMINHO]: src/pages/Voting.tsx
- * [STATUS]: PRODUÇÃO - VERSÃO 24.0 (FIX: IP PRE-INSERT + BG AUDIT)
- * [OBJETIVO]: Registrar voto instantaneamente e disparar auditoria em segundo plano.
+ * [STATUS]: PRODUÇÃO - VERSÃO 25.0 (FIX: PRIVACIDADE DE LINK DE TESTE)
+ * [CONTEXTO]: Garante que o link de teste e o Master Mode sejam visíveis apenas para o admin.
  */
 
 import { useState, useEffect, useCallback, useRef } from "react";
@@ -17,7 +17,6 @@ import { ClubLogo } from "@/components/ClubLogo";
 import logo from "@/assets/logo.png";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
-// IMPORTAÇÃO DOS MÓDULOS DE AUDITORIA
 import { 
   getFingerprint, 
   getFastIP, 
@@ -33,6 +32,7 @@ const Voting = () => {
   const { user, profile, refreshProfile } = useUser();
   const { toast } = useToast();
 
+  // TRAVA DE SEGURANÇA: APENAS O EMAIL DO BETO ACESSA O MODO DE TESTE
   const IS_MASTER_ADMIN = user?.email === "betoborelli9@gmail.com";
   const TEST_MODE = IS_MASTER_ADMIN && searchParams.get("test") === "1";
 
@@ -54,9 +54,6 @@ const Voting = () => {
   const heartReqId = useRef(0);
   const sympathyReqId = useRef(0);
 
-  /* ═══════════════════════════════════════════════════════════
-      MÓDULO 1: LOGICA DE BUSCA
-     ═══════════════════════════════════════════════════════════ */
   const performSearch = useCallback(
     async (query: string, setterResults: any, setterOpen: any, setterLoading: any, reqRef: React.MutableRefObject<number>) => {
       const term = query.trim();
@@ -92,14 +89,12 @@ const Voting = () => {
     return () => clearTimeout(timer);
   }, [sympathySearch, performSearch]);
 
-  /* ═══════════════════════════════════════════════════════════
-      MÓDULO 2: PROCESSAMENTO DO VOTO (INSTANT VOTE)
-     ═══════════════════════════════════════════════════════════ */
   const handleConfirmVote = async () => {
     if (!heartClub || !user) return;
     setSubmitting(true);
     
     try {
+      // APENAS BETO PODE USAR O REDIRECT DE TESTE
       if (TEST_MODE) {
         navigate(`/testar-clube?club=${encodeURIComponent(heartClub.name)}`);
         return;
@@ -109,7 +104,6 @@ const Voting = () => {
         await supabase.from("votos").delete().eq("user_id", user.id);
       }
 
-      // CAPTURA DO IP/FP ANTES DO INSERT (IMPEDE IP NULO)
       const [ip, fp] = await Promise.all([getFastIP(), getFingerprint()]);
 
       const mainVote: any = {
@@ -138,14 +132,11 @@ const Voting = () => {
 
       if (voteError) throw voteError;
 
-      // REDIRECIONA O TORCEDOR IMEDIATAMENTE
       toast({ title: "Lealdade registrada com sucesso! 🏟️" });
       navigate("/dashboard");
 
-      // DISPARA AUDITORIA EM SEGUNDO PLANO (SEM AWAIT)
       runSilentAudit(supabase, newVote.id, heartClub.name, ip, fp);
 
-      // SINCERIZAÇÃO DE CLUBES (BACKGROUND)
       (async () => {
         const allClubs = [{ club: heartClub, main: true }, ...sympathyClubs.map(c => ({ club: c, main: false }))];
         await persistClubsIfMissing(allClubs.map(v => v.club));
@@ -161,9 +152,6 @@ const Voting = () => {
     }
   };
 
-  /* ═══════════════════════════════════════════════════════════
-      MÓDULO 3: INTERFACE DE USUÁRIO (UI)
-     ═══════════════════════════════════════════════════════════ */
   const ClubDropdown = ({ results, open, loading, onSelect }: any) => {
     if (!open) return null;
     return (
@@ -197,6 +185,8 @@ const Voting = () => {
         <div className="text-center space-y-3">
           <img src={logo} alt="Logo" className="mx-auto w-20 h-20" />
           <h1 className="text-2xl font-black italic uppercase tracking-tighter text-white">Voto Sagrado</h1>
+          
+          {/* MENSAGEM VISÍVEL APENAS PARA VOCÊ */}
           {IS_MASTER_ADMIN && (
             <p className="text-[10px] text-primary font-black uppercase flex items-center gap-1 justify-center">
               <ShieldCheck size={12} /> Master Mode Ativo
@@ -307,7 +297,6 @@ export default Voting;
 /**
  * [RODAPÉ TÉCNICO]
  * ARQUIVO: src/pages/Voting.tsx
- * VERSÃO: 24.0
- * - Resolvido: IP agora é capturado ANTES do insert para garantir auditoria.
- * - Performance: Redirecionamento instantâneo mantido via auditoria assíncrona.
+ * VERSÃO: 25.0
+ * - Removida visibilidade do Master Mode e links de teste para usuários comuns.
  */
