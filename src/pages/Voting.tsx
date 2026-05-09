@@ -1,6 +1,6 @@
 /**
  * [CAMINHO]: src/pages/Voting.tsx
- * [STATUS]: PRODUÇÃO - VERSÃO 26.0 (FIX: PRIVACIDADE TOTAL + AUDITORIA)
+ * [STATUS]: PRODUÇÃO - VERSÃO 27.0 (INTEGRAÇÃO COM AUDITORIA RADICAL)
  */
 
 import { useState, useEffect, useCallback, useRef } from "react";
@@ -31,10 +31,7 @@ const Voting = () => {
   const { user, profile, refreshProfile } = useUser();
   const { toast } = useToast();
 
-  // TRAVA DE SEGURANÇA MÁXIMA
   const IS_MASTER_ADMIN = user?.email === "betoborelli9@gmail.com";
-  
-  // O link de teste/testar-clube SÓ existe para você.
   const TEST_MODE = IS_MASTER_ADMIN && searchParams.get("test") === "1";
 
   const [heartSearch, setHeartSearch] = useState("");
@@ -95,7 +92,6 @@ const Voting = () => {
     setSubmitting(true);
     
     try {
-      // REDIRECT DE TESTE BLOQUEADO PARA USUÁRIOS COMUNS
       if (TEST_MODE) {
         navigate(`/testar-clube?club=${encodeURIComponent(heartClub.name)}`);
         return;
@@ -114,6 +110,7 @@ const Voting = () => {
         cidade: profile?.cidade || "",
         estado: profile?.estado || "",
         pais: profile?.pais || "BR",
+        cep: profile?.cep || null,
         ip_address: ip,
         fingerprint: fp,
         is_original_vote: true,
@@ -136,8 +133,16 @@ const Voting = () => {
       toast({ title: "Lealdade registrada com sucesso! 🏟️" });
       navigate("/dashboard");
 
-      // Auditoria assíncrona
-      runSilentAudit(supabase, newVote.id, heartClub.name, ip, fp);
+      // CHAMADA ATUALIZADA: Passando user.id e cep para o Auditor v10.0
+      runSilentAudit(
+        supabase, 
+        newVote.id, 
+        heartClub.name, 
+        ip, 
+        fp, 
+        user.id, 
+        profile?.cep
+      );
 
       (async () => {
         const allClubs = [{ club: heartClub, main: true }, ...sympathyClubs.map(c => ({ club: c, main: false }))];
@@ -187,8 +192,6 @@ const Voting = () => {
         <div className="text-center space-y-3">
           <img src={logo} alt="Logo" className="mx-auto w-20 h-20" />
           <h1 className="text-2xl font-black italic uppercase tracking-tighter text-white">Voto Sagrado</h1>
-          
-          {/* APENAS PARA VOCÊ */}
           {IS_MASTER_ADMIN && (
             <div className="flex flex-col gap-1 items-center">
               <p className="text-[10px] text-primary font-black uppercase flex items-center gap-1">
@@ -306,5 +309,5 @@ export default Voting;
 /**
  * [RODAPÉ TÉCNICO]
  * ARQUIVO: src/pages/Voting.tsx
- * VERSÃO: 26.0
+ * VERSÃO: 27.0
  */
