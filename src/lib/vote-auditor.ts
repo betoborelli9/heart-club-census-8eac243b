@@ -1,7 +1,7 @@
 /**
  * [CAMINHO]: src/lib/vote-auditor.ts
- * [STATUS]: PRODUÇÃO - VERSÃO 9.8 (MEMÓRIA DE FRAUDE PERSISTENTE)
- * [OBJETIVO]: Relacionar votos históricos por IP/Fingerprint e marcar suspeição automática.
+ * [STATUS]: PRODUÇÃO - VERSÃO 9.9 (BLOQUEIO RADICAL)
+ * [OBJETIVO]: Se o IP ou ID de hardware bater, o voto cai na malha fina instantaneamente.
  */
 
 import FingerprintJS from "@fingerprintjs/fingerprintjs";
@@ -28,45 +28,41 @@ export async function getFullAddress(cep: string) {
     const res = await fetch(`https://viacep.com.br/ws/${cleanCep}/json/`);
     const data = await res.json();
     if (data.erro) return null;
-    return { bairro: data.bairro || "Não informado", cidade: data.localidade, estado: data.uf };
+    return {
+      bairro: data.bairro || "Não informado",
+      cidade: data.localidade,
+      estado: data.uf
+    };
   } catch { return null; }
 }
 
 export async function runSilentAudit(supabase: any, voteId: string, clubName: string, ip: string | null, fp: string) {
   if (!ip && !fp) return;
 
-  // 1. BUSCA HISTÓRICA COMPLETA (IP ou FINGERPRINT)
-  // Procuramos qualquer voto que não seja este atual (voteId)
-  const { data: records, error } = await supabase
+  // BUSCA RADICAL: Não importa o status, se o rastro existe, é fraude.
+  const { data: duplicates } = await supabase
     .from("votos")
-    .select("id, status_aprovacao, motivo_suspicao")
+    .select("id, status_aprovacao")
     .or(`ip_address.eq.${ip},fingerprint.eq.${fp}`)
-    .neq("id", voteId);
+    .neq("id", voteId); // Ignora o próprio voto que acabou de entrar
 
-  if (error) return;
+  if (duplicates && duplicates.length > 0) {
+    const total = duplicates.length;
+    const motivo = `SUSPEITO: ID/IP REPETIDO (${total} ocorrências anteriores).`;
 
-  let motivo = "";
-  if (records && records.length > 0) {
-    const temRecusado = records.some(r => r.status_aprovacao === 'recusado');
-    const totalAnteriores = records.length;
-
-    if (temRecusado) {
-      motivo = `LISTA NEGRA: IP/Dispositivo com histórico de fraude recusada.`;
-    } else {
-      motivo = `SUSPEITO: Reincidência detectada (${totalAnteriores} votos anteriores com este ID/IP).`;
-    }
-
-    // 2. ATUALIZA O STATUS PARA SUSPEITO IMEDIATAMENTE
+    // MARRETA O STATUS PARA SUSPEITO
     await supabase.from("votos").update({
       is_suspicious: true,
-      status_aprovacao: "pendente",
+      status_aprovacao: "pendente", // Sai do ranking e fica aguardando você
       motivo_suspicao: motivo
     }).eq("id", voteId);
+    
+    console.log(`[AUDITOR] Voto ${voteId} marcado como fraude. Motivo: ${motivo}`);
   }
 }
 
 /**
  * [RODAPÉ TÉCNICO]
  * ARQUIVO: src/lib/vote-auditor.ts
- * VERSÃO: 9.8 - Foco em inteligência relacional e status 'Suspeito' automático.
+ * VERSÃO: 9.9 - Fim da tolerância com IPs duplicados.
  */
