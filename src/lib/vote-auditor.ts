@@ -1,29 +1,23 @@
 /**
  * [CAMINHO]: src/lib/vote-auditor.ts
- * [STATUS]: PRODUÇÃO - VERSÃO 8.7 (AUDITORIA AGRESSIVA)
- * [OBJETIVO]: Detectar fraudes por IP e Fingerprint de forma implacável.
- * [MÓDULOS]: 1. Identidade Digital, 2. Auditoria Silenciosa, 3. Localização.
+ * [STATUS]: PRODUÇÃO - VERSÃO 8.8 (FIX: CONTROLE DE DUPLICIDADE REAL)
+ * [CONTEXTO]: Auditoria que não perdoa IP repetido, independente do status.
  */
 
 import FingerprintJS from "@fingerprintjs/fingerprintjs";
-
-/* ═══════════════════════════════════════════════════════════
-    MÓDULO 1: CAPTURA DE IDENTIDADE DIGITAL
-   ═══════════════════════════════════════════════════════════ */
 
 export async function getFingerprint(): Promise<string> {
   try {
     const fp = await FingerprintJS.load();
     const result = await fp.get();
     return result.visitorId;
-  } catch (error) {
+  } catch {
     return "id-gen-" + Math.random().toString(36).substring(7);
   }
 }
 
 export async function getFastIP() {
   try {
-    // Usando ipify pela estabilidade e velocidade
     const res = await fetch("https://api.ipify.org?format=json");
     const data = await res.json();
     return data.ip || null;
@@ -32,17 +26,13 @@ export async function getFastIP() {
   }
 }
 
-/* ═══════════════════════════════════════════════════════════
-    MÓDULO 2: AUDITORIA SILENCIOSA (DETECTOR DE FRAUDE)
-   ═══════════════════════════════════════════════════════════ */
-
 export async function runSilentAudit(supabase: any, voteId: string, clubName: string, ip: string | null, fp: string) {
   if (!ip) return;
 
-  // 1. CHECAGEM DE LISTA NEGRA (IP MARCADO COMO RECUSADO)
+  // 1. CHECAGEM DE LISTA NEGRA (IP RECUSADO)
   const { data: blacklist } = await supabase
     .from("votos")
-    .select("status_aprovacao")
+    .select("id")
     .eq("ip_address", ip)
     .eq("status_aprovacao", "recusado")
     .limit(1);
@@ -51,13 +41,13 @@ export async function runSilentAudit(supabase: any, voteId: string, clubName: st
     await supabase.from("votos").update({
       is_suspicious: true,
       status_aprovacao: "pendente",
-      motivo_suspicao: "LISTA NEGRA: IP com histórico de fraude."
+      motivo_suspicao: "IP BANIDO: Histórico de fraude."
     }).eq("id", voteId);
     return;
   }
 
-  // 2. CHECAGEM DE MULTI-VOTO (MESMO IP, OUTROS IDs)
-  // Conta votos existentes com este IP que não sejam o atual
+  // 2. CHECAGEM DE MULTI-VOTO (IP JÁ EXISTENTE NO BANCO)
+  // Se houver qualquer outro voto com este IP, o sistema acusa.
   const { count, error } = await supabase
     .from("votos")
     .select("id", { count: 'exact', head: true })
@@ -65,17 +55,14 @@ export async function runSilentAudit(supabase: any, voteId: string, clubName: st
     .neq("id", voteId);
 
   if (!error && count && count > 0) {
+    console.log(`[AUDIT] Fraude detectada para IP ${ip}. Votos anteriores: ${count}`);
     await supabase.from("votos").update({
       is_suspicious: true,
       status_aprovacao: "pendente",
-      motivo_suspicao: `REINCIDÊNCIA: IP já registrou ${count} voto(s).`
+      motivo_suspicao: `IP DUPLICADO: Já existem ${count} voto(s) registrados por este endereço.`
     }).eq("id", voteId);
   }
 }
-
-/* ═══════════════════════════════════════════════════════════
-    MÓDULO 3: ENRIQUECIMENTO POSTAL
-   ═══════════════════════════════════════════════════════════ */
 
 export async function getFullAddress(cep: string) {
   const cleanCep = cep.replace(/\D/g, "");
@@ -83,11 +70,7 @@ export async function getFullAddress(cep: string) {
     const res = await fetch(`https://viacep.com.br/ws/${cleanCep}/json/`);
     const data = await res.json();
     if (data.erro) return null;
-    return {
-      bairro: data.bairro || "Não informado",
-      cidade: data.localidade,
-      estado: data.uf
-    };
+    return { bairro: data.bairro, cidade: data.localidade, estado: data.uf };
   } catch {
     return null;
   }
@@ -96,7 +79,5 @@ export async function getFullAddress(cep: string) {
 /**
  * [RODAPÉ TÉCNICO]
  * ARQUIVO: src/lib/vote-auditor.ts
- * VERSÃO: 8.7
- * - Implementada contagem exata por IP para evitar race conditions.
- * - Prioridade absoluta para o campo status_aprovacao 'recusado'.
+ * VERSÃO: 8.8
  */

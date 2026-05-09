@@ -1,7 +1,6 @@
 /**
  * [CAMINHO]: src/pages/Voting.tsx
- * [STATUS]: PRODUÇÃO - VERSÃO 25.0 (FIX: PRIVACIDADE DE LINK DE TESTE)
- * [CONTEXTO]: Garante que o link de teste e o Master Mode sejam visíveis apenas para o admin.
+ * [STATUS]: PRODUÇÃO - VERSÃO 26.0 (FIX: PRIVACIDADE TOTAL + AUDITORIA)
  */
 
 import { useState, useEffect, useCallback, useRef } from "react";
@@ -32,8 +31,10 @@ const Voting = () => {
   const { user, profile, refreshProfile } = useUser();
   const { toast } = useToast();
 
-  // TRAVA DE SEGURANÇA: APENAS O EMAIL DO BETO ACESSA O MODO DE TESTE
+  // TRAVA DE SEGURANÇA MÁXIMA
   const IS_MASTER_ADMIN = user?.email === "betoborelli9@gmail.com";
+  
+  // O link de teste/testar-clube SÓ existe para você.
   const TEST_MODE = IS_MASTER_ADMIN && searchParams.get("test") === "1";
 
   const [heartSearch, setHeartSearch] = useState("");
@@ -94,7 +95,7 @@ const Voting = () => {
     setSubmitting(true);
     
     try {
-      // APENAS BETO PODE USAR O REDIRECT DE TESTE
+      // REDIRECT DE TESTE BLOQUEADO PARA USUÁRIOS COMUNS
       if (TEST_MODE) {
         navigate(`/testar-clube?club=${encodeURIComponent(heartClub.name)}`);
         return;
@@ -135,6 +136,7 @@ const Voting = () => {
       toast({ title: "Lealdade registrada com sucesso! 🏟️" });
       navigate("/dashboard");
 
+      // Auditoria assíncrona
       runSilentAudit(supabase, newVote.id, heartClub.name, ip, fp);
 
       (async () => {
@@ -186,11 +188,18 @@ const Voting = () => {
           <img src={logo} alt="Logo" className="mx-auto w-20 h-20" />
           <h1 className="text-2xl font-black italic uppercase tracking-tighter text-white">Voto Sagrado</h1>
           
-          {/* MENSAGEM VISÍVEL APENAS PARA VOCÊ */}
+          {/* APENAS PARA VOCÊ */}
           {IS_MASTER_ADMIN && (
-            <p className="text-[10px] text-primary font-black uppercase flex items-center gap-1 justify-center">
-              <ShieldCheck size={12} /> Master Mode Ativo
-            </p>
+            <div className="flex flex-col gap-1 items-center">
+              <p className="text-[10px] text-primary font-black uppercase flex items-center gap-1">
+                <ShieldCheck size={12} /> Master Mode Ativo
+              </p>
+              {TEST_MODE && (
+                <span className="text-[8px] bg-red-500 text-white px-2 py-0.5 rounded-full font-bold animate-pulse">
+                  LINK DE VOTAÇÃO (TESTE) ATIVO
+                </span>
+              )}
+            </div>
           )}
         </div>
 
@@ -297,6 +306,5 @@ export default Voting;
 /**
  * [RODAPÉ TÉCNICO]
  * ARQUIVO: src/pages/Voting.tsx
- * VERSÃO: 25.0
- * - Removida visibilidade do Master Mode e links de teste para usuários comuns.
+ * VERSÃO: 26.0
  */
