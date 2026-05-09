@@ -1,7 +1,7 @@
 /**
  * [CAMINHO]: src/pages/Voting.tsx
- * [STATUS]: PRODUÇÃO - VERSÃO 23.0 (FIX: VOTO INSTANTÂNEO + AUDITORIA SILENCIOSA)
- * [CONTEXTO]: Registro de lealdade com auditoria assíncrona para eliminar lentidão.
+ * [STATUS]: PRODUÇÃO - VERSÃO 24.0 (FIX: IP PRE-INSERT + BG AUDIT)
+ * [OBJETIVO]: Registrar voto instantaneamente e disparar auditoria em segundo plano.
  */
 
 import { useState, useEffect, useCallback, useRef } from "react";
@@ -17,7 +17,7 @@ import { ClubLogo } from "@/components/ClubLogo";
 import logo from "@/assets/logo.png";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
-// IMPORTAÇÃO DO MÓDULO ÚNICO DE AUDITORIA
+// IMPORTAÇÃO DOS MÓDULOS DE AUDITORIA
 import { 
   getFingerprint, 
   getFastIP, 
@@ -54,6 +54,9 @@ const Voting = () => {
   const heartReqId = useRef(0);
   const sympathyReqId = useRef(0);
 
+  /* ═══════════════════════════════════════════════════════════
+      MÓDULO 1: LOGICA DE BUSCA
+     ═══════════════════════════════════════════════════════════ */
   const performSearch = useCallback(
     async (query: string, setterResults: any, setterOpen: any, setterLoading: any, reqRef: React.MutableRefObject<number>) => {
       const term = query.trim();
@@ -90,7 +93,7 @@ const Voting = () => {
   }, [sympathySearch, performSearch]);
 
   /* ═══════════════════════════════════════════════════════════
-      MÓDULO: PROCESSO DE VOTO INSTANTÂNEO (VELOCIDADE MÁXIMA)
+      MÓDULO 2: PROCESSAMENTO DO VOTO (INSTANT VOTE)
      ═══════════════════════════════════════════════════════════ */
   const handleConfirmVote = async () => {
     if (!heartClub || !user) return;
@@ -106,7 +109,9 @@ const Voting = () => {
         await supabase.from("votos").delete().eq("user_id", user.id);
       }
 
-      // 1. MONTAGEM DO VOTO BÁSICO (O que precisa para salvar na hora)
+      // CAPTURA DO IP/FP ANTES DO INSERT (IMPEDE IP NULO)
+      const [ip, fp] = await Promise.all([getFastIP(), getFingerprint()]);
+
       const mainVote: any = {
         user_id: user.id,
         email: user.email,
@@ -114,8 +119,10 @@ const Voting = () => {
         cidade: profile?.cidade || "",
         estado: profile?.estado || "",
         pais: profile?.pais || "BR",
+        ip_address: ip,
+        fingerprint: fp,
         is_original_vote: true,
-        status_aprovacao: "aprovado", // Entra aprovado por padrão para velocidade
+        status_aprovacao: "aprovado", 
         is_suspicious: false,
         sympathy_1: sympathyClubs[0]?.name ?? null,
         sympathy_2: sympathyClubs[1]?.name ?? null,
@@ -123,7 +130,6 @@ const Voting = () => {
         sympathy_4: sympathyClubs[3]?.name ?? null,
       };
 
-      // 2. SALVAMENTO RELÂMPAGO
       const { data: newVote, error: voteError } = await supabase
         .from("votos")
         .insert([mainVote])
@@ -132,31 +138,18 @@ const Voting = () => {
 
       if (voteError) throw voteError;
 
-      // 3. LIBERAÇÃO IMEDIATA DO TORCEDOR
+      // REDIRECIONA O TORCEDOR IMEDIATAMENTE
       toast({ title: "Lealdade registrada com sucesso! 🏟️" });
       navigate("/dashboard");
 
-      // 4. [AUDITORIA SILENCIOSA] - Roda em background após o redirect
-      (async () => {
-        try {
-          const [ip, fp] = await Promise.all([getFastIP(), getFingerprint()]);
-          
-          // Registra os dados técnicos coletados
-          await supabase.from("votos").update({ 
-            ip_address: ip, 
-            fingerprint: fp 
-          }).eq("id", newVote.id);
+      // DISPARA AUDITORIA EM SEGUNDO PLANO (SEM AWAIT)
+      runSilentAudit(supabase, newVote.id, heartClub.name, ip, fp);
 
-          // Executa a conferência de fraude sem o usuário esperar
-          await runSilentAudit(supabase, newVote.id, heartClub.name, ip, fp);
-          
-          // Sincroniza dados complementares
-          const allClubs = [{ club: heartClub, main: true }, ...sympathyClubs.map((c) => ({ club: c, main: false }))];
-          await persistClubsIfMissing(allClubs.map((v) => v.club));
-          refreshProfile().catch(() => {});
-        } catch (e) {
-          console.error("[BG-AUDIT] Erro silencioso:", e);
-        }
+      // SINCERIZAÇÃO DE CLUBES (BACKGROUND)
+      (async () => {
+        const allClubs = [{ club: heartClub, main: true }, ...sympathyClubs.map(c => ({ club: c, main: false }))];
+        await persistClubsIfMissing(allClubs.map(v => v.club));
+        refreshProfile().catch(() => {});
       })();
 
     } catch (err) {
@@ -168,6 +161,9 @@ const Voting = () => {
     }
   };
 
+  /* ═══════════════════════════════════════════════════════════
+      MÓDULO 3: INTERFACE DE USUÁRIO (UI)
+     ═══════════════════════════════════════════════════════════ */
   const ClubDropdown = ({ results, open, loading, onSelect }: any) => {
     if (!open) return null;
     return (
@@ -311,7 +307,7 @@ export default Voting;
 /**
  * [RODAPÉ TÉCNICO]
  * ARQUIVO: src/pages/Voting.tsx
- * VERSÃO: 23.0
- * - Implementado insert instantâneo com auditoria em segundo plano.
- * - Resolvida lentidão do clique no botão "Sim, eu juro!".
+ * VERSÃO: 24.0
+ * - Resolvido: IP agora é capturado ANTES do insert para garantir auditoria.
+ * - Performance: Redirecionamento instantâneo mantido via auditoria assíncrona.
  */

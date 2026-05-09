@@ -1,13 +1,14 @@
 /**
  * [CAMINHO]: src/lib/vote-auditor.ts
- * [STATUS]: PRODUÇÃO - VERSÃO 8.6 (CORREÇÃO DE EXPORT PARA BUILD)
- * [OBJETIVO]: Garantir que getFastIP esteja disponível para o Voting.tsx.
+ * [STATUS]: PRODUÇÃO - VERSÃO 8.7 (AUDITORIA AGRESSIVA)
+ * [OBJETIVO]: Detectar fraudes por IP e Fingerprint de forma implacável.
+ * [MÓDULOS]: 1. Identidade Digital, 2. Auditoria Silenciosa, 3. Localização.
  */
 
 import FingerprintJS from "@fingerprintjs/fingerprintjs";
 
 /* ═══════════════════════════════════════════════════════════
-    MÓDULO 1: IDENTIDADE DIGITAL
+    MÓDULO 1: CAPTURA DE IDENTIDADE DIGITAL
    ═══════════════════════════════════════════════════════════ */
 
 export async function getFingerprint(): Promise<string> {
@@ -15,14 +16,14 @@ export async function getFingerprint(): Promise<string> {
     const fp = await FingerprintJS.load();
     const result = await fp.get();
     return result.visitorId;
-  } catch {
+  } catch (error) {
     return "id-gen-" + Math.random().toString(36).substring(7);
   }
 }
 
-// ESTA É A FUNÇÃO QUE A VERCEL DISSE QUE ESTAVA FALTANDO:
 export async function getFastIP() {
   try {
+    // Usando ipify pela estabilidade e velocidade
     const res = await fetch("https://api.ipify.org?format=json");
     const data = await res.json();
     return data.ip || null;
@@ -32,13 +33,13 @@ export async function getFastIP() {
 }
 
 /* ═══════════════════════════════════════════════════════════
-    MÓDULO 2: AUDITORIA SILENCIOSA (LISTA NEGRA)
+    MÓDULO 2: AUDITORIA SILENCIOSA (DETECTOR DE FRAUDE)
    ═══════════════════════════════════════════════════════════ */
 
 export async function runSilentAudit(supabase: any, voteId: string, clubName: string, ip: string | null, fp: string) {
   if (!ip) return;
 
-  // 1. VERIFICAÇÃO DE ANTECEDENTES (LISTA NEGRA)
+  // 1. CHECAGEM DE LISTA NEGRA (IP MARCADO COMO RECUSADO)
   const { data: blacklist } = await supabase
     .from("votos")
     .select("status_aprovacao")
@@ -50,25 +51,24 @@ export async function runSilentAudit(supabase: any, voteId: string, clubName: st
     await supabase.from("votos").update({
       is_suspicious: true,
       status_aprovacao: "pendente",
-      motivo_suspicao: `LISTA NEGRA: IP com histórico de votos recusados.`
+      motivo_suspicao: "LISTA NEGRA: IP com histórico de fraude."
     }).eq("id", voteId);
     return;
   }
 
-  // 2. VERIFICAÇÃO DE REINCIDÊNCIA (VOTAÇÃO EM MASSA)
-  const { data: duplicates } = await supabase
+  // 2. CHECAGEM DE MULTI-VOTO (MESMO IP, OUTROS IDs)
+  // Conta votos existentes com este IP que não sejam o atual
+  const { count, error } = await supabase
     .from("votos")
-    .select("id")
+    .select("id", { count: 'exact', head: true })
     .eq("ip_address", ip)
-    .neq("id", voteId)
-    .neq("status_aprovacao", "ficticio")
-    .limit(1);
+    .neq("id", voteId);
 
-  if (duplicates && duplicates.length > 0) {
+  if (!error && count && count > 0) {
     await supabase.from("votos").update({
       is_suspicious: true,
       status_aprovacao: "pendente",
-      motivo_suspicao: `REINCIDÊNCIA: Votação em massa detectada no IP: ${ip}`
+      motivo_suspicao: `REINCIDÊNCIA: IP já registrou ${count} voto(s).`
     }).eq("id", voteId);
   }
 }
@@ -96,7 +96,7 @@ export async function getFullAddress(cep: string) {
 /**
  * [RODAPÉ TÉCNICO]
  * ARQUIVO: src/lib/vote-auditor.ts
- * VERSÃO: 8.6
- * - Adicionado export explícito de getFastIP para sanar erro de build.
- * - Mantida lógica de Ficha Suja para auditoria silenciosa.
+ * VERSÃO: 8.7
+ * - Implementada contagem exata por IP para evitar race conditions.
+ * - Prioridade absoluta para o campo status_aprovacao 'recusado'.
  */
