@@ -1,6 +1,6 @@
 /**
  * [CAMINHO]: src/pages/Voting.tsx
- * [STATUS]: PRODUÇÃO - VERSÃO 27.0 (INTEGRAÇÃO COM AUDITORIA RADICAL)
+ * [STATUS]: PRODUÇÃO - VERSÃO 28.0 (GEOLOCALIZAÇÃO HÍBRIDA ATIVA)
  */
 
 import { useState, useEffect, useCallback, useRef } from "react";
@@ -52,6 +52,20 @@ const Voting = () => {
   const heartReqId = useRef(0);
   const sympathyReqId = useRef(0);
 
+  /* ═══════════════════════════════════════════════════════
+      🌐 MÓDULO: GEOLOCALIZAÇÃO
+     ═══════════════════════════════════════════════════════ */
+  const getCoordinates = (): Promise<{ lat: number | null; lng: number | null }> => {
+    return new Promise((resolve) => {
+      if (!navigator.geolocation) return resolve({ lat: null, lng: null });
+      navigator.geolocation.getCurrentPosition(
+        (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+        () => resolve({ lat: null, lng: null }),
+        { timeout: 5000 }
+      );
+    });
+  };
+
   const performSearch = useCallback(
     async (query: string, setterResults: any, setterOpen: any, setterLoading: any, reqRef: React.MutableRefObject<number>) => {
       const term = query.trim();
@@ -101,7 +115,12 @@ const Voting = () => {
         await supabase.from("votos").delete().eq("user_id", user.id);
       }
 
-      const [ip, fp] = await Promise.all([getFastIP(), getFingerprint()]);
+      // Captura de coordenadas em tempo real para o Mapa de Calor
+      const [ip, fp, coords] = await Promise.all([
+        getFastIP(), 
+        getFingerprint(),
+        getCoordinates()
+      ]);
 
       const mainVote: any = {
         user_id: user.id,
@@ -111,6 +130,8 @@ const Voting = () => {
         estado: profile?.estado || "",
         pais: profile?.pais || "BR",
         cep: profile?.cep || null,
+        latitude: coords.lat, // Injeção de precisão
+        longitude: coords.lng, // Injeção de precisão
         ip_address: ip,
         fingerprint: fp,
         is_original_vote: true,
@@ -133,7 +154,7 @@ const Voting = () => {
       toast({ title: "Lealdade registrada com sucesso! 🏟️" });
       navigate("/dashboard");
 
-      // CHAMADA ATUALIZADA: Passando user.id e cep para o Auditor v10.0
+      // Auditoria v10.0
       runSilentAudit(
         supabase, 
         newVote.id, 
@@ -309,5 +330,5 @@ export default Voting;
 /**
  * [RODAPÉ TÉCNICO]
  * ARQUIVO: src/pages/Voting.tsx
- * VERSÃO: 27.0
+ * VERSÃO: 28.0 (GEOLOCALIZAÇÃO ATIVA)
  */
