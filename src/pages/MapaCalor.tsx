@@ -1,3 +1,14 @@
+/**
+ * [CAMINHO]: src/pages/MapaCalor.tsx
+ * [STATUS]: PRODUÇÃO - VERSÃO 4.0 (AUDITORIA UNIFICADA + PORTEIRO CEP)
+ * [CONTEXTO]: War Room Choropleth com polígonos reais.
+ * [MÓDULOS]: 
+ * 1. Helpers e Normalização Geográfica.
+ * 2. Geocoding e Cache (OSM/Overpass).
+ * 3. Porteiro do Mapa (Trava de Integridade por CEP).
+ * 4. Renderização Leaflet e GeoJSON.
+ */
+
 /* =====================================================================
 
  * MapaCalor.tsx — War Room Choropleth (Polígonos Reais)
@@ -2575,3 +2586,11 @@ const MapaCalor = () => {
 };
 
 export default MapaCalor;
+
+/**
+ * [RODAPÉ TÉCNICO]
+ * ARQUIVO: src/pages/MapaCalor.tsx
+ * VERSÃO: 4.0
+ * - Integração completa com Auditor Único e Trava de CEP.
+ * - Estética War Room mantida (CartoDB DarkMatter).
+ */

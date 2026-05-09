@@ -62,17 +62,34 @@ export async function getPostalData(cep: string) {
 
 // --- MÓDULO 5: AUDITORIA HISTÓRICA (A SEQUÊNCIA QUE O MODERADOR VÊ) ---
 export async function auditRealVote(supabase: any, clubName: string, identity: VoteIdentity) {
+  // Proteção: Se não tiver IP nem Fingerprint, não busca duplicidade para não travar
+  if (!identity.fingerprint && !identity.ip_address) return { isSuspicious: false, history: [] };
+
   // Busca votos anteriores do mesmo clube vindos do mesmo IP ou Aparelho
   const { data: history } = await supabase
     .from("votos")
     .select("id, created_at, email")
     .eq("clube_nome", clubName)
-    .neq("status_integridade", "ficticio") // ISOLA TOTALMENTE OS FICTÍCIOS
+    // Garante que ignore os votos de teste/fictícios na auditoria real
+    .neq("status_aprovacao", "ficticio") 
     .or(`fingerprint.eq.${identity.fingerprint},ip_address.eq.${identity.ip_address}`)
     .order('created_at', { ascending: false });
 
   return {
     isSuspicious: history && history.length > 0,
     history: history || []
+  };
+}
+
+// --- MÓDULO 6: ENRIQUECIMENTO DE ENDEREÇO AUTÔNOMO ---
+export async function getFullAddress(cep: string) {
+  const data = await getPostalData(cep);
+  if (!data || data.erro) return null;
+  
+  return {
+    bairro: data.bairro || "Não informado",
+    cidade: data.localidade,
+    estado: data.uf,
+    logradouro: data.logradouro
   };
 }
