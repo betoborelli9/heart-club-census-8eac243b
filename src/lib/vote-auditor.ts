@@ -1,85 +1,54 @@
 /**
  * [CAMINHO]: src/lib/vote-auditor.ts
- * [STATUS]: PRODUÇÃO - VERSÃO 7.0 (BLINDAGEM TOTAL)
- * [OBJETIVO]: Impedir votação em massa no mesmo local/dispositivo.
+ * [STATUS]: PRODUÇÃO - VERSÃO 8.5 (BLACKLIST PERSISTENTE)
+ * [OBJETIVO]: Manter o rastro do fraudador sem computar o voto no Censo.
  */
 
-import FingerprintJS from "@fingerprintjs/fingerprintjs";
-
 /* ═══════════════════════════════════════════════════════════
-    MÓDULO 1: DNA DO HARDWARE (MAIS RIGOROSO)
-   ═══════════════════════════════════════════════════════════ */
-export async function getFingerprint(): Promise<string> {
-  try {
-    const fp = await FingerprintJS.load();
-    // Usamos o visitorId como base, mas ele precisa ser persistente
-    const result = await fp.get();
-    return result.visitorId;
-  } catch {
-    return "id-local-" + window.screen.width + window.screen.height;
-  }
-}
-
-/* ═══════════════════════════════════════════════════════════
-    MÓDULO 2: DNA DE REDE (A FONTE DA VERDADE)
-   ═══════════════════════════════════════════════════════════ */
-export async function getFastIP() {
-  try {
-    // Ipify é o mais estável para capturar o IP real do Wi-Fi
-    const res = await fetch("https://api.ipify.org?format=json");
-    const data = await res.json();
-    return data.ip || null;
-  } catch { return null; }
-}
-
-/* ═══════════════════════════════════════════════════════════
-    MÓDULO 3: AUDITORIA IMPLACÁVEL (DETECTOR DE MASSA)
+    MÓDULO 5: AUDITORIA DE ANTECEDENTES (LISTA NEGRA)
    ═══════════════════════════════════════════════════════════ */
 export async function runSilentAudit(supabase: any, voteId: string, clubName: string, ip: string | null, fp: string) {
-  if (!ip) return; // Sem IP não há auditoria de rede
+  if (!ip) return;
 
-  // BUSCA QUALQUER VOTO REAL COM O MESMO IP (Independente do Fingerprint)
+  // 1. BUSCA POR ANTECEDENTES (Votos que você já recusou no passado)
+  const { data: blacklist } = await supabase
+    .from("votos")
+    .select("id, motivo_suspicao")
+    .eq("ip_address", ip)
+    .eq("status_aprovacao", "recusado") // AQUI ESTÁ A CHAVE: Ele não foi deletado!
+    .limit(1);
+
+  if (blacklist && blacklist.length > 0) {
+    // Se o IP está na lista negra, o voto novo já nasce marcado
+    await supabase.from("votos").update({
+      is_suspicious: true,
+      status_aprovacao: "pendente", // Fica travado para você ver
+      motivo_suspicao: "IP BANIDO: Este torcedor possui histórico de fraudes recusadas."
+    }).eq("id", voteId);
+    return;
+  }
+
+  // 2. BUSCA POR REINCIDÊNCIA (Votos em massa no mesmo momento)
   const { data: duplicates } = await supabase
     .from("votos")
-    .select("id, email, created_at")
+    .select("id")
     .eq("ip_address", ip)
-    .neq("id", voteId) // Ignora o voto atual
+    .neq("id", voteId)
     .neq("status_aprovacao", "ficticio")
     .limit(1);
 
   if (duplicates && duplicates.length > 0) {
-    // Se achou alguém no mesmo IP, marca como SUSPEITO na hora
     await supabase.from("votos").update({
       is_suspicious: true,
       status_aprovacao: "pendente",
-      motivo_suspicao: `Votação em massa detectada no IP: ${ip}`
+      motivo_suspicao: `ALERTA: Múltiplos votos detectados no IP: ${ip}`
     }).eq("id", voteId);
-    
-    console.log(`[AUDITORIA]: Voto ${voteId} marcado como suspeito por IP repetido.`);
   }
-}
-
-/* ═══════════════════════════════════════════════════════════
-    MÓDULO 4: ENRIQUECIMENTO POSTAL
-   ═══════════════════════════════════════════════════════════ */
-export async function getFullAddress(cep: string) {
-  const cleanCep = cep.replace(/\D/g, "");
-  try {
-    const res = await fetch(`https://viacep.com.br/ws/${cleanCep}/json/`);
-    const data = await res.json();
-    if (data.erro) return null;
-    return {
-      bairro: data.bairro || "Não informado",
-      cidade: data.localidade,
-      estado: data.uf
-    };
-  } catch { return null; }
 }
 
 /**
  * [RODAPÉ TÉCNICO]
  * ARQUIVO: src/lib/vote-auditor.ts
- * VERSÃO: 7.0
- * - Prioridade absoluta ao IP para detecção de fraude em Wi-Fi compartilhado.
- * - Descarte de filtros que tornavam a busca "gentil" demais.
+ * - O status 'recusado' impede que o voto some no RPC 'get_heatmap_data'.
+ * - O rastro permanece para consulta do Master Admin.
  */
