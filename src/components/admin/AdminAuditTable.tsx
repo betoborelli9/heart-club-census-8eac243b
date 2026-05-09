@@ -1,8 +1,8 @@
 /**
  * ═══════════════════════════════════════════════════════════════
  * 📁 CAMINHO: src/components/admin/AdminAuditTable.tsx
- * 🧠 MÓDULO: CENTRAL DE AUDITORIA E CONTROLE DE FRAUDES
- * 🔥 STATUS: PRODUÇÃO — VERSÃO 10.7 (ESTRUTURA MESTRE)
+ * 🧠 MÓDULO: PAINEL GLOBAL DE AUDITORIA ANTIFRAUDE (MASTER)
+ * 🔥 STATUS: PRODUÇÃO — VERSÃO 10.9 (FULL SYNC RECOVERY)
  * ═══════════════════════════════════════════════════════════════
  */
 
@@ -16,7 +16,7 @@ import { Trash2, RefreshCw, Check, Heart, XOctagon, MapPin } from "lucide-react"
 import { useToast } from "@/hooks/use-toast";
 
 /* ═══════════════════════════════════════════════════════════
-    🧩 MÓDULO 1: TIPAGEM E INTERFACES
+    🧩 MÓDULO 1: INTERFACES (Sincronizadas com o SQL Rodado)
    ═══════════════════════════════════════════════════════════ */
 interface VoteRow {
   voto_id: string;
@@ -44,26 +44,37 @@ const AdminAuditTable = () => {
   const [sympathyCache, setSympathyCache] = useState<Record<string, string[]>>({});
   const { toast } = useToast();
 
+  /* ═══════════════════════════════════════════════════════
+      🔄 MÓDULO 2.1: BUSCA DE DADOS
+     ═══════════════════════════════════════════════════════ */
   const fetchVotes = async () => {
     setLoading(true);
     const { data, error } = await supabase.rpc("admin_get_votes_with_tracking");
-    if (!error) {
-      setVotes((data as unknown as VoteRow[]) || []);
+    
+    if (error) {
+      console.error("[RPC SYNC ERROR]:", error);
+      toast({ 
+        title: "Erro na Auditoria", 
+        description: "Aguardando sincronia do banco de dados...", 
+        variant: "destructive" 
+      });
     } else {
-      console.error("[RPC ERROR]:", error);
-      toast({ title: "Erro na Auditoria", description: "Verifique a função SQL.", variant: "destructive" });
+      setVotes((data as unknown as VoteRow[]) || []);
     }
     setLoading(false);
   };
 
   useEffect(() => { fetchVotes(); }, []);
 
+  /* ═══════════════════════════════════════════════════════
+      ⚡ MÓDULO 2.2: OPERAÇÕES ADMINISTRATIVAS
+     ═══════════════════════════════════════════════════════ */
   const handleApprove = async (id: string) => {
     setActingId(id);
     const { error } = await supabase.rpc("admin_approve_vote", { p_voto_id: id });
     if (!error) {
       setVotes(prev => prev.map(v => v.voto_id === id ? { ...v, status_aprovacao: 'aprovado', is_suspicious: false } : v));
-      toast({ title: "Voto Aprovado!" });
+      toast({ title: "Voto aprovado com sucesso." });
     }
     setActingId(null);
   };
@@ -73,22 +84,22 @@ const AdminAuditTable = () => {
     const { error } = await supabase.from("votos").update({ 
       status_aprovacao: "recusado", 
       is_suspicious: true, 
-      motivo_suspicao: "Fraude manual confirmada." 
+      motivo_suspicao: "Recusado pelo Moderador (Manual)." 
     }).eq("id", id);
     if (!error) {
       setVotes(prev => prev.map(v => v.voto_id === id ? { ...v, status_aprovacao: 'recusado', is_suspicious: true } : v));
-      toast({ title: "Voto Recusado!" });
+      toast({ title: "Voto enviado para lista negra." });
     }
     setActingId(null);
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Deletar permanentemente?")) return;
+    if (!confirm("Deletar permanentemente este rastro?")) return;
     setActingId(id);
     const { error } = await supabase.rpc("admin_delete_vote", { p_voto_id: id });
     if (!error) {
       setVotes(prev => prev.filter(v => v.voto_id !== id));
-      toast({ title: "Removido." });
+      toast({ title: "Registro removido." });
     }
     setActingId(null);
   };
@@ -104,9 +115,12 @@ const AdminAuditTable = () => {
     setOpenSympathyId(votoId);
   };
 
+  /* ═══════════════════════════════════════════════════════
+      🎨 MÓDULO 3: RENDERIZAÇÃO DE INTERFACE
+     ═══════════════════════════════════════════════════════ */
   return (
     <div className="space-y-6">
-      <Button onClick={fetchVotes} variant="outline" size="sm" disabled={loading} className="font-black italic uppercase">
+      <Button onClick={fetchVotes} variant="outline" size="sm" disabled={loading} className="font-black italic uppercase tracking-tighter">
         <RefreshCw className={`mr-2 h-4 w-4 ${loading ? "animate-spin" : ""}`} /> Atualizar Base
       </Button>
 
@@ -129,15 +143,15 @@ const AdminAuditTable = () => {
 
               return (
                 <Fragment key={v.voto_id}>
-                  <TableRow className={`border-border transition-all ${isSuspicious ? "bg-red-500/5 animate-pulse" : ""}`}>
+                  <TableRow className={`border-border transition-all ${isSuspicious ? "bg-red-600/5 animate-pulse shadow-[inset_0_0_15px_rgba(255,0,0,0.1)]" : ""}`}>
                     <TableCell>
                       <div className="flex flex-col gap-1">
                         {isRejected ? <Badge className="bg-red-600 font-black italic">RECUSADO</Badge> :
                          isApproved ? <Badge className="bg-green-600 font-black italic">APROVADO</Badge> :
                          isSuspicious ? (
                            <>
-                             <Badge className="bg-red-500 animate-pulse font-black text-white shadow-[0_0_10px_rgba(255,0,0,0.3)] italic">SUSPEITO</Badge>
-                             <span className="text-[7px] text-red-400 font-black uppercase leading-none">{v.motivo_suspicao}</span>
+                             <Badge className="bg-red-500 animate-pulse font-black text-white shadow-[0_0_10px_rgba(255,0,0,0.4)] italic">SUSPEITO</Badge>
+                             <span className="text-[7px] text-red-400 font-black uppercase leading-none tracking-tight">{v.motivo_suspicao}</span>
                            </>
                          ) : <Badge className="bg-green-600 font-black italic">OK</Badge>}
                       </div>
@@ -160,13 +174,13 @@ const AdminAuditTable = () => {
                         <Button size="sm" variant="outline" className="h-8 w-8 p-0" onClick={() => handleToggleSympathy(v.voto_id)}><Heart className="w-3.5 h-3.5" /></Button>
                         <Button size="sm" variant="outline" className="h-8 w-8 p-0 border-green-600 text-green-500 hover:bg-green-600/10" disabled={actingId === v.voto_id || isApproved} onClick={() => handleApprove(v.voto_id)}><Check className="w-4 h-4" /></Button>
                         <Button size="sm" variant="outline" className="h-8 w-8 p-0 border-red-600 text-red-500 hover:bg-red-600/10" disabled={actingId === v.voto_id || isRejected} onClick={() => handleReject(v.voto_id)}><XOctagon className="w-4 h-4" /></Button>
-                        <Button size="sm" variant="outline" className="h-8 w-8 p-0 border-destructive text-destructive" disabled={actingId === v.voto_id} onClick={() => handleDelete(v.voto_id)}><Trash2 className="w-3.5 h-3.5" /></Button>
+                        <Button size="sm" variant="outline" className="h-8 w-8 p-0 border-destructive text-destructive hover:bg-destructive/10" disabled={actingId === v.voto_id} onClick={() => handleDelete(v.voto_id)}><Trash2 className="w-3.5 h-3.5" /></Button>
                       </div>
                     </TableCell>
                   </TableRow>
                   {openSympathyId === v.voto_id && (
-                    <TableRow className="bg-primary/5">
-                      <TableCell colSpan={5} className="px-4 py-2 text-[10px] italic text-primary font-black uppercase text-center">
+                    <TableRow className="bg-primary/5 animate-in slide-in-from-top-1 duration-200">
+                      <TableCell colSpan={5} className="px-4 py-2 text-[10px] italic text-primary font-black uppercase text-center tracking-tighter">
                         Simpatias: {sympathyCache[v.voto_id]?.join(", ") || "Nenhuma Registrada"}
                       </TableCell>
                     </TableRow>
@@ -187,8 +201,9 @@ export default AdminAuditTable;
  * ═══════════════════════════════════════════════════════════════
  * 📌 RODAPÉ TÉCNICO | HEART CLUB INTELLIGENCE
  * ═══════════════════════════════════════════════════════════════
- * VERSÃO: 10.7 (ESTRUTURA MESTRE)
- * MÓDULO: AdminAuditTable (Painel de Auditoria Antifraude)
- * COMPATIBILIDADE: admin_get_votes_with_tracking
+ * VERSÃO: 10.9 (FULL SYNC RECOVERY)
+ * MÓDULO: AdminAuditTable (Auditoria Antifraude)
+ * STATUS: SINCRONIZADO COM SQL RPC 
+ * RESPONSÁVEL: Borelli Defense System
  * ═══════════════════════════════════════════════════════════════
  */
