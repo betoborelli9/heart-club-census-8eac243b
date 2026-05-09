@@ -1,32 +1,30 @@
 /**
- * ═══════════════════════════════════════════════════════════════
+ * ═══════════════════════════════════════════════════════════════════════
  * 📁 CAMINHO: src/lib/vote-auditor.ts
- * 🧠 MÓDULO: MOTOR DE AUDITORIA ANTIFRAUDE GLOBAL
- * 🔥 STATUS: PRODUÇÃO — VERSÃO 10.0 (BORELLI DEFENSE SYSTEM)
+ * 🧠 MÓDULO: AUDITORIA RADICAL DE VOTOS
+ * 🔥 STATUS: PRODUÇÃO — VERSÃO 10.5 (ANTI-FRAUDE REAL)
  *
  * OBJETIVO:
- * Sistema inteligente de auditoria antifraude do Heart Club.
- *
- * RESPONSABILIDADES:
- * - Detectar votos suspeitos
+ * - Detectar múltiplos votos pelo mesmo IP
+ * - Detectar múltiplos votos pelo mesmo dispositivo
  * - Gerar score de fraude
- * - Identificar duplicidades
- * - Detectar comportamento anormal
- * - Preservar votos legítimos
- * - Alimentar o painel administrativo
+ * - Marcar automaticamente como SUSPEITO
+ * - Alimentar o painel ADMIN em tempo real
  *
- * ESTRATÉGIA:
- * O sistema NÃO condena automaticamente.
- * Ele apenas marca padrões suspeitos
- * para análise administrativa.
- * ═══════════════════════════════════════════════════════════════
+ * REGRAS:
+ * ✅ Mesmo IP = SUSPEITO
+ * ✅ Mesmo Fingerprint = SUSPEITO
+ * ✅ IP + Fingerprint = SCORE MAIS ALTO
+ * ✅ Auditoria silenciosa
+ * ✅ Compatível com Supabase RPC
+ * ═══════════════════════════════════════════════════════════════════════
  */
 
 import FingerprintJS from "@fingerprintjs/fingerprintjs";
 
-/* ═══════════════════════════════════════════════════════════
-    🧩 MÓDULO 1 — IDENTIDADE DIGITAL
-   ═══════════════════════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════════════════════════════
+   MÓDULO 1: IDENTIDADE DIGITAL
+   ═══════════════════════════════════════════════════════════════════════ */
 
 export async function getFingerprint(): Promise<string> {
   try {
@@ -35,14 +33,16 @@ export async function getFingerprint(): Promise<string> {
     const result = await fp.get();
 
     return result.visitorId;
-  } catch {
-    return "fp-fallback-" + Math.random().toString(36).substring(2, 12);
+  } catch (err) {
+    console.error("[FINGERPRINT ERROR]", err);
+
+    return "fingerprint-fallback-" + Math.random().toString(36).substring(2);
   }
 }
 
-/* ═══════════════════════════════════════════════════════════
-    🌐 MÓDULO 2 — CAPTURA DE IP
-   ═══════════════════════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════════════════════════════
+   MÓDULO 2: CAPTURA DE IP
+   ═══════════════════════════════════════════════════════════════════════ */
 
 export async function getFastIP(): Promise<string | null> {
   try {
@@ -51,252 +51,223 @@ export async function getFastIP(): Promise<string | null> {
     const data = await res.json();
 
     return data.ip || null;
-  } catch {
+  } catch (err) {
+    console.error("[IP ERROR]", err);
+
     return null;
   }
 }
 
-/* ═══════════════════════════════════════════════════════════
-    📍 MÓDULO 3 — ENDEREÇO VIA CEP
-   ═══════════════════════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════════════════════════════
+   MÓDULO 3: GEOLOCALIZAÇÃO VIA CEP
+   ═══════════════════════════════════════════════════════════════════════ */
 
 export async function getFullAddress(cep: string) {
-  const cleanCep = cep.replace(/\D/g, "");
-
   try {
+    const cleanCep = cep.replace(/\D/g, "");
+
     const res = await fetch(`https://viacep.com.br/ws/${cleanCep}/json/`);
 
     const data = await res.json();
 
-    if (data.erro) return null;
+    if (data.erro) {
+      return null;
+    }
 
     return {
       bairro: data.bairro || "Não informado",
       cidade: data.localidade || "Não informado",
       estado: data.uf || "Não informado",
     };
-  } catch {
+  } catch (err) {
+    console.error("[CEP ERROR]", err);
+
     return null;
   }
 }
 
-/* ═══════════════════════════════════════════════════════════
-    🧠 MÓDULO 4 — ENGINE DE SCORE
-   ═══════════════════════════════════════════════════════════ */
-
-type FraudAnalysis = {
-  score: number;
-  flags: string[];
-  suspicious: boolean;
-};
-
-function buildFraudResult(score: number, flags: string[]): FraudAnalysis {
-  return {
-    score,
-    flags,
-    suspicious: score >= 30,
-  };
-}
-
-/* ═══════════════════════════════════════════════════════════
-    🔥 MÓDULO 5 — AUDITORIA PRINCIPAL
-   ═══════════════════════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════════════════════════════
+   MÓDULO 4: ENGINE DE AUDITORIA RADICAL
+   ═══════════════════════════════════════════════════════════════════════ */
 
 export async function runSilentAudit(
   supabase: any,
   voteId: string,
   clubName: string,
   ip: string | null,
-  fingerprint: string,
-  cep?: string | null,
-  bairro?: string | null,
-  cidade?: string | null,
-  estado?: string | null,
+  fingerprint: string | null
 ) {
   try {
-    let fraudScore = 0;
+    console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    console.log("[AUDITORIA INICIADA]");
+    console.log("Vote ID:", voteId);
+    console.log("Clube:", clubName);
+    console.log("IP:", ip);
+    console.log("Fingerprint:", fingerprint);
+    console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
 
-    const flags: string[] = [];
+    /* =========================================
+       BUSCA DUPLICIDADE POR IP
+       ========================================= */
 
-    /* ======================================================
-       🔍 BUSCA DUPLICIDADE POR IP
-    ====================================================== */
+    let ipDuplicates: any[] = [];
 
     if (ip) {
-      const { data: ipDuplicates } = await supabase
+      const { data } = await supabase
         .from("votos")
-        .select("id")
+        .select(`
+          id,
+          user_email,
+          ip_address,
+          fingerprint,
+          created_at
+        `)
         .eq("ip_address", ip)
         .neq("id", voteId);
 
-      const totalIpDuplicates = ipDuplicates?.length || 0;
-
-      if (totalIpDuplicates >= 1) {
-        fraudScore += 25;
-
-        flags.push(`IP repetido (${totalIpDuplicates})`);
-      }
-
-      if (totalIpDuplicates >= 5) {
-        fraudScore += 20;
-
-        flags.push("Alta recorrência de IP");
-      }
+      ipDuplicates = data || [];
     }
 
-    /* ======================================================
-       🔍 BUSCA DUPLICIDADE POR FINGERPRINT
-    ====================================================== */
+    /* =========================================
+       BUSCA DUPLICIDADE POR FINGERPRINT
+       ========================================= */
+
+    let fingerprintDuplicates: any[] = [];
 
     if (fingerprint) {
-      const { data: fpDuplicates } = await supabase
+      const { data } = await supabase
         .from("votos")
-        .select("id")
+        .select(`
+          id,
+          user_email,
+          ip_address,
+          fingerprint,
+          created_at
+        `)
         .eq("fingerprint", fingerprint)
         .neq("id", voteId);
 
-      const totalFpDuplicates = fpDuplicates?.length || 0;
-
-      if (totalFpDuplicates >= 1) {
-        fraudScore += 60;
-
-        flags.push(`Fingerprint repetido (${totalFpDuplicates})`);
-      }
-
-      if (totalFpDuplicates >= 3) {
-        fraudScore += 40;
-
-        flags.push("Fingerprint altamente reincidente");
-      }
+      fingerprintDuplicates = data || [];
     }
 
-    /* ======================================================
-       🔍 DUPLICIDADE POR CEP
-    ====================================================== */
+    /* =========================================
+       PROCESSAMENTO DE SCORE
+       ========================================= */
 
-    if (cep) {
-      const { data: cepDuplicates } = await supabase
-        .from("votos")
-        .select("id")
-        .eq("cep", cep)
-        .neq("id", voteId);
+    const totalIp = ipDuplicates.length;
 
-      const totalCepDuplicates = cepDuplicates?.length || 0;
+    const totalFingerprint = fingerprintDuplicates.length;
 
-      if (totalCepDuplicates >= 3) {
-        fraudScore += 10;
+    let fraudScore = 0;
 
-        flags.push("CEP recorrente");
-      }
+    const motivos: string[] = [];
+
+    /* =========================================
+       SCORE POR IP
+       ========================================= */
+
+    if (totalIp >= 1) {
+      fraudScore += 60;
+
+      motivos.push(
+        `${totalIp} voto(s) encontrado(s) no mesmo IP`
+      );
     }
 
-    /* ======================================================
-       🔍 DUPLICIDADE POR BAIRRO
-    ====================================================== */
+    /* =========================================
+       SCORE POR FINGERPRINT
+       ========================================= */
 
-    if (bairro) {
-      const { data: bairroDuplicates } = await supabase
-        .from("votos")
-        .select("id")
-        .eq("bairro", bairro)
-        .neq("id", voteId);
+    if (totalFingerprint >= 1) {
+      fraudScore += 80;
 
-      const totalBairroDuplicates = bairroDuplicates?.length || 0;
-
-      if (totalBairroDuplicates >= 10) {
-        fraudScore += 10;
-
-        flags.push("Alta atividade regional");
-      }
+      motivos.push(
+        `${totalFingerprint} dispositivo(s) repetido(s)`
+      );
     }
 
-    /* ======================================================
-       🔍 DETECÇÃO TEMPORAL
-    ====================================================== */
+    /* =========================================
+       SCORE MÁXIMO
+       ========================================= */
 
-    const last5Minutes = new Date(Date.now() - 5 * 60 * 1000).toISOString();
-
-    const { data: recentVotes } = await supabase
-      .from("votos")
-      .select("id")
-      .gte("created_at", last5Minutes);
-
-    const recentCount = recentVotes?.length || 0;
-
-    if (recentCount >= 20) {
-      fraudScore += 20;
-
-      flags.push("Explosão anormal de votos");
+    if (fraudScore > 100) {
+      fraudScore = 100;
     }
 
-    /* ======================================================
-       🔍 SCORE FINAL
-    ====================================================== */
+    /* =========================================
+       DEFINE STATUS
+       ========================================= */
 
-    const result = buildFraudResult(fraudScore, flags);
+    const isSuspicious = fraudScore >= 60;
 
-    let approvalStatus = "aprovado";
+    const motivoFinal =
+      motivos.length > 0
+        ? motivos.join(" + ")
+        : null;
 
-    if (result.score >= 30) {
-      approvalStatus = "pendente";
-    }
+    console.log("Fraud Score:", fraudScore);
+    console.log("Suspeito:", isSuspicious);
+    console.log("Motivo:", motivoFinal);
 
-    if (result.score >= 80) {
-      approvalStatus = "recusado";
-    }
+    /* =========================================
+       UPDATE FINAL NO BANCO
+       ========================================= */
 
-    /* ======================================================
-       💾 PERSISTÊNCIA
-    ====================================================== */
-
-    await supabase
+    const { error } = await supabase
       .from("votos")
       .update({
-        fraud_score: result.score,
-        fraud_flags: result.flags,
-        is_suspicious: result.suspicious,
-        status_aprovacao: approvalStatus,
-        motivo_suspicao:
-          result.flags.length > 0
-            ? result.flags.join(" • ")
-            : null,
+        is_suspicious: isSuspicious,
+        fraud_score: fraudScore,
+        motivo_suspicao: motivoFinal,
+        status_aprovacao: isSuspicious
+          ? "pendente"
+          : "aprovado",
       })
       .eq("id", voteId);
 
-    console.log(
-      `[HEART-AUDIT] Vote ${voteId} | Score: ${result.score} | Flags: ${result.flags.join(", ")}`,
-    );
+    if (error) {
+      console.error("[SUPABASE UPDATE ERROR]", error);
+    }
+
+    console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    console.log("[AUDITORIA FINALIZADA]");
+    console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
   } catch (err) {
-    console.error("[HEART-AUDIT] Erro na auditoria:", err);
+    console.error("[AUDITORIA ERROR]", err);
   }
 }
 
 /**
- * ═══════════════════════════════════════════════════════════════
+ * ═══════════════════════════════════════════════════════════════════════
  * 📌 RODAPÉ TÉCNICO
- * ═══════════════════════════════════════════════════════════════
+ * ═══════════════════════════════════════════════════════════════════════
  *
- * SISTEMA IMPLEMENTADO:
+ * MELHORIAS IMPLEMENTADAS:
  *
- * ✅ Score de fraude
- * ✅ Flags inteligentes
- * ✅ Auditoria geográfica
- * ✅ Auditoria temporal
- * ✅ Detecção de fingerprint
- * ✅ Detecção de IP repetido
- * ✅ Estrutura modular escalável
- * ✅ Compatível com Dashboard Admin
+ * ✅ Auditoria real por IP
+ * ✅ Auditoria real por dispositivo
+ * ✅ Fraud Score dinâmico
+ * ✅ Detecção automática
+ * ✅ Compatível com AdminAuditTable
+ * ✅ Compatível com Supabase
+ * ✅ Logs completos
+ * ✅ Sistema escalável
  *
- * PRÓXIMAS EVOLUÇÕES:
+ * EXEMPLOS:
  *
- * 🔥 VPN Detection
- * 🔥 Proxy Detection
- * 🔥 IA comportamental
- * 🔥 Heatmap antifraude
- * 🔥 Risk Score visual
- * 🔥 Sistema de quarentena
+ * 1 voto no mesmo IP
+ * → 60%
  *
- * 🧠 Heart Club Anti-Fraud Engine
- * 🔥 Borelli Defense Architecture
- * ═══════════════════════════════════════════════════════════════
+ * Mesmo Fingerprint
+ * → 80%
+ *
+ * IP + Fingerprint
+ * → 100%
+ *
+ * STATUS:
+ * fraud_score >= 60
+ * → SUSPEITO
+ *
+ * 🔥 HEART CLUB — ANTI FRAUDE ENGINE
+ * ═══════════════════════════════════════════════════════════════════════
  */
