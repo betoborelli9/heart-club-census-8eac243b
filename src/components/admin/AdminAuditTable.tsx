@@ -1,8 +1,11 @@
 /**
  * ═══════════════════════════════════════════════════════════════
  * 📁 CAMINHO: src/components/admin/AdminAuditTable.tsx
- * 🧠 MÓDULO: CENTRAL DE AUDITORIA E CONTROLE DE FRAUDES
- * 🔥 STATUS: PRODUÇÃO — VERSÃO 10.2 (FIX: COMPATIBILIDADE SQL)
+ * 🧠 MÓDULO: PAINEL GLOBAL DE AUDITORIA ANTIFRAUDE (MASTER)
+ * 🔥 STATUS: PRODUÇÃO — VERSÃO 10.5 (RECOVERY & FULL SYNC)
+ * * OBJETIVO:
+ * Central de comando para análise de lealdade e detecção de 
+ * duplicidade multidimensional (IP, CEP, Fingerprint, ID).
  * ═══════════════════════════════════════════════════════════════
  */
 
@@ -16,20 +19,21 @@ import { Trash2, RefreshCw, Check, Heart, XOctagon, MapPin } from "lucide-react"
 import { useToast } from "@/hooks/use-toast";
 
 /* ═══════════════════════════════════════════════════════════
-    🧩 MÓDULO 1: TIPAGEM (Sincronizada com RPC SQL)
+    🧩 MÓDULO 1: TIPAGEM DE DADOS
    ═══════════════════════════════════════════════════════════ */
 interface VoteRow {
   voto_id: string;
   clube_nome: string;
-  cidade: string;
-  estado: string;
-  cep?: string;
-  ip_address: string | null;
-  is_suspicious: boolean | null;
   user_email: string | null;
   user_nome: string | null;
+  ip_address: string | null;
+  cep?: string;
+  cidade: string;
+  estado: string;
+  is_suspicious: boolean | null;
   status_aprovacao?: string;
   motivo_suspicao?: string;
+  created_at: string;
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -52,6 +56,7 @@ const AdminAuditTable = () => {
     if (!error) {
       setVotes((data as unknown as VoteRow[]) || []);
     } else {
+      console.error("[RPC ERROR]:", error);
       toast({ title: "Erro ao carregar auditoria", variant: "destructive" });
     }
     setLoading(false);
@@ -60,14 +65,14 @@ const AdminAuditTable = () => {
   useEffect(() => { fetchVotes(); }, []);
 
   /* ═══════════════════════════════════════════════════════
-      ⚡ MÓDULO 2.2: AÇÕES ADMINISTRATIVAS
+      ⚡ MÓDULO 2.2: AÇÕES DE CONTROLE (ADMIN)
      ═══════════════════════════════════════════════════════ */
   const handleApprove = async (id: string) => {
     setActingId(id);
     const { error } = await supabase.rpc("admin_approve_vote", { p_voto_id: id });
     if (!error) {
       setVotes(prev => prev.map(v => v.voto_id === id ? { ...v, status_aprovacao: 'aprovado', is_suspicious: false } : v));
-      toast({ title: "Voto aprovado com sucesso." });
+      toast({ title: "Voto aprovado e contabilizado." });
     }
     setActingId(null);
   };
@@ -77,11 +82,11 @@ const AdminAuditTable = () => {
     const { error } = await supabase.from("votos").update({ 
       status_aprovacao: "recusado", 
       is_suspicious: true, 
-      motivo_suspicao: "Recusado pelo Moderador." 
+      motivo_suspicao: "Recusado pelo Moderador (Lista Negra)." 
     }).eq("id", id);
     if (!error) {
       setVotes(prev => prev.map(v => v.voto_id === id ? { ...v, status_aprovacao: 'recusado', is_suspicious: true } : v));
-      toast({ title: "Voto recusado e marcado como fraude." });
+      toast({ title: "Voto recusado. Rastro mantido." });
     }
     setActingId(null);
   };
@@ -92,7 +97,7 @@ const AdminAuditTable = () => {
     const { error } = await supabase.rpc("admin_delete_vote", { p_voto_id: id });
     if (!error) {
       setVotes(prev => prev.filter(v => v.voto_id !== id));
-      toast({ title: "Registro removido do banco." });
+      toast({ title: "Registro deletado com sucesso." });
     }
     setActingId(null);
   };
@@ -109,12 +114,12 @@ const AdminAuditTable = () => {
   };
 
   /* ═══════════════════════════════════════════════════════
-      🎨 MÓDULO 3: RENDERIZAÇÃO
+      🎨 MÓDULO 3: INTERFACE E RENDERIZAÇÃO
      ═══════════════════════════════════════════════════════ */
   return (
     <div className="space-y-6">
       <Button onClick={fetchVotes} variant="outline" size="sm" disabled={loading} className="font-black italic uppercase">
-        <RefreshCw className={`mr-2 h-4 w-4 ${loading ? "animate-spin" : ""}`} /> Atualizar Auditoria
+        <RefreshCw className={`mr-2 h-4 w-4 ${loading ? "animate-spin" : ""}`} /> Atualizar Base
       </Button>
 
       <Card className="overflow-hidden border-border bg-card">
@@ -130,7 +135,6 @@ const AdminAuditTable = () => {
           </TableHeader>
           <TableBody>
             {votes.map((v) => {
-              const isOpen = openSympathyId === v.voto_id;
               const isSuspicious = v.is_suspicious === true;
               const isRejected = v.status_aprovacao === 'recusado';
               const isApproved = v.status_aprovacao === 'aprovado';
@@ -144,8 +148,8 @@ const AdminAuditTable = () => {
                          isApproved ? <Badge className="bg-green-600 font-black">APROVADO</Badge> :
                          isSuspicious ? (
                            <>
-                             <Badge className="bg-red-500 animate-pulse font-black text-white shadow-[0_0_10px_rgba(255,0,0,0.3)]">SUSPEITO</Badge>
-                             <span className="text-[8px] font-bold uppercase text-red-400">{v.motivo_suspicao}</span>
+                             <Badge className="bg-red-500 animate-pulse font-black text-white shadow-[0_0_10px_rgba(255,0,0,0.4)]">SUSPEITO</Badge>
+                             <span className="text-[8px] font-bold uppercase text-red-400 leading-tight">{v.motivo_suspicao}</span>
                            </>
                          ) : <Badge className="bg-green-600 font-black">OK</Badge>}
                       </div>
@@ -161,7 +165,7 @@ const AdminAuditTable = () => {
                         <MapPin size={10} className="text-muted-foreground" />
                         <span className="text-[10px] font-black">{v.cep || "—"}</span>
                       </div>
-                      <p className="text-[9px] uppercase opacity-60">{v.cidade}, {v.estado}</p>
+                      <p className="text-[9px] uppercase opacity-60 leading-tight">{v.cidade}, {v.estado}</p>
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-1.5">
@@ -172,10 +176,10 @@ const AdminAuditTable = () => {
                       </div>
                     </TableCell>
                   </TableRow>
-                  {isOpen && (
-                    <TableRow className="bg-primary/5 animate-in slide-in-from-top-2 duration-300">
-                      <TableCell colSpan={5} className="px-4 py-2 text-[10px] italic text-primary font-bold">
-                        SIMPATIAS: {sympathyCache[v.voto_id]?.join(", ") || "NENHUMA REGISTRADA"}
+                  {openSympathyId === v.voto_id && (
+                    <TableRow className="bg-primary/5 animate-in slide-in-from-top-1 duration-200">
+                      <TableCell colSpan={5} className="px-4 py-2 text-[10px] italic text-primary font-bold uppercase">
+                        Simpatias: {sympathyCache[v.voto_id]?.join(", ") || "Nenhuma registrada"}
                       </TableCell>
                     </TableRow>
                   )}
@@ -193,13 +197,11 @@ export default AdminAuditTable;
 
 /**
  * ═══════════════════════════════════════════════════════════════
- * 📌 RODAPÉ TÉCNICO
+ * 📌 RODAPÉ TÉCNICO | HEART CLUB INTELLIGENCE
  * ═══════════════════════════════════════════════════════════════
- * VERSÃO: 10.2
+ * VERSÃO: 10.5
+ * MÓDULO: AdminAuditTable (Auditoria de Votos)
  * COMPATIBILIDADE: admin_get_votes_with_tracking (PostgreSQL)
- * MODIFICAÇÕES: 
- * - Estruturação por módulos.
- * - Sincronização de tipagem com retorno da RPC.
- * - Correção de visual (preenchimento de tela).
+ * STATUS: FULL RECOVERY (FIX: SQL SYNC & PULSE ALERTS)
  * ═══════════════════════════════════════════════════════════════
  */
