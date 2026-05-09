@@ -16,7 +16,7 @@ import { Trash2, RefreshCw, Check, Heart, XOctagon, MapPin } from "lucide-react"
 import { useToast } from "@/hooks/use-toast";
 
 /* ═══════════════════════════════════════════════════════════
-    🧩 MÓDULO 1: TIPAGEM (Sincronizada com RPC v11)
+    🧩 MÓDULO 1: TIPAGEM (Sincronizada com RPC v11.0)
    ═══════════════════════════════════════════════════════════ */
 interface VoteRow {
   voto_id: string;
@@ -24,17 +24,17 @@ interface VoteRow {
   user_email: string | null;
   user_nome: string | null;
   ip_address: string | null;
-  cep?: string;
+  cep: string | null;
   cidade: string;
   estado: string;
   is_suspicious: boolean | null;
-  status_aprovacao?: string;
-  motivo_suspicao?: string;
+  status_aprovacao: string | null;
+  motivo_suspicao: string | null;
   created_at: string;
 }
 
 /* ═══════════════════════════════════════════════════════════
-    🧠 MÓDULO 2: COMPONENTE PRINCIPAL
+    🧠 MÓDULO 2: COMPONENTE PRINCIPAL (Lógica & Handlers)
    ═══════════════════════════════════════════════════════════ */
 const AdminAuditTable = () => {
   const [votes, setVotes] = useState<VoteRow[]>([]);
@@ -44,14 +44,11 @@ const AdminAuditTable = () => {
   const [sympathyCache, setSympathyCache] = useState<Record<string, string[]>>({});
   const { toast } = useToast();
 
-  /* ═══════════════════════════════════════════════════════
-      🔄 MÓDULO 2.1: BUSCA DE DADOS
-     ═══════════════════════════════════════════════════════ */
+  /* 🔄 MÓDULO 2.1: BUSCA DE DADOS */
   const fetchVotes = async () => {
     setLoading(true);
     try {
       const { data, error } = await supabase.rpc("admin_get_votes_with_tracking");
-      
       if (error) {
         console.error("[RPC ERROR]:", error);
         toast({ title: "Erro na Auditoria", description: "Falha na conexão com o banco.", variant: "destructive" });
@@ -67,9 +64,7 @@ const AdminAuditTable = () => {
 
   useEffect(() => { fetchVotes(); }, []);
 
-  /* ═══════════════════════════════════════════════════════
-      ⚡ MÓDULO 2.2: AÇÕES ADMINISTRATIVAS
-     ═══════════════════════════════════════════════════════ */
+  /* ⚡ MÓDULO 2.2: AÇÕES ADMINISTRATIVAS */
   const handleApprove = async (id: string) => {
     setActingId(id);
     const { error } = await supabase.rpc("admin_approve_vote", { p_voto_id: id });
@@ -82,13 +77,13 @@ const AdminAuditTable = () => {
 
   const handleReject = async (id: string) => {
     setActingId(id);
-    const { error } = await supabase.from("votos").update({ 
-      status_aprovacao: "recusado", 
-      is_suspicious: true, 
-      motivo_suspicao: "Fraude manual detectada pelo Administrador." 
+    const { error } = await supabase.from("votos").update({
+      status_aprovacao: "recusado",
+      is_suspicious: true,
+      motivo_suspicao: "Fraude manual detectada pelo Administrador."
     }).eq("id", id);
     if (!error) {
-      setVotes(prev => prev.map(v => v.voto_id === id ? { ...v, status_aprovacao: 'recusado', is_suspicious: true } : v));
+      setVotes(prev => prev.map(v => v.voto_id === id ? { ...v, status_aprovacao: 'recusado', is_suspicious: true, motivo_suspicao: "Fraude manual detectada pelo Administrador." } : v));
       toast({ title: "Voto recusado. Alerta pulsante ativado." });
     }
     setActingId(null);
@@ -117,7 +112,7 @@ const AdminAuditTable = () => {
   };
 
   /* ═══════════════════════════════════════════════════════
-      🎨 MÓDULO 3: RENDERIZAÇÃO DE INTERFACE
+      🎨 MÓDULO 3: RENDERIZAÇÃO COM ANIMAÇÕES DE ALERTA
      ═══════════════════════════════════════════════════════ */
   return (
     <div className="space-y-6">
@@ -144,7 +139,7 @@ const AdminAuditTable = () => {
 
               return (
                 <Fragment key={v.voto_id}>
-                  <TableRow className={`border-border transition-all ${isSuspicious ? "bg-red-600/5 animate-pulse shadow-[inset_0_0_20px_rgba(255,0,0,0.1)]" : ""}`}>
+                  <TableRow className={`border-border transition-all ${isSuspicious ? "bg-red-500/5 animate-pulse shadow-[inset_0_0_20px_rgba(255,0,0,0.1)]" : ""}`}>
                     <TableCell>
                       <div className="flex flex-col gap-1">
                         {isRejected ? <Badge className="bg-red-600 font-black italic">RECUSADO</Badge> :
@@ -152,7 +147,7 @@ const AdminAuditTable = () => {
                          isSuspicious ? (
                            <>
                              <Badge className="bg-red-500 animate-pulse font-black text-white shadow-[0_0_10px_rgba(255,0,0,0.4)] italic">SUSPEITO</Badge>
-                             <span className="text-[8px] text-red-500 font-black uppercase leading-none">{v.motivo_suspicao}</span>
+                             <span className="text-[8px] text-red-500 font-bold uppercase leading-none">{v.motivo_suspicao}</span>
                            </>
                          ) : <Badge className="bg-green-600 font-black italic">OK</Badge>}
                       </div>
@@ -204,6 +199,7 @@ export default AdminAuditTable;
  * ═══════════════════════════════════════════════════════════════
  * VERSÃO: 11.0 (MASTER SYNC)
  * MÓDULO: AdminAuditTable (Auditoria Antifraude)
+ * COMPATIBILIDADE: PostgreSQL 15+ / Supabase RPC
  * STATUS: FULL RECOVERY — SINCRONIZADO
  * ═══════════════════════════════════════════════════════════════
  */
