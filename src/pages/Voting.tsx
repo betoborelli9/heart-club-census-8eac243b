@@ -1,7 +1,7 @@
 /**
  * [CAMINHO]: src/pages/Voting.tsx
- * [STATUS]: PRODUÇÃO - VERSÃO 21.0 (FIX: AUDITORIA RIGOROSA)
- * [CONTEXTO]: Integrando lógica sugerida para detecção real de fraude.
+ * [STATUS]: PRODUÇÃO - VERSÃO 22.0 (CENTRALIZAÇÃO EM VOTE-AUDITOR)
+ * [CONTEXTO]: Auditoria unificada de integridade (GPS, IP, ISP, Fingerprint).
  */
 
 import { useState, useEffect, useCallback, useRef } from "react";
@@ -16,9 +16,15 @@ import { searchClubsWithFallback, persistClubsIfMissing, ClubSearchResult } from
 import { ClubLogo } from "@/components/ClubLogo";
 import logo from "@/assets/logo.png";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import FingerprintJS from "@fingerprintjs/fingerprintjs";
-import { captureIpAudit } from "@/lib/address";
-import { detectDeviceModel } from "@/lib/device-detect";
+
+// IMPORTAÇÃO DO MÓDULO ÚNICO DE AUDITORIA
+import { 
+  getFingerprint, 
+  getNetworkData, 
+  getGpsCoords, 
+  auditRealVote,
+  VoteIdentity 
+} from "@/lib/vote-auditor";
 
 type ClubResult = ClubSearchResult;
 const MAX_SYMPATHY_CLUBS = 4;
@@ -46,28 +52,12 @@ const Voting = () => {
 
   const [showConfirm, setShowConfirm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [fingerprint, setFingerprint] = useState<string | null>(null);
 
   const heartReqId = useRef(0);
   const sympathyReqId = useRef(0);
 
-  useEffect(() => {
-    const initFP = async () => {
-      const fp = await FingerprintJS.load();
-      const result = await fp.get();
-      setFingerprint(result.visitorId);
-    };
-    initFP();
-  }, []);
-
   const performSearch = useCallback(
-    async (
-      query: string,
-      setterResults: any,
-      setterOpen: any,
-      setterLoading: any,
-      reqRef: React.MutableRefObject<number>,
-    ) => {
+    async (query: string, setterResults: any, setterOpen: any, setterLoading: any, reqRef: React.MutableRefObject<number>) => {
       const term = query.trim();
       if (term.length < 3) {
         setterResults([]);
@@ -92,24 +82,22 @@ const Voting = () => {
   );
 
   useEffect(() => {
-    const timer = setTimeout(
-      () => performSearch(heartSearch, setHeartResults, setHeartOpen, setHeartLoading, heartReqId),
-      300,
-    );
+    const timer = setTimeout(() => performSearch(heartSearch, setHeartResults, setHeartOpen, setHeartLoading, heartReqId), 300);
     return () => clearTimeout(timer);
   }, [heartSearch, performSearch]);
 
   useEffect(() => {
-    const timer = setTimeout(
-      () => performSearch(sympathySearch, setSympathyResults, setSympathyOpen, setSympathyLoading, sympathyReqId),
-      300,
-    );
+    const timer = setTimeout(() => performSearch(sympathySearch, setSympathyResults, setSympathyOpen, setSympathyLoading, sympathyReqId), 300);
     return () => clearTimeout(timer);
   }, [sympathySearch, performSearch]);
 
+  /* ═══════════════════════════════════════════════════════════
+      PROCESSAMENTO DO VOTO COM AUDITORIA UNIFICADA
+     ═══════════════════════════════════════════════════════════ */
   const handleConfirmVote = async () => {
     if (!heartClub || !user) return;
     setSubmitting(true);
+    
     try {
       const allSelected = [{ club: heartClub, main: true }, ...sympathyClubs.map((c) => ({ club: c, main: false }))];
 
@@ -122,32 +110,25 @@ const Voting = () => {
         await supabase.from("votos").delete().eq("user_id", user.id);
       }
 
-      const fpId = fingerprint || "web-client";
-      const ipAudit = await captureIpAudit().catch(() => null);
-      const callerIp = ipAudit?.ip || null;
+      // 1. CAPTURA DO DNA DIGITAL (Módulo Único)
+      const fp = await getFingerprint();
+      const net = await getNetworkData();
+      const gps = await getGpsCoords();
 
-      // --- LÓGICA DE AUDITORIA (CUIDADOSAMENTE REVISADA) ---
-      let isSuspicious = false;
-      let motivo: string | null = null;
+      const identity: VoteIdentity = {
+        fingerprint: fp,
+        ip_address: net.ip,
+        isp: net.isp,
+        lat: gps?.lat || null,
+        lng: gps?.lng || null,
+        bairro: null, // Será preenchido no AddressModal posteriormente
+        cep: null
+      };
 
-      // Monta a query de busca de fraude
-      let orFilter = `fingerprint.eq.${fpId}`;
-      if (callerIp) orFilter += `,ip_address.eq.${callerIp}`;
+      // 2. AUDITORIA DE REINCIDÊNCIA (Histórico Real)
+      const audit = await auditRealVote(supabase, heartClub.name, identity);
 
-      const { data: dup } = await supabase
-        .from("votos")
-        .select("id, email")
-        .eq("clube_nome", heartClub.name)
-        .or(orFilter)
-        .neq("email", user.email) // Crucial: Só é golpe se o e-mail for outro
-        .limit(1);
-
-      if (dup && dup.length > 0) {
-        isSuspicious = true;
-        motivo = "Mesmo IP/Dispositivo com e-mail diferente";
-      }
-
-      const mainVote = {
+      const mainVote: any = {
         user_id: user.id,
         email: user.email,
         clube_nome: heartClub.name,
@@ -155,41 +136,40 @@ const Voting = () => {
         estado: profile?.estado || "",
         pais: profile?.pais || "BR",
         is_original_vote: true,
-        fingerprint: fpId,
-        ip_address: callerIp,
-        status_aprovacao: isSuspicious ? "pendente" : "aprovado",
-        is_suspicious: isSuspicious,
-        motivo_suspicao: motivo,
+        fingerprint: identity.fingerprint,
+        ip_address: identity.ip_address,
+        isp: identity.isp,
+        voto_lat: identity.lat,
+        voto_lng: identity.lng,
+        status_aprovacao: audit.isSuspicious ? "pendente" : "aprovado",
+        is_suspicious: audit.isSuspicious,
+        motivo_suspicao: audit.isSuspicious ? "Reincidência detectada no mesmo local/dispositivo." : null,
         sympathy_1: sympathyClubs[0]?.name ?? null,
         sympathy_2: sympathyClubs[1]?.name ?? null,
         sympathy_3: sympathyClubs[2]?.name ?? null,
         sympathy_4: sympathyClubs[3]?.name ?? null,
-        voto_bairro_gps: ipAudit?.bairro ?? null,
-        voto_cidade_gps: ipAudit?.cidade ?? null,
-        voto_lat: ipAudit?.lat ?? null,
-        voto_lng: ipAudit?.lng ?? null,
       };
 
       const { error: voteError } = await supabase.from("votos").insert([mainVote]);
       if (voteError) throw voteError;
 
       toast({
-        title: isSuspicious ? "Voto registrado para auditoria 🔍" : "Lealdade registrada com sucesso! 🏟️",
-        description: isSuspicious ? "Detectamos múltiplos acessos. Sua entrada será revisada." : undefined,
+        title: audit.isSuspicious ? "Voto em análise de integridade 🔍" : "Lealdade registrada com sucesso! 🏟️",
+        description: audit.isSuspicious ? "Detectamos múltiplos acessos. Sua entrada será revisada." : undefined,
       });
 
       navigate("/dashboard");
 
+      // BACKGROUND: Persistência de clubes e atualização de perfil
       (async () => {
         try {
-          const device_model = await detectDeviceModel().catch(() => null);
-          await supabase.from("votos").update({ device_model }).eq("user_id", user.id).eq("clube_nome", heartClub.name);
           await persistClubsIfMissing(allSelected.map((v) => v.club));
           refreshProfile().catch(() => {});
         } catch (e) {
-          console.error("BG error", e);
+          console.error("BG sync error", e);
         }
       })();
+
     } catch (err) {
       console.error("[VOTING] erro:", err);
       toast({ variant: "destructive", title: "Erro ao processar votos" });
@@ -204,32 +184,21 @@ const Voting = () => {
     return (
       <div className="absolute top-full left-0 right-0 z-[1000] mt-2 rounded-2xl border border-white/10 max-h-[350px] overflow-y-auto bg-[#1A1A1A] shadow-2xl backdrop-blur-xl">
         {loading ? (
-          <div className="p-6 flex justify-center">
-            <Loader2 className="animate-spin text-primary" />
-          </div>
+          <div className="p-6 flex justify-center"><Loader2 className="animate-spin text-primary" /></div>
         ) : (
           results.map((club: ClubResult, i: number) => (
             <button
               key={i}
               type="button"
-              onMouseDown={(e) => {
-                e.preventDefault();
-                onSelect(club);
-              }}
+              onMouseDown={(e) => { e.preventDefault(); onSelect(club); }}
               className="w-full flex items-center gap-4 px-5 py-4 hover:bg-white/5 border-b border-white/5 last:border-0 text-left group transition-colors"
             >
               <ClubLogo src={club.logo} alt={club.name} size="md" />
               <div className="flex-1 min-w-0">
-                <p className="font-black italic text-base uppercase truncate group-hover:text-primary transition-colors">
-                  {club.name}
-                </p>
-                <p className="text-[10px] text-muted-foreground uppercase font-bold">
-                  {club.location || `${club.city}, ${club.country}`}
-                </p>
+                <p className="font-black italic text-base uppercase truncate group-hover:text-primary transition-colors">{club.name}</p>
+                <p className="text-[10px] text-muted-foreground uppercase font-bold">{club.location || `${club.city}, ${club.country}`}</p>
               </div>
-              <div className="text-[8px] font-black px-2 py-1 bg-primary/10 text-primary rounded uppercase italic">
-                {club.source}
-              </div>
+              <div className="text-[8px] font-black px-2 py-1 bg-primary/10 text-primary rounded uppercase italic">{club.source}</div>
             </button>
           ))
         )}
@@ -261,10 +230,7 @@ const Voting = () => {
                 <p className="font-black italic text-lg uppercase truncate tracking-tighter">{heartClub.name}</p>
                 <p className="text-[10px] text-muted-foreground uppercase">{heartClub.location}</p>
               </div>
-              <button
-                onClick={() => setHeartClub(null)}
-                className="p-2 opacity-40 hover:opacity-100 transition-opacity"
-              >
+              <button onClick={() => setHeartClub(null)} className="p-2 opacity-40 hover:opacity-100 transition-opacity">
                 <X size={20} />
               </button>
             </div>
@@ -293,9 +259,7 @@ const Voting = () => {
               <div key={idx} className="flex items-center gap-3 glass-card rounded-xl p-3 border border-white/5">
                 <ClubLogo src={club.logo} alt={club.name} size="sm" />
                 <p className="flex-1 text-sm font-bold italic truncate uppercase">{club.name}</p>
-                <button onClick={() => setSympathyClubs((p) => p.filter((_, i) => i !== idx))}>
-                  <X size={14} />
-                </button>
+                <button onClick={() => setSympathyClubs((p) => p.filter((_, i) => i !== idx))}><X size={14} /></button>
               </div>
             ))}
             {sympathyClubs.length < MAX_SYMPATHY_CLUBS && (
@@ -342,21 +306,10 @@ const Voting = () => {
             Você jura lealdade ao <strong className="text-primary not-italic uppercase">{heartClub?.name}</strong>?
           </p>
           <DialogFooter className="flex-col gap-2 mt-2">
-            <Button
-              className="w-full btn-orange-gradient h-14 font-black italic text-lg uppercase"
-              onClick={handleConfirmVote}
-              disabled={submitting}
-            >
+            <Button className="w-full btn-orange-gradient h-14 font-black italic text-lg uppercase" onClick={handleConfirmVote} disabled={submitting}>
               {submitting ? <Loader2 className="animate-spin" /> : "SIM, EU JURO!"}
             </Button>
-            <Button
-              variant="ghost"
-              className="w-full text-xs opacity-50 font-bold italic"
-              onClick={() => setShowConfirm(false)}
-              disabled={submitting}
-            >
-              VOLTAR
-            </Button>
+            <Button variant="ghost" className="w-full text-xs opacity-50 font-bold italic" onClick={() => setShowConfirm(false)} disabled={submitting}>VOLTAR</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
