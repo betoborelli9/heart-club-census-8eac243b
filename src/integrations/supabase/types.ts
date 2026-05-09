@@ -806,6 +806,7 @@ export type Database = {
           clube_nome: string
           created_at: string
           estado: string
+          fraud_score: number
           ip_address: string
           is_suspicious: boolean
           motivo_suspicao: string
