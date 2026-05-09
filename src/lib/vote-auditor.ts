@@ -1,6 +1,7 @@
 /**
  * [CAMINHO]: src/lib/vote-auditor.ts
- * [STATUS]: PRODUÇÃO - VERSÃO 9.6 (FIX EXPORT + GEO INTELLIGENCE)
+ * [STATUS]: PRODUÇÃO - VERSÃO 9.7 (BUILD FIX TOTAL)
+ * [OBJETIVO]: Exportar todas as funções necessárias para Voting.tsx e AddressModal.tsx.
  */
 
 import FingerprintJS from "@fingerprintjs/fingerprintjs";
@@ -19,7 +20,6 @@ export async function getFingerprint(): Promise<string> {
   }
 }
 
-// GARANTIA DE EXPORT PARA O Vercel Build
 export async function getFastIP() {
   try {
     const res = await fetch("https://api.ipify.org?format=json");
@@ -31,7 +31,27 @@ export async function getFastIP() {
 }
 
 /* ═══════════════════════════════════════════════════════════
-    MÓDULO 2: AUDITORIA SILENCIOSA (REGRAS DE NEGÓCIO)
+    MÓDULO 2: LOCALIZAÇÃO (IMPORTADO PELO ADDRESSMODAL)
+   ═══════════════════════════════════════════════════════════ */
+
+export async function getFullAddress(cep: string) {
+  const cleanCep = cep.replace(/\D/g, "");
+  try {
+    const res = await fetch(`https://viacep.com.br/ws/${cleanCep}/json/`);
+    const data = await res.json();
+    if (data.erro) return null;
+    return {
+      bairro: data.bairro || "Não informado",
+      cidade: data.localidade,
+      estado: data.uf
+    };
+  } catch {
+    return null;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════
+    MÓDULO 3: AUDITORIA SILENCIOSA (REGRAS DE NEGÓCIO)
    ═══════════════════════════════════════════════════════════ */
 
 export async function runSilentAudit(supabase: any, voteId: string, clubName: string, ip: string | null, fp: string) {
@@ -75,5 +95,7 @@ export async function runSilentAudit(supabase: any, voteId: string, clubName: st
 /**
  * [RODAPÉ TÉCNICO]
  * ARQUIVO: src/lib/vote-auditor.ts
- * VERSÃO: 9.6
+ * VERSÃO: 9.7
+ * - Restaurado getFullAddress para corrigir erro no AddressModal.tsx.
+ * - Mantido getFastIP para o Voting.tsx.
  */
