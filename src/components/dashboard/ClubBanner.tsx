@@ -1,11 +1,10 @@
 /**
  * [CAMINHO/ARQUIVO]: src/components/dashboard/ClubBanner.tsx
  * [MÓDULO]: BRANDING & DASHBOARD NAVIGATION
- * [STATUS]: VERSÃO 39.0 (HYBRID FIXED MEASURES — RESPONSIVE)
- * [DESCRIÇÃO]:
- * - Desktop: Mantido em 150px (Círculo) e 115px (Emblema).
- * - Mobile: Restaurado para 110px (Círculo) e 90px (Emblema) para manter a forma redonda.
- * - Correção: Adicionado prefixo md: na altura para evitar achatamento no celular.
+ * [STATUS]: VERSÃO 40.0 (FIX: PRIVACIDADE TOTAL DE LINKS DE GESTÃO)
+ * [DESCRIÇÃO]: 
+ * - Trava de segurança aplicada ao botão VOTAÇÃO.
+ * - Mantida estrutura de NavItem e Branding original.
  */
 
 /* ═══════════════════════════════════════════════════════════
@@ -61,7 +60,6 @@ const ClubBanner = ({
   const location = useLocation();
   const { user } = useUser();
 
-  // Tema chumbo (fallback enquanto enriquecimento não retornou)
   const CHUMBO_PRIMARY = "#111111";
   const CHUMBO_SECONDARY = "#2a2a2a";
 
@@ -105,7 +103,6 @@ const ClubBanner = ({
         });
         setEnriching(false);
       } else {
-        // Mantém chumbo, dispara enrichment e re-tenta uma vez
         setEnriching(true);
         try {
           await supabase.functions.invoke("enrich-club-colors", { body: { club_name: clubName } });
@@ -134,15 +131,12 @@ const ClubBanner = ({
   const buildFlagGradient = (): string => {
     const colors = [theme.cor_primaria, theme.cor_secundaria, theme.cor_terciaria, theme.cor_quarta].filter(Boolean);
     const sorted = [...colors].sort((a, b) => calculateLuminance(a) - calculateLuminance(b));
-
     if (sorted.length === 4) {
       return `linear-gradient(115deg, ${sorted[0]} 0%, ${sorted[0]} 34%, ${sorted[1]} 34%, ${sorted[1]} 38%, ${sorted[2]} 38%, ${sorted[2]} 42%, ${sorted[3]} 42%, ${sorted[3]} 46%, ${sorted[0]} 46%, ${sorted[0]} 100%)`;
     }
-
     if (sorted.length === 3) {
       return `linear-gradient(115deg, ${sorted[0]} 0%, ${sorted[0]} 34%, ${sorted[1]} 34%, ${sorted[1]} 38%, ${sorted[2]} 38%, ${sorted[2]} 42%, ${sorted[0]} 42%, ${sorted[0]} 46%, ${sorted[1]} 46%, ${sorted[1]} 100%)`;
     }
-
     const strong = sorted[0];
     const light = sorted[1] || "#ffffff";
     return `linear-gradient(115deg, ${strong} 0%, ${strong} 34%, ${light} 34%, ${light} 38%, ${strong} 38%, ${strong} 39%, ${light} 39%, ${light} 43%, ${strong} 43%, ${strong} 44%, ${light} 44%, ${light} 48%, ${strong} 48%, ${strong} 100%)`;
@@ -182,7 +176,6 @@ const ClubBanner = ({
       `}</style>
 
       <div className="overflow-hidden rounded-[2.5rem] border border-[#1a1a1a] shadow-2xl flex flex-col">
-        {/* BANNER (ALTURA 180px) */}
         <section
           className="relative h-[180px] md:h-[180px] w-full flex items-center overflow-hidden"
           style={{
@@ -195,17 +188,7 @@ const ClubBanner = ({
 
           <div className="relative z-10 h-full w-full flex flex-row items-center justify-between px-6 md:px-16">
             <div className="flex items-center h-full shrink-0">
-              {/* ═══════════════════════════════════════════════════════════
-                  MÓDULO: TAMANHO DO CÍRCULO (BADGE)
-                  - Mobile: 110px x 110px (Restaurado)
-                  - Desktop: 120px x 120px (Excelente)
-                 ═══════════════════════════════════════════════════════════ */}
               <div className="w-[110px] h-[110px] md:w-[120px] md:h-[120px] rounded-full bg-white flex items-center justify-center shrink-0 shadow-xl border-4 border-white/10 transition-all duration-500">
-                {/* ═══════════════════════════════════════════════════════════
-                    MÓDULO: TAMANHO DO EMBLEMA (PIXELS)
-                    - Mobile: 90px (Equivalente a 82% de 110px)
-                    - Desktop: 115px (Excelente)
-                   ═══════════════════════════════════════════════════════════ */}
                 <ClubLogo
                   src={theme.escudo_url}
                   alt={clubName}
@@ -215,27 +198,15 @@ const ClubBanner = ({
 
               {showProfileInfo && (
                 <div className="hidden md:flex flex-col text-white ml-8 h-full justify-center">
-                  <h2
-                    className="text-3xl font-black italic uppercase tracking-tighter leading-none mb-2"
-                    style={textOutlineStyle}
-                  >
+                  <h2 className="text-3xl font-black italic uppercase tracking-tighter leading-none mb-2" style={textOutlineStyle}>
                     {profileName || "CARREGANDO..."}
                   </h2>
-                  <div
-                    className="flex items-center gap-2 text-xs font-bold uppercase opacity-90 italic"
-                    style={textOutlineStyle}
-                  >
+                  <div className="flex items-center gap-2 text-xs font-bold uppercase opacity-90 italic" style={textOutlineStyle}>
                     <MapPin size={12} className="text-white/70" />
-                    <span>
-                      {profileCity}
-                      {profileState ? `, ${profileState}` : ""}
-                    </span>
+                    <span>{profileCity}{profileState ? `, ${profileState}` : ""}</span>
                   </div>
                   {canSeeAmbassador && (
-                    <div
-                      className="flex items-center gap-2 mt-2 text-xs font-black italic uppercase tracking-widest"
-                      style={textOutlineStyle}
-                    >
+                    <div className="flex items-center gap-2 mt-2 text-xs font-black italic uppercase tracking-widest" style={textOutlineStyle}>
                       <Trophy size={14} className={IS_MASTER ? "text-cyan-400 animate-pulse" : "text-orange-500"} />
                       <span className={IS_MASTER ? "text-cyan-200" : "text-white"}>EMBAIXADOR {displayLevel}</span>
                     </div>
@@ -247,27 +218,15 @@ const ClubBanner = ({
             <div className="flex-1 flex flex-col h-full items-end text-right py-4 md:py-6">
               {showProfileInfo && (
                 <div className="flex-1 md:hidden flex flex-col justify-center items-end text-white">
-                  <h2
-                    className="text-xl font-black italic uppercase tracking-tighter leading-none mb-1"
-                    style={textOutlineStyle}
-                  >
+                  <h2 className="text-xl font-black italic uppercase tracking-tighter leading-none mb-1" style={textOutlineStyle}>
                     {profileName || "CARREGANDO..."}
                   </h2>
-                  <div
-                    className="flex items-center gap-1.5 text-[9px] font-bold uppercase opacity-90 italic"
-                    style={textOutlineStyle}
-                  >
+                  <div className="flex items-center gap-1.5 text-[9px] font-bold uppercase opacity-90 italic" style={textOutlineStyle}>
                     <MapPin size={12} className="text-white/70" />
-                    <span>
-                      {profileCity}
-                      {profileState ? `, ${profileState}` : ""}
-                    </span>
+                    <span>{profileCity}{profileState ? `, ${profileState}` : ""}</span>
                   </div>
                   {canSeeAmbassador && (
-                    <div
-                      className="flex items-center gap-1.5 mt-1 text-[9px] font-black text-white italic uppercase tracking-widest"
-                      style={textOutlineStyle}
-                    >
+                    <div className="flex items-center gap-1.5 mt-1 text-[9px] font-black text-white italic uppercase tracking-widest" style={textOutlineStyle}>
                       <Trophy size={12} className={IS_MASTER ? "text-cyan-400 animate-pulse" : "text-orange-500"} />
                       <span>EMBAIXADOR {ambassadorLevel || "BRONZE"}</span>
                     </div>
@@ -276,16 +235,10 @@ const ClubBanner = ({
               )}
 
               <div className="flex flex-col items-end justify-end text-white mt-auto">
-                <span
-                  className="text-[8px] md:text-[9px] font-black uppercase italic opacity-70 tracking-[0.3em] mb-[-4px]"
-                  style={textOutlineStyle}
-                >
+                <span className="text-[8px] md:text-[9px] font-black uppercase italic opacity-70 tracking-[0.3em] mb-[-4px]" style={textOutlineStyle}>
                   Clube do Coração
                 </span>
-                <h1
-                  className="text-xl md:text-4xl font-black italic uppercase tracking-tighter leading-none"
-                  style={textOutlineStyle}
-                >
+                <h1 className="text-xl md:text-4xl font-black italic uppercase tracking-tighter leading-none" style={textOutlineStyle}>
                   {clubName}
                 </h1>
               </div>
@@ -295,12 +248,16 @@ const ClubBanner = ({
 
         <nav className="flex items-center justify-center gap-1.5 bg-[#1a1a1a] px-4 py-3.5 overflow-x-auto no-scrollbar">
           <NavItem icon={Flame} label="MAPA DE CALOR" path="/mapa-calor" active={isActive("/mapa-calor")} />
-          <NavItem icon={Crown} label="RANKING" path="/ranking" active={isActive("/ranking")} />
+          <NavItem icon={BarChart3} label="RANKING" path="/ranking" active={isActive("/ranking")} />
           <NavItem icon={Users} label="EMBAIXADORES" path="/embaixadores" active={isActive("/embaixadores")} />
           <div className="w-[1px] h-6 bg-white/10 mx-2 hidden md:block" />
-          <NavItem icon={Vote} label="VOTAÇÃO" path="/voting" variant="orange" />
+          
+          {/* ═══════════════════════════════════════════════════════════
+              MÓDULO DE SEGURANÇA: LINKS EXCLUSIVOS MASTER ADMIN
+             ═══════════════════════════════════════════════════════════ */}
           {IS_MASTER && (
             <>
+              <NavItem icon={Vote} label="VOTAÇÃO" path="/voting" variant="orange" />
               <NavItem icon={FlaskConical} label="TESTAR CLUBE" path="/voting?test=1" variant="orange" />
               <NavItem icon={ShieldAlert} label="PAINEL MASTER" path="/admin" variant="danger" />
             </>
@@ -325,3 +282,11 @@ const ClubBanner = ({
 };
 
 export default ClubBanner;
+
+/**
+ * [RODAPÉ TÉCNICO]
+ * ARQUIVO: src/components/dashboard/ClubBanner.tsx
+ * VERSÃO: 40.0
+ * - Corrigido: Botão 'VOTAÇÃO' agora está dentro da trava IS_MASTER.
+ * - Segurança: Links de gestão 100% ocultos para torcedores comuns.
+ */
