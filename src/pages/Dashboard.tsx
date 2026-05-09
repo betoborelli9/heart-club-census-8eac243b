@@ -1,11 +1,11 @@
 /**
  * [CAMINHO/ARQUIVO]: src/pages/Dashboard.tsx
- * [MÓDULO]: DASHBOARD CALEIDOSCÓPIO — REESTRUTURAÇÃO FINAL 4.0
- * [STATUS]: BLINDAGEM ADMIN, REMOÇÃO DE LOGOS E GARANTIA DE ESCUDOS
+ * [MÓDULO]: DASHBOARD CALEIDOSCÓPIO — REESTRUTURAÇÃO FINAL 5.0
+ * [STATUS]: PROTEÇÃO DE LINKS MASTER ADMIN (BETOBORELLI9)
  */
 
 import { useEffect, useState } from "react";
-import { LogOut, Loader2, Heart, Home, BarChart3, Map, Users, LayoutDashboard, Beaker } from "lucide-react";
+import { LogOut, Loader2, Heart, Home, BarChart3, Map, Users, LayoutDashboard, Beaker, Vote } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { useUser } from "@/contexts/UserContext";
@@ -13,7 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { CLUBS_DATA } from "@/clubes-data";
 
 /* ═══════════════════════════════════════════════════════════
-   MÓDULO 1: COMPONENTES DO DASHBOARD
+    MÓDULO 1: COMPONENTES DO DASHBOARD
    ═══════════════════════════════════════════════════════════ */
 import { ClubSearch } from "@/components/dashboard/ClubSearch";
 import ClubBanner from "@/components/dashboard/ClubBanner";
@@ -26,7 +26,7 @@ import SocialShareBanners from "@/components/dashboard/SocialShareBanners";
 import ClubIdentityCard from "@/components/dashboard/ClubIdentityCard";
 
 /* ═══════════════════════════════════════════════════════════
-   MÓDULO 2: HOOKS E ASSETS
+    MÓDULO 2: HOOKS E ASSETS
    ═══════════════════════════════════════════════════════════ */
 import { useClubTheme } from "@/hooks/useClubTheme";
 import logo from "@/assets/logo.png";
@@ -43,7 +43,8 @@ const Dashboard = () => {
   const [fadeKey, setFadeKey] = useState(0);
   const [viewedLogo, setViewedLogo] = useState<string | null>(null);
 
-  const isAdmin = user?.email === "betoborelli9@gmail.com";
+  // TRAVA DE SEGURANÇA MASTER ADMIN
+  const isMasterAdmin = user?.email === "betoborelli9@gmail.com";
 
   useEffect(() => {
     const loadVoto = async () => {
@@ -87,9 +88,7 @@ const Dashboard = () => {
       if (!cancelled) setViewedLogo(data?.escudo_url || null);
     };
     fetchLogo();
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, [viewedClubName, viewedClubData]);
 
   const handlePickClub = (name: string) => {
@@ -132,15 +131,15 @@ const Dashboard = () => {
             <ClubSearch onSelect={(club) => handlePickClub(club.name)} />
           </div>
           <div className="flex items-center gap-4">
-            {/* BOTÃO VOTAÇÃO - EXCLUSIVO ADMIN */}
-            {isAdmin && (
+            {/* BOTÃO VOTAÇÃO MESTRE - EXCLUSIVO BETOBORELLI9 */}
+            {isMasterAdmin && (
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => navigate("/votação")}
+                onClick={() => navigate("/votação?test=1")}
                 className="border-[#ff6200] text-[#ff6200] hover:bg-[#ff6200] hover:text-white font-black italic uppercase text-[10px]"
               >
-                Votação
+                Votação Master
               </Button>
             )}
             <Button variant="ghost" size="icon" onClick={() => signOut()} className="text-white/30 hover:text-white">
@@ -198,7 +197,6 @@ const Dashboard = () => {
               </div>
             )}
             <div className="glass-card rounded-[32px] p-2 min-h-[600px]">
-              {/* NEWSFEED - FORÇANDO REMOÇÃO DE LOGOS EXTERNAS */}
               <NewsFeedCards teamName={viewedClubName} primaryColor={primary} />
             </div>
           </section>
@@ -221,10 +219,10 @@ const Dashboard = () => {
         </div>
       </main>
 
-      {/* RODAPÉ TAB BAR */}
+      {/* RODAPÉ TAB BAR - PROTEÇÃO DE LINKS DE GESTÃO */}
       <footer className="fixed bottom-0 left-0 right-0 h-16 bg-black/80 backdrop-blur-2xl border-t border-white/5 z-[100] flex items-center justify-center">
         <nav className="flex items-center gap-8 md:gap-16">
-          <button className="flex flex-col items-center gap-1 text-[#ff6200]">
+          <button className="flex flex-col items-center gap-1 text-[#ff6200]" onClick={() => navigate("/dashboard")}>
             <Home className="w-5 h-5" />
             <span className="text-[9px] font-bold uppercase tracking-widest">Início</span>
           </button>
@@ -242,30 +240,33 @@ const Dashboard = () => {
             <Map className="w-5 h-5" />
             <span className="text-[9px] font-bold uppercase tracking-widest">Mapa</span>
           </button>
-          <button
-            className="flex flex-col items-center gap-1 text-white/40 hover:text-white"
-            onClick={() => navigate("/embaixadores")}
-          >
-            <Users className="w-5 h-5" />
-            <span className="text-[9px] font-bold uppercase tracking-widest">Embaixadores</span>
-          </button>
-          {isAdmin && (
+          
+          {/* LINKS RESTRITOS BETOBORELLI9 NO RODAPÉ */}
+          {isMasterAdmin ? (
             <>
+              <button
+                className="flex flex-col items-center gap-1 text-[#ff6200] hover:text-white"
+                onClick={() => navigate("/votação?test=1")}
+              >
+                <Vote className="w-5 h-5" />
+                <span className="text-[9px] font-bold uppercase tracking-widest">Votação</span>
+              </button>
               <button
                 className="flex flex-col items-center gap-1 text-white/40 hover:text-white"
                 onClick={() => navigate("/painel")}
               >
                 <LayoutDashboard className="w-5 h-5" />
-                <span className="text-[9px] font-bold uppercase tracking-widest">Painel</span>
-              </button>
-              <button
-                className="flex flex-col items-center gap-1 text-[#ff6200] hover:text-white"
-                onClick={() => navigate("/admin/votos-ficticios")}
-              >
-                <Beaker className="w-5 h-5" />
-                <span className="text-[9px] font-bold uppercase tracking-widest">Fictícios</span>
+                <span className="text-[9px] font-bold uppercase tracking-widest">Admin</span>
               </button>
             </>
+          ) : (
+            <button
+              className="flex flex-col items-center gap-1 text-white/40 hover:text-white"
+              onClick={() => navigate("/embaixadores")}
+            >
+              <Users className="w-5 h-5" />
+              <span className="text-[9px] font-bold uppercase tracking-widest">Embaixadores</span>
+            </button>
           )}
         </nav>
       </footer>
@@ -274,3 +275,12 @@ const Dashboard = () => {
 };
 
 export default Dashboard;
+
+/**
+ * [RODAPÉ TÉCNICO]
+ * ARQUIVO: src/pages/Dashboard.tsx
+ * VERSÃO: 5.0
+ * - Links 'Votação', 'Admin' e 'Fictícios' agora dependem de isMasterAdmin.
+ * - Torcedor comum vê 'Embaixadores' no lugar dos links de gestão.
+ * - Adicionado ícone de 'Vote' para o link de votação mestre.
+ */
