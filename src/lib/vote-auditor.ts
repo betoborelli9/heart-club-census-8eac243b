@@ -1,10 +1,14 @@
 /**
  * [CAMINHO]: src/lib/vote-auditor.ts
- * [STATUS]: PRODUÇÃO - VERSÃO 10.0 (AUDITORIA RADICAL MULTI-FILTRO)
- * [OBJETIVO]: Exportação total para build e auditoria por IP, FP, UserID e CEP.
+ * [STATUS]: PRODUÇÃO - VERSÃO 9.9.1 (BUILD FIX + RADICAL AUDIT)
+ * [OBJETIVO]: Exportação total para build e auditoria implacável de duplicidade.
  */
 
 import FingerprintJS from "@fingerprintjs/fingerprintjs";
+
+/* ═══════════════════════════════════════════════════════════
+    MÓDULO 1: IDENTIDADE DIGITAL E REDE
+   ═══════════════════════════════════════════════════════════ */
 
 export async function getFingerprint(): Promise<string> {
   try {
@@ -26,6 +30,10 @@ export async function getFastIP() {
   }
 }
 
+/* ═══════════════════════════════════════════════════════════
+    MÓDULO 2: ENDEREÇO (NECESSÁRIO PARA O BUILD)
+   ═══════════════════════════════════════════════════════════ */
+
 export async function getFullAddress(cep: string) {
   const cleanCep = cep.replace(/\D/g, "");
   try {
@@ -42,44 +50,37 @@ export async function getFullAddress(cep: string) {
   }
 }
 
-export async function runSilentAudit(
-  supabase: any, 
-  voteId: string, 
-  clubName: string, 
-  ip: string | null, 
-  fp: string,
-  userId?: string | null,
-  cep?: string | null
-) {
-  const conditions: string[] = [];
-  
-  if (ip) conditions.push(`ip_address.eq.${ip}`);
-  if (fp) conditions.push(`fingerprint.eq.${fp}`);
-  if (userId) conditions.push(`user_id.eq.${userId}`);
-  if (cep) conditions.push(`cep.eq.${cep}`);
+/* ═══════════════════════════════════════════════════════════
+    MÓDULO 3: AUDITORIA SILENCIOSA (A MARRETA)
+   ═══════════════════════════════════════════════════════════ */
 
-  if (conditions.length === 0) return;
+export async function runSilentAudit(supabase: any, voteId: string, clubName: string, ip: string | null, fp: string) {
+  if (!ip && !fp) return;
 
-  const { data: duplicates, error } = await supabase
+  // Busca qualquer voto anterior com o mesmo IP ou Digital ID
+  const { data: duplicates } = await supabase
     .from("votos")
     .select("id")
-    .or(conditions.join(","))
+    .or(`ip_address.eq.${ip},fingerprint.eq.${fp}`)
     .neq("id", voteId);
 
-  if (!error && duplicates && duplicates.length > 0) {
+  if (duplicates && duplicates.length > 0) {
     const total = duplicates.length;
-    const motivo = `SUSPEITO: DUPLICIDADE DETECTADA (${total} ocorrências em IP/ID/CEP).`;
+    const motivo = `SUSPEITO: ID/IP REPETIDO (${total} ocorrências anteriores).`;
 
+    // MARRETA O STATUS PARA SUSPEITO NO BANCO
     await supabase.from("votos").update({
       is_suspicious: true,
       status_aprovacao: "pendente",
       motivo_suspicao: motivo
     }).eq("id", voteId);
+    
+    console.log(`[AUDITOR] Voto ${voteId} marcado como fraude.`);
   }
 }
 
 /**
  * [RODAPÉ TÉCNICO]
  * ARQUIVO: src/lib/vote-auditor.ts
- * VERSÃO: 10.0
+ * VERSÃO: 9.9.1
  */
