@@ -152,7 +152,7 @@ const AdminAuditTable = () => {
                          isSuspicious ? (
                            <>
                              <Badge className="bg-red-500 animate-pulse font-black text-white shadow-[0_0_10px_rgba(255,0,0,0.4)] italic">SUSPEITO</Badge>
-                             <span className="text-[7px] text-red-400 font-black uppercase leading-none">{v.motivo_suspicao}</span>
+                             <span className="text-[8px] text-red-500 font-black uppercase leading-none">{v.motivo_suspicao}</span>
                            </>
                          ) : <Badge className="bg-green-600 font-black italic">OK</Badge>}
                       </div>

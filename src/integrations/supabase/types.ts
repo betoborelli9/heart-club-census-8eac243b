@@ -499,6 +499,7 @@ export type Database = {
           country_code: string | null
           created_at: string | null
           device_model: string | null
+          email: string | null
           estado: string
           fingerprint: string | null
           id: string
@@ -508,6 +509,7 @@ export type Database = {
           is_residente: boolean | null
           is_suspicious: boolean | null
           isp: string | null
+          motivo_suspicao: string | null
           numero: string | null
           pais: string
           potential_duplicate_user: boolean
@@ -537,6 +539,7 @@ export type Database = {
           country_code?: string | null
           created_at?: string | null
           device_model?: string | null
+          email?: string | null
           estado: string
           fingerprint?: string | null
           id?: string
@@ -546,6 +549,7 @@ export type Database = {
           is_residente?: boolean | null
           is_suspicious?: boolean | null
           isp?: string | null
+          motivo_suspicao?: string | null
           numero?: string | null
           pais: string
           potential_duplicate_user?: boolean
@@ -575,6 +579,7 @@ export type Database = {
           country_code?: string | null
           created_at?: string | null
           device_model?: string | null
+          email?: string | null
           estado?: string
           fingerprint?: string | null
           id?: string
@@ -584,6 +589,7 @@ export type Database = {
           is_residente?: boolean | null
           is_suspicious?: boolean | null
           isp?: string | null
+          motivo_suspicao?: string | null
           numero?: string | null
           pais?: string
           potential_duplicate_user?: boolean
@@ -795,35 +801,22 @@ export type Database = {
       admin_get_votes_with_tracking: {
         Args: never
         Returns: {
-          bairro: string
           cep: string
           cidade: string
           clube_nome: string
-          complemento: string
           created_at: string
           estado: string
-          fingerprint: string
           ip_address: string
-          is_fraud_attempt: boolean
-          is_original_vote: boolean
           is_suspicious: boolean
-          numero: string
-          pais: string
-          status_integridade: string
+          motivo_suspicao: string
+          status_aprovacao: string
           user_email: string
-          user_genero: string
-          user_id: string
-          user_nascimento: string
           user_nome: string
-          user_profissao: string
-          voto_bairro_gps: string
-          voto_cidade_gps: string
           voto_id: string
-          voto_lat: number
-          voto_lng: number
         }[]
       }
       admin_purge_suspicious_to_trash: { Args: never; Returns: Json }
+      clean_fictitious_data: { Args: never; Returns: undefined }
       fake_votes_summary: { Args: never; Returns: Json }
       get_club_vote_ranking: { Args: { p_limit?: number }; Returns: Json }
       get_club_vote_summary: { Args: { p_club_name: string }; Returns: Json }
