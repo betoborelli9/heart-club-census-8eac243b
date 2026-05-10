@@ -852,10 +852,10 @@ const MapaCalor = () => {
                       <button
                         key={i}
                         className="w-full text-left px-3 py-2 hover:bg-white/5 flex items-center gap-2 text-xs"
-                        onClick={() => handleSelectClub(c)}
+                        onClick={() => handleSelectClub(c.name)}
                       >
-                        <ClubLogo clubName={c.nome} size={18} />
-                        <span className="font-bold uppercase">{c.nome}</span>
+                        <ClubLogo src={c.logo} alt={c.name} size="xs" />
+                        <span className="font-bold uppercase">{c.name}</span>
                       </button>
                     ))}
                   </div>
