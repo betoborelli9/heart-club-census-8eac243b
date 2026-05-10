@@ -139,9 +139,7 @@ const Voting = () => {
         newVote.id, 
         heartClub.name, 
         ip, 
-        fp, 
-        user.id, 
-        profile?.cep
+        fp
       );
 
       (async () => {
