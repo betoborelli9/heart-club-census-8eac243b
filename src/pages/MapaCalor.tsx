@@ -751,8 +751,8 @@ const MapaCalor = () => {
   /* ---------------------------------------------------------------
    * 9.9 — AÇÃO: Trocar clube ativo via busca
    * --------------------------------------------------------------- */
-  const handleSelectClub = useCallback((c: ClubSearchResult) => {
-    setActiveClubName(c.nome);
+  const handleSelectClub = useCallback((name: string) => {
+    setActiveClubName(name);
     setSearchQuery("");
     setSearchResults([]);
     // reset drill-down para mundo
