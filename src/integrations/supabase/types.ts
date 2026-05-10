@@ -400,6 +400,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          bairro: string | null
           cep: string | null
           cidade: string | null
           classe_social: string | null
@@ -421,6 +422,7 @@ export type Database = {
           username: string | null
         }
         Insert: {
+          bairro?: string | null
           cep?: string | null
           cidade?: string | null
           classe_social?: string | null
@@ -442,6 +444,7 @@ export type Database = {
           username?: string | null
         }
         Update: {
+          bairro?: string | null
           cep?: string | null
           cidade?: string | null
           classe_social?: string | null
