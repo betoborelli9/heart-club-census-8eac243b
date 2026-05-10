@@ -864,7 +864,7 @@ const MapaCalor = () => {
               {heartClubName && heartClubName !== activeClubName && (
                 <button
                   className="text-[10px] mt-2 text-primary font-black uppercase"
-                  onClick={() => handleSelectClub({ nome: heartClubName } as any)}
+                  onClick={() => handleSelectClub(heartClubName)}
                 >
                   ← voltar para {heartClubName}
                 </button>
