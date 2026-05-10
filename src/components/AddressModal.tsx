@@ -82,6 +82,20 @@ const AddressModal = ({ open, onOpenChange, clubName, onSuccess }: AddressModalP
 
     setSubmitting(true);
     try {
+      // 0. Persistência local imediata (cache do Porteiro)
+      try {
+        localStorage.setItem(
+          "mapacalor_address",
+          JSON.stringify({
+            cep: cepDigits,
+            bairro: bairro.trim(),
+            cidade: cidadeAddr.trim(),
+            estado: estadoAddr.trim(),
+            savedAt: Date.now(),
+          }),
+        );
+      } catch {}
+
       // 1. Atualiza o Perfil do Torcedor (Âncora permanente)
       const { error: profileErr } = await supabase
         .from("profiles")
@@ -95,12 +109,14 @@ const AddressModal = ({ open, onOpenChange, clubName, onSuccess }: AddressModalP
 
       if (profileErr) throw profileErr;
 
-      // 2. Atualiza o Voto Real (Para rastreabilidade do Moderador)
+      // 2. Atualiza o Voto Real / Auditoria (Para rastreabilidade do Moderador)
       const { error: voteErr } = await supabase
         .from("votos")
         .update({ 
           cep: cepDigits,
-          bairro: bairro.trim()
+          bairro: bairro.trim(),
+          cidade: cidadeAddr.trim(),
+          estado: estadoAddr.trim(),
         })
         .eq("user_id", user.id)
         .eq("is_original_vote", true);
