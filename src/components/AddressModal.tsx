@@ -211,7 +211,13 @@ const AddressModal = ({ open, onOpenChange, clubName, onSuccess }: AddressModalP
           {/* Botão de Ação (CTA) */}
           <Button
             onClick={handleSubmit}
-            disabled={submitting || !bairro.trim() || cep.replace(/\D/g, "").length !== 8}
+            disabled={
+              submitting ||
+              !bairro.trim() ||
+              !cidadeAddr.trim() ||
+              !estadoAddr.trim() ||
+              cep.replace(/\D/g, "").length !== 8
+            }
             className="w-full h-13 btn-orange-gradient font-black italic uppercase rounded-xl shadow-lg shadow-orange-500/20"
           >
             {submitting ? <Loader2 className="animate-spin w-5 h-5" /> : "LIBERAR MAPA DE CALOR"}
