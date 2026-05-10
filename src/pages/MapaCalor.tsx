@@ -790,7 +790,7 @@ const MapaCalor = () => {
         <div className="flex items-center gap-3">
           {activeClubName && (
             <div className="hidden md:flex items-center gap-2 text-xs">
-              <ClubLogo clubName={activeClubName} size={20} />
+              <ClubLogo clubName={activeClubName} size="sm" />
               <span className="font-black italic uppercase">
                 {activeClubName}
               </span>
