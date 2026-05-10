@@ -410,8 +410,10 @@ export type Database = {
           faixa_etaria: string | null
           genero: string | null
           id: string
+          metadata: Json | null
           nivel_embaixador: string | null
           nome_exibicao: string | null
+          occupation: string | null
           pais: string | null
           profissao: string | null
           role: string | null
@@ -429,8 +431,10 @@ export type Database = {
           faixa_etaria?: string | null
           genero?: string | null
           id: string
+          metadata?: Json | null
           nivel_embaixador?: string | null
           nome_exibicao?: string | null
+          occupation?: string | null
           pais?: string | null
           profissao?: string | null
           role?: string | null
@@ -448,8 +452,10 @@ export type Database = {
           faixa_etaria?: string | null
           genero?: string | null
           id?: string
+          metadata?: Json | null
           nivel_embaixador?: string | null
           nome_exibicao?: string | null
+          occupation?: string | null
           pais?: string | null
           profissao?: string | null
           role?: string | null
@@ -509,6 +515,8 @@ export type Database = {
           is_residente: boolean | null
           is_suspicious: boolean | null
           isp: string | null
+          latitude: number | null
+          longitude: number | null
           motivo_suspicao: string | null
           numero: string | null
           pais: string
@@ -549,6 +557,8 @@ export type Database = {
           is_residente?: boolean | null
           is_suspicious?: boolean | null
           isp?: string | null
+          latitude?: number | null
+          longitude?: number | null
           motivo_suspicao?: string | null
           numero?: string | null
           pais: string
@@ -589,6 +599,8 @@ export type Database = {
           is_residente?: boolean | null
           is_suspicious?: boolean | null
           isp?: string | null
+          latitude?: number | null
+          longitude?: number | null
           motivo_suspicao?: string | null
           numero?: string | null
           pais?: string
@@ -832,6 +844,16 @@ export type Database = {
       get_heatmap_neighborhoods: {
         Args: { p_city: string; p_club_name: string }
         Returns: Json
+      }
+      get_heatmap_stats: {
+        Args: { p_clube_nome: string }
+        Returns: {
+          is_precise: boolean
+          lat: number
+          lng: number
+          location_name: string
+          vote_count: number
+        }[]
       }
       get_my_ambassador_referrals: {
         Args: never
