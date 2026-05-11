@@ -1420,12 +1420,12 @@ const MapaCalor = () => {
         },
       });
     },
-    [lookupVotesForFeature, viewMode, activeState, goCountry, goState, goCity],
+    [lookupVotesForFeature, viewMode, activeState, goCountry, goState, goCity, compareClubName],
   );
 
   const geoKey = useMemo(
-    () => `${viewMode}-${activeCountry}-${activeState}-${activeCity}-${maxVotes}-${heatData.length}`,
-    [viewMode, activeCountry, activeState, activeCity, maxVotes, heatData.length],
+    () => `${viewMode}-${activeCountry}-${activeState}-${activeCity}-${maxVotes}-${heatData.length}-${compareClubName || "solo"}-${compareHeatData.length}`,
+    [viewMode, activeCountry, activeState, activeCity, maxVotes, heatData.length, compareClubName, compareHeatData.length],
   );
   const mapHardResetKey = useMemo(() => {
     const raw = `${viewMode}|${activeCountry || ""}|${activeState || ""}|${activeCity || ""}`;
