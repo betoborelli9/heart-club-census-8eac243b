@@ -377,41 +377,49 @@ export default function AddressModal({ open, onOpenChange, clubName, onSuccess }
   const onTypeSearch = (val: string) => {
     setSearchQuery(val);
 
-    if (searchTimeout.current) {
-      clearTimeout(searchTimeout.current);
+    /**
+     * BAIRRO: filtragem LOCAL instantânea sobre o cache.
+     */
+    if (step === "searching_bairro") {
+      if (searchTimeout.current) clearTimeout(searchTimeout.current);
+      const q = normalize(val);
+      if (!q) {
+        setSuggestions(bairrosCache.slice(0, 50));
+        return;
+      }
+      const startsWith: any[] = [];
+      const includes: any[] = [];
+      for (const b of bairrosCache) {
+        const n = normalize(b.text);
+        if (n.startsWith(q)) startsWith.push(b);
+        else if (n.includes(q)) includes.push(b);
+      }
+      setSuggestions([...startsWith, ...includes].slice(0, 30));
+      return;
     }
 
+    /**
+     * CIDADE: busca remota com debounce.
+     */
+    if (searchTimeout.current) clearTimeout(searchTimeout.current);
     searchTimeout.current = setTimeout(async () => {
       if (val.length < 2) {
         setSuggestions([]);
         return;
       }
-
-      let results = [];
-
-      /**
-       * ============================================================
-       * BUSCA CIDADES
-       * ============================================================
-       */
-
-      if (step === "searching_city") {
-        results = await searchCities(val);
-      }
-
-      /**
-       * ============================================================
-       * BUSCA BAIRROS
-       * ============================================================
-       */
-
-      if (step === "searching_bairro") {
-        results = await searchNeighborhoods(val, selectedCity);
-      }
-
+      const results = await searchCities(val);
       setSuggestions(results);
     }, 350);
   };
+
+  /**
+   * Quando o cache de bairros chega, popula a lista inicial sem precisar digitar.
+   */
+  useEffect(() => {
+    if (step === "searching_bairro" && !searchQuery && bairrosCache.length) {
+      setSuggestions(bairrosCache.slice(0, 50));
+    }
+  }, [bairrosCache, step, searchQuery]);
 
   /* ══════════════════════════════════════════════════════════════════
      SAVE
