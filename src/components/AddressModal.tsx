@@ -199,7 +199,7 @@ function useTerritoryEngine() {
 
 export default function AddressModal({ open, onOpenChange, clubName, onSuccess }: any) {
   const { toast } = useToast();
-  const { searchCities, searchNeighborhoods } = useTerritoryEngine();
+  const { searchNeighborhoods } = useTerritoryEngine();
   const [step, setStep] = useState<"detecting" | "welcome" | "location_error" | "searching_bairro">("detecting");
   const [loading, setLoading] = useState(false);
   const [detectedLocation, setDetectedLocation] = useState<any>(null);
@@ -233,46 +233,43 @@ export default function AddressModal({ open, onOpenChange, clubName, onSuccess }
   const handleDetection = useCallback(async () => {
     const ipAudit = await captureIpAudit();
     if (ipAudit.cidade) {
-      setDetectedLocation({
+      const detected = await enrichDetectedCity({
         name: ipAudit.cidade,
         country: ipAudit.pais || "Brasil",
         state: ipAudit.estado,
         center: typeof ipAudit.lng === "number" && typeof ipAudit.lat === "number" ? [ipAudit.lng, ipAudit.lat] : null,
       });
+      setDetectedLocation(detected);
       setStep("welcome");
       return;
     }
 
-    if (!MAPBOX_TOKEN) {
-      setStep("searching_city");
-      return;
-    }
-
     if (!navigator.geolocation) {
-      setStep("searching_city");
+      setStep("location_error");
       return;
     }
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
         try {
-          const res = await fetch(
-            `https://api.mapbox.com/geocoding/v5/mapbox.places/${pos.coords.longitude},${pos.coords.latitude}.json?access_token=${MAPBOX_TOKEN}&types=place,region,country&language=pt`,
-          );
+          const center = [pos.coords.longitude, pos.coords.latitude];
+          const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&addressdetails=1&lat=${center[1]}&lon=${center[0]}`, {
+            headers: { "Accept-Language": "pt-BR,en" },
+          });
           const data = await res.json();
-          const city = data.features?.find((f: any) => f.place_type.includes("place"));
-          const state = data.features?.find((f: any) => f.place_type.includes("region"));
-          const country = data.features?.find((f: any) => f.place_type.includes("country"));
-          if (city) {
-            setDetectedLocation({ name: city.text, country: country?.text || "Brasil", state: state?.text, center: city.center });
+          const address = data?.address || {};
+          const name = address.city || address.town || address.village || address.municipality || address.county;
+          if (name) {
+            setDetectedLocation({ name, country: address.country || "Brasil", state: address.state || address.region || address.province, center });
             setStep("welcome");
           } else {
-            setStep("searching_city");
+            setStep("location_error");
           }
         } catch {
-          setStep("searching_city");
+          setStep("location_error");
         }
       },
-      () => setStep("searching_city"),
+      () => setStep("location_error"),
+      { enableHighAccuracy: true, timeout: 12000, maximumAge: 300000 },
     );
   }, []);
 
