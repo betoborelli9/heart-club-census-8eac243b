@@ -176,6 +176,7 @@ function useTerritoryEngine() {
 export default function AddressModal({ open, onOpenChange, clubName, onSuccess }: any) {
   const { toast } = useToast();
   const { searchCities, searchNeighborhoods } = useTerritoryEngine();
+  const [canShowModal, setCanShowModal] = useState(false);
   const [step, setStep] = useState<"detecting" | "welcome" | "searching_city" | "searching_bairro">("detecting");
   const [loading, setLoading] = useState(false);
   const [detectedLocation, setDetectedLocation] = useState<any>(null);
@@ -186,19 +187,33 @@ export default function AddressModal({ open, onOpenChange, clubName, onSuccess }
   const [loadingBairros, setLoadingBairros] = useState(false);
   const searchTimeout = useRef<any>(null);
 
-  // [CHECK DE SEGURANÇA: FECHA O MODAL SE JÁ ESTIVER NO BANCO]
+  // [PORTARIA: NUNCA MOSTRA O MODAL SE address_confirmed JÁ ESTÁ TRUE NO BANCO]
   useEffect(() => {
+    let cancelled = false;
     const checkStatus = async () => {
+      setCanShowModal(false);
       const {
         data: { user },
       } = await supabase.auth.getUser();
-      if (!user) return;
-      const { data: profile } = await supabase.from("profiles").select("address_confirmed").eq("id", user.id).single();
-      if (profile?.address_confirmed) {
-        onOpenChange(false); // Se já confirmou, mata o modal.
+      if (!user) {
+        onOpenChange(false);
+        return;
       }
+      const { data: profile } = await supabase.from("profiles").select("address_confirmed").eq("id", user.id).maybeSingle();
+      if (cancelled) return;
+      if (profile?.address_confirmed) {
+        setCanShowModal(false);
+        onOpenChange(false);
+        return;
+      }
+      setStep("detecting");
+      setCanShowModal(true);
     };
     if (open) checkStatus();
+    else setCanShowModal(false);
+    return () => {
+      cancelled = true;
+    };
   }, [open, onOpenChange]);
 
   useEffect(() => {
