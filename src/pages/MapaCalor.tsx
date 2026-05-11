@@ -804,9 +804,8 @@ const MapaCalor = () => {
       if (Object.keys(updates).length > 0) {
         await supabase.from("votos").update(updates).eq("user_id", user.id).eq("is_original_vote", true);
       }
-      const temCep = votoCep || profileCep;
-      // [TRAVA DE LOOP]: Só abre modal se address_confirmed === false E não tem CEP/bairro
-      if (!addressConfirmed && !temCep && !votoBairro) {
+      // [PORTARIA]: address_confirmed é a única chave de liberação do território.
+      if (!addressConfirmed) {
         setAddressOpen(true);
       }
       setAddressChecked(true);
