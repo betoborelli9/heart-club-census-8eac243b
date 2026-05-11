@@ -409,6 +409,18 @@ export default function AddressModal({ open, onOpenChange, clubName, onSuccess }
                   Sim, moro aqui!
                 </Button>
                 <Button
+                  variant="outline"
+                  onClick={() => {
+                    setSelectedCity(null);
+                    setSearchQuery("");
+                    setSuggestions([]);
+                    setStep("searching_city");
+                  }}
+                  className="bg-transparent border-white/10 text-white hover:bg-white/5 font-black italic uppercase h-12 rounded-2xl"
+                >
+                  Não, moro em outra cidade
+                </Button>
+                <Button
                   variant="ghost"
                   onClick={() => {
                     setStep("detecting");
@@ -421,6 +433,57 @@ export default function AddressModal({ open, onOpenChange, clubName, onSuccess }
                   Detectar novamente
                 </Button>
               </div>
+            </div>
+          )}
+
+          {step === "searching_city" && (
+            <div className="space-y-4 animate-in fade-in duration-300">
+              <div className="relative">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-500" />
+                <Input
+                  autoFocus
+                  placeholder="Digite sua cidade..."
+                  className="h-16 bg-zinc-900 border-white/10 pl-12 rounded-2xl focus:border-[#ff6200] text-lg font-bold italic"
+                  value={searchQuery}
+                  onChange={(e) => onTypeSearch(e.target.value)}
+                />
+              </div>
+              <div className="max-h-[250px] overflow-y-auto space-y-2 pr-2 scrollbar-hide">
+                {searchingCities && (
+                  <div className="flex items-center justify-center gap-3 p-6 text-zinc-400">
+                    <Loader2 className="w-4 h-4 animate-spin text-[#ff6200]" />
+                    <span className="text-xs italic uppercase tracking-widest">Buscando cidades...</span>
+                  </div>
+                )}
+                {suggestions.map((item: any) => (
+                  <button
+                    key={item.id}
+                    onClick={() => {
+                      setSelectedCity(item.ctx || { name: item.text, country: "Brasil", center: item.center });
+                      setSearchQuery("");
+                      setSuggestions([]);
+                      setStep("searching_bairro");
+                    }}
+                    className="w-full flex items-center justify-between p-4 bg-zinc-900/40 border border-white/5 hover:border-[#ff6200]/50 hover:bg-[#ff6200]/5 rounded-xl transition-all group text-left"
+                  >
+                    <div className="flex items-center gap-3">
+                      <MapPin className="w-5 h-5 text-zinc-600 group-hover:text-[#ff6200]" />
+                      <div>
+                        <p className="font-black italic uppercase text-sm">{item.text}</p>
+                        <p className="text-[10px] text-zinc-500 uppercase tracking-widest">{item.place_name}</p>
+                      </div>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-zinc-700" />
+                  </button>
+                ))}
+              </div>
+              <Button
+                variant="ghost"
+                onClick={() => setStep("welcome")}
+                className="text-zinc-500 hover:text-white uppercase font-bold text-xs h-10 w-full"
+              >
+                Voltar
+              </Button>
             </div>
           )}
 
