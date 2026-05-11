@@ -63,6 +63,30 @@ function toCityContext(feature: any) {
   };
 }
 
+async function enrichDetectedCity(input: { name?: string | null; country?: string | null; state?: string | null; center?: number[] | null }) {
+  if (!input?.name) return null;
+  if (input.state && input.country) return input;
+  try {
+    const params = input.center
+      ? `format=jsonv2&addressdetails=1&lat=${input.center[1]}&lon=${input.center[0]}`
+      : `format=jsonv2&addressdetails=1&limit=1&q=${encodeURIComponent(`${input.name}, ${input.country || "Brasil"}`)}`;
+    const res = await fetch(`https://nominatim.openstreetmap.org/${input.center ? "reverse" : "search"}?${params}`, {
+      headers: { "Accept-Language": "pt-BR,en" },
+    });
+    const data = await res.json();
+    const item = Array.isArray(data) ? data[0] : data;
+    const address = item?.address || {};
+    return {
+      ...input,
+      name: input.name || address.city || address.town || address.municipality,
+      country: input.country || address.country || "Brasil",
+      state: input.state || address.state || address.region || address.province,
+    };
+  } catch {
+    return input;
+  }
+}
+
 function centerFromGeometry(geometry: any): [number, number] | null {
   const coords: number[][] = [];
   const walk = (value: any) => {
@@ -176,7 +200,7 @@ function useTerritoryEngine() {
 export default function AddressModal({ open, onOpenChange, clubName, onSuccess }: any) {
   const { toast } = useToast();
   const { searchCities, searchNeighborhoods } = useTerritoryEngine();
-  const [step, setStep] = useState<"detecting" | "welcome" | "searching_city" | "searching_bairro">("detecting");
+  const [step, setStep] = useState<"detecting" | "welcome" | "location_error" | "searching_bairro">("detecting");
   const [loading, setLoading] = useState(false);
   const [detectedLocation, setDetectedLocation] = useState<any>(null);
   const [selectedCity, setSelectedCity] = useState<any>(null);
