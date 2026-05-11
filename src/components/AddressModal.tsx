@@ -63,6 +63,30 @@ function toCityContext(feature: any) {
   };
 }
 
+async function enrichDetectedCity(input: { name?: string | null; country?: string | null; state?: string | null; center?: number[] | null }) {
+  if (!input?.name) return null;
+  if (input.state && input.country) return input;
+  try {
+    const params = input.center
+      ? `format=jsonv2&addressdetails=1&lat=${input.center[1]}&lon=${input.center[0]}`
+      : `format=jsonv2&addressdetails=1&limit=1&q=${encodeURIComponent(`${input.name}, ${input.country || "Brasil"}`)}`;
+    const res = await fetch(`https://nominatim.openstreetmap.org/${input.center ? "reverse" : "search"}?${params}`, {
+      headers: { "Accept-Language": "pt-BR,en" },
+    });
+    const data = await res.json();
+    const item = Array.isArray(data) ? data[0] : data;
+    const address = item?.address || {};
+    return {
+      ...input,
+      name: input.name || address.city || address.town || address.municipality,
+      country: input.country || address.country || "Brasil",
+      state: input.state || address.state || address.region || address.province,
+    };
+  } catch {
+    return input;
+  }
+}
+
 function centerFromGeometry(geometry: any): [number, number] | null {
   const coords: number[][] = [];
   const walk = (value: any) => {
@@ -175,8 +199,8 @@ function useTerritoryEngine() {
 
 export default function AddressModal({ open, onOpenChange, clubName, onSuccess }: any) {
   const { toast } = useToast();
-  const { searchCities, searchNeighborhoods } = useTerritoryEngine();
-  const [step, setStep] = useState<"detecting" | "welcome" | "searching_city" | "searching_bairro">("detecting");
+  const { searchNeighborhoods } = useTerritoryEngine();
+  const [step, setStep] = useState<"detecting" | "welcome" | "location_error" | "searching_bairro">("detecting");
   const [loading, setLoading] = useState(false);
   const [detectedLocation, setDetectedLocation] = useState<any>(null);
   const [selectedCity, setSelectedCity] = useState<any>(null);
@@ -209,46 +233,43 @@ export default function AddressModal({ open, onOpenChange, clubName, onSuccess }
   const handleDetection = useCallback(async () => {
     const ipAudit = await captureIpAudit();
     if (ipAudit.cidade) {
-      setDetectedLocation({
+      const detected = await enrichDetectedCity({
         name: ipAudit.cidade,
         country: ipAudit.pais || "Brasil",
         state: ipAudit.estado,
         center: typeof ipAudit.lng === "number" && typeof ipAudit.lat === "number" ? [ipAudit.lng, ipAudit.lat] : null,
       });
+      setDetectedLocation(detected);
       setStep("welcome");
       return;
     }
 
-    if (!MAPBOX_TOKEN) {
-      setStep("searching_city");
-      return;
-    }
-
     if (!navigator.geolocation) {
-      setStep("searching_city");
+      setStep("location_error");
       return;
     }
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
         try {
-          const res = await fetch(
-            `https://api.mapbox.com/geocoding/v5/mapbox.places/${pos.coords.longitude},${pos.coords.latitude}.json?access_token=${MAPBOX_TOKEN}&types=place,region,country&language=pt`,
-          );
+          const center = [pos.coords.longitude, pos.coords.latitude];
+          const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&addressdetails=1&lat=${center[1]}&lon=${center[0]}`, {
+            headers: { "Accept-Language": "pt-BR,en" },
+          });
           const data = await res.json();
-          const city = data.features?.find((f: any) => f.place_type.includes("place"));
-          const state = data.features?.find((f: any) => f.place_type.includes("region"));
-          const country = data.features?.find((f: any) => f.place_type.includes("country"));
-          if (city) {
-            setDetectedLocation({ name: city.text, country: country?.text || "Brasil", state: state?.text, center: city.center });
+          const address = data?.address || {};
+          const name = address.city || address.town || address.village || address.municipality || address.county;
+          if (name) {
+            setDetectedLocation({ name, country: address.country || "Brasil", state: address.state || address.region || address.province, center });
             setStep("welcome");
           } else {
-            setStep("searching_city");
+            setStep("location_error");
           }
         } catch {
-          setStep("searching_city");
+          setStep("location_error");
         }
       },
-      () => setStep("searching_city"),
+      () => setStep("location_error"),
+      { enableHighAccuracy: true, timeout: 12000, maximumAge: 300000 },
     );
   }, []);
 
@@ -258,25 +279,14 @@ export default function AddressModal({ open, onOpenChange, clubName, onSuccess }
 
   const onTypeSearch = (val: string) => {
     setSearchQuery(val);
-    if (step === "searching_bairro") {
-      const q = normalize(val);
-      if (!q) {
-        setSuggestions(bairrosCache.slice(0, 50));
-        return;
-      }
-      const filtered = bairrosCache.filter((b) => normalize(b.text).includes(q));
-      setSuggestions(filtered.slice(0, 30));
+    if (step !== "searching_bairro") return;
+    const q = normalize(val);
+    if (!q) {
+      setSuggestions(bairrosCache.slice(0, 50));
       return;
     }
-    if (searchTimeout.current) clearTimeout(searchTimeout.current);
-    searchTimeout.current = setTimeout(async () => {
-      if (val.length < 2) {
-        setSuggestions([]);
-        return;
-      }
-      const results = await searchCities(val);
-      setSuggestions(results);
-    }, 350);
+    const filtered = bairrosCache.filter((b) => normalize(b.text).includes(q));
+    setSuggestions(filtered.slice(0, 30));
   };
 
   useEffect(() => {
@@ -293,14 +303,18 @@ export default function AddressModal({ open, onOpenChange, clubName, onSuccess }
       if (!user) return;
       const longitude = feature.center?.[0] ?? selectedCity?.center?.[0] ?? null;
       const latitude = feature.center?.[1] ?? selectedCity?.center?.[1] ?? null;
+      const resolvedCity = await enrichDetectedCity({ ...selectedCity, center: selectedCity?.center || feature.center });
+      const cityName = resolvedCity?.name || selectedCity?.name;
+      const stateName = resolvedCity?.state || selectedCity?.state || "";
+      const countryName = resolvedCity?.country || selectedCity?.country || "Brasil";
 
       const { error } = await supabase
         .from("profiles")
         .update({
           bairro: feature.text,
-          cidade: selectedCity.name,
-          estado: selectedCity.state || null,
-          pais: selectedCity.country || "Brasil",
+          cidade: cityName,
+          estado: stateName,
+          pais: countryName,
           latitude,
           longitude,
           address_confirmed: true, // AQUI É O INGRESSO DA FESTA
@@ -313,9 +327,9 @@ export default function AddressModal({ open, onOpenChange, clubName, onSuccess }
         .from("votos")
         .update({
           bairro: feature.text,
-          cidade: selectedCity.name,
-          estado: selectedCity.state || "",
-          pais: selectedCity.country || "Brasil",
+          cidade: cityName,
+          estado: stateName,
+          pais: countryName,
           latitude,
           longitude,
           voto_lat: latitude,
@@ -374,27 +388,43 @@ export default function AddressModal({ open, onOpenChange, clubName, onSuccess }
                 <Button
                   variant="ghost"
                   onClick={() => {
-                    setStep("searching_city");
+                    setStep("detecting");
                     setSearchQuery("");
                     setSuggestions([]);
+                    handleDetection();
                   }}
                   className="text-zinc-500 hover:text-white uppercase font-bold text-xs h-12"
                 >
-                  Não, moro em outro lugar
+                  Detectar novamente
                 </Button>
               </div>
             </div>
           )}
 
-          {(step === "searching_city" || step === "searching_bairro") && (
+          {step === "location_error" && (
+            <div className="space-y-4 animate-in fade-in duration-300 text-center">
+              <p className="text-sm text-zinc-400 italic leading-relaxed">
+                Não consegui detectar sua cidade automaticamente. Ative a localização do navegador e tente de novo.
+              </p>
+              <Button
+                onClick={() => {
+                  setStep("detecting");
+                  handleDetection();
+                }}
+                className="bg-[#ff6200] hover:bg-[#ff8230] text-white font-black italic uppercase h-12 rounded-2xl w-full"
+              >
+                Detectar localização
+              </Button>
+            </div>
+          )}
+
+          {step === "searching_bairro" && (
             <div className="space-y-4 animate-in fade-in duration-300">
               <div className="relative">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-500" />
                 <Input
                   autoFocus
-                  placeholder={
-                    step === "searching_city" ? "Digite sua cidade..." : `Qual o seu bairro em ${selectedCity?.name}?`
-                  }
+                  placeholder={`Qual o seu bairro em ${selectedCity?.name}?`}
                   className="h-16 bg-zinc-900 border-white/10 pl-12 rounded-2xl focus:border-[#ff6200] text-lg font-bold italic"
                   value={searchQuery}
                   onChange={(e) => onTypeSearch(e.target.value)}
@@ -405,14 +435,7 @@ export default function AddressModal({ open, onOpenChange, clubName, onSuccess }
                   <button
                     key={item.id}
                     onClick={() => {
-                      if (step === "searching_city") {
-                        setSelectedCity(toCityContext(item));
-                        setStep("searching_bairro");
-                        setSearchQuery("");
-                        setSuggestions([]);
-                      } else {
-                        handleFinalSave(item);
-                      }
+                      handleFinalSave(item);
                     }}
                     className="w-full flex items-center justify-between p-4 bg-zinc-900/40 border border-white/5 hover:border-[#ff6200]/50 hover:bg-[#ff6200]/5 rounded-xl transition-all group text-left"
                   >
