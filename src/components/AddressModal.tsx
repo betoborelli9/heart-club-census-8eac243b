@@ -199,8 +199,8 @@ function useTerritoryEngine() {
 
 export default function AddressModal({ open, onOpenChange, clubName, onSuccess }: any) {
   const { toast } = useToast();
-  const { searchNeighborhoods } = useTerritoryEngine();
-  const [step, setStep] = useState<"detecting" | "welcome" | "location_error" | "searching_bairro">("detecting");
+  const { searchCities, searchNeighborhoods } = useTerritoryEngine();
+  const [step, setStep] = useState<"detecting" | "welcome" | "location_error" | "searching_city" | "searching_bairro">("detecting");
   const [loading, setLoading] = useState(false);
   const [detectedLocation, setDetectedLocation] = useState<any>(null);
   const [selectedCity, setSelectedCity] = useState<any>(null);
@@ -208,6 +208,7 @@ export default function AddressModal({ open, onOpenChange, clubName, onSuccess }
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const [bairrosCache, setBairrosCache] = useState<any[]>([]);
   const [loadingBairros, setLoadingBairros] = useState(false);
+  const [searchingCities, setSearchingCities] = useState(false);
   const searchTimeout = useRef<any>(null);
 
   // [RESET DE STEP AO ABRIR — A PORTARIA AGORA É RESPONSABILIDADE DO COMPONENTE PAI]
