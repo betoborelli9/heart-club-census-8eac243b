@@ -579,13 +579,37 @@ export default function AddressModal({ open, onOpenChange, clubName, onSuccess }
                   </button>
                 ))}
 
-                {searchQuery.length >= 2 && suggestions.length === 0 && !loading && (
-                  <div className="bg-zinc-900/40 border border-white/5 rounded-2xl p-6 text-center">
-                    <p className="text-sm italic text-zinc-400">Nenhum território encontrado.</p>
-
-                    <p className="text-[11px] text-zinc-600 mt-2">Tente outro nome ou outra grafia.</p>
+                {step === "searching_bairro" && loadingBairros && (
+                  <div className="flex items-center justify-center gap-3 p-6 text-zinc-400">
+                    <Loader2 className="w-4 h-4 animate-spin text-[#ff6200]" />
+                    <span className="text-xs italic uppercase tracking-widest">
+                      Carregando bairros de {selectedCity?.name}...
+                    </span>
                   </div>
                 )}
+
+                {step === "searching_bairro" &&
+                  !loadingBairros &&
+                  bairrosCache.length === 0 && (
+                    <div className="bg-zinc-900/40 border border-white/5 rounded-2xl p-6 text-center">
+                      <p className="text-sm italic text-zinc-400">
+                        Não foi possível carregar bairros desta cidade.
+                      </p>
+                      <p className="text-[11px] text-zinc-600 mt-2">
+                        Digite o nome do seu bairro mesmo assim.
+                      </p>
+                    </div>
+                  )}
+
+                {step === "searching_city" &&
+                  searchQuery.length >= 2 &&
+                  suggestions.length === 0 &&
+                  !loading && (
+                    <div className="bg-zinc-900/40 border border-white/5 rounded-2xl p-6 text-center">
+                      <p className="text-sm italic text-zinc-400">Nenhum território encontrado.</p>
+                      <p className="text-[11px] text-zinc-600 mt-2">Tente outro nome ou outra grafia.</p>
+                    </div>
+                  )}
               </div>
             </div>
           )}
