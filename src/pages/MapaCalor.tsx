@@ -826,6 +826,7 @@ const MapaCalor = () => {
         await supabase.from("votos").update(updates).eq("user_id", user.id).eq("is_original_vote", true);
       }
       // [PORTARIA]: address_confirmed é a única chave de liberação do território.
+      setAddressConfirmed(addressConfirmed);
       if (!addressConfirmed) {
         setAddressOpen(true);
       }
