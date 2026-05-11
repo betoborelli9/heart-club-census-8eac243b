@@ -232,6 +232,23 @@ export default function AddressModal({ open, onOpenChange, clubName, onSuccess }
   }, [step, selectedCity?.name]);
 
   const handleDetection = useCallback(async () => {
+    const ipAudit = await captureIpAudit();
+    if (ipAudit.cidade) {
+      setDetectedLocation({
+        name: ipAudit.cidade,
+        country: ipAudit.pais || "Brasil",
+        state: ipAudit.estado,
+        center: Number.isFinite(ipAudit.lng) && Number.isFinite(ipAudit.lat) ? [ipAudit.lng, ipAudit.lat] : null,
+      });
+      setStep("welcome");
+      return;
+    }
+
+    if (!MAPBOX_TOKEN) {
+      setStep("searching_city");
+      return;
+    }
+
     if (!navigator.geolocation) {
       setStep("searching_city");
       return;
@@ -240,13 +257,14 @@ export default function AddressModal({ open, onOpenChange, clubName, onSuccess }
       async (pos) => {
         try {
           const res = await fetch(
-            `https://api.mapbox.com/geocoding/v5/mapbox.places/${pos.coords.longitude},${pos.coords.latitude}.json?access_token=${MAPBOX_TOKEN}&types=place,country&language=pt`,
+            `https://api.mapbox.com/geocoding/v5/mapbox.places/${pos.coords.longitude},${pos.coords.latitude}.json?access_token=${MAPBOX_TOKEN}&types=place,region,country&language=pt`,
           );
           const data = await res.json();
           const city = data.features?.find((f: any) => f.place_type.includes("place"));
+          const state = data.features?.find((f: any) => f.place_type.includes("region"));
           const country = data.features?.find((f: any) => f.place_type.includes("country"));
           if (city) {
-            setDetectedLocation({ name: city.text, country: country?.text || "Brasil", center: city.center });
+            setDetectedLocation({ name: city.text, country: country?.text || "Brasil", state: state?.text, center: city.center });
             setStep("welcome");
           } else {
             setStep("searching_city");
@@ -260,8 +278,8 @@ export default function AddressModal({ open, onOpenChange, clubName, onSuccess }
   }, []);
 
   useEffect(() => {
-    if (open) handleDetection();
-  }, [open, handleDetection]);
+    if (open && canShowModal) handleDetection();
+  }, [open, canShowModal, handleDetection]);
 
   const onTypeSearch = (val: string) => {
     setSearchQuery(val);
