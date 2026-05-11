@@ -256,7 +256,7 @@ function useTerritoryEngine() {
           return a.text.localeCompare(b.text);
         })
 
-        .slice(0, 20);
+        .slice(0, query ? 20 : 5000);
 
       return filtered;
     } catch (e) {
