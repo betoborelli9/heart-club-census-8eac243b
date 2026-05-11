@@ -805,7 +805,8 @@ const MapaCalor = () => {
         await supabase.from("votos").update(updates).eq("user_id", user.id).eq("is_original_vote", true);
       }
       const temCep = votoCep || profileCep;
-      if (!temCep) {
+      // [TRAVA DE LOOP]: Só abre modal se address_confirmed === false E não tem CEP/bairro
+      if (!addressConfirmed && !temCep && !votoBairro) {
         setAddressOpen(true);
       }
       setAddressChecked(true);
