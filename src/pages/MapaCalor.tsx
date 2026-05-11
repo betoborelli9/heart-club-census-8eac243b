@@ -127,12 +127,23 @@ const HEAT_PALETTE = [
   "#6f2500", // máximo
 ];
 
-function getColorByVotes(value: number, max: number): string {
+// Escala invasora (Time Consultado): Lilás → Roxo
+const INVADER_PALETTE = [
+  "#e9c2ff",
+  "#cf95ff",
+  "#b066ff",
+  "#9333ea",
+  "#7322c2",
+  "#561799",
+  "#380c66",
+];
+
+function getColorByVotes(value: number, max: number, palette: string[] = HEAT_PALETTE): string {
   if (!value || !max) return "rgba(40,40,40,0.15)";
-  if (value <= 1 || max <= 1) return HEAT_PALETTE[0];
+  if (value <= 1 || max <= 1) return palette[0];
   const t = Math.min(1, Math.max(0, Math.log(value) / Math.log(max)));
-  const idx = Math.min(HEAT_PALETTE.length - 1, Math.floor(t * HEAT_PALETTE.length));
-  return HEAT_PALETTE[idx];
+  const idx = Math.min(palette.length - 1, Math.floor(t * palette.length));
+  return palette[idx];
 }
 
 const COUNTRY_DB_TO_GEO: Record<string, string> = {
@@ -757,6 +768,7 @@ const MapaCalor = () => {
   const [heartCompareData, setHeartCompareData] = useState<ClubCompareData | null>(null);
   const [addressOpen, setAddressOpen] = useState(false);
   const [addressChecked, setAddressChecked] = useState(false);
+  const [addressConfirmed, setAddressConfirmed] = useState(false);
   const [addressReloadKey, setAddressReloadKey] = useState(0);
 
   useEffect(() => {
@@ -814,6 +826,7 @@ const MapaCalor = () => {
         await supabase.from("votos").update(updates).eq("user_id", user.id).eq("is_original_vote", true);
       }
       // [PORTARIA]: address_confirmed é a única chave de liberação do território.
+      setAddressConfirmed(addressConfirmed);
       if (!addressConfirmed) {
         setAddressOpen(true);
       }
@@ -1029,6 +1042,23 @@ const MapaCalor = () => {
     return map;
   }, [combinedHeatData]);
 
+  // [GUERRA DE CORES]: contadores separados Coração vs Invasor por região
+  const heartVotesByRegion = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const e of heatData) {
+      for (const key of regionLookupKeys(e.region)) map.set(key, Number(e.votes));
+    }
+    return map;
+  }, [heatData]);
+
+  const invaderVotesByRegion = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const e of compareHeatData) {
+      for (const key of regionLookupKeys(e.region)) map.set(key, Number(e.votes));
+    }
+    return map;
+  }, [compareHeatData]);
+
   const regionNameByKey = useMemo(() => {
     const map = new Map<string, string>();
     for (const e of combinedHeatData) {
@@ -1042,69 +1072,60 @@ const MapaCalor = () => {
     [combinedHeatData],
   );
 
+  const maxHeartVotes = useMemo(
+    () => heatData.reduce((m, e) => Math.max(m, Number(e.votes)), 0),
+    [heatData],
+  );
+
+  const maxInvaderVotes = useMemo(
+    () => compareHeatData.reduce((m, e) => Math.max(m, Number(e.votes)), 0),
+    [compareHeatData],
+  );
+
   /** * [MODULO 4: RENDERIZAÇÃO E LOOKUP CORRIGIDO]
    * Ajustado para resolver o problema de Tooltips vazios em Estados/Cidades.
    */
   const lookupVotesForFeature = useCallback(
-    (props: any): { name: string; votes: number } => {
-      if (!props) return { name: "—", votes: 0 };
-      const candidates: string[] = [];
+    (props: any): { name: string; votes: number; heartVotes: number; invaderVotes: number } => {
+      const empty = { name: "—", votes: 0, heartVotes: 0, invaderVotes: 0 };
+      if (!props) return empty;
 
-      // Caso Bairro (City View)
+      const candidates: string[] = [];
+      let display = "—";
+
       if (viewMode === "city") {
-        const neighborhoodName = getNeighborhoodFeatureName(props);
-        for (const key of regionLookupKeys(neighborhoodName)) {
-          const v = votesByRegion.get(key);
-          if (v !== undefined) return { name: regionNameByKey.get(key) || neighborhoodName, votes: v };
-        }
-        return { name: neighborhoodName, votes: 0 };
+        display = getNeighborhoodFeatureName(props);
+        candidates.push(display);
+      } else {
+        const propNames = ["ADMIN", "name", "name_en", "name_pt", "official_name", "NAME", "NAME_LONG", "NOME", "NM_MUN", "NM_UF"];
+        propNames.forEach((p) => { if (props[p]) candidates.push(props[p]); });
+        const propUfs = ["sigla", "sigla_uf", "UF", "uf", "ISO_A2", "iso_a2", "ISO3166_2"];
+        propUfs.forEach((p) => { if (props[p]) candidates.push(props[p]); });
+        display = candidates[0] || "—";
       }
 
-      // Caso Mundo/País/Estado
-      // 1. Tenta nomes diretos do GeoJSON
-      const propNames = [
-        "ADMIN",
-        "name",
-        "name_en",
-        "name_pt",
-        "official_name",
-        "NAME",
-        "NAME_LONG",
-        "NOME",
-        "NM_MUN",
-        "NM_UF",
-      ];
-      propNames.forEach((p) => {
-        if (props[p]) candidates.push(props[p]);
-      });
-
-      // 2. Tenta siglas (Crucial para o caso Brasil onde o mapa tem nomes mas o banco tem siglas)
-      const propUfs = ["sigla", "sigla_uf", "UF", "uf", "ISO_A2", "iso_a2", "ISO3166_2"];
-      propUfs.forEach((p) => {
-        if (props[p]) candidates.push(props[p]);
-      });
-
-      const display = candidates[0] || "—";
-
-      // Busca exaustiva nos candidatos normalizados
+      // Procura match em qualquer chave normalizada
       for (const c of candidates) {
-        for (const key of regionLookupKeys(c)) {
-          const v = votesByRegion.get(key);
-          if (v !== undefined) return { name: regionNameByKey.get(key) || display, votes: v };
-        }
-        // Fallback específico para mapeamento internacional
+        const keys = regionLookupKeys(c);
         const dbName = COUNTRY_GEO_TO_DB[c];
-        if (dbName) {
-          for (const key of regionLookupKeys(dbName)) {
-            const v2 = votesByRegion.get(key);
-            if (v2 !== undefined) return { name: regionNameByKey.get(key) || display, votes: v2 };
+        if (dbName) for (const k of regionLookupKeys(dbName)) keys.push(k);
+        for (const key of keys) {
+          if (votesByRegion.has(key) || heartVotesByRegion.has(key) || invaderVotesByRegion.has(key)) {
+            const heartVotes = heartVotesByRegion.get(key) || 0;
+            const invaderVotes = invaderVotesByRegion.get(key) || 0;
+            const total = votesByRegion.get(key) ?? heartVotes + invaderVotes;
+            return {
+              name: regionNameByKey.get(key) || display,
+              votes: total,
+              heartVotes,
+              invaderVotes,
+            };
           }
         }
       }
-
-      return { name: display, votes: 0 };
+      return { name: display, votes: 0, heartVotes: 0, invaderVotes: 0 };
     },
-    [votesByRegion, regionNameByKey, viewMode],
+    [votesByRegion, heartVotesByRegion, invaderVotesByRegion, regionNameByKey, viewMode],
   );
 
   const ranking = useMemo(
@@ -1346,24 +1367,34 @@ const MapaCalor = () => {
 
   const geoStyle = useCallback(
     (feature: any) => {
-      const { votes } = lookupVotesForFeature(feature?.properties);
+      const { votes, heartVotes, invaderVotes } = lookupVotesForFeature(feature?.properties);
       const hasVotes = votes > 0;
+      // [GUERRA DE CORES]: Invasor atropela Coração quando vence
+      const invaderWins = invaderVotes > heartVotes && invaderVotes > 0;
+      const fillColor = !hasVotes
+        ? "#0a0a0a"
+        : invaderWins
+          ? getColorByVotes(invaderVotes, maxInvaderVotes || 1, INVADER_PALETTE)
+          : getColorByVotes(heartVotes || votes, (maxHeartVotes || maxVotes) || 1, HEAT_PALETTE);
       return {
-        fillColor: hasVotes ? getColorByVotes(votes, maxVotes) : "#0a0a0a",
+        fillColor,
         fillOpacity: hasVotes ? 0.82 : 0.35,
         color: "#A9A9A9",
         weight: 0.5,
         opacity: 1,
       };
     },
-    [lookupVotesForFeature, maxVotes],
+    [lookupVotesForFeature, maxVotes, maxHeartVotes, maxInvaderVotes],
   );
 
   const onEachFeature = useCallback(
     (feature: any, layer: any) => {
-      const { name, votes } = lookupVotesForFeature(feature?.properties);
+      const { name, votes, heartVotes, invaderVotes } = lookupVotesForFeature(feature?.properties);
+      const breakdown = compareClubName
+        ? `<div style="color:#ff6200;font-weight:900;font-size:10px;margin-top:2px">❤️ ${fmt(heartVotes)}</div><div style="color:#b066ff;font-weight:900;font-size:10px">⚔️ ${fmt(invaderVotes)}</div>`
+        : `<div style="color:#ff6200;font-weight:900;font-size:11px;margin-top:2px">${fmt(votes)} VOTOS</div>`;
       layer.bindTooltip(
-        `<div style="font-family:Verdana,sans-serif"><div style="font-weight:900;font-style:italic;text-transform:uppercase;font-size:11px;color:#fff">${name}</div><div style="color:#ff6200;font-weight:900;font-size:11px;margin-top:2px">${fmt(votes)} VOTOS</div></div>`,
+        `<div style="font-family:Verdana,sans-serif"><div style="font-weight:900;font-style:italic;text-transform:uppercase;font-size:11px;color:#fff">${name}</div>${breakdown}</div>`,
         { sticky: true, direction: "top", opacity: 0.95, className: "war-tooltip" },
       );
       layer.on({
@@ -1389,12 +1420,12 @@ const MapaCalor = () => {
         },
       });
     },
-    [lookupVotesForFeature, viewMode, activeState, goCountry, goState, goCity],
+    [lookupVotesForFeature, viewMode, activeState, goCountry, goState, goCity, compareClubName],
   );
 
   const geoKey = useMemo(
-    () => `${viewMode}-${activeCountry}-${activeState}-${activeCity}-${maxVotes}-${heatData.length}`,
-    [viewMode, activeCountry, activeState, activeCity, maxVotes, heatData.length],
+    () => `${viewMode}-${activeCountry}-${activeState}-${activeCity}-${maxVotes}-${heatData.length}-${compareClubName || "solo"}-${compareHeatData.length}`,
+    [viewMode, activeCountry, activeState, activeCity, maxVotes, heatData.length, compareClubName, compareHeatData.length],
   );
   const mapHardResetKey = useMemo(() => {
     const raw = `${viewMode}|${activeCountry || ""}|${activeState || ""}|${activeCity || ""}`;
@@ -1813,9 +1844,29 @@ const MapaCalor = () => {
         </div>
       </div>
       <style>{`.war-tooltip { background: rgba(0,0,0,0.92) !important; border: 1px solid rgba(255,98,0,0.5) !important; border-radius: 8px !important; padding: 6px 10px !important; color: #fff !important; box-shadow: 0 4px 20px rgba(255,98,0,0.25) !important; }.war-tooltip::before { display: none !important; }.leaflet-container { font-family: Verdana, sans-serif; z-index: 0; }.leaflet-pane, .leaflet-top, .leaflet-bottom, .leaflet-control { z-index: 1 !important; }.leaflet-tooltip { z-index: 2 !important; }`}</style>
+      {addressChecked && !addressConfirmed && (
+        <div className="fixed inset-0 z-40 bg-black/85 backdrop-blur-md flex items-center justify-center">
+          <div className="text-center space-y-4 px-6">
+            <MapPin className="w-12 h-12 text-[#ff6200] mx-auto" />
+            <h2 className="text-xl font-black italic uppercase text-white">Confirme seu território</h2>
+            <p className="text-zinc-400 text-sm italic max-w-sm mx-auto">
+              O Mapa de Calor está bloqueado até você confirmar onde mora.
+            </p>
+            <Button
+              onClick={() => setAddressOpen(true)}
+              className="bg-[#ff6200] hover:bg-[#ff8230] text-white font-black italic uppercase h-12 px-6 rounded-2xl"
+            >
+              Abrir confirmação
+            </Button>
+          </div>
+        </div>
+      )}
       <AddressModal
         open={addressOpen}
-        onOpenChange={setAddressOpen}
+        onOpenChange={(v: boolean) => {
+          if (!v && !addressConfirmed) return; // gatekeeper: trava fechamento sem confirmação
+          setAddressOpen(v);
+        }}
         clubName={heartClubName}
         onSuccess={() => setAddressReloadKey((k) => k + 1)}
       />
