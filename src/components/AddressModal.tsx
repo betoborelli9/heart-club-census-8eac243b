@@ -363,7 +363,7 @@ export default function AddressModal({ open, onOpenChange, clubName, onSuccess }
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open && canShowModal} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md border-white/10 bg-black text-white rounded-[32px] p-0 overflow-hidden shadow-[0_0_60px_rgba(255,98,0,0.25)]">
         <div className="p-8 space-y-6">
           <header className="flex flex-col items-center text-center space-y-4">
@@ -431,11 +431,7 @@ export default function AddressModal({ open, onOpenChange, clubName, onSuccess }
                     key={item.id}
                     onClick={() => {
                       if (step === "searching_city") {
-                        setSelectedCity({
-                          name: item.text,
-                          country: item.context?.find((c: any) => c.id.includes("country"))?.text || "Brasil",
-                          center: item.center,
-                        });
+                        setSelectedCity(toCityContext(item));
                         setStep("searching_bairro");
                         setSearchQuery("");
                         setSuggestions([]);
