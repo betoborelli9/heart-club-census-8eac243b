@@ -220,13 +220,9 @@ function useTerritoryEngine() {
 
         .filter((item: any) => !isStreetTrash(item.text))
 
-        /**
-         * ==============================================================
-         * MATCH DA DIGITAÇÃO
-         * ==============================================================
-         */
-
-        .filter((item: any) => normalize(item.text).includes(normalize(query)))
+        .filter((item: any) =>
+          query ? normalize(item.text).includes(normalize(query)) : true,
+        )
 
         /**
          * ==============================================================
