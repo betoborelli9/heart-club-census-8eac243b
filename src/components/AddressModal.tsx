@@ -296,7 +296,35 @@ export default function AddressModal({ open, onOpenChange, clubName, onSuccess }
 
   const [suggestions, setSuggestions] = useState<any[]>([]);
 
+  const [bairrosCache, setBairrosCache] = useState<any[]>([]);
+  const [loadingBairros, setLoadingBairros] = useState(false);
+
   const searchTimeout = useRef<any>(null);
+
+  /* ══════════════════════════════════════════════════════════════════
+     PRÉ-CARREGAMENTO DE BAIRROS DA CIDADE
+     Quando o usuário escolhe uma cidade, carregamos TODOS os
+     bairros uma única vez. O autocomplete filtra localmente (instantâneo).
+     ══════════════════════════════════════════════════════════════════ */
+  useEffect(() => {
+    if (step !== "searching_bairro" || !selectedCity?.name) return;
+
+    let cancelled = false;
+    setLoadingBairros(true);
+    setBairrosCache([]);
+
+    (async () => {
+      const all = await searchNeighborhoods("", selectedCity);
+      if (cancelled) return;
+      setBairrosCache(all);
+      setLoadingBairros(false);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, selectedCity?.name]);
 
   /* ══════════════════════════════════════════════════════════════════
      GEO DETECTION
