@@ -768,6 +768,7 @@ const MapaCalor = () => {
   const [heartCompareData, setHeartCompareData] = useState<ClubCompareData | null>(null);
   const [addressOpen, setAddressOpen] = useState(false);
   const [addressChecked, setAddressChecked] = useState(false);
+  const [addressConfirmed, setAddressConfirmed] = useState(false);
   const [addressReloadKey, setAddressReloadKey] = useState(0);
 
   useEffect(() => {
