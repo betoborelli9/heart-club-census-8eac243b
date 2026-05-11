@@ -891,6 +891,7 @@ export type Database = {
         Args: { p_level: string; p_limit?: number; p_value: string }
         Returns: Json
       }
+      is_admin_or_master: { Args: { _user_id: string }; Returns: boolean }
       master_reset_my_vote: { Args: never; Returns: Json }
       purge_fake_votes: { Args: never; Returns: Json }
       purge_invalid_fake_votes: { Args: never; Returns: Json }

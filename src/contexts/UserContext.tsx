@@ -167,12 +167,14 @@ export function UserProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  // Perfil é considerado completo quando o usuário preencheu os campos
+  // que o ProfileSetup realmente coleta (nome, nascimento e gênero).
+  // Cidade/estado/bairro são capturados depois pelo AddressModal e não
+  // devem causar loop no /profile-setup.
   const isProfileComplete = !!(
     profile?.nome_exibicao &&
     profile?.data_nascimento &&
-    profile?.genero &&
-    profile?.cidade &&
-    profile?.estado
+    profile?.genero
   );
 
   const isAuthenticated = !!user;
