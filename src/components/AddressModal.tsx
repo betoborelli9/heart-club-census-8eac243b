@@ -384,27 +384,43 @@ export default function AddressModal({ open, onOpenChange, clubName, onSuccess }
                 <Button
                   variant="ghost"
                   onClick={() => {
-                    setStep("searching_city");
+                    setStep("detecting");
                     setSearchQuery("");
                     setSuggestions([]);
+                    handleDetection();
                   }}
                   className="text-zinc-500 hover:text-white uppercase font-bold text-xs h-12"
                 >
-                  Não, moro em outro lugar
+                  Detectar novamente
                 </Button>
               </div>
             </div>
           )}
 
-          {(step === "searching_city" || step === "searching_bairro") && (
+          {step === "location_error" && (
+            <div className="space-y-4 animate-in fade-in duration-300 text-center">
+              <p className="text-sm text-zinc-400 italic leading-relaxed">
+                Não consegui detectar sua cidade automaticamente. Ative a localização do navegador e tente de novo.
+              </p>
+              <Button
+                onClick={() => {
+                  setStep("detecting");
+                  handleDetection();
+                }}
+                className="bg-[#ff6200] hover:bg-[#ff8230] text-white font-black italic uppercase h-12 rounded-2xl w-full"
+              >
+                Detectar localização
+              </Button>
+            </div>
+          )}
+
+          {step === "searching_bairro" && (
             <div className="space-y-4 animate-in fade-in duration-300">
               <div className="relative">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-500" />
                 <Input
                   autoFocus
-                  placeholder={
-                    step === "searching_city" ? "Digite sua cidade..." : `Qual o seu bairro em ${selectedCity?.name}?`
-                  }
+                  placeholder={`Qual o seu bairro em ${selectedCity?.name}?`}
                   className="h-16 bg-zinc-900 border-white/10 pl-12 rounded-2xl focus:border-[#ff6200] text-lg font-bold italic"
                   value={searchQuery}
                   onChange={(e) => onTypeSearch(e.target.value)}
@@ -415,14 +431,7 @@ export default function AddressModal({ open, onOpenChange, clubName, onSuccess }
                   <button
                     key={item.id}
                     onClick={() => {
-                      if (step === "searching_city") {
-                        setSelectedCity(toCityContext(item));
-                        setStep("searching_bairro");
-                        setSearchQuery("");
-                        setSuggestions([]);
-                      } else {
-                        handleFinalSave(item);
-                      }
+                      handleFinalSave(item);
                     }}
                     className="w-full flex items-center justify-between p-4 bg-zinc-900/40 border border-white/5 hover:border-[#ff6200]/50 hover:bg-[#ff6200]/5 rounded-xl transition-all group text-left"
                   >
