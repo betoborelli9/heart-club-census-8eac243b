@@ -280,14 +280,36 @@ export default function AddressModal({ open, onOpenChange, clubName, onSuccess }
 
   const onTypeSearch = (val: string) => {
     setSearchQuery(val);
-    if (step !== "searching_bairro") return;
-    const q = normalize(val);
-    if (!q) {
-      setSuggestions(bairrosCache.slice(0, 50));
+    if (step === "searching_bairro") {
+      const q = normalize(val);
+      if (!q) {
+        setSuggestions(bairrosCache.slice(0, 50));
+        return;
+      }
+      const filtered = bairrosCache.filter((b) => normalize(b.text).includes(q));
+      setSuggestions(filtered.slice(0, 30));
       return;
     }
-    const filtered = bairrosCache.filter((b) => normalize(b.text).includes(q));
-    setSuggestions(filtered.slice(0, 30));
+    if (step === "searching_city") {
+      if (searchTimeout.current) clearTimeout(searchTimeout.current);
+      if (val.trim().length < 2) {
+        setSuggestions([]);
+        return;
+      }
+      setSearchingCities(true);
+      searchTimeout.current = setTimeout(async () => {
+        const features = await searchCities(val);
+        const items = (features || []).map((f: any) => ({
+          id: f.id,
+          text: f.text,
+          place_name: f.place_name,
+          center: f.center,
+          ctx: toCityContext(f),
+        }));
+        setSuggestions(items);
+        setSearchingCities(false);
+      }, 280);
+    }
   };
 
   useEffect(() => {
