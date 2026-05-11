@@ -127,12 +127,23 @@ const HEAT_PALETTE = [
   "#6f2500", // máximo
 ];
 
-function getColorByVotes(value: number, max: number): string {
+// Escala invasora (Time Consultado): Lilás → Roxo
+const INVADER_PALETTE = [
+  "#e9c2ff",
+  "#cf95ff",
+  "#b066ff",
+  "#9333ea",
+  "#7322c2",
+  "#561799",
+  "#380c66",
+];
+
+function getColorByVotes(value: number, max: number, palette: string[] = HEAT_PALETTE): string {
   if (!value || !max) return "rgba(40,40,40,0.15)";
-  if (value <= 1 || max <= 1) return HEAT_PALETTE[0];
+  if (value <= 1 || max <= 1) return palette[0];
   const t = Math.min(1, Math.max(0, Math.log(value) / Math.log(max)));
-  const idx = Math.min(HEAT_PALETTE.length - 1, Math.floor(t * HEAT_PALETTE.length));
-  return HEAT_PALETTE[idx];
+  const idx = Math.min(palette.length - 1, Math.floor(t * palette.length));
+  return palette[idx];
 }
 
 const COUNTRY_DB_TO_GEO: Record<string, string> = {
