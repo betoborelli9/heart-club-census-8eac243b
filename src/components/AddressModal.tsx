@@ -13,6 +13,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { captureIpAudit } from "@/lib/address";
+import { fetchOfficialGoianiaNeighborhoodGeoJson } from "@/lib/official-neighborhoods";
 
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_PUBLIC_TOKEN;
 
@@ -25,19 +27,12 @@ const STREET_BLACKLIST = [
   "alameda",
   "travessa",
   "praça",
-  "quadra",
-  "lote",
   "rodovia",
   "nº",
+  "número",
   "numero",
   "sn",
   "s/n",
-  "condominio",
-  "residencial",
-  "bloco",
-  "casa",
-  "apt",
-  "apartamento",
 ];
 function normalize(v: string = "") {
   return v
@@ -49,6 +44,39 @@ function normalize(v: string = "") {
 function isStreetTrash(name: string) {
   const n = normalize(name);
   return STREET_BLACKLIST.some((word) => n.includes(word));
+}
+
+function isGoiania(city?: string | null) {
+  return normalize(city || "") === "goiania";
+}
+
+function contextText(feature: any, prefix: string) {
+  return feature?.context?.find((c: any) => String(c.id || "").startsWith(prefix))?.text || null;
+}
+
+function toCityContext(feature: any) {
+  return {
+    name: feature.text,
+    country: contextText(feature, "country") || "Brasil",
+    state: contextText(feature, "region"),
+    center: feature.center,
+  };
+}
+
+function centerFromGeometry(geometry: any): [number, number] | null {
+  const coords: number[][] = [];
+  const walk = (value: any) => {
+    if (!Array.isArray(value)) return;
+    if (typeof value[0] === "number" && typeof value[1] === "number") {
+      coords.push([value[0], value[1]]);
+      return;
+    }
+    value.forEach(walk);
+  };
+  walk(geometry?.coordinates);
+  if (!coords.length) return null;
+  const sum = coords.reduce((acc, c) => [acc[0] + c[0], acc[1] + c[1]], [0, 0]);
+  return [sum[0] / coords.length, sum[1] / coords.length];
 }
 
 // [MÓDULO 2: ENGINE TERRITORIAL OVERPASS - MANTIDO INTACTO]
