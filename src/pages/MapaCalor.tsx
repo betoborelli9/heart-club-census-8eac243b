@@ -774,9 +774,10 @@ const MapaCalor = () => {
       setActiveClubInfo(CLUBS_DATA.find((c) => c.nome === name) || null);
       const { data: profileData } = await supabase
         .from("profiles")
-        .select("cep, cidade, estado")
+        .select("cep, cidade, estado, bairro, latitude, longitude, address_confirmed")
         .eq("id", user.id)
         .maybeSingle();
+      const addressConfirmed = !!profileData?.address_confirmed;
       const votoCep = data?.cep && String(data.cep).trim().length > 0;
       const profileCep = profileData?.cep && String(profileData.cep).trim().length > 0;
       const votoBairro = data?.bairro && String(data.bairro).trim().length > 0;
@@ -804,7 +805,8 @@ const MapaCalor = () => {
         await supabase.from("votos").update(updates).eq("user_id", user.id).eq("is_original_vote", true);
       }
       const temCep = votoCep || profileCep;
-      if (!temCep) {
+      // [TRAVA DE LOOP]: Só abre modal se address_confirmed === false E não tem CEP/bairro
+      if (!addressConfirmed && !temCep && !votoBairro) {
         setAddressOpen(true);
       }
       setAddressChecked(true);

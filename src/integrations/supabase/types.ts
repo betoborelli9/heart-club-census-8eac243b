@@ -400,6 +400,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          address_confirmed: boolean | null
           bairro: string | null
           cep: string | null
           cidade: string | null
@@ -411,6 +412,8 @@ export type Database = {
           faixa_etaria: string | null
           genero: string | null
           id: string
+          latitude: number | null
+          longitude: number | null
           metadata: Json | null
           nivel_embaixador: string | null
           nome_exibicao: string | null
@@ -422,6 +425,7 @@ export type Database = {
           username: string | null
         }
         Insert: {
+          address_confirmed?: boolean | null
           bairro?: string | null
           cep?: string | null
           cidade?: string | null
@@ -433,6 +437,8 @@ export type Database = {
           faixa_etaria?: string | null
           genero?: string | null
           id: string
+          latitude?: number | null
+          longitude?: number | null
           metadata?: Json | null
           nivel_embaixador?: string | null
           nome_exibicao?: string | null
@@ -444,6 +450,7 @@ export type Database = {
           username?: string | null
         }
         Update: {
+          address_confirmed?: boolean | null
           bairro?: string | null
           cep?: string | null
           cidade?: string | null
@@ -455,6 +462,8 @@ export type Database = {
           faixa_etaria?: string | null
           genero?: string | null
           id?: string
+          latitude?: number | null
+          longitude?: number | null
           metadata?: Json | null
           nivel_embaixador?: string | null
           nome_exibicao?: string | null

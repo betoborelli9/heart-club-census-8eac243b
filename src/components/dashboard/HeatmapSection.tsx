@@ -73,7 +73,9 @@ const HeatmapSection = () => {
         setSelectedClubId(slug);
       }
       const profileCep = (profile as any)?.cep;
-      setHasAddress(!!(data.bairro && data.bairro.trim()) || !!profileCep);
+      const addressConfirmed = (profile as any)?.address_confirmed === true;
+      const profileBairro = (profile as any)?.bairro;
+      setHasAddress(addressConfirmed || !!(data.bairro && data.bairro.trim()) || !!profileCep || !!profileBairro);
     };
     loadUserVote();
   }, [user, profile]);
