@@ -176,7 +176,6 @@ function useTerritoryEngine() {
 export default function AddressModal({ open, onOpenChange, clubName, onSuccess }: any) {
   const { toast } = useToast();
   const { searchCities, searchNeighborhoods } = useTerritoryEngine();
-  const [canShowModal, setCanShowModal] = useState(false);
   const [step, setStep] = useState<"detecting" | "welcome" | "searching_city" | "searching_bairro">("detecting");
   const [loading, setLoading] = useState(false);
   const [detectedLocation, setDetectedLocation] = useState<any>(null);
@@ -187,34 +186,10 @@ export default function AddressModal({ open, onOpenChange, clubName, onSuccess }
   const [loadingBairros, setLoadingBairros] = useState(false);
   const searchTimeout = useRef<any>(null);
 
-  // [PORTARIA: NUNCA MOSTRA O MODAL SE address_confirmed JÁ ESTÁ TRUE NO BANCO]
+  // [RESET DE STEP AO ABRIR — A PORTARIA AGORA É RESPONSABILIDADE DO COMPONENTE PAI]
   useEffect(() => {
-    let cancelled = false;
-    const checkStatus = async () => {
-      setCanShowModal(false);
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) {
-        onOpenChange(false);
-        return;
-      }
-      const { data: profile } = await supabase.from("profiles").select("address_confirmed").eq("id", user.id).maybeSingle();
-      if (cancelled) return;
-      if (profile?.address_confirmed) {
-        setCanShowModal(false);
-        onOpenChange(false);
-        return;
-      }
-      setStep("detecting");
-      setCanShowModal(true);
-    };
-    if (open) checkStatus();
-    else setCanShowModal(false);
-    return () => {
-      cancelled = true;
-    };
-  }, [open, onOpenChange]);
+    if (open) setStep("detecting");
+  }, [open]);
 
   useEffect(() => {
     if (step !== "searching_bairro" || !selectedCity?.name) return;
@@ -278,8 +253,8 @@ export default function AddressModal({ open, onOpenChange, clubName, onSuccess }
   }, []);
 
   useEffect(() => {
-    if (open && canShowModal) handleDetection();
-  }, [open, canShowModal, handleDetection]);
+    if (open) handleDetection();
+  }, [open, handleDetection]);
 
   const onTypeSearch = (val: string) => {
     setSearchQuery(val);
@@ -363,7 +338,7 @@ export default function AddressModal({ open, onOpenChange, clubName, onSuccess }
   };
 
   return (
-    <Dialog open={open && canShowModal} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md border-white/10 bg-black text-white rounded-[32px] p-0 overflow-hidden shadow-[0_0_60px_rgba(255,98,0,0.25)]">
         <div className="p-8 space-y-6">
           <header className="flex flex-col items-center text-center space-y-4">
