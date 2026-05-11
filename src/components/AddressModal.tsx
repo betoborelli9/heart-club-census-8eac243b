@@ -238,7 +238,7 @@ export default function AddressModal({ open, onOpenChange, clubName, onSuccess }
         name: ipAudit.cidade,
         country: ipAudit.pais || "Brasil",
         state: ipAudit.estado,
-        center: Number.isFinite(ipAudit.lng) && Number.isFinite(ipAudit.lat) ? [ipAudit.lng, ipAudit.lat] : null,
+        center: typeof ipAudit.lng === "number" && typeof ipAudit.lat === "number" ? [ipAudit.lng, ipAudit.lat] : null,
       });
       setStep("welcome");
       return;
