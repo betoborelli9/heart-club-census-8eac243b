@@ -1844,9 +1844,29 @@ const MapaCalor = () => {
         </div>
       </div>
       <style>{`.war-tooltip { background: rgba(0,0,0,0.92) !important; border: 1px solid rgba(255,98,0,0.5) !important; border-radius: 8px !important; padding: 6px 10px !important; color: #fff !important; box-shadow: 0 4px 20px rgba(255,98,0,0.25) !important; }.war-tooltip::before { display: none !important; }.leaflet-container { font-family: Verdana, sans-serif; z-index: 0; }.leaflet-pane, .leaflet-top, .leaflet-bottom, .leaflet-control { z-index: 1 !important; }.leaflet-tooltip { z-index: 2 !important; }`}</style>
+      {addressChecked && !addressConfirmed && (
+        <div className="fixed inset-0 z-40 bg-black/85 backdrop-blur-md flex items-center justify-center">
+          <div className="text-center space-y-4 px-6">
+            <MapPin className="w-12 h-12 text-[#ff6200] mx-auto" />
+            <h2 className="text-xl font-black italic uppercase text-white">Confirme seu território</h2>
+            <p className="text-zinc-400 text-sm italic max-w-sm mx-auto">
+              O Mapa de Calor está bloqueado até você confirmar onde mora.
+            </p>
+            <Button
+              onClick={() => setAddressOpen(true)}
+              className="bg-[#ff6200] hover:bg-[#ff8230] text-white font-black italic uppercase h-12 px-6 rounded-2xl"
+            >
+              Abrir confirmação
+            </Button>
+          </div>
+        </div>
+      )}
       <AddressModal
         open={addressOpen}
-        onOpenChange={setAddressOpen}
+        onOpenChange={(v: boolean) => {
+          if (!v && !addressConfirmed) return; // gatekeeper: trava fechamento sem confirmação
+          setAddressOpen(v);
+        }}
         clubName={heartClubName}
         onSuccess={() => setAddressReloadKey((k) => k + 1)}
       />
