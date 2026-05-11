@@ -303,14 +303,18 @@ export default function AddressModal({ open, onOpenChange, clubName, onSuccess }
       if (!user) return;
       const longitude = feature.center?.[0] ?? selectedCity?.center?.[0] ?? null;
       const latitude = feature.center?.[1] ?? selectedCity?.center?.[1] ?? null;
+      const resolvedCity = await enrichDetectedCity({ ...selectedCity, center: selectedCity?.center || feature.center });
+      const cityName = resolvedCity?.name || selectedCity?.name;
+      const stateName = resolvedCity?.state || selectedCity?.state || "";
+      const countryName = resolvedCity?.country || selectedCity?.country || "Brasil";
 
       const { error } = await supabase
         .from("profiles")
         .update({
           bairro: feature.text,
-          cidade: selectedCity.name,
-          estado: selectedCity.state || null,
-          pais: selectedCity.country || "Brasil",
+          cidade: cityName,
+          estado: stateName,
+          pais: countryName,
           latitude,
           longitude,
           address_confirmed: true, // AQUI É O INGRESSO DA FESTA
@@ -323,9 +327,9 @@ export default function AddressModal({ open, onOpenChange, clubName, onSuccess }
         .from("votos")
         .update({
           bairro: feature.text,
-          cidade: selectedCity.name,
-          estado: selectedCity.state || "",
-          pais: selectedCity.country || "Brasil",
+          cidade: cityName,
+          estado: stateName,
+          pais: countryName,
           latitude,
           longitude,
           voto_lat: latitude,
