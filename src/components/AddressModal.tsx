@@ -13,6 +13,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { captureIpAudit } from "@/lib/address";
+import { fetchOfficialGoianiaNeighborhoodGeoJson } from "@/lib/official-neighborhoods";
 
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_PUBLIC_TOKEN;
 
@@ -25,19 +27,12 @@ const STREET_BLACKLIST = [
   "alameda",
   "travessa",
   "praça",
-  "quadra",
-  "lote",
   "rodovia",
   "nº",
+  "número",
   "numero",
   "sn",
   "s/n",
-  "condominio",
-  "residencial",
-  "bloco",
-  "casa",
-  "apt",
-  "apartamento",
 ];
 function normalize(v: string = "") {
   return v
@@ -51,9 +46,43 @@ function isStreetTrash(name: string) {
   return STREET_BLACKLIST.some((word) => n.includes(word));
 }
 
+function isGoiania(city?: string | null) {
+  return normalize(city || "") === "goiania";
+}
+
+function contextText(feature: any, prefix: string) {
+  return feature?.context?.find((c: any) => String(c.id || "").startsWith(prefix))?.text || null;
+}
+
+function toCityContext(feature: any) {
+  return {
+    name: feature.text,
+    country: contextText(feature, "country") || "Brasil",
+    state: contextText(feature, "region"),
+    center: feature.center,
+  };
+}
+
+function centerFromGeometry(geometry: any): [number, number] | null {
+  const coords: number[][] = [];
+  const walk = (value: any) => {
+    if (!Array.isArray(value)) return;
+    if (typeof value[0] === "number" && typeof value[1] === "number") {
+      coords.push([value[0], value[1]]);
+      return;
+    }
+    value.forEach(walk);
+  };
+  walk(geometry?.coordinates);
+  if (!coords.length) return null;
+  const sum = coords.reduce((acc, c) => [acc[0] + c[0], acc[1] + c[1]], [0, 0]);
+  return [sum[0] / coords.length, sum[1] / coords.length];
+}
+
 // [MÓDULO 2: ENGINE TERRITORIAL OVERPASS - MANTIDO INTACTO]
 function useTerritoryEngine() {
   const searchCities = async (query: string) => {
+    if (!MAPBOX_TOKEN || query.trim().length < 2) return [];
     const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?access_token=${MAPBOX_TOKEN}&types=place&language=pt&autocomplete=true&limit=10`;
     try {
       const res = await fetch(url);
@@ -67,6 +96,33 @@ function useTerritoryEngine() {
   const searchNeighborhoods = async (query: string, cityContext: any) => {
     if (!cityContext?.name) return [];
     try {
+      if (isGoiania(cityContext.name)) {
+        const geojson = await fetchOfficialGoianiaNeighborhoodGeoJson();
+        const unique = new Map();
+        return (geojson?.features || [])
+          .map((feature: any) => {
+            const name = String(feature?.properties?.official_name || feature?.properties?.name || "").trim();
+            const center = centerFromGeometry(feature?.geometry) || cityContext.center;
+            if (!name || !center) return null;
+            return {
+              id: `goiania-${normalize(name)}`,
+              text: name,
+              place_name: `${name}, Goiânia`,
+              center,
+            };
+          })
+          .filter(Boolean)
+          .filter((item: any) => !isStreetTrash(item.text))
+          .filter((item: any) => (query ? normalize(item.text).includes(normalize(query)) : true))
+          .filter((item: any) => {
+            const key = normalize(item.text);
+            if (unique.has(key)) return false;
+            unique.set(key, true);
+            return true;
+          })
+          .sort((a: any, b: any) => a.text.localeCompare(b.text, "pt-BR"));
+      }
+
       const citySearchUrl = `https://nominatim.openstreetmap.org/search?${new URLSearchParams({ city: cityContext.name, country: cityContext.country || "", format: "jsonv2", limit: "1" })}`;
       const cityRes = await fetch(citySearchUrl);
       const cityData = await cityRes.json();
@@ -74,7 +130,7 @@ function useTerritoryEngine() {
       const areaId = cityData[0].osm_type === "relation" ? 3600000000 + Number(cityData[0].osm_id) : null;
       if (!areaId) return [];
 
-      const overpassQuery = `[out:json][timeout:25];area(${areaId})->.searchArea;(node["place"~"suburb|neighbourhood|quarter|city_block|subdivision"](area.searchArea);way["place"~"suburb|neighbourhood|quarter|city_block|subdivision"](area.searchArea);relation["place"~"suburb|neighbourhood|quarter|city_block|subdivision"](area.searchArea););out center tags;`;
+      const overpassQuery = `[out:json][timeout:25];area(${areaId})->.searchArea;(node["place"~"suburb|neighbourhood|quarter"](area.searchArea);way["place"~"suburb|neighbourhood|quarter"](area.searchArea);relation["place"~"suburb|neighbourhood|quarter"](area.searchArea););out center tags;`;
       const overpassRes = await fetch("https://overpass-api.de/api/interpreter", {
         method: "POST",
         body: overpassQuery,
@@ -95,6 +151,7 @@ function useTerritoryEngine() {
           };
         })
         .filter(Boolean)
+        .filter((item: any) => Number.isFinite(item.center?.[0]) && Number.isFinite(item.center?.[1]))
         .filter((item: any) => !isStreetTrash(item.text))
         .filter((item: any) => (query ? normalize(item.text).includes(normalize(query)) : true))
         .filter((item: any) => {
@@ -119,6 +176,7 @@ function useTerritoryEngine() {
 export default function AddressModal({ open, onOpenChange, clubName, onSuccess }: any) {
   const { toast } = useToast();
   const { searchCities, searchNeighborhoods } = useTerritoryEngine();
+  const [canShowModal, setCanShowModal] = useState(false);
   const [step, setStep] = useState<"detecting" | "welcome" | "searching_city" | "searching_bairro">("detecting");
   const [loading, setLoading] = useState(false);
   const [detectedLocation, setDetectedLocation] = useState<any>(null);
@@ -129,19 +187,33 @@ export default function AddressModal({ open, onOpenChange, clubName, onSuccess }
   const [loadingBairros, setLoadingBairros] = useState(false);
   const searchTimeout = useRef<any>(null);
 
-  // [CHECK DE SEGURANÇA: FECHA O MODAL SE JÁ ESTIVER NO BANCO]
+  // [PORTARIA: NUNCA MOSTRA O MODAL SE address_confirmed JÁ ESTÁ TRUE NO BANCO]
   useEffect(() => {
+    let cancelled = false;
     const checkStatus = async () => {
+      setCanShowModal(false);
       const {
         data: { user },
       } = await supabase.auth.getUser();
-      if (!user) return;
-      const { data: profile } = await supabase.from("profiles").select("address_confirmed").eq("id", user.id).single();
-      if (profile?.address_confirmed) {
-        onOpenChange(false); // Se já confirmou, mata o modal.
+      if (!user) {
+        onOpenChange(false);
+        return;
       }
+      const { data: profile } = await supabase.from("profiles").select("address_confirmed").eq("id", user.id).maybeSingle();
+      if (cancelled) return;
+      if (profile?.address_confirmed) {
+        setCanShowModal(false);
+        onOpenChange(false);
+        return;
+      }
+      setStep("detecting");
+      setCanShowModal(true);
     };
     if (open) checkStatus();
+    else setCanShowModal(false);
+    return () => {
+      cancelled = true;
+    };
   }, [open, onOpenChange]);
 
   useEffect(() => {
@@ -160,6 +232,23 @@ export default function AddressModal({ open, onOpenChange, clubName, onSuccess }
   }, [step, selectedCity?.name]);
 
   const handleDetection = useCallback(async () => {
+    const ipAudit = await captureIpAudit();
+    if (ipAudit.cidade) {
+      setDetectedLocation({
+        name: ipAudit.cidade,
+        country: ipAudit.pais || "Brasil",
+        state: ipAudit.estado,
+        center: typeof ipAudit.lng === "number" && typeof ipAudit.lat === "number" ? [ipAudit.lng, ipAudit.lat] : null,
+      });
+      setStep("welcome");
+      return;
+    }
+
+    if (!MAPBOX_TOKEN) {
+      setStep("searching_city");
+      return;
+    }
+
     if (!navigator.geolocation) {
       setStep("searching_city");
       return;
@@ -168,13 +257,14 @@ export default function AddressModal({ open, onOpenChange, clubName, onSuccess }
       async (pos) => {
         try {
           const res = await fetch(
-            `https://api.mapbox.com/geocoding/v5/mapbox.places/${pos.coords.longitude},${pos.coords.latitude}.json?access_token=${MAPBOX_TOKEN}&types=place,country&language=pt`,
+            `https://api.mapbox.com/geocoding/v5/mapbox.places/${pos.coords.longitude},${pos.coords.latitude}.json?access_token=${MAPBOX_TOKEN}&types=place,region,country&language=pt`,
           );
           const data = await res.json();
           const city = data.features?.find((f: any) => f.place_type.includes("place"));
+          const state = data.features?.find((f: any) => f.place_type.includes("region"));
           const country = data.features?.find((f: any) => f.place_type.includes("country"));
           if (city) {
-            setDetectedLocation({ name: city.text, country: country?.text || "Brasil", center: city.center });
+            setDetectedLocation({ name: city.text, country: country?.text || "Brasil", state: state?.text, center: city.center });
             setStep("welcome");
           } else {
             setStep("searching_city");
@@ -188,8 +278,8 @@ export default function AddressModal({ open, onOpenChange, clubName, onSuccess }
   }, []);
 
   useEffect(() => {
-    if (open) handleDetection();
-  }, [open, handleDetection]);
+    if (open && canShowModal) handleDetection();
+  }, [open, canShowModal, handleDetection]);
 
   const onTypeSearch = (val: string) => {
     setSearchQuery(val);
@@ -226,20 +316,38 @@ export default function AddressModal({ open, onOpenChange, clubName, onSuccess }
         data: { user },
       } = await supabase.auth.getUser();
       if (!user) return;
+      const longitude = feature.center?.[0] ?? selectedCity?.center?.[0] ?? null;
+      const latitude = feature.center?.[1] ?? selectedCity?.center?.[1] ?? null;
 
       const { error } = await supabase
         .from("profiles")
         .update({
           bairro: feature.text,
           cidade: selectedCity.name,
+          estado: selectedCity.state || null,
           pais: selectedCity.country || "Brasil",
-          latitude: feature.center[1],
-          longitude: feature.center[0],
+          latitude,
+          longitude,
           address_confirmed: true, // AQUI É O INGRESSO DA FESTA
         })
         .eq("id", user.id);
 
       if (error) throw error;
+
+      await supabase
+        .from("votos")
+        .update({
+          bairro: feature.text,
+          cidade: selectedCity.name,
+          estado: selectedCity.state || "",
+          pais: selectedCity.country || "Brasil",
+          latitude,
+          longitude,
+          voto_lat: latitude,
+          voto_lng: longitude,
+        })
+        .eq("user_id", user.id)
+        .eq("is_original_vote", true);
 
       toast({ title: "Território Confirmado!", description: "Bem-vindo ao mapa global!" });
       onOpenChange(false);
@@ -255,7 +363,7 @@ export default function AddressModal({ open, onOpenChange, clubName, onSuccess }
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open && canShowModal} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md border-white/10 bg-black text-white rounded-[32px] p-0 overflow-hidden shadow-[0_0_60px_rgba(255,98,0,0.25)]">
         <div className="p-8 space-y-6">
           <header className="flex flex-col items-center text-center space-y-4">
@@ -323,11 +431,7 @@ export default function AddressModal({ open, onOpenChange, clubName, onSuccess }
                     key={item.id}
                     onClick={() => {
                       if (step === "searching_city") {
-                        setSelectedCity({
-                          name: item.text,
-                          country: item.context?.find((c: any) => c.id.includes("country"))?.text || "Brasil",
-                          center: item.center,
-                        });
+                        setSelectedCity(toCityContext(item));
                         setStep("searching_bairro");
                         setSearchQuery("");
                         setSuggestions([]);

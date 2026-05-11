@@ -20,6 +20,10 @@ interface Profile {
   codigo_indicacao: string | null;
   nivel_embaixador: string | null;
   cep: string | null;
+  bairro: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  address_confirmed: boolean | null;
 }
 
 interface UserContextType {

@@ -136,7 +136,7 @@ const Dashboard = () => {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => navigate("/votação?test=1")}
+                onClick={() => navigate("/voting?test=1")}
                 className="border-[#ff6200] text-[#ff6200] hover:bg-[#ff6200] hover:text-white font-black italic uppercase text-[10px]"
               >
                 Votação Master
@@ -246,14 +246,14 @@ const Dashboard = () => {
             <>
               <button
                 className="flex flex-col items-center gap-1 text-[#ff6200] hover:text-white"
-                onClick={() => navigate("/votação?test=1")}
+                onClick={() => navigate("/voting?test=1")}
               >
                 <Vote className="w-5 h-5" />
                 <span className="text-[9px] font-bold uppercase tracking-widest">Votação</span>
               </button>
               <button
                 className="flex flex-col items-center gap-1 text-white/40 hover:text-white"
-                onClick={() => navigate("/painel")}
+                onClick={() => navigate("/admin")}
               >
                 <LayoutDashboard className="w-5 h-5" />
                 <span className="text-[9px] font-bold uppercase tracking-widest">Admin</span>
