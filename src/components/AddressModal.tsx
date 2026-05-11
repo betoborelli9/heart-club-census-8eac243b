@@ -220,13 +220,9 @@ function useTerritoryEngine() {
 
         .filter((item: any) => !isStreetTrash(item.text))
 
-        /**
-         * ==============================================================
-         * MATCH DA DIGITAÇÃO
-         * ==============================================================
-         */
-
-        .filter((item: any) => normalize(item.text).includes(normalize(query)))
+        .filter((item: any) =>
+          query ? normalize(item.text).includes(normalize(query)) : true,
+        )
 
         /**
          * ==============================================================
@@ -260,7 +256,7 @@ function useTerritoryEngine() {
           return a.text.localeCompare(b.text);
         })
 
-        .slice(0, 20);
+        .slice(0, query ? 20 : 5000);
 
       return filtered;
     } catch (e) {
@@ -296,7 +292,35 @@ export default function AddressModal({ open, onOpenChange, clubName, onSuccess }
 
   const [suggestions, setSuggestions] = useState<any[]>([]);
 
+  const [bairrosCache, setBairrosCache] = useState<any[]>([]);
+  const [loadingBairros, setLoadingBairros] = useState(false);
+
   const searchTimeout = useRef<any>(null);
+
+  /* ══════════════════════════════════════════════════════════════════
+     PRÉ-CARREGAMENTO DE BAIRROS DA CIDADE
+     Quando o usuário escolhe uma cidade, carregamos TODOS os
+     bairros uma única vez. O autocomplete filtra localmente (instantâneo).
+     ══════════════════════════════════════════════════════════════════ */
+  useEffect(() => {
+    if (step !== "searching_bairro" || !selectedCity?.name) return;
+
+    let cancelled = false;
+    setLoadingBairros(true);
+    setBairrosCache([]);
+
+    (async () => {
+      const all = await searchNeighborhoods("", selectedCity);
+      if (cancelled) return;
+      setBairrosCache(all);
+      setLoadingBairros(false);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, selectedCity?.name]);
 
   /* ══════════════════════════════════════════════════════════════════
      GEO DETECTION
@@ -353,41 +377,49 @@ export default function AddressModal({ open, onOpenChange, clubName, onSuccess }
   const onTypeSearch = (val: string) => {
     setSearchQuery(val);
 
-    if (searchTimeout.current) {
-      clearTimeout(searchTimeout.current);
+    /**
+     * BAIRRO: filtragem LOCAL instantânea sobre o cache.
+     */
+    if (step === "searching_bairro") {
+      if (searchTimeout.current) clearTimeout(searchTimeout.current);
+      const q = normalize(val);
+      if (!q) {
+        setSuggestions(bairrosCache.slice(0, 50));
+        return;
+      }
+      const startsWith: any[] = [];
+      const includes: any[] = [];
+      for (const b of bairrosCache) {
+        const n = normalize(b.text);
+        if (n.startsWith(q)) startsWith.push(b);
+        else if (n.includes(q)) includes.push(b);
+      }
+      setSuggestions([...startsWith, ...includes].slice(0, 30));
+      return;
     }
 
+    /**
+     * CIDADE: busca remota com debounce.
+     */
+    if (searchTimeout.current) clearTimeout(searchTimeout.current);
     searchTimeout.current = setTimeout(async () => {
       if (val.length < 2) {
         setSuggestions([]);
         return;
       }
-
-      let results = [];
-
-      /**
-       * ============================================================
-       * BUSCA CIDADES
-       * ============================================================
-       */
-
-      if (step === "searching_city") {
-        results = await searchCities(val);
-      }
-
-      /**
-       * ============================================================
-       * BUSCA BAIRROS
-       * ============================================================
-       */
-
-      if (step === "searching_bairro") {
-        results = await searchNeighborhoods(val, selectedCity);
-      }
-
+      const results = await searchCities(val);
       setSuggestions(results);
     }, 350);
   };
+
+  /**
+   * Quando o cache de bairros chega, popula a lista inicial sem precisar digitar.
+   */
+  useEffect(() => {
+    if (step === "searching_bairro" && !searchQuery && bairrosCache.length) {
+      setSuggestions(bairrosCache.slice(0, 50));
+    }
+  }, [bairrosCache, step, searchQuery]);
 
   /* ══════════════════════════════════════════════════════════════════
      SAVE
@@ -547,13 +579,37 @@ export default function AddressModal({ open, onOpenChange, clubName, onSuccess }
                   </button>
                 ))}
 
-                {searchQuery.length >= 2 && suggestions.length === 0 && !loading && (
-                  <div className="bg-zinc-900/40 border border-white/5 rounded-2xl p-6 text-center">
-                    <p className="text-sm italic text-zinc-400">Nenhum território encontrado.</p>
-
-                    <p className="text-[11px] text-zinc-600 mt-2">Tente outro nome ou outra grafia.</p>
+                {step === "searching_bairro" && loadingBairros && (
+                  <div className="flex items-center justify-center gap-3 p-6 text-zinc-400">
+                    <Loader2 className="w-4 h-4 animate-spin text-[#ff6200]" />
+                    <span className="text-xs italic uppercase tracking-widest">
+                      Carregando bairros de {selectedCity?.name}...
+                    </span>
                   </div>
                 )}
+
+                {step === "searching_bairro" &&
+                  !loadingBairros &&
+                  bairrosCache.length === 0 && (
+                    <div className="bg-zinc-900/40 border border-white/5 rounded-2xl p-6 text-center">
+                      <p className="text-sm italic text-zinc-400">
+                        Não foi possível carregar bairros desta cidade.
+                      </p>
+                      <p className="text-[11px] text-zinc-600 mt-2">
+                        Digite o nome do seu bairro mesmo assim.
+                      </p>
+                    </div>
+                  )}
+
+                {step === "searching_city" &&
+                  searchQuery.length >= 2 &&
+                  suggestions.length === 0 &&
+                  !loading && (
+                    <div className="bg-zinc-900/40 border border-white/5 rounded-2xl p-6 text-center">
+                      <p className="text-sm italic text-zinc-400">Nenhum território encontrado.</p>
+                      <p className="text-[11px] text-zinc-600 mt-2">Tente outro nome ou outra grafia.</p>
+                    </div>
+                  )}
               </div>
             </div>
           )}
