@@ -28,11 +28,19 @@ const MAX_SYMPATHY_CLUBS = 4;
 const Voting = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { user, profile, refreshProfile } = useUser();
+  const { user, profile, hasVoted, refreshProfile } = useUser();
   const { toast } = useToast();
 
   const IS_MASTER_ADMIN = user?.email === "betoborelli9@gmail.com";
   const TEST_MODE = IS_MASTER_ADMIN && searchParams.get("test") === "1";
+
+  // VOTO SAGRADO: quem já votou nunca mais entra na tela de votação,
+  // exceto o Master em modo de teste explícito (?test=1).
+  useEffect(() => {
+    if (hasVoted && !TEST_MODE) {
+      navigate("/dashboard", { replace: true });
+    }
+  }, [hasVoted, TEST_MODE, navigate]);
 
   const [heartSearch, setHeartSearch] = useState("");
   const [heartResults, setHeartResults] = useState<ClubResult[]>([]);
