@@ -32,8 +32,10 @@ const Admin = () => {
       navigate("/login");
       return;
     }
-    // Check admin role from profile
-    if (profile?.role === "admin") {
+    // Acesso liberado para admins OU para o fundador (master), independente
+    // do valor de profile.role — evita travar o dono do projeto.
+    const isMaster = user.email?.toLowerCase() === "betoborelli9@gmail.com";
+    if (profile?.role === "admin" || isMaster) {
       setIsAdmin(true);
     } else {
       setIsAdmin(false);
