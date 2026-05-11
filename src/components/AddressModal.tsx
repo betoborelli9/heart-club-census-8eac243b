@@ -279,25 +279,14 @@ export default function AddressModal({ open, onOpenChange, clubName, onSuccess }
 
   const onTypeSearch = (val: string) => {
     setSearchQuery(val);
-    if (step === "searching_bairro") {
-      const q = normalize(val);
-      if (!q) {
-        setSuggestions(bairrosCache.slice(0, 50));
-        return;
-      }
-      const filtered = bairrosCache.filter((b) => normalize(b.text).includes(q));
-      setSuggestions(filtered.slice(0, 30));
+    if (step !== "searching_bairro") return;
+    const q = normalize(val);
+    if (!q) {
+      setSuggestions(bairrosCache.slice(0, 50));
       return;
     }
-    if (searchTimeout.current) clearTimeout(searchTimeout.current);
-    searchTimeout.current = setTimeout(async () => {
-      if (val.length < 2) {
-        setSuggestions([]);
-        return;
-      }
-      const results = await searchCities(val);
-      setSuggestions(results);
-    }, 350);
+    const filtered = bairrosCache.filter((b) => normalize(b.text).includes(q));
+    setSuggestions(filtered.slice(0, 30));
   };
 
   useEffect(() => {
