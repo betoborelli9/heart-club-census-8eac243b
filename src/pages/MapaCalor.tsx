@@ -778,16 +778,25 @@ const MapaCalor = () => {
         .eq("id", user.id)
         .maybeSingle();
       const addressConfirmed = !!profileData?.address_confirmed;
-      const votoCep = data?.cep && String(data.cep).trim().length > 0;
-      const profileCep = profileData?.cep && String(profileData.cep).trim().length > 0;
-      const votoBairro = data?.bairro && String(data.bairro).trim().length > 0;
+      // [SYNC PROFILE → VOTO ORIGINAL]
+      // Garantir que o voto sagrado herda os dados de território confirmados no profile.
+      // Sem isso, o heatmap (que lê de votos) não pinta país/estado/cidade/bairro do torcedor.
       const updates: Record<string, any> = {};
-      if (!votoCep && profileCep) {
-        updates.cep = profileData!.cep;
-        if (profileData?.cidade) updates.cidade = profileData.cidade;
-        if (profileData?.estado) updates.estado = profileData.estado;
+      const isEmpty = (v: any) => !v || !String(v).trim();
+      if (isEmpty(data?.cidade) && profileData?.cidade) updates.cidade = profileData.cidade;
+      if (isEmpty(data?.estado) && profileData?.estado) updates.estado = profileData.estado;
+      if (isEmpty(data?.bairro) && profileData?.bairro) updates.bairro = profileData.bairro;
+      if (isEmpty(data?.cep) && profileData?.cep) updates.cep = profileData.cep;
+      if (profileData?.latitude != null) {
+        updates.latitude = profileData.latitude;
+        updates.voto_lat = profileData.latitude;
       }
-      if (!votoBairro) {
+      if (profileData?.longitude != null) {
+        updates.longitude = profileData.longitude;
+        updates.voto_lng = profileData.longitude;
+      }
+      // Fallback CEP → bairro via ViaCEP, mantido como último recurso.
+      if (isEmpty(updates.bairro) && isEmpty(data?.bairro)) {
         const cepRaw = (data?.cep || profileData?.cep || updates.cep || "").toString().replace(/\D/g, "");
         if (cepRaw.length === 8) {
           try {
@@ -795,8 +804,8 @@ const MapaCalor = () => {
             const j = await r.json();
             if (j?.bairro && String(j.bairro).trim()) {
               updates.bairro = String(j.bairro).trim();
-              if (!data?.cidade && j.localidade) updates.cidade = j.localidade;
-              if (!data?.estado && j.uf) updates.estado = j.uf;
+              if (isEmpty(updates.cidade) && isEmpty(data?.cidade) && j.localidade) updates.cidade = j.localidade;
+              if (isEmpty(updates.estado) && isEmpty(data?.estado) && j.uf) updates.estado = j.uf;
             }
           } catch (e) {}
         }
