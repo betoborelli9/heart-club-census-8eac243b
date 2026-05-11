@@ -316,20 +316,38 @@ export default function AddressModal({ open, onOpenChange, clubName, onSuccess }
         data: { user },
       } = await supabase.auth.getUser();
       if (!user) return;
+      const longitude = feature.center?.[0] ?? selectedCity?.center?.[0] ?? null;
+      const latitude = feature.center?.[1] ?? selectedCity?.center?.[1] ?? null;
 
       const { error } = await supabase
         .from("profiles")
         .update({
           bairro: feature.text,
           cidade: selectedCity.name,
+          estado: selectedCity.state || null,
           pais: selectedCity.country || "Brasil",
-          latitude: feature.center[1],
-          longitude: feature.center[0],
+          latitude,
+          longitude,
           address_confirmed: true, // AQUI É O INGRESSO DA FESTA
         })
         .eq("id", user.id);
 
       if (error) throw error;
+
+      await supabase
+        .from("votos")
+        .update({
+          bairro: feature.text,
+          cidade: selectedCity.name,
+          estado: selectedCity.state || "",
+          pais: selectedCity.country || "Brasil",
+          latitude,
+          longitude,
+          voto_lat: latitude,
+          voto_lng: longitude,
+        })
+        .eq("user_id", user.id)
+        .eq("is_original_vote", true);
 
       toast({ title: "Território Confirmado!", description: "Bem-vindo ao mapa global!" });
       onOpenChange(false);
