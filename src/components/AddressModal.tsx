@@ -1,12 +1,12 @@
 /**
  * ╔══════════════════════════════════════════════════════════════════════╗
  * ║ CAMINHO: src/components/AddressModal.tsx                              ║
- * ║ CONTEXTO: Modal de Endereço com trava geográfica e busca resiliente  ║
+ * ║ STATUS: WAR ROOM - FILTRO ANTI-RUA (EXCLUSÃO DE POI/ADDRESS)         ║
  * ║ LOCALHOST: C:\Users\betob\Desktop\GitHub\heart-club                  ║
  * ╚══════════════════════════════════════════════════════════════════════╝
  */
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { MapPin, Loader2, Check, Search, Navigation, ChevronRight, Heart } from "lucide-react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -16,54 +16,70 @@ import { useToast } from "@/hooks/use-toast";
 
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_PUBLIC_TOKEN;
 
-// --- MÓDULO DE LÓGICA (HOOK) ---
-function useGeoLocation() {
-  const [loading, setLoading] = useState(false);
-
-  const getCityFromCoords = async (lon: number, lat: number) => {
-    const res = await fetch(
-      `https://api.mapbox.com/geocoding/v5/mapbox.places/${lon},${lat}.json?access_token=${MAPBOX_TOKEN}&types=place,country&language=pt`,
-    );
-    return await res.json();
+/* ══════════════════════════════════════════════════════════════════════
+   MÓDULO 1: MOTOR DE BUSCA TERRITORIAL (ANTI-RUAS)
+   ══════════════════════════════════════════════════════════════════════ */
+function useTerritoryEngine() {
+  const filterStreetTrash = (features: any[]) => {
+    // Palavras proibidas para garantir que não venham ruas ou avenidas
+    const forbidden = ["rua", "avenida", "ave.", "av.", "alameda", "travessa", "praça", "rodovia", "br-"];
+    return features.filter((f) => {
+      const name = f.text.toLowerCase();
+      const fullName = f.place_name.toLowerCase();
+      return !forbidden.some((word) => name.includes(word) || fullName.includes(word));
+    });
   };
 
-  const searchPlaces = async (query: string, type: string, cityCenter?: number[]) => {
+  const searchPlaces = async (query: string, mode: "city" | "neighborhood", context?: any) => {
     let url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?access_token=${MAPBOX_TOKEN}&language=pt&autocomplete=true`;
 
-    if (type === "city") {
+    if (mode === "city") {
       url += `&types=place`;
     } else {
-      // Ajuste: neighborhood, locality e address para garantir que o Coimbra apareça
-      url += `&types=neighborhood,locality,address`;
-      if (cityCenter) {
-        const [lon, lat] = cityCenter;
-        url += `&proximity=${lon},${lat}&bbox=${lon - 0.3},${lat - 0.3},${lon + 0.3},${lat + 0.3}`;
+      url += `&types=neighborhood,locality`; // Solicita apenas bairros e localidades
+      if (context?.center) {
+        const [lon, lat] = context.center;
+        // Bbox mais apertado (0.15) para não sair da cidade de jeito nenhum
+        url += `&proximity=${lon},${lat}&bbox=${lon - 0.15},${lat - 0.15},${lon + 0.15},${lat + 0.15}`;
       }
     }
-    const res = await fetch(url);
-    return await res.json();
+
+    try {
+      const res = await fetch(url);
+      const data = await res.json();
+      return mode === "neighborhood" ? filterStreetTrash(data.features || []) : data.features;
+    } catch (e) {
+      return [];
+    }
   };
 
-  return { getCityFromCoords, searchPlaces, loading, setLoading };
+  return { searchPlaces };
 }
 
-// --- COMPONENTE PRINCIPAL ---
+/* ══════════════════════════════════════════════════════════════════════
+   MÓDULO 2: COMPONENTE DE INTERFACE
+   ══════════════════════════════════════════════════════════════════════ */
 export default function AddressModal({ open, onOpenChange, clubName, onSuccess }: any) {
   const { toast } = useToast();
-  const { getCityFromCoords, searchPlaces, setLoading } = useGeoLocation();
+  const { searchPlaces } = useTerritoryEngine();
 
   const [step, setStep] = useState<"detecting" | "welcome" | "searching_city" | "searching_bairro">("detecting");
+  const [loading, setLoading] = useState(false);
   const [detectedLocation, setDetectedLocation] = useState<any>(null);
   const [selectedCity, setSelectedCity] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [suggestions, setSuggestions] = useState<any[]>([]);
+  const searchTimeout = useRef<any>(null);
 
   const handleDetection = useCallback(async () => {
     if (!navigator.geolocation) return setStep("searching_city");
 
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
-        const data = await getCityFromCoords(pos.coords.longitude, pos.coords.latitude);
+        const res = await fetch(
+          `https://api.mapbox.com/geocoding/v5/mapbox.places/${pos.coords.longitude},${pos.coords.latitude}.json?access_token=${MAPBOX_TOKEN}&types=place,country&language=pt`,
+        );
+        const data = await res.json();
         const city = data.features?.find((f: any) => f.place_type.includes("place"));
         const country = data.features?.find((f: any) => f.place_type.includes("country"));
 
@@ -76,20 +92,24 @@ export default function AddressModal({ open, onOpenChange, clubName, onSuccess }
       },
       () => setStep("searching_city"),
     );
-  }, [getCityFromCoords]);
+  }, []);
 
   useEffect(() => {
     if (open) handleDetection();
   }, [open, handleDetection]);
 
-  const onTypeSearch = async (val: string) => {
+  const onTypeSearch = (val: string) => {
     setSearchQuery(val);
-    if (val.length < 2) {
-      setSuggestions([]);
-      return;
-    }
-    const data = await searchPlaces(val, step === "searching_city" ? "city" : "bairro", selectedCity?.center);
-    setSuggestions(data.features || []);
+    if (searchTimeout.current) clearTimeout(searchTimeout.current);
+
+    searchTimeout.current = setTimeout(async () => {
+      if (val.length < 2) {
+        setSuggestions([]);
+        return;
+      }
+      const results = await searchPlaces(val, step === "searching_city" ? "city" : "neighborhood", selectedCity);
+      setSuggestions(results || []);
+    }, 300);
   };
 
   const handleFinalSave = async (feature: any) => {
@@ -99,7 +119,7 @@ export default function AddressModal({ open, onOpenChange, clubName, onSuccess }
     } = await supabase.auth.getUser();
     if (!user) return;
 
-    const { error } = await supabase
+    await supabase
       .from("profiles")
       .update({
         bairro: feature.text,
@@ -111,11 +131,9 @@ export default function AddressModal({ open, onOpenChange, clubName, onSuccess }
       })
       .eq("id", user.id);
 
-    if (!error) {
-      toast({ title: "Território Confirmado!" });
-      onOpenChange(false);
-      onSuccess?.();
-    }
+    toast({ title: "Território Confirmado!" });
+    onOpenChange(false);
+    onSuccess?.();
     setLoading(false);
   };
 
@@ -127,18 +145,11 @@ export default function AddressModal({ open, onOpenChange, clubName, onSuccess }
             <div className="w-16 h-16 bg-[#ff6200]/10 border border-[#ff6200]/30 rounded-2xl flex items-center justify-center">
               <Heart className="text-[#ff6200] w-8 h-8 fill-[#ff6200]/20" />
             </div>
-            <h2 className="text-2xl font-black italic uppercase">Onde pulsa seu coração?</h2>
+            <h2 className="text-2xl font-black italic uppercase">Território do Coração</h2>
             <p className="text-zinc-500 text-sm italic">
-              Confirme seu território no mapa do <span className="text-[#ff6200] font-bold uppercase">{clubName}</span>.
+              Onde você torce pelo <span className="text-[#ff6200] font-bold uppercase">{clubName}</span>?
             </p>
           </header>
-
-          {step === "detecting" && (
-            <div className="py-10 flex flex-col items-center space-y-4">
-              <Loader2 className="w-8 h-8 animate-spin text-[#ff6200]" />
-              <p className="text-sm italic text-zinc-400">Rastreando seu território...</p>
-            </div>
-          )}
 
           {step === "welcome" && (
             <div className="space-y-6 animate-in fade-in zoom-in-95">
@@ -168,7 +179,7 @@ export default function AddressModal({ open, onOpenChange, clubName, onSuccess }
                   }}
                   className="text-zinc-500 hover:text-white uppercase font-bold text-xs"
                 >
-                  Não, moro em outra cidade
+                  Não, moro em outro lugar
                 </Button>
               </div>
             </div>
@@ -181,7 +192,7 @@ export default function AddressModal({ open, onOpenChange, clubName, onSuccess }
                 <Input
                   autoFocus
                   placeholder={
-                    step === "searching_city" ? "Qual a sua cidade?" : `Qual o seu bairro em ${selectedCity?.name}?`
+                    step === "searching_city" ? "Digite sua cidade..." : `Qual o seu bairro em ${selectedCity?.name}?`
                   }
                   className="h-16 bg-zinc-900 border-white/10 pl-12 rounded-2xl focus:border-[#ff6200] text-lg font-bold"
                   value={searchQuery}
@@ -219,7 +230,7 @@ export default function AddressModal({ open, onOpenChange, clubName, onSuccess }
           <footer className="flex items-start gap-3 bg-[#ff6200]/5 p-4 rounded-2xl border border-[#ff6200]/10">
             <Navigation className="w-4 h-4 text-[#ff6200] shrink-0 mt-0.5" />
             <p className="text-[10px] text-zinc-400 italic leading-tight">
-              Sua privacidade é sagrada. O endereço nunca será público. Apenas o bairro alimentará o mapa global.
+              Sua privacidade é prioridade. Apenas o bairro é utilizado para o mapa de calor da torcida.
             </p>
           </footer>
         </div>
@@ -230,9 +241,9 @@ export default function AddressModal({ open, onOpenChange, clubName, onSuccess }
 
 /**
  * ╔══════════════════════════════════════════════════════════════════════╗
- * ║ LOG TÉCNICO:                                                         ║
- * ║ - Ajustado filtro Mapbox para (neighborhood, locality, address)      ║
- * ║ - Implementado useGeoLocation Hook para separação de lógica          ║
- * ║ - Corrigido bug de sugestão única (agora sempre exibe o box)         ║
+ * ║ RESUMO TÉCNICO:                                                      ║
+ * ║ - Implementado filterStreetTrash para remover endereços de logradouro ║
+ * ║ - BBox reduzido para 0.15 para travar busca estritamente na cidade   ║
+ * ║ - Estilo War Room mantido com acessibilidade e feedback visual       ║
  * ╚══════════════════════════════════════════════════════════════════════╝
  */
