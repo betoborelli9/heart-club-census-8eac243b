@@ -82,6 +82,7 @@ function centerFromGeometry(geometry: any): [number, number] | null {
 // [MÓDULO 2: ENGINE TERRITORIAL OVERPASS - MANTIDO INTACTO]
 function useTerritoryEngine() {
   const searchCities = async (query: string) => {
+    if (!MAPBOX_TOKEN || query.trim().length < 2) return [];
     const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?access_token=${MAPBOX_TOKEN}&types=place&language=pt&autocomplete=true&limit=10`;
     try {
       const res = await fetch(url);
@@ -95,6 +96,33 @@ function useTerritoryEngine() {
   const searchNeighborhoods = async (query: string, cityContext: any) => {
     if (!cityContext?.name) return [];
     try {
+      if (isGoiania(cityContext.name)) {
+        const geojson = await fetchOfficialGoianiaNeighborhoodGeoJson();
+        const unique = new Map();
+        return (geojson?.features || [])
+          .map((feature: any) => {
+            const name = String(feature?.properties?.official_name || feature?.properties?.name || "").trim();
+            const center = centerFromGeometry(feature?.geometry) || cityContext.center;
+            if (!name || !center) return null;
+            return {
+              id: `goiania-${normalize(name)}`,
+              text: name,
+              place_name: `${name}, Goiânia`,
+              center,
+            };
+          })
+          .filter(Boolean)
+          .filter((item: any) => !isStreetTrash(item.text))
+          .filter((item: any) => (query ? normalize(item.text).includes(normalize(query)) : true))
+          .filter((item: any) => {
+            const key = normalize(item.text);
+            if (unique.has(key)) return false;
+            unique.set(key, true);
+            return true;
+          })
+          .sort((a: any, b: any) => a.text.localeCompare(b.text, "pt-BR"));
+      }
+
       const citySearchUrl = `https://nominatim.openstreetmap.org/search?${new URLSearchParams({ city: cityContext.name, country: cityContext.country || "", format: "jsonv2", limit: "1" })}`;
       const cityRes = await fetch(citySearchUrl);
       const cityData = await cityRes.json();
@@ -102,7 +130,7 @@ function useTerritoryEngine() {
       const areaId = cityData[0].osm_type === "relation" ? 3600000000 + Number(cityData[0].osm_id) : null;
       if (!areaId) return [];
 
-      const overpassQuery = `[out:json][timeout:25];area(${areaId})->.searchArea;(node["place"~"suburb|neighbourhood|quarter|city_block|subdivision"](area.searchArea);way["place"~"suburb|neighbourhood|quarter|city_block|subdivision"](area.searchArea);relation["place"~"suburb|neighbourhood|quarter|city_block|subdivision"](area.searchArea););out center tags;`;
+      const overpassQuery = `[out:json][timeout:25];area(${areaId})->.searchArea;(node["place"~"suburb|neighbourhood|quarter"](area.searchArea);way["place"~"suburb|neighbourhood|quarter"](area.searchArea);relation["place"~"suburb|neighbourhood|quarter"](area.searchArea););out center tags;`;
       const overpassRes = await fetch("https://overpass-api.de/api/interpreter", {
         method: "POST",
         body: overpassQuery,
@@ -123,6 +151,7 @@ function useTerritoryEngine() {
           };
         })
         .filter(Boolean)
+        .filter((item: any) => Number.isFinite(item.center?.[0]) && Number.isFinite(item.center?.[1]))
         .filter((item: any) => !isStreetTrash(item.text))
         .filter((item: any) => (query ? normalize(item.text).includes(normalize(query)) : true))
         .filter((item: any) => {
