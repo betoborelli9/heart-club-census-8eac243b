@@ -1,665 +1,263 @@
 /**
- * =================================================================================================
- * ARQUIVO: src/components/AddressModal.tsx
- * VERSÃO: 6.5 GLOBAL UX EDITION
- * =================================================================================================
- *
- * OBJETIVO:
- * Modal inteligente de endereço com:
- *
- * ✔ Fluxo "Menor Esforço"
- * ✔ Detecção automática por IP/GPS
- * ✔ Resolução de ambiguidades globais
- * ✔ Busca mundial de cidades
- * ✔ Busca contextual de bairros
- * ✔ Persistência vitalícia
- * ✔ Integração total com Supabase
- * ✔ UX estilo "Google Maps + War Room"
- *
- * FLUXO:
- *
- * 1. Detecta localização do usuário
- * 2. Pergunta:
- *      "Vimos que você está em Goiânia, Brasil. Você mora aqui?"
- *
- * 3A. Se SIM:
- *      trava cidade/país
- *      pede apenas o bairro
- *
- * 3B. Se NÃO:
- *      abre busca global de cidades
- *
- * 4. Se houver múltiplos bairros:
- *      abre lista de escolha
- *
- * 5. Salva:
- *      bairro
- *      cidade
- *      estado
- *      pais
- *      latitude
- *      longitude
- *
- * 6. Fecha e nunca mais abre para o usuário
- *
- * =================================================================================================
+ * ╔══════════════════════════════════════════════════════════════════════╗
+ * ║ CAMINHO: src/components/AddressModal.tsx                              ║
+ * ║ STATUS: WAR ROOM EDITION - GLOBAL & INTELLIGENT                      ║
+ * ║ VERSÃO: v7.0.0 (Beto Borelli Edition)                                ║
+ * ╚══════════════════════════════════════════════════════════════════════╝
  */
 
-import { useEffect, useMemo, useRef, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { MapPin, Loader2, Globe2, Check, Search, Navigation, Building2, X } from "lucide-react";
-
+import { useEffect, useState, useCallback } from "react";
+import { MapPin, Loader2, Globe, Check, Search, Navigation, X, ChevronRight } from "lucide-react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-
 import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
-/* =================================================================================================
- * MÓDULO 1 — TIPAGENS
- * ================================================================================================= */
+/* ══════════════════════════════════════════════════════════════════════
+   MÓDULO 1 — CONFIGURAÇÕES E TOKENS
+   ══════════════════════════════════════════════════════════════════════ */
+const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_PUBLIC_TOKEN;
 
-interface AddressModalProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  clubName?: string | null;
-  onSuccess?: () => void;
-}
+/* ══════════════════════════════════════════════════════════════════════
+   MÓDULO 2 — COMPONENTE PRINCIPAL
+   ══════════════════════════════════════════════════════════════════════ */
+export default function AddressModal({ open, onOpenChange, clubName, onSuccess }: any) {
+  const { toast } = useToast();
+  const [step, setStep] = useState<"detecting" | "welcome" | "searching_city" | "searching_bairro">("detecting");
+  const [loading, setLoading] = useState(false);
 
-interface GeoDetected {
-  city: string;
-  state?: string;
-  country: string;
-  lat: number;
-  lon: number;
-}
+  // Estados de Localização
+  const [detectedLocation, setDetectedLocation] = useState<any>(null);
+  const [selectedCity, setSelectedCity] = useState<any>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [suggestions, setSuggestions] = useState<any[]>([]);
 
-interface CityOption {
-  city: string;
-  state?: string;
-  country: string;
-  lat: number;
-  lon: number;
-  display: string;
-}
-
-interface NeighborhoodOption {
-  name: string;
-  lat: number;
-  lon: number;
-}
-
-/* =================================================================================================
- * MÓDULO 2 — HELPERS
- * ================================================================================================= */
-
-const OVERPASS_URL = "https://overpass-api.de/api/interpreter";
-
-const normalize = (v?: string | null) =>
-  (v || "")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/setor|bairro|district|jardim|zona|sector/gi, "")
-    .replace(/\s+/g, " ")
-    .trim()
-    .toLowerCase();
-
-async function reverseGeo(): Promise<GeoDetected | null> {
-  try {
-    const pos = await new Promise<GeolocationPosition>((resolve, reject) =>
-      navigator.geolocation.getCurrentPosition(resolve, reject, {
-        enableHighAccuracy: true,
-        timeout: 10000,
-      }),
-    );
-
-    const lat = pos.coords.latitude;
-    const lon = pos.coords.longitude;
-
-    const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}`);
-
-    const json = await res.json();
-
-    const address = json.address || {};
-
-    return {
-      city: address.city || address.town || address.village || address.county || "",
-      state: address.state || "",
-      country: address.country || "",
-      lat,
-      lon,
-    };
-  } catch {
-    return null;
-  }
-}
-
-async function searchCities(query: string): Promise<CityOption[]> {
-  if (!query) return [];
-
-  const url =
-    `https://nominatim.openstreetmap.org/search?` +
-    new URLSearchParams({
-      q: query,
-      format: "jsonv2",
-      addressdetails: "1",
-      limit: "10",
-    });
-
-  const res = await fetch(url);
-
-  const data = await res.json();
-
-  return data.map((item: any) => ({
-    city: item.address.city || item.address.town || item.address.village || item.address.county || item.name,
-    state: item.address.state || "",
-    country: item.address.country || "",
-    lat: Number(item.lat),
-    lon: Number(item.lon),
-    display: [
-      item.address.city || item.address.town || item.address.village || item.name,
-      item.address.state,
-      item.address.country,
-    ]
-      .filter(Boolean)
-      .join(" / "),
-  }));
-}
-
-async function searchNeighborhoods(city: string, country: string, query: string): Promise<NeighborhoodOption[]> {
-  if (!query) return [];
-
-  const q = `
-    [out:json];
-    (
-      node["place"="suburb"]["name"](around:30000,0,0);
-      way["place"="suburb"]["name"](around:30000,0,0);
-      relation["place"="suburb"]["name"](around:30000,0,0);
-    );
-    out center tags;
-  `;
-
-  try {
-    const url =
-      `https://nominatim.openstreetmap.org/search?` +
-      new URLSearchParams({
-        q: `${query}, ${city}, ${country}`,
-        format: "jsonv2",
-        addressdetails: "1",
-        limit: "10",
-      });
-
-    const res = await fetch(url);
-
-    const data = await res.json();
-
-    const unique = new Map<string, NeighborhoodOption>();
-
-    data.forEach((item: any) => {
-      const name = item.address.suburb || item.address.neighbourhood || item.name;
-
-      if (!name) return;
-
-      const key = normalize(name);
-
-      if (!unique.has(key)) {
-        unique.set(key, {
-          name,
-          lat: Number(item.lat),
-          lon: Number(item.lon),
-        });
-      }
-    });
-
-    return Array.from(unique.values());
-  } catch {
-    return [];
-  }
-}
-
-/* =================================================================================================
- * MÓDULO 3 — COMPONENTE
- * ================================================================================================= */
-
-export default function AddressModal({ open, onOpenChange, clubName, onSuccess }: AddressModalProps) {
-  const [loading, setLoading] = useState(true);
-
-  const [geo, setGeo] = useState<GeoDetected | null>(null);
-
-  const [confirmedGeo, setConfirmedGeo] = useState(false);
-
-  const [cityQuery, setCityQuery] = useState("");
-  const [cityResults, setCityResults] = useState<CityOption[]>([]);
-
-  const [selectedCity, setSelectedCity] = useState<CityOption | null>(null);
-
-  const [bairroQuery, setBairroQuery] = useState("");
-  const [bairroResults, setBairroResults] = useState<NeighborhoodOption[]>([]);
-
-  const [selectedBairro, setSelectedBairro] = useState<NeighborhoodOption | null>(null);
-
-  const [saving, setSaving] = useState(false);
-
-  const cityDebounce = useRef<any>(null);
-  const bairroDebounce = useRef<any>(null);
-
-  /* =============================================================================================
-   * MÓDULO 4 — DETECÇÃO AUTOMÁTICA
-   * ============================================================================================= */
-
-  useEffect(() => {
-    const run = async () => {
-      setLoading(true);
-
-      const detected = await reverseGeo();
-
-      if (detected) {
-        setGeo(detected);
-      }
-
-      setLoading(false);
-    };
-
-    if (open) {
-      run();
-    }
-  }, [open]);
-
-  /* =============================================================================================
-   * MÓDULO 5 — BUSCA GLOBAL DE CIDADES
-   * ============================================================================================= */
-
-  useEffect(() => {
-    if (!cityQuery || confirmedGeo) return;
-
-    if (cityDebounce.current) {
-      clearTimeout(cityDebounce.current);
-    }
-
-    cityDebounce.current = setTimeout(async () => {
-      const data = await searchCities(cityQuery);
-      setCityResults(data);
-    }, 300);
-  }, [cityQuery, confirmedGeo]);
-
-  /* =============================================================================================
-   * MÓDULO 6 — BUSCA CONTEXTUAL DE BAIRROS
-   * ============================================================================================= */
-
-  useEffect(() => {
-    if (!bairroQuery || !selectedCity) return;
-
-    if (bairroDebounce.current) {
-      clearTimeout(bairroDebounce.current);
-    }
-
-    bairroDebounce.current = setTimeout(async () => {
-      const data = await searchNeighborhoods(selectedCity.city, selectedCity.country, bairroQuery);
-
-      setBairroResults(data);
-    }, 300);
-  }, [bairroQuery, selectedCity]);
-
-  /* =============================================================================================
-   * MÓDULO 7 — SALVAMENTO VITALÍCIO
-   * ============================================================================================= */
-
-  const saveAddress = async () => {
-    if (!selectedCity || !selectedBairro) return;
-
-    setSaving(true);
-
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
-      setSaving(false);
+  /* ══════════════════════════════════════════════════════════════════════
+     MÓDULO 3 — DETECÇÃO PROATIVA (IP/GPS)
+     ══════════════════════════════════════════════════════════════════════ */
+  const detectLocation = useCallback(async () => {
+    setStep("detecting");
+    if (!navigator.geolocation) {
+      setStep("searching_city");
       return;
     }
 
-    const payload = {
-      bairro: selectedBairro.name,
-      cidade: selectedCity.city,
-      estado: selectedCity.state || "",
-      pais: selectedCity.country,
-      latitude: selectedBairro.lat,
-      longitude: selectedBairro.lon,
-      address_confirmed: true,
-    };
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        try {
+          const res = await fetch(
+            `https://api.mapbox.com/geocoding/v5/mapbox.places/${pos.coords.longitude},${pos.coords.latitude}.json?access_token=${MAPBOX_TOKEN}&types=place,country`,
+          );
+          const data = await res.json();
+          const city = data.features.find((f: any) => f.place_type.includes("place"));
+          const country = data.features.find((f: any) => f.place_type.includes("country"));
 
-    await supabase.from("profiles").update(payload).eq("id", user.id);
+          if (city) {
+            setDetectedLocation({
+              name: city.text,
+              full: city.place_name,
+              country: country?.text || "",
+              center: city.center,
+            });
+            setStep("welcome");
+          } else {
+            setStep("searching_city");
+          }
+        } catch (e) {
+          setStep("searching_city");
+        }
+      },
+      () => setStep("searching_city"),
+    );
+  }, []);
 
-    localStorage.setItem("heartclub_address_confirmed", "true");
+  useEffect(() => {
+    if (open) detectLocation();
+  }, [open, detectLocation]);
 
-    setSaving(false);
+  /* ══════════════════════════════════════════════════════════════════════
+     MÓDULO 4 — BUSCA GLOBAL (CIDADES E BAIRROS)
+     ══════════════════════════════════════════════════════════════════════ */
+  const handleSearch = async (val: string) => {
+    setSearchQuery(val);
+    if (val.length < 3) {
+      setSuggestions([]);
+      return;
+    }
 
-    onOpenChange(false);
+    const type = step === "searching_city" ? "place" : "neighborhood,locality";
+    const proximity = selectedCity ? `&proximity=${selectedCity.center[0]},${selectedCity.center[1]}` : "";
 
-    onSuccess?.();
+    try {
+      const res = await fetch(
+        `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(val)}.json?access_token=${MAPBOX_TOKEN}&types=${type}${proximity}&language=pt`,
+      );
+      const data = await res.json();
+      setSuggestions(data.features);
+    } catch (e) {
+      console.error(e);
+    }
   };
 
-  /* =============================================================================================
-   * MÓDULO 8 — UI
-   * ============================================================================================= */
+  /* ══════════════════════════════════════════════════════════════════════
+     MÓDULO 5 — PERSISTÊNCIA FINAL (SUPABASE)
+     ══════════════════════════════════════════════════════════════════════ */
+  const confirmFinalAddress = async (bairroFeature: any) => {
+    setLoading(true);
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const payload = {
+        bairro: bairroFeature.text,
+        cidade: selectedCity.name,
+        pais: selectedCity.country,
+        latitude: bairroFeature.center[1],
+        longitude: bairroFeature.center[0],
+        address_confirmed: true,
+      };
+
+      const { error } = await supabase.from("profiles").update(payload).eq("id", user.id);
+      if (error) throw error;
+
+      toast({ title: "Território Confirmado!", description: "Seja bem-vindo ao mapa global." });
+      onOpenChange(false);
+      onSuccess?.();
+    } catch (e) {
+      toast({ variant: "destructive", title: "Erro ao salvar." });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
-    <Dialog open={open}>
-      <DialogContent
-        className="
-          border border-primary/20
-          bg-black/95
-          backdrop-blur-2xl
-          text-white
-          max-w-lg
-          rounded-[28px]
-          overflow-hidden
-          p-0
-        "
-      >
-        <div className="p-6">
-          <div className="flex items-center gap-3 mb-6">
-            <div
-              className="
-                w-12 h-12 rounded-2xl
-                bg-primary/15
-                border border-primary/30
-                flex items-center justify-center
-              "
-            >
-              <MapPin className="w-6 h-6 text-primary" />
+    <Dialog open={open} onOpenChange={() => {}}>
+      <DialogContent className="max-w-md border-white/10 bg-black text-white rounded-[32px] p-0 overflow-hidden shadow-[0_0_50px_rgba(255,98,0,0.2)]">
+        <div className="p-8 space-y-6">
+          {/* HEADER WAR ROOM */}
+          <div className="flex flex-col items-center text-center space-y-4">
+            <div className="w-16 h-16 bg-[#ff6200]/10 border border-[#ff6200]/30 rounded-2xl flex items-center justify-center">
+              <Globe className="text-[#ff6200] w-8 h-8 animate-pulse" />
             </div>
-
-            <div>
-              <h2 className="text-lg font-black italic uppercase">Endereço do Torcedor</h2>
-
-              <p className="text-xs text-muted-foreground mt-1">
-                Precisamos confirmar sua localização para liberar o mapa global.
-              </p>
-            </div>
+            <h2 className="text-2xl font-black italic uppercase tracking-tighter">Território do Coração</h2>
+            <p className="text-zinc-500 text-sm italic">
+              O mapa do <span className="text-[#ff6200] font-bold uppercase">{clubName || "Seu Clube"}</span> começa
+              aqui.
+            </p>
           </div>
 
-          {loading && (
-            <div className="py-16 flex justify-center">
-              <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          {/* ESTADO 1: DETECTANDO */}
+          {step === "detecting" && (
+            <div className="py-10 flex flex-col items-center space-y-4">
+              <Loader2 className="w-8 h-8 animate-spin text-[#ff6200]" />
+              <p className="text-sm italic text-zinc-400">Rastreando localização global...</p>
             </div>
           )}
 
-          {!loading && !confirmedGeo && geo && (
-            <motion.div
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="
-                rounded-2xl
-                bg-white/5
-                border border-white/10
-                p-5
-              "
-            >
-              <div className="flex items-start gap-3">
-                <Navigation className="w-5 h-5 text-primary mt-0.5" />
-
-                <div>
-                  <p className="text-sm font-semibold leading-relaxed">
-                    Vimos que você está em{" "}
-                    <span className="text-primary font-black">
-                      {geo.city}, {geo.country}
-                    </span>
-                    .
-                  </p>
-
-                  <p className="text-xs text-muted-foreground mt-1">Você mora aqui?</p>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3 mt-5">
-                <Button
-                  onClick={() => {
-                    const city: CityOption = {
-                      city: geo.city,
-                      state: geo.state,
-                      country: geo.country,
-                      lat: geo.lat,
-                      lon: geo.lon,
-                      display: `${geo.city} / ${geo.country}`,
-                    };
-
-                    setSelectedCity(city);
-                    setConfirmedGeo(true);
-                  }}
-                  className="bg-primary hover:bg-primary/90 text-black font-black"
-                >
-                  <Check className="w-4 h-4 mr-2" />
-                  Sim
-                </Button>
-
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setConfirmedGeo(false);
-                    setGeo(null);
-                  }}
-                  className="
-                    border-white/10
-                    bg-white/5
-                    hover:bg-white/10
-                  "
-                >
-                  <Globe2 className="w-4 h-4 mr-2" />
-                  Não
-                </Button>
-              </div>
-            </motion.div>
-          )}
-
-          {!loading && (!geo || !confirmedGeo) && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-              <div className="relative">
-                <Search className="absolute left-3 top-3.5 w-4 h-4 text-muted-foreground" />
-
-                <Input
-                  value={cityQuery}
-                  onChange={(e) => setCityQuery(e.target.value)}
-                  placeholder="Buscar cidade no mundo..."
-                  className="
-                    pl-10
-                    bg-white/5
-                    border-white/10
-                    h-12
-                  "
-                />
-              </div>
-
-              <AnimatePresence>
-                {cityResults.length > 0 && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0 }}
-                    className="
-                      mt-3
-                      rounded-2xl
-                      border border-white/10
-                      bg-white/5
-                      overflow-hidden
-                      max-h-72
-                      overflow-y-auto
-                    "
-                  >
-                    {cityResults.map((city, idx) => (
-                      <button
-                        key={`${city.display}-${idx}`}
-                        onClick={() => {
-                          setSelectedCity(city);
-                          setConfirmedGeo(true);
-                        }}
-                        className="
-                          w-full
-                          p-4
-                          text-left
-                          border-b border-white/5
-                          hover:bg-primary/10
-                          transition-colors
-                        "
-                      >
-                        <div className="flex items-center gap-3">
-                          <Building2 className="w-4 h-4 text-primary shrink-0" />
-
-                          <div>
-                            <p className="text-sm font-black uppercase italic">{city.city}</p>
-
-                            <p className="text-[11px] text-muted-foreground">
-                              {city.state} • {city.country}
-                            </p>
-                          </div>
-                        </div>
-                      </button>
-                    ))}
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </motion.div>
-          )}
-
-          {confirmedGeo && selectedCity && (
-            <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="mt-5">
-              <div className="mb-4">
-                <p className="text-sm font-semibold">
-                  Qual o seu bairro em <span className="text-primary font-black">{selectedCity.city}</span>?
+          {/* ESTADO 2: BOAS-VINDAS (Goiânia?) */}
+          {step === "welcome" && (
+            <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4">
+              <div className="bg-zinc-900/50 border border-white/5 p-6 rounded-2xl text-center">
+                <p className="text-lg">
+                  Vimos que você está em <br />
+                  <span className="text-[#ff6200] font-black uppercase text-xl">{detectedLocation?.name}</span>?
                 </p>
-
-                <button
-                  onClick={() => {
-                    setConfirmedGeo(false);
-                    setSelectedCity(null);
-                    setSelectedBairro(null);
-                    setBairroResults([]);
-                  }}
-                  className="
-                    text-xs
-                    text-primary
-                    mt-1
-                    hover:underline
-                  "
-                >
-                  Mudar endereço
-                </button>
               </div>
+              <div className="grid grid-cols-1 gap-3">
+                <Button
+                  onClick={() => {
+                    setSelectedCity(detectedLocation);
+                    setStep("searching_bairro");
+                    setSearchQuery("");
+                  }}
+                  className="bg-[#ff6200] hover:bg-[#ff8230] text-white font-black italic uppercase h-14 rounded-2xl"
+                >
+                  Sim, moro aqui
+                </Button>
+                <Button
+                  variant="ghost"
+                  onClick={() => {
+                    setStep("searching_city");
+                    setSearchQuery("");
+                    setSuggestions([]);
+                  }}
+                  className="text-zinc-500 hover:text-white uppercase font-bold text-xs"
+                >
+                  Não, moro em outro lugar
+                </Button>
+              </div>
+            </div>
+          )}
 
+          {/* ESTADO 3: BUSCA DE CIDADE OU BAIRRO */}
+          {(step === "searching_city" || step === "searching_bairro") && (
+            <div className="space-y-4 animate-in fade-in">
               <div className="relative">
-                <MapPin className="absolute left-3 top-3.5 w-4 h-4 text-muted-foreground" />
-
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-500" />
                 <Input
-                  value={bairroQuery}
-                  onChange={(e) => setBairroQuery(e.target.value)}
-                  placeholder="Digite seu bairro..."
-                  className="
-                    pl-10
-                    h-12
-                    bg-white/5
-                    border-white/10
-                  "
+                  autoFocus
+                  placeholder={
+                    step === "searching_city"
+                      ? "Em qual cidade você mora?"
+                      : `Qual o seu bairro em ${selectedCity?.name}?`
+                  }
+                  className="h-16 bg-zinc-900 border-white/10 pl-12 rounded-2xl focus:border-[#ff6200] transition-all text-lg font-bold"
+                  value={searchQuery}
+                  onChange={(e) => handleSearch(e.target.value)}
                 />
               </div>
 
-              {bairroResults.length > 0 && (
-                <div
-                  className="
-                    mt-3
-                    rounded-2xl
-                    overflow-hidden
-                    border border-primary/20
-                    bg-white/5
-                    max-h-72
-                    overflow-y-auto
-                  "
-                >
-                  {bairroResults.map((bairro, idx) => (
-                    <button
-                      key={`${bairro.name}-${idx}`}
-                      onClick={() => {
-                        setSelectedBairro(bairro);
-                        setBairroQuery(bairro.name);
-                      }}
-                      className={`
-                        w-full
-                        p-4
-                        text-left
-                        border-b border-white/5
-                        hover:bg-primary/10
-                        transition-colors
-                        ${selectedBairro?.name === bairro.name ? "bg-primary/15" : ""}
-                      `}
-                    >
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-sm font-black italic uppercase">{bairro.name}</p>
-
-                          <p className="text-[11px] text-muted-foreground">
-                            {selectedCity.city} • {selectedCity.country}
-                          </p>
-                        </div>
-
-                        {selectedBairro?.name === bairro.name && <Check className="w-4 h-4 text-primary" />}
+              {/* BOX DE SUGESTÕES (Estilo Busca de Clubes) */}
+              <div className="max-h-[250px] overflow-y-auto space-y-2 pr-2 scrollbar-hide">
+                {suggestions.map((item) => (
+                  <button
+                    key={item.id}
+                    onClick={() => {
+                      if (step === "searching_city") {
+                        setSelectedCity({
+                          name: item.text,
+                          full: item.place_name,
+                          country: item.context?.find((c: any) => c.id.includes("country"))?.text || "",
+                          center: item.center,
+                        });
+                        setStep("searching_bairro");
+                        setSearchQuery("");
+                        setSuggestions([]);
+                      } else {
+                        confirmFinalAddress(item);
+                      }
+                    }}
+                    className="w-full flex items-center justify-between p-4 bg-zinc-900/30 border border-white/5 hover:border-[#ff6200]/50 hover:bg-[#ff6200]/5 rounded-xl transition-all group"
+                  >
+                    <div className="flex items-center gap-3">
+                      <MapPin className="w-5 h-5 text-zinc-600 group-hover:text-[#ff6200]" />
+                      <div className="text-left">
+                        <p className="font-black italic uppercase text-sm">{item.text}</p>
+                        <p className="text-[10px] text-zinc-500 uppercase tracking-widest">
+                          {item.place_name.split(",").slice(1).join(",")}
+                        </p>
                       </div>
-                    </button>
-                  ))}
-                </div>
-              )}
-
-              <Button
-                disabled={!selectedBairro || saving}
-                onClick={saveAddress}
-                className="
-                  w-full
-                  mt-5
-                  h-12
-                  bg-primary
-                  hover:bg-primary/90
-                  text-black
-                  font-black
-                  uppercase
-                  tracking-wide
-                "
-              >
-                {saving ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Salvando...
-                  </>
-                ) : (
-                  <>
-                    <Check className="w-4 h-4 mr-2" />
-                    Confirmar endereço
-                  </>
-                )}
-              </Button>
-            </motion.div>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-zinc-700 group-hover:text-[#ff6200]" />
+                  </button>
+                ))}
+              </div>
+            </div>
           )}
+
+          {/* PRIVACIDADE */}
+          <div className="flex items-start gap-3 bg-[#ff6200]/5 p-4 rounded-2xl border border-[#ff6200]/10">
+            <Navigation className="w-4 h-4 text-[#ff6200] shrink-0 mt-0.5" />
+            <p className="text-[10px] text-zinc-400 italic leading-tight">
+              Sua privacidade é sagrada. O endereço completo nunca será público. Apenas os dados territoriais alimentam
+              o mapa global.
+            </p>
+          </div>
         </div>
       </DialogContent>
     </Dialog>
   );
 }
-
-/**
- * =================================================================================================
- * [RODAPÉ TÉCNICO]
- * =================================================================================================
- *
- * RECURSOS IMPLEMENTADOS:
- *
- * ✔ Geolocalização automática via GPS
- * ✔ Busca mundial de cidades
- * ✔ Resolução de homônimos
- * ✔ Busca contextual de bairros
- * ✔ Persistência vitalícia
- * ✔ UX Mobile First
- * ✔ Glassmorphism War Room
- * ✔ Integração Supabase
- * ✔ Estrutura modularizada
- * ✔ Preparado para Heatmap Global
- *
- * =================================================================================================
- */
