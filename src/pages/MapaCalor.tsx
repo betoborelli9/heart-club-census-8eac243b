@@ -1367,24 +1367,34 @@ const MapaCalor = () => {
 
   const geoStyle = useCallback(
     (feature: any) => {
-      const { votes } = lookupVotesForFeature(feature?.properties);
+      const { votes, heartVotes, invaderVotes } = lookupVotesForFeature(feature?.properties);
       const hasVotes = votes > 0;
+      // [GUERRA DE CORES]: Invasor atropela Coração quando vence
+      const invaderWins = invaderVotes > heartVotes && invaderVotes > 0;
+      const fillColor = !hasVotes
+        ? "#0a0a0a"
+        : invaderWins
+          ? getColorByVotes(invaderVotes, maxInvaderVotes || 1, INVADER_PALETTE)
+          : getColorByVotes(heartVotes || votes, (maxHeartVotes || maxVotes) || 1, HEAT_PALETTE);
       return {
-        fillColor: hasVotes ? getColorByVotes(votes, maxVotes) : "#0a0a0a",
+        fillColor,
         fillOpacity: hasVotes ? 0.82 : 0.35,
         color: "#A9A9A9",
         weight: 0.5,
         opacity: 1,
       };
     },
-    [lookupVotesForFeature, maxVotes],
+    [lookupVotesForFeature, maxVotes, maxHeartVotes, maxInvaderVotes],
   );
 
   const onEachFeature = useCallback(
     (feature: any, layer: any) => {
-      const { name, votes } = lookupVotesForFeature(feature?.properties);
+      const { name, votes, heartVotes, invaderVotes } = lookupVotesForFeature(feature?.properties);
+      const breakdown = compareClubName
+        ? `<div style="color:#ff6200;font-weight:900;font-size:10px;margin-top:2px">❤️ ${fmt(heartVotes)}</div><div style="color:#b066ff;font-weight:900;font-size:10px">⚔️ ${fmt(invaderVotes)}</div>`
+        : `<div style="color:#ff6200;font-weight:900;font-size:11px;margin-top:2px">${fmt(votes)} VOTOS</div>`;
       layer.bindTooltip(
-        `<div style="font-family:Verdana,sans-serif"><div style="font-weight:900;font-style:italic;text-transform:uppercase;font-size:11px;color:#fff">${name}</div><div style="color:#ff6200;font-weight:900;font-size:11px;margin-top:2px">${fmt(votes)} VOTOS</div></div>`,
+        `<div style="font-family:Verdana,sans-serif"><div style="font-weight:900;font-style:italic;text-transform:uppercase;font-size:11px;color:#fff">${name}</div>${breakdown}</div>`,
         { sticky: true, direction: "top", opacity: 0.95, className: "war-tooltip" },
       );
       layer.on({
