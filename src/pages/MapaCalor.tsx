@@ -1086,65 +1086,46 @@ const MapaCalor = () => {
    * Ajustado para resolver o problema de Tooltips vazios em Estados/Cidades.
    */
   const lookupVotesForFeature = useCallback(
-    (props: any): { name: string; votes: number } => {
-      if (!props) return { name: "—", votes: 0 };
-      const candidates: string[] = [];
+    (props: any): { name: string; votes: number; heartVotes: number; invaderVotes: number } => {
+      const empty = { name: "—", votes: 0, heartVotes: 0, invaderVotes: 0 };
+      if (!props) return empty;
 
-      // Caso Bairro (City View)
+      const candidates: string[] = [];
+      let display = "—";
+
       if (viewMode === "city") {
-        const neighborhoodName = getNeighborhoodFeatureName(props);
-        for (const key of regionLookupKeys(neighborhoodName)) {
-          const v = votesByRegion.get(key);
-          if (v !== undefined) return { name: regionNameByKey.get(key) || neighborhoodName, votes: v };
-        }
-        return { name: neighborhoodName, votes: 0 };
+        display = getNeighborhoodFeatureName(props);
+        candidates.push(display);
+      } else {
+        const propNames = ["ADMIN", "name", "name_en", "name_pt", "official_name", "NAME", "NAME_LONG", "NOME", "NM_MUN", "NM_UF"];
+        propNames.forEach((p) => { if (props[p]) candidates.push(props[p]); });
+        const propUfs = ["sigla", "sigla_uf", "UF", "uf", "ISO_A2", "iso_a2", "ISO3166_2"];
+        propUfs.forEach((p) => { if (props[p]) candidates.push(props[p]); });
+        display = candidates[0] || "—";
       }
 
-      // Caso Mundo/País/Estado
-      // 1. Tenta nomes diretos do GeoJSON
-      const propNames = [
-        "ADMIN",
-        "name",
-        "name_en",
-        "name_pt",
-        "official_name",
-        "NAME",
-        "NAME_LONG",
-        "NOME",
-        "NM_MUN",
-        "NM_UF",
-      ];
-      propNames.forEach((p) => {
-        if (props[p]) candidates.push(props[p]);
-      });
-
-      // 2. Tenta siglas (Crucial para o caso Brasil onde o mapa tem nomes mas o banco tem siglas)
-      const propUfs = ["sigla", "sigla_uf", "UF", "uf", "ISO_A2", "iso_a2", "ISO3166_2"];
-      propUfs.forEach((p) => {
-        if (props[p]) candidates.push(props[p]);
-      });
-
-      const display = candidates[0] || "—";
-
-      // Busca exaustiva nos candidatos normalizados
+      // Procura match em qualquer chave normalizada
       for (const c of candidates) {
-        for (const key of regionLookupKeys(c)) {
-          const v = votesByRegion.get(key);
-          if (v !== undefined) return { name: regionNameByKey.get(key) || display, votes: v };
-        }
-        // Fallback específico para mapeamento internacional
+        const keys = regionLookupKeys(c);
         const dbName = COUNTRY_GEO_TO_DB[c];
-        if (dbName) {
-          for (const key of regionLookupKeys(dbName)) {
-            const v2 = votesByRegion.get(key);
-            if (v2 !== undefined) return { name: regionNameByKey.get(key) || display, votes: v2 };
+        if (dbName) for (const k of regionLookupKeys(dbName)) keys.push(k);
+        for (const key of keys) {
+          if (votesByRegion.has(key) || heartVotesByRegion.has(key) || invaderVotesByRegion.has(key)) {
+            const heartVotes = heartVotesByRegion.get(key) || 0;
+            const invaderVotes = invaderVotesByRegion.get(key) || 0;
+            const total = votesByRegion.get(key) ?? heartVotes + invaderVotes;
+            return {
+              name: regionNameByKey.get(key) || display,
+              votes: total,
+              heartVotes,
+              invaderVotes,
+            };
           }
         }
       }
-
-      return { name: display, votes: 0 };
+      return { name: display, votes: 0, heartVotes: 0, invaderVotes: 0 };
     },
-    [votesByRegion, regionNameByKey, viewMode],
+    [votesByRegion, heartVotesByRegion, invaderVotesByRegion, regionNameByKey, viewMode],
   );
 
   const ranking = useMemo(
