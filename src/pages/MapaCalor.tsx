@@ -1042,6 +1042,23 @@ const MapaCalor = () => {
     return map;
   }, [combinedHeatData]);
 
+  // [GUERRA DE CORES]: contadores separados Coração vs Invasor por região
+  const heartVotesByRegion = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const e of heatData) {
+      for (const key of regionLookupKeys(e.region)) map.set(key, Number(e.votes));
+    }
+    return map;
+  }, [heatData]);
+
+  const invaderVotesByRegion = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const e of compareHeatData) {
+      for (const key of regionLookupKeys(e.region)) map.set(key, Number(e.votes));
+    }
+    return map;
+  }, [compareHeatData]);
+
   const regionNameByKey = useMemo(() => {
     const map = new Map<string, string>();
     for (const e of combinedHeatData) {
@@ -1053,6 +1070,16 @@ const MapaCalor = () => {
   const maxVotes = useMemo(
     () => combinedHeatData.reduce((m, e) => Math.max(m, Number(e.votes)), 0),
     [combinedHeatData],
+  );
+
+  const maxHeartVotes = useMemo(
+    () => heatData.reduce((m, e) => Math.max(m, Number(e.votes)), 0),
+    [heatData],
+  );
+
+  const maxInvaderVotes = useMemo(
+    () => compareHeatData.reduce((m, e) => Math.max(m, Number(e.votes)), 0),
+    [compareHeatData],
   );
 
   /** * [MODULO 4: RENDERIZAÇÃO E LOOKUP CORRIGIDO]
