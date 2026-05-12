@@ -224,7 +224,7 @@ const Dashboard = () => {
             <>
               <button
                 className="flex flex-col items-center gap-1 text-[#ff6200] hover:text-white"
-                onClick={() => navigate("/voting?test=1")}
+                onClick={() => navigate("/voting")}
               >
                 <Vote className="w-5 h-5" />
                 <span className="text-[9px] font-bold uppercase tracking-widest">Votação</span>
