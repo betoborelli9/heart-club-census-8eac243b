@@ -113,6 +113,20 @@ export default function ShareTropaModal({ open, onOpenChange, refCode }: Props) 
           </div>
         </DialogHeader>
 
+        <a
+          href={link}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="block rounded-xl overflow-hidden border border-[#ff6200]/30 shadow-lg shadow-[#ff6200]/20 hover:scale-[1.02] transition-transform"
+        >
+          <img
+            src="/heart-club-og.png"
+            alt="Jornada do Embaixador — Bronze, Prata, Ouro, Diamante"
+            className="w-full h-auto block"
+            loading="lazy"
+          />
+        </a>
+
         <div className="grid grid-cols-2 gap-3 mt-2">
           <Btn icon={MessageCircle} label="WhatsApp" color="#25D366" onClick={handleWhats} />
           <Btn icon={Send} label="Telegram" color="#0088CC" onClick={handleTelegram} />
