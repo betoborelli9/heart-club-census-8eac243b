@@ -17,6 +17,7 @@ import {
   Radar, Megaphone,
 } from "lucide-react";
 import ShareTropaModal from "@/components/dashboard/ShareTropaModal";
+import RivalsColumn from "@/components/dashboard/RivalsColumn";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
