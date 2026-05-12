@@ -270,16 +270,18 @@ const Ambassadors = () => {
         setActivityFeed([]);
         return;
       }
-      const feed: ActivityEntry[] = (data as any[]).map((d) => ({
-        id: d.indicacao_id,
-        nome: d.nome ?? "Novo membro",
-        cidade: d.cidade ?? null,
-        estado: d.estado ?? null,
-        clube_nome: d.clube_nome ?? null,
-        bairro: d.bairro ?? null,
-        voto_created_at: d.voto_created_at ?? null,
-        created_at: d.indicacao_created_at ?? "",
-      }));
+      const feed: ActivityEntry[] = (data as any[])
+        .filter((d) => typeof d.nome === "string" && d.nome.trim().length > 0)
+        .map((d) => ({
+          id: d.indicacao_id,
+          nome: d.nome.trim(),
+          cidade: d.cidade ?? null,
+          estado: d.estado ?? null,
+          clube_nome: d.clube_nome ?? null,
+          bairro: d.bairro ?? null,
+          voto_created_at: d.voto_created_at ?? null,
+          created_at: d.indicacao_created_at ?? "",
+        }));
       setActivityFeed(feed);
     };
 
@@ -603,15 +605,20 @@ const Ambassadors = () => {
             </div>
 
             {activityFeed.length === 0 ? (
-              <p className="text-xs text-white/30 text-center py-6">
-                Nenhum indicado ainda. Compartilhe seu código!
+              <p className="text-xs text-white/40 text-center py-6 italic">
+                Nenhuma atividade nova na sua região.
               </p>
             ) : (
-              <div className="space-y-2 max-h-[260px] overflow-y-auto pr-1">
+              <div
+                className="space-y-2 max-h-[260px] overflow-y-auto pr-1 thin-orange-scroll"
+              >
                 {activityFeed.map((entry, i) => {
                   const cd = resolveClub(entry.clube_nome ?? null);
                   const dateRef = entry.voto_created_at || entry.created_at;
                   const localizacao = [entry.cidade, entry.estado].filter(Boolean).join(" · ");
+                  const acao = entry.clube_nome
+                    ? <>acaba de votar no <span className="text-[#ff6200]">{entry.clube_nome}</span></>
+                    : <span className="text-white/50">entrou no Heart Club</span>;
                   return (
                     <motion.div
                       key={entry.id}
@@ -621,26 +628,20 @@ const Ambassadors = () => {
                       className="flex items-center gap-3 rounded-xl bg-white/5 px-3 py-2.5"
                     >
                       <div className="w-8 h-8 rounded-full bg-[#ff6200]/20 flex items-center justify-center text-[10px] font-black text-[#ff6200] shrink-0">
-                        {entry.nome?.charAt(0)?.toUpperCase() || "?"}
+                        {entry.nome.charAt(0).toUpperCase()}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-xs font-bold truncate">{entry.nome}</p>
+                        <p className="text-xs font-bold truncate">
+                          <span className="text-white">{entry.nome}</span>{" "}
+                          <span className="font-normal text-white/70">{acao}</span>
+                        </p>
                         <p className="text-[10px] text-white/40 truncate">
                           {localizacao || "—"}
                           {dateRef ? ` · ${format(new Date(dateRef), "dd/MM/yyyy")}` : ""}
                         </p>
                       </div>
-                      {entry.clube_nome ? (
-                        <div className="flex items-center gap-1.5 shrink-0">
-                          <ClubLogo src={cd?.logoUrl} alt={entry.clube_nome} size="xs" />
-                          <span className="text-[10px] font-bold text-white/70 hidden sm:inline truncate max-w-[90px]">
-                            {entry.clube_nome}
-                          </span>
-                        </div>
-                      ) : (
-                        <span className="text-[9px] uppercase tracking-wider text-white/30 shrink-0">
-                          aguardando voto
-                        </span>
+                      {entry.clube_nome && (
+                        <ClubLogo src={cd?.logoUrl} alt={entry.clube_nome} size="xs" />
                       )}
                     </motion.div>
                   );
