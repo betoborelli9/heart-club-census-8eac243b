@@ -37,10 +37,9 @@ export default function ShareTropaModal({ open, onOpenChange, refCode }: Props) 
     () => (refCode ? `${BASE_URL}?ref=${encodeURIComponent(refCode)}` : BASE_URL),
     [refCode],
   );
-  // Link aparece PRIMEIRO no texto para que o WhatsApp/Telegram gerem o preview
-  // clicável usando o og:image do site (banner Jornada do Embaixador).
-  // O amigo só toca no banner e já cai direto em heartclubapp.com — sem clicar em link.
-  const fullText = `${link}\n\n${TEXT}`;
+  // Link aparece ABAIXO do texto (coerente com "clique no link abaixo"),
+  // tanto no desktop quanto no mobile. WhatsApp/Telegram ainda geram preview clicável.
+  const fullText = `${TEXT}\n\n${link}`;
 
   const openUrl = (url: string) => {
     window.open(url, "_blank", "noopener,noreferrer");
