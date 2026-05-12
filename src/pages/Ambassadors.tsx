@@ -199,11 +199,15 @@ const Ambassadors = () => {
     setShowCensusModal(needsCensus);
   }, [profile, isLoading]);
 
-  /* [MÓDULO: CARREGA PROFISSÕES] */
+  /* [MÓDULO: CARREGA PROFISSÕES — DB + base ampla embutida] */
   useEffect(() => {
     const loadProfessions = async () => {
       const { data } = await supabase.from("lista_profissoes").select("nome").order("nome");
-      if (data) setProfessions(data.map((p) => p.nome));
+      const dbList = (data ?? []).map((p) => p.nome);
+      const merged = Array.from(new Set([...dbList, ...BROAD_PROFESSIONS])).sort((a, b) =>
+        a.localeCompare(b, "pt-BR")
+      );
+      setProfessions(merged);
     };
     loadProfessions();
   }, []);
