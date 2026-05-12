@@ -14,8 +14,9 @@ import { motion } from "framer-motion";
 import {
   Loader2, LogOut, Search, Globe, Flag, MapPin, Building2, Home,
   TrendingUp, TrendingDown, Trophy, Swords, Target, Share2, Copy, Sparkles, Crown, Zap,
-  Radar,
+  Radar, Megaphone,
 } from "lucide-react";
+import ShareTropaModal from "@/components/dashboard/ShareTropaModal";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
