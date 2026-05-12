@@ -34,13 +34,12 @@ const Voting = () => {
   const IS_MASTER_ADMIN = user?.email === "betoborelli9@gmail.com";
   const TEST_MODE = IS_MASTER_ADMIN && searchParams.get("test") === "1";
 
-  // VOTO SAGRADO: quem já votou nunca mais entra na tela de votação,
-  // exceto o Master em modo de teste explícito (?test=1).
+  // VOTO SAGRADO: torcedor comum só vota uma vez. Master Admin tem acesso permanente.
   useEffect(() => {
-    if (hasVoted && !TEST_MODE) {
+    if (hasVoted && !IS_MASTER_ADMIN) {
       navigate("/dashboard", { replace: true });
     }
-  }, [hasVoted, TEST_MODE, navigate]);
+  }, [hasVoted, IS_MASTER_ADMIN, navigate]);
 
   const [heartSearch, setHeartSearch] = useState("");
   const [heartResults, setHeartResults] = useState<ClubResult[]>([]);
