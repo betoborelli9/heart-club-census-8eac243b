@@ -270,16 +270,18 @@ const Ambassadors = () => {
         setActivityFeed([]);
         return;
       }
-      const feed: ActivityEntry[] = (data as any[]).map((d) => ({
-        id: d.indicacao_id,
-        nome: d.nome ?? "Novo membro",
-        cidade: d.cidade ?? null,
-        estado: d.estado ?? null,
-        clube_nome: d.clube_nome ?? null,
-        bairro: d.bairro ?? null,
-        voto_created_at: d.voto_created_at ?? null,
-        created_at: d.indicacao_created_at ?? "",
-      }));
+      const feed: ActivityEntry[] = (data as any[])
+        .filter((d) => typeof d.nome === "string" && d.nome.trim().length > 0)
+        .map((d) => ({
+          id: d.indicacao_id,
+          nome: d.nome.trim(),
+          cidade: d.cidade ?? null,
+          estado: d.estado ?? null,
+          clube_nome: d.clube_nome ?? null,
+          bairro: d.bairro ?? null,
+          voto_created_at: d.voto_created_at ?? null,
+          created_at: d.indicacao_created_at ?? "",
+        }));
       setActivityFeed(feed);
     };
 
