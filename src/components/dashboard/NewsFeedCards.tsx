@@ -50,15 +50,32 @@ export default function NewsFeedCards({ teamName, primaryColor = "#ff6200" }: Pr
         const { data } = await supabase.functions.invoke("club-news", { body: { clubName: teamName } });
         const raw: NewsItem[] = Array.isArray(data) ? data : data?.data || [];
 
+        // FILTRO DE VALIDADE (anti-zumbi):
+        // - descarta tudo publicado há mais de 48h
+        // - "onde assistir", "escalação/escalações", "provável", "pré-jogo",
+        //   "ao vivo", "tempo real" só valem se publicados nas últimas 24h
+        //   (notícias de pré-jogo de partida que já aconteceu são removidas).
+        const now = Date.now();
+        const H48 = 48 * 60 * 60 * 1000;
+        const H24 = 24 * 60 * 60 * 1000;
+        const PRE_MATCH_RX = /(onde\s+assistir|escala[cç][aã]o|escala[cç][oõ]es|prov[aá]vel|pr[eé][- ]?jogo|ao\s+vivo|tempo\s+real|minuto\s+a\s+minuto)/i;
+        const fresh = raw.filter((item) => {
+          const t = item.pubDate ? new Date(item.pubDate).getTime() : NaN;
+          if (isNaN(t)) return false;
+          const age = now - t;
+          if (age > H48) return false;
+          if (PRE_MATCH_RX.test(item.title || "") && age > H24) return false;
+          return true;
+        });
+
         // ORDENA por data (mais recente primeiro) — base para a deduplicação
-        const sorted = [...raw].sort((a, b) => {
+        const sorted = [...fresh].sort((a, b) => {
           const ta = a.pubDate ? new Date(a.pubDate).getTime() : 0;
           const tb = b.pubDate ? new Date(b.pubDate).getTime() : 0;
           return tb - ta;
         });
 
         // DEDUPLICAÇÃO: compara primeiros 40 caracteres do título normalizado.
-        // Como já está ordenado do mais recente para o mais antigo, manter o primeiro = manter o mais recente.
         const seen = new Set<string>();
         const unique: NewsItem[] = [];
         for (const item of sorted) {
