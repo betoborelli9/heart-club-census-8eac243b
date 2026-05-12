@@ -61,6 +61,7 @@ const Pill = ({ icon: Icon, children }: { icon: any; children: React.ReactNode }
 
 export default function ClubIdentityCard({ clubName }: Props) {
   const [data, setData] = useState<CacheRow | null>(null);
+  const [comps, setComps] = useState<ActiveComp[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -71,14 +72,22 @@ export default function ClubIdentityCard({ clubName }: Props) {
       const { data } = await supabase
         .from("clubes_cache")
         .select(
-          "cor_primaria, cor_secundaria, cor_terciaria, cor_quarta, mascote, fundado, cidade, pais, estadio_nome, estadio_capacidade, tem_feminino, division",
+          "cor_primaria, cor_secundaria, cor_terciaria, cor_quarta, mascote, fundado, cidade, pais, estadio_nome, estadio_capacidade, tem_feminino, division, api_id",
         )
         .ilike("nome", clubName)
         .maybeSingle();
-      if (!cancelled) {
-        setData((data as CacheRow) || null);
-        setLoading(false);
+      if (cancelled) return;
+      const row = (data as CacheRow) || null;
+      setData(row);
+
+      const teamId = row?.api_id ? Number(row.api_id) : NaN;
+      if (Number.isFinite(teamId) && teamId > 0) {
+        const { data: rows } = await supabase.rpc("get_active_competitions_v2", { p_team_id: teamId });
+        if (!cancelled) setComps(((rows as ActiveComp[]) || []).filter((c) => c?.l_name));
+      } else {
+        setComps([]);
       }
+      setLoading(false);
     })();
     return () => {
       cancelled = true;
