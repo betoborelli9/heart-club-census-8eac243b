@@ -233,47 +233,57 @@ function StandingsTable({
   primaryColor: string;
 }) {
   if (!rows.length) return <p className="text-[11px] italic text-white/40">Sem classificação disponível.</p>;
+  // Coluna fixa (sticky) à esquerda com posição+nome do time, garantindo que
+  // o torcedor sempre veja o clube enquanto rola lateralmente para ver P, J, V, E, D, SG.
+  const stickyBg = "bg-[#0b0b0b]";
   return (
-    <div className="overflow-x-auto -mx-4 px-4">
-      <table className="w-full text-[11px] min-w-[420px]">
+    <div className="overflow-x-auto -mx-4 px-4 [scrollbar-width:thin]">
+      <table className="w-full text-[10px] sm:text-[11px] min-w-[640px] border-separate border-spacing-0">
         <thead>
-          <tr className="text-[9px] font-mono uppercase tracking-widest text-white/40 border-b border-white/5">
-            <th className="text-left py-1.5 pr-2 w-6">#</th>
-            <th className="text-left py-1.5">Time</th>
-            <th className="text-center py-1.5 w-8">P</th>
-            <th className="text-center py-1.5 w-8 hidden sm:table-cell">J</th>
-            <th className="text-center py-1.5 w-8 hidden sm:table-cell">V</th>
-            <th className="text-center py-1.5 w-8 hidden sm:table-cell">E</th>
-            <th className="text-center py-1.5 w-8 hidden sm:table-cell">D</th>
-            <th className="text-center py-1.5 w-10">SG</th>
+          <tr className="text-[9px] font-mono uppercase tracking-widest text-white/40">
+            <th className={`sticky left-0 z-10 ${stickyBg} text-left py-1.5 pl-1 pr-2 border-b border-white/5`}>
+              <div className="flex items-center gap-1">
+                <span className="w-5 inline-block">#</span>
+                <span>Time</span>
+              </div>
+            </th>
+            <th className="text-center py-1.5 px-2 w-10 border-b border-white/5">P</th>
+            <th className="text-center py-1.5 px-2 w-10 border-b border-white/5">J</th>
+            <th className="text-center py-1.5 px-2 w-10 border-b border-white/5">V</th>
+            <th className="text-center py-1.5 px-2 w-10 border-b border-white/5">E</th>
+            <th className="text-center py-1.5 px-2 w-10 border-b border-white/5">D</th>
+            <th className="text-center py-1.5 px-2 w-12 border-b border-white/5">SG</th>
           </tr>
         </thead>
         <tbody>
           {rows.map((r) => {
             const isMe = meTeamId && r.teamId === meTeamId;
+            const rowBg = isMe ? "bg-white/[0.06]" : stickyBg;
             return (
-              <tr
-                key={`${r.teamId}-${r.position}`}
-                className={`border-b border-white/[0.03] ${isMe ? "bg-white/[0.04]" : ""}`}
-                style={isMe ? { boxShadow: `inset 3px 0 0 ${primaryColor}` } : undefined}
-              >
-                <td className="py-1.5 pr-2 font-mono text-white/60">{r.position}</td>
-                <td className="py-1.5">
-                  <div className="flex items-center gap-2 min-w-0">
+              <tr key={`${r.teamId}-${r.position}`}>
+                <td
+                  className={`sticky left-0 z-10 ${rowBg} py-1.5 pl-1 pr-2 border-b border-white/[0.04]`}
+                  style={isMe ? { boxShadow: `inset 3px 0 0 ${primaryColor}` } : undefined}
+                >
+                  <div className="flex items-center gap-1.5 min-w-0 max-w-[180px]">
+                    <span className="w-5 font-mono text-white/60 shrink-0">{r.position}</span>
                     <ClubLogo src={r.logo} alt={r.name} size="xs" className="w-4 h-4 shrink-0" />
                     <span className={`truncate ${isMe ? "font-black text-white" : "text-white/80"}`}>
                       {r.name}
                     </span>
                   </div>
                 </td>
-                <td className="text-center font-black" style={isMe ? { color: primaryColor } : undefined}>
+                <td
+                  className="text-center font-black px-2 py-1.5 border-b border-white/[0.04]"
+                  style={isMe ? { color: primaryColor } : undefined}
+                >
                   {r.points}
                 </td>
-                <td className="text-center text-white/50 hidden sm:table-cell">{r.played ?? "-"}</td>
-                <td className="text-center text-white/50 hidden sm:table-cell">{r.win ?? "-"}</td>
-                <td className="text-center text-white/50 hidden sm:table-cell">{r.draw ?? "-"}</td>
-                <td className="text-center text-white/50 hidden sm:table-cell">{r.lose ?? "-"}</td>
-                <td className="text-center text-white/50">{r.goalsDiff ?? "-"}</td>
+                <td className="text-center text-white/60 px-2 py-1.5 border-b border-white/[0.04]">{r.played ?? "-"}</td>
+                <td className="text-center text-white/60 px-2 py-1.5 border-b border-white/[0.04]">{r.win ?? "-"}</td>
+                <td className="text-center text-white/60 px-2 py-1.5 border-b border-white/[0.04]">{r.draw ?? "-"}</td>
+                <td className="text-center text-white/60 px-2 py-1.5 border-b border-white/[0.04]">{r.lose ?? "-"}</td>
+                <td className="text-center text-white/60 px-2 py-1.5 border-b border-white/[0.04]">{r.goalsDiff ?? "-"}</td>
               </tr>
             );
           })}
