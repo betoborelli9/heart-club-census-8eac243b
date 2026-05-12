@@ -23,12 +23,20 @@ import logo from "@/assets/logo.png";
 const ProfileSetup = () => {
   /* ---------- MÓDULO 1: NAVEGAÇÃO E GUARDS ---------- */
   const navigate = useNavigate();
-  const { user, profile, isAuthenticated, isLoading, updateProfile } = useUser();
+  const { user, profile, isAuthenticated, isLoading, isProfileComplete, hasVoted, updateProfile } = useUser();
   const { toast } = useToast();
 
+  // Guard: se não autenticado vai para login; se perfil já completo, nunca mais mostra este passo.
   useEffect(() => {
-    if (!isLoading && !isAuthenticated) navigate("/login", { replace: true });
-  }, [isLoading, isAuthenticated, navigate]);
+    if (isLoading) return;
+    if (!isAuthenticated) {
+      navigate("/login", { replace: true });
+      return;
+    }
+    if (isProfileComplete) {
+      navigate(hasVoted ? "/dashboard" : "/voting", { replace: true });
+    }
+  }, [isLoading, isAuthenticated, isProfileComplete, hasVoted, navigate]);
 
   /* ---------- MÓDULO 2: ESTADOS DO FORMULÁRIO ---------- */
   const [nome, setNome] = useState("");
