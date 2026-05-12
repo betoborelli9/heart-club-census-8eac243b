@@ -142,6 +142,9 @@ const Stats = () => {
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
 
+  // Share modal (Convocar a Tropa)
+  const [shareOpen, setShareOpen] = useState(false);
+
   // ─── Load user's club + vote location ───
   useEffect(() => {
     if (!user) return;
