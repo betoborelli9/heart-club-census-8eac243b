@@ -233,57 +233,64 @@ function StandingsTable({
   primaryColor: string;
 }) {
   if (!rows.length) return <p className="text-[11px] italic text-white/40">Sem classificação disponível.</p>;
-  // Coluna fixa (sticky) à esquerda com posição+nome do time, garantindo que
-  // o torcedor sempre veja o clube enquanto rola lateralmente para ver P, J, V, E, D, SG.
+  // Padrão SofaScore/GE: coluna Time fixa (sticky) à esquerda, colunas numéricas
+  // centralizadas e uniformes, cabeçalho sempre visível acompanhando o scroll horizontal.
   const stickyBg = "bg-[#0b0b0b]";
+  const headerBg = "bg-[#141414]";
+  const numCol = "text-center px-2 py-2 w-9 border-b border-white/[0.06] tabular-nums";
+  const fmt = (v: number | undefined | null) => (v === undefined || v === null ? 0 : v);
   return (
-    <div className="overflow-x-auto -mx-4 px-4 [scrollbar-width:thin]">
-      <table className="w-full text-[10px] sm:text-[11px] min-w-[640px] border-separate border-spacing-0">
+    <div className="overflow-x-auto -mx-4 px-4 [scrollbar-width:thin] rounded-lg">
+      <table className="w-full text-[11px] min-w-[480px] border-separate border-spacing-0">
         <thead>
-          <tr className="text-[9px] font-mono uppercase tracking-widest text-white/40">
-            <th className={`sticky left-0 z-10 ${stickyBg} text-left py-1.5 pl-1 pr-2 border-b border-white/5`}>
-              <div className="flex items-center gap-1">
-                <span className="w-5 inline-block">#</span>
+          <tr className="text-[10px] font-mono uppercase tracking-wider text-white/70">
+            <th
+              className={`sticky left-0 z-20 ${headerBg} text-left py-2 pl-2 pr-3 border-b border-white/15 min-w-[150px]`}
+            >
+              <div className="flex items-center gap-2">
+                <span className="w-4 inline-block text-white/50">#</span>
                 <span>Time</span>
               </div>
             </th>
-            <th className="text-center py-1.5 px-2 w-10 border-b border-white/5">P</th>
-            <th className="text-center py-1.5 px-2 w-10 border-b border-white/5">J</th>
-            <th className="text-center py-1.5 px-2 w-10 border-b border-white/5">V</th>
-            <th className="text-center py-1.5 px-2 w-10 border-b border-white/5">E</th>
-            <th className="text-center py-1.5 px-2 w-10 border-b border-white/5">D</th>
-            <th className="text-center py-1.5 px-2 w-12 border-b border-white/5">SG</th>
+            <th className={`${numCol} ${headerBg} border-white/15 font-bold`} style={{ color: primaryColor }}>P</th>
+            <th className={`${numCol} ${headerBg} border-white/15`}>J</th>
+            <th className={`${numCol} ${headerBg} border-white/15`}>V</th>
+            <th className={`${numCol} ${headerBg} border-white/15`}>E</th>
+            <th className={`${numCol} ${headerBg} border-white/15`}>D</th>
+            <th className={`${numCol} ${headerBg} border-white/15 w-11`}>SG</th>
           </tr>
         </thead>
         <tbody>
           {rows.map((r) => {
-            const isMe = meTeamId && r.teamId === meTeamId;
-            const rowBg = isMe ? "bg-white/[0.06]" : stickyBg;
+            const isMe = !!(meTeamId && r.teamId === meTeamId);
+            const rowBg = isMe ? "bg-white/[0.08]" : stickyBg;
             return (
-              <tr key={`${r.teamId}-${r.position}`}>
+              <tr key={`${r.teamId}-${r.position}`} className={isMe ? "bg-white/[0.04]" : ""}>
                 <td
-                  className={`sticky left-0 z-10 ${rowBg} py-1.5 pl-1 pr-2 border-b border-white/[0.04]`}
+                  className={`sticky left-0 z-10 ${rowBg} py-2 pl-2 pr-3 border-b border-white/[0.06] min-w-[150px]`}
                   style={isMe ? { boxShadow: `inset 3px 0 0 ${primaryColor}` } : undefined}
                 >
-                  <div className="flex items-center gap-1.5 min-w-0 max-w-[180px]">
-                    <span className="w-5 font-mono text-white/60 shrink-0">{r.position}</span>
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="w-4 font-mono text-white/50 shrink-0 text-right">{r.position}</span>
                     <ClubLogo src={r.logo} alt={r.name} size="xs" className="w-4 h-4 shrink-0" />
-                    <span className={`truncate ${isMe ? "font-black text-white" : "text-white/80"}`}>
+                    <span className={`truncate ${isMe ? "font-black text-white" : "text-white/85"}`}>
                       {r.name}
                     </span>
                   </div>
                 </td>
                 <td
-                  className="text-center font-black px-2 py-1.5 border-b border-white/[0.04]"
-                  style={isMe ? { color: primaryColor } : undefined}
+                  className={`${numCol} font-black`}
+                  style={{ color: isMe ? primaryColor : "rgba(255,255,255,0.95)" }}
                 >
-                  {r.points}
+                  {fmt(r.points)}
                 </td>
-                <td className="text-center text-white/60 px-2 py-1.5 border-b border-white/[0.04]">{r.played ?? "-"}</td>
-                <td className="text-center text-white/60 px-2 py-1.5 border-b border-white/[0.04]">{r.win ?? "-"}</td>
-                <td className="text-center text-white/60 px-2 py-1.5 border-b border-white/[0.04]">{r.draw ?? "-"}</td>
-                <td className="text-center text-white/60 px-2 py-1.5 border-b border-white/[0.04]">{r.lose ?? "-"}</td>
-                <td className="text-center text-white/60 px-2 py-1.5 border-b border-white/[0.04]">{r.goalsDiff ?? "-"}</td>
+                <td className={`${numCol} text-white/70`}>{fmt(r.played)}</td>
+                <td className={`${numCol} text-white/70`}>{fmt(r.win)}</td>
+                <td className={`${numCol} text-white/70`}>{fmt(r.draw)}</td>
+                <td className={`${numCol} text-white/70`}>{fmt(r.lose)}</td>
+                <td className={`${numCol} text-white/70 w-11`}>
+                  {(r.goalsDiff ?? 0) > 0 ? `+${r.goalsDiff}` : fmt(r.goalsDiff)}
+                </td>
               </tr>
             );
           })}
