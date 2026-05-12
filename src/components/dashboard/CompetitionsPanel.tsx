@@ -267,13 +267,13 @@ function StandingsTable({
             return (
               <tr key={`${r.teamId}-${r.position}`} className={isMe ? "bg-white/[0.04]" : ""}>
                 <td
-                  className={`sticky left-0 z-10 ${rowBg} py-2 pl-2 pr-3 border-b border-white/[0.06] min-w-[150px]`}
+                  className={`sticky left-0 z-10 ${rowBg} py-1.5 pl-1.5 pr-1 border-b border-white/[0.06] min-w-[110px]`}
                   style={isMe ? { boxShadow: `inset 3px 0 0 ${primaryColor}` } : undefined}
                 >
-                  <div className="flex items-center gap-2 min-w-0">
-                    <span className="w-4 font-mono text-white/50 shrink-0 text-right">{r.position}</span>
-                    <ClubLogo src={r.logo} alt={r.name} size="xs" className="w-4 h-4 shrink-0" />
-                    <span className={`truncate ${isMe ? "font-black text-white" : "text-white/85"}`}>
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <span className="w-3 font-mono text-white/50 shrink-0 text-right text-[9px]">{r.position}</span>
+                    <ClubLogo src={r.logo} alt={r.name} size="xs" className="w-3.5 h-3.5 shrink-0" />
+                    <span className={`truncate text-[10px] ${isMe ? "font-black text-white" : "text-white/85"}`}>
                       {r.name}
                     </span>
                   </div>
@@ -288,7 +288,7 @@ function StandingsTable({
                 <td className={`${numCol} text-white/70`}>{fmt(r.win)}</td>
                 <td className={`${numCol} text-white/70`}>{fmt(r.draw)}</td>
                 <td className={`${numCol} text-white/70`}>{fmt(r.lose)}</td>
-                <td className={`${numCol} text-white/70 w-11`}>
+                <td className={`${numCol} text-white/70 w-9`}>
                   {(r.goalsDiff ?? 0) > 0 ? `+${r.goalsDiff}` : fmt(r.goalsDiff)}
                 </td>
               </tr>
