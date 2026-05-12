@@ -50,6 +50,57 @@ export type Database = {
         }
         Relationships: []
       }
+      api_competitions_cache: {
+        Row: {
+          last_update: string | null
+          league_id: number
+          league_logo: string | null
+          league_name: string | null
+          season: number
+          standings_json: Json | null
+          team_id: number
+        }
+        Insert: {
+          last_update?: string | null
+          league_id: number
+          league_logo?: string | null
+          league_name?: string | null
+          season: number
+          standings_json?: Json | null
+          team_id: number
+        }
+        Update: {
+          last_update?: string | null
+          league_id?: number
+          league_logo?: string | null
+          league_name?: string | null
+          season?: number
+          standings_json?: Json | null
+          team_id?: number
+        }
+        Relationships: []
+      }
+      api_fixtures_cache: {
+        Row: {
+          fixture_data: Json | null
+          last_update: string | null
+          next_match_data: Json | null
+          team_id: number
+        }
+        Insert: {
+          fixture_data?: Json | null
+          last_update?: string | null
+          next_match_data?: Json | null
+          team_id: number
+        }
+        Update: {
+          fixture_data?: Json | null
+          last_update?: string | null
+          next_match_data?: Json | null
+          team_id?: number
+        }
+        Relationships: []
+      }
       auth_tokens: {
         Row: {
           created_at: string | null
@@ -1000,8 +1051,18 @@ export type Database = {
         }[]
       }
       admin_purge_suspicious_to_trash: { Args: never; Returns: Json }
+      check_fixture_status: { Args: { p_fixture_json: Json }; Returns: boolean }
+      clean_dead_competitions: { Args: never; Returns: undefined }
       clean_fictitious_data: { Args: never; Returns: undefined }
       fake_votes_summary: { Args: never; Returns: Json }
+      get_active_competitions_v2: {
+        Args: { p_team_id: number }
+        Returns: {
+          l_id: number
+          l_name: string
+          l_type: string
+        }[]
+      }
       get_cached_rivals: {
         Args: { p_clube_nome: string }
         Returns: {
@@ -1052,6 +1113,14 @@ export type Database = {
         Args: { p_level: string; p_limit?: number; p_value?: string }
         Returns: Json
       }
+      get_real_time_competitions: {
+        Args: { p_team_id: number }
+        Returns: {
+          is_active: boolean
+          league_id: number
+          league_name: string
+        }[]
+      }
       get_rivals_fast: {
         Args: { p_club_name: string }
         Returns: {
@@ -1067,6 +1136,7 @@ export type Database = {
         }[]
       }
       get_sympathy_ranking: { Args: { p_limit?: number }; Returns: Json }
+      get_team_standings_real: { Args: { p_team_name: string }; Returns: Json }
       get_team_stats_v2: {
         Args: {
           location_name: string
@@ -1098,6 +1168,7 @@ export type Database = {
       master_reset_my_vote: { Args: never; Returns: Json }
       purge_fake_votes: { Args: never; Returns: Json }
       purge_invalid_fake_votes: { Args: never; Returns: Json }
+      purge_mock_data: { Args: never; Returns: undefined }
       register_referral_from_code: {
         Args: { p_codigo: string; p_indicado_id?: string }
         Returns: boolean
