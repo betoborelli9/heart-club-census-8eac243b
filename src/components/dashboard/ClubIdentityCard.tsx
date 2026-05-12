@@ -95,6 +95,8 @@ export default function ClubIdentityCard({ clubName }: Props) {
       } catch {
         if (!cancelled) setComps([]);
       }
+      if (!cancelled) setLoading(false);
+    })();
     return () => {
       cancelled = true;
     };
