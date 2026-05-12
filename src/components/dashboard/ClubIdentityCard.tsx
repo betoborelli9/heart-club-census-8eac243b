@@ -79,15 +79,22 @@ export default function ClubIdentityCard({ clubName }: Props) {
       const row = (data as CacheRow) || null;
       setData(row);
 
-      const teamId = row?.api_id ? Number(row.api_id) : NaN;
-      if (Number.isFinite(teamId) && teamId > 0) {
-        const { data: rows } = await supabase.rpc("get_active_competitions_v2", { p_team_id: teamId });
-        if (!cancelled) setComps(((rows as ActiveComp[]) || []).filter((c) => c?.l_name));
-      } else {
-        setComps([]);
+      // Fonte da verdade: edge function league-standings
+      // Retorna apenas competições ATIVAS (com fixture futuro/ao vivo) — automático.
+      try {
+        const { data: ls } = await supabase.functions.invoke("league-standings", {
+          body: { clubName },
+        });
+        const list = ((ls as any)?.competitions || [])
+          .map((c: any) => ({ l_id: c.leagueId, l_name: c.leagueName }))
+          .filter((c: ActiveComp) => c?.l_name);
+        // dedup por leagueId
+        const seen = new Set<number>();
+        const uniq = list.filter((c: ActiveComp) => (seen.has(c.l_id) ? false : (seen.add(c.l_id), true)));
+        if (!cancelled) setComps(uniq);
+      } catch {
+        if (!cancelled) setComps([]);
       }
-      setLoading(false);
-    })();
     return () => {
       cancelled = true;
     };
