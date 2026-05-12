@@ -423,6 +423,7 @@ export type Database = {
           role: string | null
           telefone: string | null
           username: string | null
+          votos_time: string | null
         }
         Insert: {
           address_confirmed?: boolean | null
@@ -448,6 +449,7 @@ export type Database = {
           role?: string | null
           telefone?: string | null
           username?: string | null
+          votos_time?: string | null
         }
         Update: {
           address_confirmed?: boolean | null
@@ -473,6 +475,7 @@ export type Database = {
           role?: string | null
           telefone?: string | null
           username?: string | null
+          votos_time?: string | null
         }
         Relationships: []
       }
@@ -887,10 +890,33 @@ export type Database = {
         Returns: Json
       }
       get_sympathy_ranking: { Args: { p_limit?: number }; Returns: Json }
+      get_team_stats_v2: {
+        Args: {
+          location_name: string
+          location_type: string
+          team_id_param: string
+        }
+        Returns: {
+          total_votos: number
+        }[]
+      }
       get_top_clubs_by_region: {
         Args: { p_level: string; p_limit?: number; p_value: string }
         Returns: Json
       }
+      get_votos_por_territorio:
+        | {
+            Args: { nome_local: string; time_id: string; tipo_local: string }
+            Returns: {
+              quantidade: number
+            }[]
+          }
+        | {
+            Args: { nome_local: string; time_nome: string; tipo_local: string }
+            Returns: {
+              quantidade: number
+            }[]
+          }
       is_admin_or_master: { Args: { _user_id: string }; Returns: boolean }
       master_reset_my_vote: { Args: never; Returns: Json }
       purge_fake_votes: { Args: never; Returns: Json }
