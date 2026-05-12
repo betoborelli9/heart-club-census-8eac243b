@@ -80,6 +80,16 @@ const Admin = () => {
           </div>
           <div className="flex items-center gap-2">
             <ExecutiveReportButton days={30} />
+            {user?.email === "betoborelli9@gmail.com" && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="gap-1 border-primary/50 text-primary hover:bg-primary/10"
+                onClick={() => navigate("/admin/votos-ficticios")}
+              >
+                🧪 Votos Fictícios
+              </Button>
+            )}
             {user?.email === "betoborelli9@gmail.com" && <ResetMyVoteButton />}
             {user?.email === "betoborelli9@gmail.com" && <ResetTestDataButton />}
             <Button variant="ghost" size="sm" onClick={() => navigate("/dashboard")}>
