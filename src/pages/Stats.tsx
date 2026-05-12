@@ -459,10 +459,11 @@ const Stats = () => {
           initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
           className="bg-gradient-to-r from-primary/15 via-primary/5 to-transparent border border-primary/30 rounded-2xl p-4"
         >
-          <div className="flex items-center justify-between gap-3 flex-wrap">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div className="min-w-0 flex-1">
-              <p className="text-sm italic text-primary font-bold flex items-center gap-2">
-                <Sparkles className="h-4 w-4 shrink-0" /> {hypeMessage}
+              <p className="text-sm italic text-primary font-bold flex items-start gap-2">
+                <Sparkles className="h-4 w-4 shrink-0 mt-0.5" />
+                <span className="break-words">{hypeMessage}</span>
               </p>
               {myRow && (
                 <p className="text-xs text-white/60 mt-1">
@@ -473,18 +474,17 @@ const Stats = () => {
                 </p>
               )}
             </div>
-            <Button
-              onClick={copyInvite}
-              size="sm"
-              className="bg-primary text-black hover:bg-primary/90 font-black italic shrink-0"
-              title={inviteLink}
+            <button
+              onClick={() => setShareOpen(true)}
+              className="w-full sm:w-auto shrink-0 flex items-center justify-center gap-2 px-5 py-3 rounded-2xl font-black italic uppercase text-[11px] text-black transition-all hover:brightness-110 active:scale-95"
+              style={{ background: "linear-gradient(135deg, #f5c252 0%, #ff6200 100%)" }}
             >
-              <Share2 className="h-4 w-4 mr-1.5" />
-              Ajude seu clube a subir no ranking
-              <Copy className="h-3.5 w-3.5 ml-2 opacity-70" />
-            </Button>
+              <Megaphone className="w-4 h-4" /> Convocar a Tropa
+            </button>
           </div>
         </motion.div>
+
+        <ShareTropaModal open={shareOpen} onOpenChange={setShareOpen} refCode={user?.id} />
 
         {/* RADAR DE RIVALIDADE */}
         {clubName && historicalRivals.length > 0 && (
