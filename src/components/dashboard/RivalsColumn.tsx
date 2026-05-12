@@ -131,15 +131,6 @@ export default function RivalsColumn({ clubName, refCode, primaryColor = "#ff620
         )}
       </div>
 
-      <button
-        onClick={() => setShareOpen(true)}
-        className="w-full mt-2 flex items-center justify-center gap-2 py-4 rounded-2xl font-black italic uppercase text-[11px] text-black transition-all hover:brightness-110 active:scale-95"
-        style={{ background: `linear-gradient(135deg, #f5c252 0%, ${primaryColor} 100%)` }}
-      >
-        <Megaphone className="w-4 h-4" /> Convocar a Tropa
-      </button>
-
-      <ShareTropaModal open={shareOpen} onOpenChange={setShareOpen} refCode={refCode} />
     </section>
   );
 }
