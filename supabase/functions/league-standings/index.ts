@@ -119,7 +119,7 @@ async function getFixtures(teamId: number) {
     return cached.payload as any;
   }
   const [next, live] = await Promise.all([
-    af(`/fixtures?team=${teamId}&next=3`).catch(() => ({ response: [] })),
+    af(`/fixtures?team=${teamId}&next=15`).catch(() => ({ response: [] })),
     af(`/fixtures?team=${teamId}&live=all`).catch(() => ({ response: [] })),
   ]);
   const mapFx = (f: any) => ({
