@@ -240,8 +240,8 @@ function StandingsTable({
   const numCol = "text-center px-2 py-2 w-9 border-b border-white/[0.06] tabular-nums";
   const fmt = (v: number | undefined | null) => (v === undefined || v === null ? 0 : v);
   return (
-    <div className="overflow-x-auto -mx-4 px-4 [scrollbar-width:thin] rounded-lg">
-      <table className="w-full text-[11px] min-w-[480px] border-separate border-spacing-0">
+    <div className="overflow-x-auto md:overflow-x-visible -mx-4 px-4 md:mx-0 md:px-0 thin-orange-scroll rounded-lg">
+      <table className="w-full text-[11px] min-w-[480px] md:min-w-0 border-separate border-spacing-0">
         <thead>
           <tr className="text-[10px] font-mono uppercase tracking-wider text-white/70">
             <th
