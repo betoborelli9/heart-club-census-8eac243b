@@ -596,6 +596,24 @@ export type Database = {
         }
         Relationships: []
       }
+      team_fixtures_cache: {
+        Row: {
+          payload: Json | null
+          team_id: number
+          updated_at: string | null
+        }
+        Insert: {
+          payload?: Json | null
+          team_id: number
+          updated_at?: string | null
+        }
+        Update: {
+          payload?: Json | null
+          team_id?: number
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       team_leagues_mapping: {
         Row: {
           leagues_json: Json | null

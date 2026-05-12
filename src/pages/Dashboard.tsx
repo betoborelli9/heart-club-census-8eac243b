@@ -22,6 +22,7 @@ import RivalsColumn from "@/components/dashboard/RivalsColumn";
 import SympathyCarousel from "@/components/dashboard/SympathyCarousel";
 import ObjectivesPanel from "@/components/dashboard/ObjectivesPanel";
 import Z4Infographic from "@/components/dashboard/Z4Infographic";
+import CompetitionsPanel from "@/components/dashboard/CompetitionsPanel";
 import SocialShareBanners from "@/components/dashboard/SocialShareBanners";
 import ClubIdentityCard from "@/components/dashboard/ClubIdentityCard";
 
@@ -202,6 +203,9 @@ const Dashboard = () => {
           </section>
 
           <aside key={`col3-${fadeKey}`} className="fade-in space-y-6 min-w-0">
+            <div className="glass-card rounded-3xl p-6">
+              <CompetitionsPanel clubName={viewedClubName} primaryColor={primary} />
+            </div>
             <div className="glass-card rounded-3xl p-6 space-y-8">
               <ObjectivesPanel clubName={viewedClubName} clubLogo={viewedLogo} primaryColor={primary} />
               <div className="h-px bg-white/5" />
