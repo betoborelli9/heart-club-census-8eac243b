@@ -128,14 +128,6 @@ const Convite = () => {
                 <h2 className="text-xl md:text-2xl font-black italic leading-tight">
                   {inviterName ? `${inviterName} te convidou` : "Você foi convidado"} para o Heart Club.
                 </h2>
-                {inviterClub && (
-                  <div className="flex items-center gap-2 mt-1">
-                    <ClubLogo src={inviterClubData?.logoUrl} alt={inviterClub} size="xs" />
-                    <span className="text-xs text-white/70 italic">
-                      Torcedor(a) do <strong className="text-white">{inviterClub}</strong>
-                    </span>
-                  </div>
-                )}
               </div>
             </div>
           </motion.section>
