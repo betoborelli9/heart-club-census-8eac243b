@@ -173,6 +173,30 @@ export type Database = {
         }
         Relationships: []
       }
+      clube_rivalidades_cache: {
+        Row: {
+          clube_id: string | null
+          clube_nome: string
+          rival_emblema: string | null
+          rival_nome: string
+          updated_at: string | null
+        }
+        Insert: {
+          clube_id?: string | null
+          clube_nome: string
+          rival_emblema?: string | null
+          rival_nome: string
+          updated_at?: string | null
+        }
+        Update: {
+          clube_id?: string | null
+          clube_nome?: string
+          rival_emblema?: string | null
+          rival_nome?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       clubes_cache: {
         Row: {
           api_id: string | null
@@ -275,6 +299,30 @@ export type Database = {
           mascote?: string | null
           nome?: string
           updated_at?: string | null
+        }
+        Relationships: []
+      }
+      clubes_ranking_rapido: {
+        Row: {
+          escudo_url: string | null
+          id: string
+          nome: string | null
+          nome_curto: string | null
+          search_vector: unknown
+        }
+        Insert: {
+          escudo_url?: string | null
+          id?: string
+          nome?: string | null
+          nome_curto?: string | null
+          search_vector?: unknown
+        }
+        Update: {
+          escudo_url?: string | null
+          id?: string
+          nome?: string | null
+          nome_curto?: string | null
+          search_vector?: unknown
         }
         Relationships: []
       }
@@ -846,6 +894,13 @@ export type Database = {
       admin_purge_suspicious_to_trash: { Args: never; Returns: Json }
       clean_fictitious_data: { Args: never; Returns: undefined }
       fake_votes_summary: { Args: never; Returns: Json }
+      get_cached_rivals: {
+        Args: { p_clube_nome: string }
+        Returns: {
+          r_emblema: string
+          r_nome: string
+        }[]
+      }
       get_club_vote_ranking: { Args: { p_limit?: number }; Returns: Json }
       get_club_vote_summary: { Args: { p_club_name: string }; Returns: Json }
       get_distinct_regions: {
@@ -888,6 +943,20 @@ export type Database = {
       get_ranking_with_growth: {
         Args: { p_level: string; p_limit?: number; p_value?: string }
         Returns: Json
+      }
+      get_rivals_fast: {
+        Args: { p_club_name: string }
+        Returns: {
+          r_escudo: string
+          r_nome: string
+        }[]
+      }
+      get_rivals_instant: {
+        Args: { p_club_name: string }
+        Returns: {
+          escudo_url: string
+          nome: string
+        }[]
       }
       get_sympathy_ranking: { Args: { p_limit?: number }; Returns: Json }
       get_team_stats_v2: {
@@ -938,6 +1007,8 @@ export type Database = {
         }
         Returns: Json
       }
+      show_limit: { Args: never; Returns: number }
+      show_trgm: { Args: { "": string }; Returns: string[] }
       unaccent: { Args: { "": string }; Returns: string }
     }
     Enums: {
