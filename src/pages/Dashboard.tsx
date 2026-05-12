@@ -22,6 +22,7 @@ import RivalsColumn from "@/components/dashboard/RivalsColumn";
 import SympathyCarousel from "@/components/dashboard/SympathyCarousel";
 import ObjectivesPanel from "@/components/dashboard/ObjectivesPanel";
 import Z4Infographic from "@/components/dashboard/Z4Infographic";
+import CompetitionsPanel from "@/components/dashboard/CompetitionsPanel";
 import SocialShareBanners from "@/components/dashboard/SocialShareBanners";
 import ClubIdentityCard from "@/components/dashboard/ClubIdentityCard";
 
