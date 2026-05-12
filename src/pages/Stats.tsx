@@ -145,6 +145,21 @@ const Stats = () => {
   // Share modal (Convocar a Tropa)
   const [shareOpen, setShareOpen] = useState(false);
 
+  // Rivais autônomos via clubes_cache.rivais (qualquer clube do mundo)
+  const [cacheRivals, setCacheRivals] = useState<string[]>([]);
+  useEffect(() => {
+    if (!clubName) { setCacheRivals([]); return; }
+    (async () => {
+      const { data } = await supabase
+        .from("clubes_cache")
+        .select("rivais")
+        .ilike("nome", clubName)
+        .maybeSingle();
+      const arr = (data?.rivais as string[] | null) || [];
+      setCacheRivals(Array.isArray(arr) ? arr.filter(Boolean) : []);
+    })();
+  }, [clubName]);
+
   // ─── Load user's club + vote location ───
   useEffect(() => {
     if (!user) return;
