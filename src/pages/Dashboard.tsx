@@ -204,14 +204,6 @@ const Dashboard = () => {
             <div className="glass-card rounded-3xl p-6">
               <CompetitionsPanel clubName={viewedClubName} primaryColor={primary} />
             </div>
-            <div className="glass-card rounded-3xl p-6">
-              <SocialShareBanners
-                clubName={viewedClubName}
-                clubLogo={viewedLogo}
-                primaryColor={primary}
-                secondaryColor={secondary}
-              />
-            </div>
           </aside>
         </div>
       </main>
