@@ -39,25 +39,15 @@ const Convite = () => {
   useEffect(() => {
     if (!ref) return;
     const load = async () => {
-      // 1) tenta por codigo_indicacao
-      let { data: prof } = await supabase
-        .from("profiles")
-        .select("id, nome_exibicao")
-        .eq("codigo_indicacao", ref)
-        .maybeSingle();
-
-      // 2) fallback: trata ref como user_id
-      if (!prof) {
-        const { data: byId } = await supabase
-          .from("profiles")
-          .select("id, nome_exibicao")
-          .eq("id", ref)
-          .maybeSingle();
-        prof = byId ?? null;
-      }
-
-      if (!prof) return;
-      setInviterName(prof.nome_exibicao || null);
+      // RPC pública (SECURITY DEFINER) — funciona mesmo sem auth/RLS do convidado
+      const { data: rpcData } = await supabase.rpc("get_inviter_info" as any, { _ref: ref });
+      const inviter = Array.isArray(rpcData) ? rpcData[0] : rpcData;
+      if (!inviter?.nome_exibicao) return;
+      setInviterName(inviter.nome_exibicao);
+      // Não buscamos clube do convidador — exibimos apenas o nome.
+      return;
+      // eslint-disable-next-line no-unreachable
+      let prof: any = null;
 
       const { data: voto } = await supabase
         .from("votos")
