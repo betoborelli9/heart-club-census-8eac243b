@@ -130,17 +130,6 @@ const Dashboard = () => {
             <ClubSearch onSelect={(club) => handlePickClub(club.name)} />
           </div>
           <div className="flex items-center gap-4">
-            {/* BOTÃO VOTAÇÃO MESTRE - EXCLUSIVO BETOBORELLI9 */}
-            {isMasterAdmin && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => navigate("/voting?test=1")}
-                className="border-[#ff6200] text-[#ff6200] hover:bg-[#ff6200] hover:text-white font-black italic uppercase text-[10px]"
-              >
-                Votação Master
-              </Button>
-            )}
             <Button variant="ghost" size="icon" onClick={() => signOut()} className="text-white/30 hover:text-white">
               <LogOut className="w-5 h-5" />
             </Button>
