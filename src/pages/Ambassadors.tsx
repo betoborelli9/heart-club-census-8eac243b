@@ -123,6 +123,11 @@ const isValidPhoneByCountry = (value: string, country: CountryDial): boolean => 
   return len >= country.digits[0] && len <= country.digits[1];
 };
 
+/* [MÓDULO: BASE AMPLA DE PROFISSÕES — fallback/merge com DB] */
+const BROAD_PROFESSIONS: string[] = [
+  "Administrador","Advogado","Agricultor","Agrônomo","Analista de Dados","Analista de Sistemas","Antropólogo","Aposentado","Arquiteto","Arquivista","Artesão","Artista Plástico","Assistente Administrativo","Assistente Social","Astrônomo","Atendente","Atleta Profissional","Atriz/Ator","Auditor","Auxiliar Administrativo","Auxiliar de Limpeza","Auxiliar de Produção","Babá","Bancário","Barbeiro","Barman","Bibliotecário","Biólogo","Bioquímico","Biomédico","Bombeiro","Bordador","Cabeleireiro","Caminhoneiro","Carpinteiro","Cientista de Dados","Cientista Político","Cineasta","Comerciante","Comissário de Bordo","Confeiteiro","Construtor Civil","Consultor","Contador","Corretor de Imóveis","Corretor de Seguros","Costureira","Cozinheiro","Cuidador","Decorador","Dentista","Designer Gráfico","Designer de Interiores","Desenvolvedor de Software","Desenhista","Diretor de Cinema","DJ","Doceira","Doméstica","Eletricista","Eletrotécnico","Empresário","Enfermeiro","Engenheiro Agrônomo","Engenheiro Civil","Engenheiro de Computação","Engenheiro Eletricista","Engenheiro Elétrico","Engenheiro Eletrônico","Engenheiro Mecânico","Engenheiro de Produção","Engenheiro Químico","Engenheiro de Software","Escritor","Estatístico","Esteticista","Estudante","Farmacêutico","Fisioterapeuta","Fonoaudiólogo","Fotógrafo","Frentista","Funcionário Público","Garçom","Gari","Gastrônomo","Gerente","Geólogo","Geógrafo","Historiador","Influenciador Digital","Jornalista","Juiz","Manicure","Maquiador","Marceneiro","Marinheiro","Massagista","Mecânico","Médico","Modelo","Motoboy","Motorista","Motorista de Aplicativo","Músico","Nutricionista","Office Boy","Operador de Caixa","Operador de Máquinas","Operador de Telemarketing","Padeiro","Paisagista","Pastor","Pedagogo","Pedreiro","Personal Trainer","Pescador","Piloto","Pintor","Policial Civil","Policial Militar","Político","Porteiro","Procurador","Produtor Audiovisual","Produtor Cultural","Produtor Rural","Professor","Programador","Promotor de Vendas","Psicólogo","Psicopedagogo","Publicitário","Químico","Radialista","Recepcionista","Redator","Relações Públicas","Repositor","Representante Comercial","Revisor","Roteirista","Sacerdote","Salva-vidas","Sapateiro","Secretária","Segurança","Servidor Público","Sociólogo","Soldador","Sommelier","Tatuador","Taxista","Técnico Agrícola","Técnico em Edificações","Técnico de Enfermagem","Técnico em Eletrônica","Técnico em Informática","Técnico em Mecânica","Técnico em Segurança do Trabalho","Telefonista","Terapeuta Ocupacional","Tradutor","Transportador","UX/UI Designer","Vendedor","Veterinário","Videomaker","Vigilante","Web Designer","Youtuber","Zelador","Zootecnista","Outro",
+];
+
 /* [MÓDULO: TIPOS] */
 interface RankingEntry {
   user_id: string;
@@ -189,18 +194,25 @@ const Ambassadors = () => {
     load();
   }, [user]);
 
-  /* [MÓDULO: SEGURANÇA E CENSO] */
+  /* [MÓDULO: SEGURANÇA E CENSO]
+   * Modal abre apenas quando o torcedor entra no painel de Embaixador
+   * sem ter completado WhatsApp + Profissão. Data de nascimento já é
+   * coletada em outro fluxo (ProfileSetup), então não duplicamos aqui. */
   useEffect(() => {
     if (!profile || isLoading) return;
-    const needsCensus = !profile.profissao || !profile.telefone || !profile.data_nascimento;
+    const needsCensus = !profile.profissao || !profile.telefone;
     setShowCensusModal(needsCensus);
   }, [profile, isLoading]);
 
-  /* [MÓDULO: CARREGA PROFISSÕES] */
+  /* [MÓDULO: CARREGA PROFISSÕES — DB + base ampla embutida] */
   useEffect(() => {
     const loadProfessions = async () => {
       const { data } = await supabase.from("lista_profissoes").select("nome").order("nome");
-      if (data) setProfessions(data.map((p) => p.nome));
+      const dbList = (data ?? []).map((p) => p.nome);
+      const merged = Array.from(new Set([...dbList, ...BROAD_PROFESSIONS])).sort((a, b) =>
+        a.localeCompare(b, "pt-BR")
+      );
+      setProfessions(merged);
     };
     loadProfessions();
   }, []);
@@ -295,12 +307,8 @@ const Ambassadors = () => {
       toast({ title: "WhatsApp inválido", description: `Informe um número válido para ${phoneCountry.name}.`, variant: "destructive" });
       return;
     }
-    if (!professionInput) {
-      toast({ title: "Profissão obrigatória", description: "Selecione sua profissão.", variant: "destructive" });
-      return;
-    }
-    if (!birthDate) {
-      toast({ title: "Data obrigatória", description: "Informe sua data de nascimento.", variant: "destructive" });
+    if (!professionInput.trim()) {
+      toast({ title: "Profissão obrigatória", description: "Digite sua profissão.", variant: "destructive" });
       return;
     }
 
@@ -308,12 +316,11 @@ const Ambassadors = () => {
     try {
       await updateProfile({
         telefone: `${phoneCountry.dial}${phoneInput.replace(/\D/g, "")}`,
-        profissao: professionInput,
-        data_nascimento: format(birthDate, "yyyy-MM-dd"),
+        profissao: professionInput.trim(),
       });
       await refreshProfile();
       setShowCensusModal(false);
-      toast({ title: "Perfil atualizado!", description: "Seus dados foram salvos com sucesso." });
+      toast({ title: "Painel liberado!", description: "Seus dados foram salvos com sucesso." });
     } catch {
       toast({ title: "Erro ao salvar", description: "Tente novamente.", variant: "destructive" });
     } finally {
@@ -812,110 +819,25 @@ const Ambassadors = () => {
               )}
             </div>
 
-            {/* Profissão */}
+            {/* Profissão — Autocomplete com entrada livre */}
             <div className="space-y-2">
               <Label className="text-xs font-bold uppercase tracking-wider text-white/60">Profissão</Label>
-              <Select value={professionInput} onValueChange={setProfessionInput}>
-                <SelectTrigger className="bg-white/5 border-white/10 text-white">
-                  <SelectValue placeholder="Selecione sua profissão" />
-                </SelectTrigger>
-                <SelectContent className="bg-[#1a1a1a] border-white/10 text-white max-h-60">
-                  {professions.map((prof) => (
-                    <SelectItem key={prof} value={prof} className="text-white focus:bg-white/10 focus:text-white">
-                      {prof}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Data de Nascimento */}
-            <div className="space-y-2">
-              <Label className="text-xs font-bold uppercase tracking-wider text-white/60 flex items-center gap-2">
-                <CalendarIcon className="h-3.5 w-3.5 text-[#ff6200]" />
-                Data de Nascimento
-              </Label>
               <p className="text-[10px] text-white/40 italic">
-                Selecione dia, mês e ano do seu nascimento
+                Digite sua profissão — sugerimos enquanto você escreve. Pode escolher da lista ou digitar livremente.
               </p>
-              <div className="grid grid-cols-3 gap-2">
-                {/* Dia */}
-                <Select
-                  value={birthDate ? String(birthDate.getDate()) : ""}
-                  onValueChange={(v) => {
-                    const d = parseInt(v, 10);
-                    const base = birthDate ?? new Date(2000, 0, 1);
-                    const next = new Date(base.getFullYear(), base.getMonth(), d);
-                    setBirthDate(next);
-                  }}
-                >
-                  <SelectTrigger className="bg-white/5 border-white/10 text-white h-12 text-base font-bold">
-                    <SelectValue placeholder="Dia" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-[#1a1a1a] border-white/10 text-white max-h-60">
-                    {Array.from({ length: 31 }, (_, i) => i + 1).map((d) => (
-                      <SelectItem key={d} value={String(d)} className="text-white focus:bg-[#ff6200]/20 focus:text-white">
-                        {String(d).padStart(2, "0")}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-
-                {/* Mês */}
-                <Select
-                  value={birthDate ? String(birthDate.getMonth()) : ""}
-                  onValueChange={(v) => {
-                    const m = parseInt(v, 10);
-                    const base = birthDate ?? new Date(2000, 0, 1);
-                    const next = new Date(base.getFullYear(), m, base.getDate());
-                    setBirthDate(next);
-                  }}
-                >
-                  <SelectTrigger className="bg-white/5 border-white/10 text-white h-12 text-base font-bold">
-                    <SelectValue placeholder="Mês" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-[#1a1a1a] border-white/10 text-white max-h-60">
-                    {[
-                      "Janeiro","Fevereiro","Março","Abril","Maio","Junho",
-                      "Julho","Agosto","Setembro","Outubro","Novembro","Dezembro",
-                    ].map((label, idx) => (
-                      <SelectItem key={idx} value={String(idx)} className="text-white focus:bg-[#ff6200]/20 focus:text-white">
-                        {label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-
-                {/* Ano */}
-                <Select
-                  value={birthDate ? String(birthDate.getFullYear()) : ""}
-                  onValueChange={(v) => {
-                    const y = parseInt(v, 10);
-                    const base = birthDate ?? new Date(2000, 0, 1);
-                    const next = new Date(y, base.getMonth(), base.getDate());
-                    setBirthDate(next);
-                  }}
-                >
-                  <SelectTrigger className="bg-white/5 border-white/10 text-white h-12 text-base font-bold">
-                    <SelectValue placeholder="Ano" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-[#1a1a1a] border-white/10 text-white max-h-60">
-                    {Array.from(
-                      { length: new Date().getFullYear() - 1920 + 1 },
-                      (_, i) => new Date().getFullYear() - i
-                    ).map((y) => (
-                      <SelectItem key={y} value={String(y)} className="text-white focus:bg-[#ff6200]/20 focus:text-white">
-                        {y}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              {birthDate && (
-                <p className="text-xs text-[#ff6200] font-bold italic pt-1">
-                  ✓ {format(birthDate, "dd/MM/yyyy")}
-                </p>
-              )}
+              <Input
+                value={professionInput}
+                onChange={(e) => setProfessionInput(e.target.value)}
+                placeholder="Ex.: Engenheiro, Professor, Médico..."
+                className="bg-white/5 border-white/10 text-white placeholder:text-white/20"
+                list="professions-list"
+                autoComplete="off"
+              />
+              <datalist id="professions-list">
+                {professions.map((prof) => (
+                  <option key={prof} value={prof} />
+                ))}
+              </datalist>
             </div>
 
             <Button
