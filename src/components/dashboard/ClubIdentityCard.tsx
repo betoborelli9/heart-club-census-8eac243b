@@ -36,7 +36,6 @@ interface CacheRow {
 interface ActiveComp {
   l_id: number;
   l_name: string;
-  l_type: string;
 }
 
 const ColorChip = ({ hex }: { hex: string }) => (
