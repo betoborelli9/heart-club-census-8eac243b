@@ -32,20 +32,38 @@ const ProfileSetup = () => {
 
   /* ---------- MÓDULO 2: ESTADOS DO FORMULÁRIO ---------- */
   const [nome, setNome] = useState("");
-  const [dataNascimento, setDataNascimento] = useState("");
+  const [dia, setDia] = useState("");
+  const [mes, setMes] = useState("");
+  const [ano, setAno] = useState("");
   const [genero, setGenero] = useState("");
   const [saving, setSaving] = useState(false);
+
+  // Data concatenada YYYY-MM-DD
+  const dataNascimento = dia && mes && ano ? `${ano}-${mes}-${dia}` : "";
 
   // Sincronização inicial com metadados do Auth ou Profile existente
   useEffect(() => {
     if (profile) {
       setNome(profile.nome_exibicao || user?.user_metadata?.full_name || "");
-      setDataNascimento(profile.data_nascimento || "");
+      if (profile.data_nascimento) {
+        const [y, m, d] = profile.data_nascimento.split("-");
+        setAno(y || ""); setMes(m || ""); setDia(d || "");
+      }
       setGenero(profile.genero || "");
     } else if (user) {
       setNome(user.user_metadata?.full_name || "");
     }
   }, [profile, user]);
+
+  const MESES = [
+    { v: "01", l: "Janeiro" }, { v: "02", l: "Fevereiro" }, { v: "03", l: "Março" },
+    { v: "04", l: "Abril" }, { v: "05", l: "Maio" }, { v: "06", l: "Junho" },
+    { v: "07", l: "Julho" }, { v: "08", l: "Agosto" }, { v: "09", l: "Setembro" },
+    { v: "10", l: "Outubro" }, { v: "11", l: "Novembro" }, { v: "12", l: "Dezembro" },
+  ];
+  const DIAS = Array.from({ length: 31 }, (_, i) => String(i + 1).padStart(2, "0"));
+  const ANO_ATUAL = new Date().getFullYear();
+  const ANOS = Array.from({ length: ANO_ATUAL - 1920 + 1 }, (_, i) => String(ANO_ATUAL - i));
 
   /* ---------- MÓDULO 3: PERSISTÊNCIA E LOGICA DE NEGÓCIO ---------- */
   const handleSubmit = async (e: React.FormEvent) => {
@@ -117,18 +135,37 @@ const ProfileSetup = () => {
               />
             </div>
 
-            {/* Campo: Nascimento */}
+            {/* Campo: Nascimento (Dia / Mês / Ano) */}
             <div className="space-y-2">
               <Label className="text-sm text-muted-foreground flex items-center gap-2">
                 <Cake className="w-4 h-4 text-primary" /> Data de Nascimento
               </Label>
-              <Input 
-                type="date" 
-                value={dataNascimento} 
-                onChange={e => setDataNascimento(e.target.value)} 
-                className="h-12 bg-secondary/30 border-border/30" 
-                required 
-              />
+              <div className="grid grid-cols-3 gap-2">
+                <Select value={dia} onValueChange={setDia}>
+                  <SelectTrigger className="h-12 bg-secondary/30 border-border/30 focus:border-primary data-[state=open]:border-primary">
+                    <SelectValue placeholder="Dia" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-64">
+                    {DIAS.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+                <Select value={mes} onValueChange={setMes}>
+                  <SelectTrigger className="h-12 bg-secondary/30 border-border/30 focus:border-primary data-[state=open]:border-primary">
+                    <SelectValue placeholder="Mês" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-64">
+                    {MESES.map(m => <SelectItem key={m.v} value={m.v}>{m.l}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+                <Select value={ano} onValueChange={setAno}>
+                  <SelectTrigger className="h-12 bg-secondary/30 border-border/30 focus:border-primary data-[state=open]:border-primary">
+                    <SelectValue placeholder="Ano" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-64">
+                    {ANOS.map(y => <SelectItem key={y} value={y}>{y}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
             {/* Campo: Gênero */}
