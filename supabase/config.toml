@@ -19,7 +19,7 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.sync-official-neighborhoods]
-verify_jwt = true
+verify_jwt = false
 
 [functions.batch-sync-br-capitals]
 verify_jwt = false
