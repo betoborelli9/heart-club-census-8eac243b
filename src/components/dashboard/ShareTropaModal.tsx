@@ -16,8 +16,20 @@ interface Props {
 }
 
 const BASE_URL = "https://heartclubapp.com/convite";
-const TEXT =
-  "Estou te convocando para o Censo Global do Futebol no Heart Club! Clique no link e registre sua paixão pelo nosso time.";
+const TEXT = `⚽ VOCÊ FOI CONVOCADO PARA O HEART CLUB! 🧡
+
+Acabei de votar no nosso time! O Heart Club é o maior censo de torcidas do mundo.
+
+COMO FUNCIONA:
+1️⃣ Clique no link abaixo e dê seu voto.
+2️⃣ Após votar, você ganha uma Senha de Convite única.
+3️⃣ Clique em 'Convoca a Tropa' e chame seus amigos.
+
+Quanto mais gente votar com seu convite, mais pontos você ganha para subir de nível: Bronze ➔ Prata ➔ Ouro ➔ DIAMANTE! 💎
+
+Embaixadores Diamante terão prêmios exclusivos no futuro. Vamos dominar o ranking!
+
+👇 VOTE AGORA E CONVOQUE:`;
 
 export default function ShareTropaModal({ open, onOpenChange, refCode }: Props) {
   const { toast } = useToast();
