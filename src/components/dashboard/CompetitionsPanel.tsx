@@ -241,14 +241,14 @@ function StandingsTable({
   const fmt = (v: number | undefined | null) => (v === undefined || v === null ? 0 : v);
   return (
     <div className="overflow-x-auto md:overflow-x-visible -mx-4 px-4 md:mx-0 md:px-0 thin-orange-scroll rounded-lg">
-      <table className="w-full text-[11px] min-w-[480px] md:min-w-0 border-separate border-spacing-0">
+      <table className="w-full text-[10px] min-w-[360px] md:min-w-0 border-separate border-spacing-0">
         <thead>
-          <tr className="text-[10px] font-mono uppercase tracking-wider text-white/70">
+          <tr className="text-[9px] font-mono uppercase tracking-wider text-white/70">
             <th
-              className={`sticky left-0 z-20 ${headerBg} text-left py-2 pl-2 pr-3 border-b border-white/15 min-w-[150px]`}
+              className={`sticky left-0 z-20 ${headerBg} text-left py-1.5 pl-1.5 pr-1 border-b border-white/15 min-w-[110px]`}
             >
-              <div className="flex items-center gap-2">
-                <span className="w-4 inline-block text-white/50">#</span>
+              <div className="flex items-center gap-1.5">
+                <span className="w-3 inline-block text-white/50">#</span>
                 <span>Time</span>
               </div>
             </th>
@@ -257,7 +257,7 @@ function StandingsTable({
             <th className={`${numCol} ${headerBg} border-white/15`}>V</th>
             <th className={`${numCol} ${headerBg} border-white/15`}>E</th>
             <th className={`${numCol} ${headerBg} border-white/15`}>D</th>
-            <th className={`${numCol} ${headerBg} border-white/15 w-11`}>SG</th>
+            <th className={`${numCol} ${headerBg} border-white/15 w-9`}>SG</th>
           </tr>
         </thead>
         <tbody>
