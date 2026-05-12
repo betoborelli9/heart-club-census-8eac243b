@@ -162,7 +162,7 @@ const Dashboard = () => {
           </div>
         </section>
 
-        <div className="grid grid-cols-1 lg:grid-cols-[20%_36%_44%] gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-[26%_40%_34%] gap-6">
           <aside className="space-y-4">
             <div className="glass-card rounded-3xl p-5 lg:sticky lg:top-24">
               <RivalsColumn clubName={viewedClubName} refCode={profile.codigo_indicacao} primaryColor={primary} />
