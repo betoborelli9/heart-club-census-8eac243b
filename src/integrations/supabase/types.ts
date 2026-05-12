@@ -326,6 +326,33 @@ export type Database = {
         }
         Relationships: []
       }
+      competition_standings_cache: {
+        Row: {
+          group_name: string | null
+          league_id: number
+          league_name: string | null
+          season: number
+          standings_json: Json | null
+          updated_at: string | null
+        }
+        Insert: {
+          group_name?: string | null
+          league_id: number
+          league_name?: string | null
+          season: number
+          standings_json?: Json | null
+          updated_at?: string | null
+        }
+        Update: {
+          group_name?: string | null
+          league_id?: number
+          league_name?: string | null
+          season?: number
+          standings_json?: Json | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       geo_neighborhood_cache: {
         Row: {
           city: string
@@ -356,6 +383,27 @@ export type Database = {
           osm_id?: number | null
           state?: string | null
           updated_at?: string
+        }
+        Relationships: []
+      }
+      global_standings_cache: {
+        Row: {
+          last_update: string | null
+          league_id: number
+          season: number
+          standings_data: Json | null
+        }
+        Insert: {
+          last_update?: string | null
+          league_id: number
+          season: number
+          standings_data?: Json | null
+        }
+        Update: {
+          last_update?: string | null
+          league_id?: number
+          season?: number
+          standings_data?: Json | null
         }
         Relationships: []
       }
@@ -524,6 +572,48 @@ export type Database = {
           telefone?: string | null
           username?: string | null
           votos_time?: string | null
+        }
+        Relationships: []
+      }
+      team_active_competitions: {
+        Row: {
+          competitions_json: Json | null
+          last_sync: string | null
+          team_id: number
+          team_name: string | null
+        }
+        Insert: {
+          competitions_json?: Json | null
+          last_sync?: string | null
+          team_id: number
+          team_name?: string | null
+        }
+        Update: {
+          competitions_json?: Json | null
+          last_sync?: string | null
+          team_id?: number
+          team_name?: string | null
+        }
+        Relationships: []
+      }
+      team_leagues_mapping: {
+        Row: {
+          leagues_json: Json | null
+          team_id: number
+          team_name: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          leagues_json?: Json | null
+          team_id: number
+          team_name?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          leagues_json?: Json | null
+          team_id?: number
+          team_name?: string | null
+          updated_at?: string | null
         }
         Relationships: []
       }
