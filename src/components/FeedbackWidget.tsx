@@ -58,7 +58,7 @@ export default function FeedbackWidget() {
         onClick={() => setOpen(true)}
         whileHover={{ scale: 1.08 }}
         whileTap={{ scale: 0.94 }}
-        className="fixed bottom-5 right-5 z-[60] w-12 h-12 rounded-full flex items-center justify-center bg-black"
+        className="fixed bottom-20 right-6 z-[999] w-12 h-12 rounded-full flex items-center justify-center bg-black"
         style={{
           border: `2px solid ${glow}`,
           boxShadow: `0 0 12px ${glow}cc, 0 0 28px ${glow}66, inset 0 0 6px ${glow}40`,
