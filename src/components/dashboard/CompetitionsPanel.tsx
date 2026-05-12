@@ -74,8 +74,17 @@ export default function CompetitionsPanel({ clubName, primaryColor = "#ff6200" }
         if (cancelled) return;
         setTeam(data?.team || null);
         const comps: Competition[] = data?.competitions || [];
+        // Priorização pelo calendário: aba inicial = competição com jogo AO VIVO
+        // ou com nextMatch mais próximo. Mantém todas as abas navegáveis.
+        const sorted = [...comps].sort((a, b) => {
+          if (a.liveMatch && !b.liveMatch) return -1;
+          if (!a.liveMatch && b.liveMatch) return 1;
+          const ta = a.nextMatch ? new Date(a.nextMatch.date).getTime() : Infinity;
+          const tb = b.nextMatch ? new Date(b.nextMatch.date).getTime() : Infinity;
+          return ta - tb;
+        });
         setCompetitions(comps);
-        if (comps.length && !activeTab) setActiveTab(String(comps[0].leagueId));
+        if (sorted.length && !activeTab) setActiveTab(String(sorted[0].leagueId));
       } catch {
         if (!cancelled) setCompetitions([]);
       } finally {
