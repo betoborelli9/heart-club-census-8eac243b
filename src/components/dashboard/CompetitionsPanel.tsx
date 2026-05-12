@@ -237,7 +237,7 @@ function StandingsTable({
   // centralizadas e uniformes, cabeçalho sempre visível acompanhando o scroll horizontal.
   const stickyBg = "bg-[#0b0b0b]";
   const headerBg = "bg-[#141414]";
-  const numCol = "text-center px-2 py-2 w-9 border-b border-white/[0.06] tabular-nums";
+  const numCol = "text-center px-1 py-1.5 w-7 border-b border-white/[0.06] tabular-nums";
   const fmt = (v: number | undefined | null) => (v === undefined || v === null ? 0 : v);
   return (
     <div className="overflow-x-auto md:overflow-x-visible -mx-4 px-4 md:mx-0 md:px-0 thin-orange-scroll rounded-lg">
