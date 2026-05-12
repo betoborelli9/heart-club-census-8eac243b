@@ -203,9 +203,15 @@ serve(async (req) => {
 
     const fixtures = await getFixtures(team.id);
 
-    // Competições onde o time aparece nas standings
+    // VERDADE DE CAMPO: competição só está ativa se o time tem jogo futuro ou ao vivo nela.
+    // Sem fixture pendente => time eliminado / torneio encerrado => não exibe.
+    const activeLeagueIds = new Set<number>([
+      ...fixtures.next.map((f: any) => f.league.id),
+      ...fixtures.live.map((f: any) => f.league.id),
+    ]);
+
     const competitions = standingsResults
-      .filter((r) => r.standings.some((row: any) => row.teamId === team.id))
+      .filter((r) => activeLeagueIds.has(r.league.id))
       .map((r) => {
         const me = r.standings.find((row: any) => row.teamId === team.id) || null;
         const nextOfThis = fixtures.next.find((f: any) => f.league.id === r.league.id) || null;
