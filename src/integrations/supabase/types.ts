@@ -1094,6 +1094,12 @@ export type Database = {
           vote_count: number
         }[]
       }
+      get_inviter_info: {
+        Args: { _ref: string }
+        Returns: {
+          nome_exibicao: string
+        }[]
+      }
       get_my_ambassador_referrals: {
         Args: never
         Returns: {
