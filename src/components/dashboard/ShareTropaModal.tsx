@@ -37,7 +37,10 @@ export default function ShareTropaModal({ open, onOpenChange, refCode }: Props) 
     () => (refCode ? `${BASE_URL}?ref=${encodeURIComponent(refCode)}` : BASE_URL),
     [refCode],
   );
-  const fullText = `${TEXT} ${link}`;
+  // Link aparece PRIMEIRO no texto para que o WhatsApp/Telegram gerem o preview
+  // clicável usando o og:image do site (banner Jornada do Embaixador).
+  // O amigo só toca no banner e já cai direto em heartclubapp.com — sem clicar em link.
+  const fullText = `${link}\n\n${TEXT}`;
 
   const openUrl = (url: string) => {
     window.open(url, "_blank", "noopener,noreferrer");
@@ -51,13 +54,24 @@ export default function ShareTropaModal({ open, onOpenChange, refCode }: Props) 
     );
 
   const handleNative = async () => {
-    if (navigator.share) {
-      try {
-        await navigator.share({ title: "Heart Club", text: TEXT, url: link });
-      } catch {}
-    } else {
-      handleCopy();
-    }
+    if (!navigator.share) return handleCopy();
+
+    // Tenta anexar a imagem do banner como arquivo (Web Share Level 2)
+    try {
+      const res = await fetch("/heart-club-og.png");
+      const blob = await res.blob();
+      const file = new File([blob], "heart-club-convite.png", { type: blob.type });
+      const payload: ShareData = { title: "Heart Club", text: fullText, url: link, files: [file] };
+      // @ts-ignore - canShare nem sempre tipado
+      if (navigator.canShare?.(payload)) {
+        await navigator.share(payload);
+        return;
+      }
+    } catch {}
+
+    try {
+      await navigator.share({ title: "Heart Club", text: TEXT, url: link });
+    } catch {}
   };
 
   const handleCopy = async () => {
