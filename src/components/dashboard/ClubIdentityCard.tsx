@@ -30,6 +30,13 @@ interface CacheRow {
   estadio_capacidade: number | null;
   tem_feminino: boolean | null;
   division: string | null;
+  api_id: string | null;
+}
+
+interface ActiveComp {
+  l_id: number;
+  l_name: string;
+  l_type: string;
 }
 
 const ColorChip = ({ hex }: { hex: string }) => (
