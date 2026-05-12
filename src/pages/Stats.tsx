@@ -511,48 +511,9 @@ const Stats = () => {
 
         <ShareTropaModal open={shareOpen} onOpenChange={setShareOpen} refCode={user?.id} />
 
-        {/* RADAR DE RIVALIDADE */}
-        {clubName && historicalRivals.length > 0 && (
-          <section className="bg-zinc-950 border border-primary/20 rounded-2xl p-4">
-            <p className="text-[10px] uppercase tracking-widest text-primary font-black flex items-center gap-1.5 mb-3">
-              <Radar className="h-3.5 w-3.5" /> Radar de Rivalidade
-              {scopeValue && <span className="text-white/40">· {scopeValue}</span>}
-            </p>
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-2">
-              {rivalRows.map(({ name, row }) => {
-                const myV = myRow?.votes || 0;
-                const rivalV = row?.votes || 0;
-                const diff = myV - rivalV;
-                const ahead = diff > 0;
-                const pct = rivalV > 0 ? Math.abs(diff) / rivalV * 100 : 0;
-                return (
-                  <div key={name} className="bg-black/40 border border-white/10 rounded-xl p-3 flex items-center gap-3">
-                    <ClubBadge club={name} cacheUrl={logoFor(name)} size={42} />
-                    <div className="flex-1 min-w-0">
-                      <p className="font-black italic text-sm truncate">{name}</p>
-                      <p className="text-[10px] text-white/50">
-                        {row ? `${fmt(rivalV)} votos` : "sem votos no recorte"}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      {row && myRow ? (
-                        <>
-                          <p className={`text-sm font-black ${ahead ? "text-green-400" : "text-primary"}`}>
-                            {ahead ? "+" : ""}{fmt(diff)}
-                          </p>
-                          <p className="text-[10px] text-white/50">
-                            {ahead ? `${pct.toFixed(0)}% à frente` : `faltam ${pct.toFixed(0)}%`}
-                          </p>
-                        </>
-                      ) : (
-                        <Swords className="h-4 w-4 text-white/30" />
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </section>
+        {/* RADAR DE RIVALIDADE — mesma lógica do Dashboard (autônomo, qualquer clube) */}
+        {clubName && (
+          <RivalsColumn clubName={clubName} refCode={user?.id} primaryColor="#ff6200" />
         )}
 
         {/* PRÓXIMO ALVO (proximidade) */}
