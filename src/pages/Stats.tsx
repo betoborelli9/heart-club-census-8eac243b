@@ -296,7 +296,16 @@ const Stats = () => {
   const aboveRow = myIdx > 0 ? ranking[myIdx - 1] : null;
   const top10Row = ranking[9];
 
-  const historicalRivals = useMemo(() => getHistoricalRivals(clubName, 3), [clubName]);
+  const historicalRivals = useMemo(() => {
+    const merged: string[] = [];
+    const push = (n: string) => {
+      if (!n) return;
+      if (!merged.some((x) => norm(x) === norm(n))) merged.push(n);
+    };
+    cacheRivals.forEach(push);
+    getHistoricalRivals(clubName, 3).forEach(push);
+    return merged.slice(0, 3);
+  }, [clubName, cacheRivals]);
   const rivalRows = useMemo(
     () => historicalRivals.map((name) => {
       const row = ranking.find((r) => norm(r.club) === norm(name));
