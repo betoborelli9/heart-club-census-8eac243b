@@ -141,7 +141,7 @@ export default function NewsFeedCards({ teamName, primaryColor = "#ff6200" }: Pr
                   style={{ ['--news-accent' as any]: primaryColor }}
                 />
                 <div className="flex-1 min-w-0">
-                  <h3 className="text-[12px] font-bold italic text-white/85 group-hover:text-white leading-tight transition-colors line-clamp-2 uppercase">
+                  <h3 className="text-[10.5px] font-bold italic text-white/85 group-hover:text-white leading-snug transition-colors line-clamp-2 uppercase">
                     {item.title}
                   </h3>
                   <div className="flex items-center gap-2 mt-1.5">

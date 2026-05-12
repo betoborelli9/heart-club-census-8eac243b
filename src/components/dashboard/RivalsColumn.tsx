@@ -97,9 +97,9 @@ export default function RivalsColumn({ clubName, refCode, primaryColor = "#ff620
           rivals.map((rival, i) => (
             <div
               key={i}
-              className="flex items-center gap-4 p-3 rounded-2xl bg-white/[0.04] border border-white/10 backdrop-blur-xl hover:bg-white/[0.07] hover:border-white/20 transition-all group"
+              className="flex items-center gap-2.5 p-2.5 rounded-2xl bg-white/[0.04] border border-white/10 backdrop-blur-xl hover:bg-white/[0.07] hover:border-white/20 transition-all group"
             >
-              <div className="w-12 h-12 shrink-0 flex items-center justify-center bg-black/40 rounded-xl p-1.5 border border-white/10 group-hover:border-white/20 transition-colors">
+              <div className="w-9 h-9 shrink-0 flex items-center justify-center bg-black/40 rounded-lg p-1 border border-white/10 group-hover:border-white/20 transition-colors">
                 <ClubLogo
                   src={rival.logo || undefined}
                   alt={`Escudo do ${rival.name}`}
@@ -110,19 +110,19 @@ export default function RivalsColumn({ clubName, refCode, primaryColor = "#ff620
                 />
               </div>
               <div className="flex-1 min-w-0">
-                <h3 className="text-xs font-black uppercase italic text-white truncate">{rival.name}</h3>
-                <span className="text-[9px] font-bold text-white/30 uppercase truncate block">
+                <h3 className="text-[10px] font-black uppercase italic text-white truncate leading-tight">{rival.name}</h3>
+                <span className="text-[8px] font-bold text-white/30 uppercase truncate block leading-tight">
                   {[rival.city, rival.country].filter(Boolean).join(" • ") || "Rival Histórico"}
                 </span>
               </div>
               <div className="shrink-0 flex flex-col items-end leading-none">
                 <span
-                  className="text-base font-black italic tabular-nums"
+                  className="text-sm font-black italic tabular-nums"
                   style={{ color: primaryColor }}
                 >
                   {(rival.votes ?? 0).toLocaleString("pt-BR")}
                 </span>
-                <span className="text-[8px] font-black uppercase italic text-white/40 tracking-widest mt-0.5">
+                <span className="text-[7px] font-black uppercase italic text-white/40 tracking-widest mt-0.5">
                   Votos
                 </span>
               </div>
