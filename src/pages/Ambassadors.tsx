@@ -298,12 +298,8 @@ const Ambassadors = () => {
       toast({ title: "WhatsApp inválido", description: `Informe um número válido para ${phoneCountry.name}.`, variant: "destructive" });
       return;
     }
-    if (!professionInput) {
-      toast({ title: "Profissão obrigatória", description: "Selecione sua profissão.", variant: "destructive" });
-      return;
-    }
-    if (!birthDate) {
-      toast({ title: "Data obrigatória", description: "Informe sua data de nascimento.", variant: "destructive" });
+    if (!professionInput.trim()) {
+      toast({ title: "Profissão obrigatória", description: "Digite sua profissão.", variant: "destructive" });
       return;
     }
 
@@ -311,12 +307,11 @@ const Ambassadors = () => {
     try {
       await updateProfile({
         telefone: `${phoneCountry.dial}${phoneInput.replace(/\D/g, "")}`,
-        profissao: professionInput,
-        data_nascimento: format(birthDate, "yyyy-MM-dd"),
+        profissao: professionInput.trim(),
       });
       await refreshProfile();
       setShowCensusModal(false);
-      toast({ title: "Perfil atualizado!", description: "Seus dados foram salvos com sucesso." });
+      toast({ title: "Painel liberado!", description: "Seus dados foram salvos com sucesso." });
     } catch {
       toast({ title: "Erro ao salvar", description: "Tente novamente.", variant: "destructive" });
     } finally {
