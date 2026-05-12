@@ -131,7 +131,9 @@ export default function ClubIdentityCard({ clubName }: Props) {
               {data.estadio_capacidade ? ` · ${data.estadio_capacidade.toLocaleString("pt-BR")}` : ""}
             </Pill>
           )}
-          {data.division && <Pill icon={Trophy}>{data.division}</Pill>}
+          {comps.map((c) => (
+            <Pill key={c.l_id} icon={Trophy}>{c.l_name}</Pill>
+          ))}
           <Pill icon={Heart}>Feminino: {data.tem_feminino ? "Sim" : "Não"}</Pill>
         </div>
 
