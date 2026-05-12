@@ -22,8 +22,9 @@ Acabei de votar no nosso time! O Heart Club é o maior censo de torcidas do mund
 
 COMO FUNCIONA:
 1️⃣ Clique no link abaixo e dê seu voto.
-2️⃣ Após votar, você ganha uma Senha de Convite única.
-3️⃣ Clique em 'Convoca a Tropa' e chame seus amigos.
+2️⃣ Você vota no seu Clube do Coração ❤️ E AINDA em até 4 Clubes Simpatia 🧡
+3️⃣ Após votar, você ganha uma Senha de Convite única.
+4️⃣ Clique em 'Convoca a Tropa' e chame seus amigos.
 
 Quanto mais gente votar com seu convite, mais pontos você ganha para subir de nível: Bronze ➔ Prata ➔ Ouro ➔ DIAMANTE! 💎
 
