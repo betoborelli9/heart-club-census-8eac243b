@@ -135,18 +135,37 @@ const ProfileSetup = () => {
               />
             </div>
 
-            {/* Campo: Nascimento */}
+            {/* Campo: Nascimento (Dia / Mês / Ano) */}
             <div className="space-y-2">
               <Label className="text-sm text-muted-foreground flex items-center gap-2">
                 <Cake className="w-4 h-4 text-primary" /> Data de Nascimento
               </Label>
-              <Input 
-                type="date" 
-                value={dataNascimento} 
-                onChange={e => setDataNascimento(e.target.value)} 
-                className="h-12 bg-secondary/30 border-border/30" 
-                required 
-              />
+              <div className="grid grid-cols-3 gap-2">
+                <Select value={dia} onValueChange={setDia}>
+                  <SelectTrigger className="h-12 bg-secondary/30 border-border/30 focus:border-primary data-[state=open]:border-primary">
+                    <SelectValue placeholder="Dia" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-64">
+                    {DIAS.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+                <Select value={mes} onValueChange={setMes}>
+                  <SelectTrigger className="h-12 bg-secondary/30 border-border/30 focus:border-primary data-[state=open]:border-primary">
+                    <SelectValue placeholder="Mês" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-64">
+                    {MESES.map(m => <SelectItem key={m.v} value={m.v}>{m.l}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+                <Select value={ano} onValueChange={setAno}>
+                  <SelectTrigger className="h-12 bg-secondary/30 border-border/30 focus:border-primary data-[state=open]:border-primary">
+                    <SelectValue placeholder="Ano" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-64">
+                    {ANOS.map(y => <SelectItem key={y} value={y}>{y}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
             {/* Campo: Gênero */}
