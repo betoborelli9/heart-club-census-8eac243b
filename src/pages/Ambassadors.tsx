@@ -189,10 +189,13 @@ const Ambassadors = () => {
     load();
   }, [user]);
 
-  /* [MÓDULO: SEGURANÇA E CENSO] */
+  /* [MÓDULO: SEGURANÇA E CENSO]
+   * Modal abre apenas quando o torcedor entra no painel de Embaixador
+   * sem ter completado WhatsApp + Profissão. Data de nascimento já é
+   * coletada em outro fluxo (ProfileSetup), então não duplicamos aqui. */
   useEffect(() => {
     if (!profile || isLoading) return;
-    const needsCensus = !profile.profissao || !profile.telefone || !profile.data_nascimento;
+    const needsCensus = !profile.profissao || !profile.telefone;
     setShowCensusModal(needsCensus);
   }, [profile, isLoading]);
 
