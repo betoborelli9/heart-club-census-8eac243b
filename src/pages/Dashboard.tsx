@@ -203,6 +203,9 @@ const Dashboard = () => {
           </section>
 
           <aside key={`col3-${fadeKey}`} className="fade-in space-y-6 min-w-0">
+            <div className="glass-card rounded-3xl p-6">
+              <CompetitionsPanel clubName={viewedClubName} primaryColor={primary} />
+            </div>
             <div className="glass-card rounded-3xl p-6 space-y-8">
               <ObjectivesPanel clubName={viewedClubName} clubLogo={viewedLogo} primaryColor={primary} />
               <div className="h-px bg-white/5" />
