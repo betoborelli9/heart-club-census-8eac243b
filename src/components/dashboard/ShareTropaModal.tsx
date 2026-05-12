@@ -16,8 +16,20 @@ interface Props {
 }
 
 const BASE_URL = "https://heartclubapp.com/convite";
-const TEXT =
-  "Estou te convocando para o Censo Global do Futebol no Heart Club! Clique no link e registre sua paixão pelo nosso time.";
+const TEXT = `⚽ VOCÊ FOI CONVOCADO PARA O HEART CLUB! 🧡
+
+Acabei de votar no nosso time! O Heart Club é o maior censo de torcidas do mundo.
+
+COMO FUNCIONA:
+1️⃣ Clique no link abaixo e dê seu voto.
+2️⃣ Após votar, você ganha uma Senha de Convite única.
+3️⃣ Clique em 'Convoca a Tropa' e chame seus amigos.
+
+Quanto mais gente votar com seu convite, mais pontos você ganha para subir de nível: Bronze ➔ Prata ➔ Ouro ➔ DIAMANTE! 💎
+
+Embaixadores Diamante terão prêmios exclusivos no futuro. Vamos dominar o ranking!
+
+👇 VOTE AGORA E CONVOQUE:`;
 
 export default function ShareTropaModal({ open, onOpenChange, refCode }: Props) {
   const { toast } = useToast();
@@ -100,6 +112,20 @@ export default function ShareTropaModal({ open, onOpenChange, refCode }: Props) 
             </div>
           </div>
         </DialogHeader>
+
+        <a
+          href={link}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="block rounded-xl overflow-hidden border border-[#ff6200]/30 shadow-lg shadow-[#ff6200]/20 hover:scale-[1.02] transition-transform"
+        >
+          <img
+            src="/heart-club-og.png"
+            alt="Jornada do Embaixador — Bronze, Prata, Ouro, Diamante"
+            className="w-full h-auto block"
+            loading="lazy"
+          />
+        </a>
 
         <div className="grid grid-cols-2 gap-3 mt-2">
           <Btn icon={MessageCircle} label="WhatsApp" color="#25D366" onClick={handleWhats} />
