@@ -1045,6 +1045,10 @@ export type Database = {
           is_suspicious: boolean
           motivo_suspicao: string
           status_aprovacao: string
+          sympathy_1: string
+          sympathy_2: string
+          sympathy_3: string
+          sympathy_4: string
           user_email: string
           user_nome: string
           voto_id: string
