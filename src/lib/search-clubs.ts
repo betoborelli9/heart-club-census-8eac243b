@@ -57,24 +57,23 @@ export async function searchClubsWithFallback(query: string, limit = 20): Promis
   const normalized = stripAccents(term);
 
   try {
-    // 1. SUPABASE PRIMEIRO: busca real no cache, sem pegar 100 linhas aleatórias.
-    const { data: cacheRows } = await supabase
-      .from("clubes_cache")
-      .select("*")
-      .or(`nome.ilike.%${term}%,nome_curto.ilike.%${term}%`)
-      .limit(limit);
+    // BUSCA HÍBRIDA EM PARALELO: cache local + API-Football juntos.
+    // Cache aparece como "LOCAL"; API mostra TODOS os homônimos do mundo (ex: todos os Operário).
+    const [cacheResp, apiResp] = await Promise.all([
+      supabase
+        .from("clubes_cache")
+        .select("*")
+        .or(`nome.ilike.%${term}%,nome_curto.ilike.%${term}%`)
+        .limit(limit),
+      supabase.functions.invoke("search-clubs", { body: { query: term } }),
+    ]);
 
-    const localMatches = (cacheRows || [])
+    const localMatches = (cacheResp.data || [])
       .filter((c: any) => isValidClubName(c.nome) && stripAccents(c.nome).includes(normalized))
       .map(mapCacheRow);
 
-    if (localMatches.length > 0) return localMatches.slice(0, limit);
-
-    // 2. API-FOOTBALL SOMENTE se não encontrou no cache.
-    const apiRes = await supabase.functions.invoke("search-clubs", { body: { query: term } });
-
-    const apiMatches = (apiRes.data || [])
-      .filter((t: any) => isValidClubName(t.name))
+    const apiMatches: ClubSearchResult[] = (apiResp.data || [])
+      .filter((t: any) => isValidClubName(t.name) && stripAccents(t.name).includes(normalized))
       .map((t: any) => ({
         id: `api-${t.api_id}`,
         name: t.name,
@@ -88,7 +87,17 @@ export async function searchClubsWithFallback(query: string, limit = 20): Promis
         source: "api" as const,
       }));
 
-    return apiMatches.slice(0, limit);
+    // Dedupe: api_id existente no cache não duplica; cache vence (já tem cores/mascote).
+    const localApiIds = new Set(localMatches.map((c) => c.api_id).filter(Boolean));
+    const localNames = new Set(localMatches.map((c) => stripAccents(c.name)));
+    const merged = [
+      ...localMatches,
+      ...apiMatches.filter(
+        (a) => !(a.api_id && localApiIds.has(a.api_id)) && !localNames.has(stripAccents(a.name)),
+      ),
+    ];
+
+    return merged.slice(0, limit);
   } catch (err) {
     console.error("[searchClubsWithFallback]", err);
     return [];
