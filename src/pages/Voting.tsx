@@ -1,7 +1,7 @@
 /**
  * [CAMINHO]: src/pages/Voting.tsx
  * [CONTEXTO]: Página de votação integrada com Auditoria v10.0 e Filtro Anti-Lixo.
- * [VERSÃO]: 29.0 (ESTÁVEL - CORREÇÃO DE PERSISTÊNCIA DE SIMPATIAS)
+ * [VERSÃO]: 30.0 (OPERAÇÃO DE GUERRA - FIM DOS CLUBES FANTASMAS E FIX SIMPATIAS)
  */
 
 import { useState, useEffect, useCallback, useRef } from "react";
@@ -127,6 +127,7 @@ const Voting = () => {
 
       const [ip, fp] = await Promise.all([getFastIP(), getFingerprint()]);
 
+      // [SEGURANÇA] Mapeamento explícito das simpatias para garantir a gravação correta
       const mainVote: any = {
         user_id: user.id,
         email: user.email,
@@ -140,10 +141,10 @@ const Voting = () => {
         is_original_vote: true,
         status_aprovacao: "aprovado",
         is_suspicious: false,
-        sympathy_1: sympathyClubs[0]?.name ?? null,
-        sympathy_2: sympathyClubs[1]?.name ?? null,
-        sympathy_3: sympathyClubs[2]?.name ?? null,
-        sympathy_4: sympathyClubs[3]?.name ?? null,
+        sympathy_1: sympathyClubs[0]?.name || null,
+        sympathy_2: sympathyClubs[1]?.name || null,
+        sympathy_3: sympathyClubs[2]?.name || null,
+        sympathy_4: sympathyClubs[3]?.name || null,
       };
 
       const { data: newVote, error: voteError } = await supabase.from("votos").insert([mainVote]).select("id").single();
@@ -153,19 +154,29 @@ const Voting = () => {
       // [BLOQUEIO 1]: Auditoria Silenciosa
       runSilentAudit(supabase, newVote.id, heartClub.name, ip, fp);
 
-      // [BLOQUEIO 2]: Persistência síncrona com filtro anti-lixo (Aprimorado para Simpatias)
-      const allClubsToPersist = [
-        { club: heartClub, main: true },
-        ...sympathyClubs.map((c) => ({ club: c, main: false })),
-      ];
+      // [BLOQUEIO 2]: Persistência Cirúrgica Anti-Fantasma (Versão 30.0)
+      const selectedClubs = [];
 
-      // Filtro corrigido: Aceita clubes com nome válido e que vieram de uma fonte de busca (API/Cache)
-      const validClubs = allClubsToPersist
-        .map((v) => v.club)
-        .filter((c) => c && c.name && (c.id || (c.source && c.source !== "local")));
+      // Só adicionamos o que o usuário REALMENTE clicou e confirmou
+      if (heartClub && heartClub.name) {
+        selectedClubs.push({ ...heartClub, main: true });
+      }
 
-      if (validClubs.length > 0) {
-        await persistClubsIfMissing(validClubs);
+      sympathyClubs.forEach((s) => {
+        if (s && s.name) {
+          selectedClubs.push({ ...s, main: false });
+        }
+      });
+
+      // Filtramos duplicatas e garantimos que a source não seja 'local' para passar no persist
+      const finalClubsToPersist = selectedClubs.map((c) => ({
+        ...c,
+        source: c.source && c.source !== "local" ? c.source : "api_fallback",
+      }));
+
+      if (finalClubsToPersist.length > 0) {
+        // [CUIDADO] Passamos apenas os objetos de clube limpos, sem lixo de busca anterior
+        await persistClubsIfMissing(finalClubsToPersist);
       }
 
       await refreshProfile().catch(() => {});
@@ -363,5 +374,5 @@ export default Voting;
 /**
  * [RODAPÉ TÉCNICO]
  * ARQUIVO: src/pages/Voting.tsx
- * VERSÃO: 29.0 (ESTÁVEL)
+ * VERSÃO: 30.0 (ESTÁVEL)
  */
