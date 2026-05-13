@@ -1,7 +1,7 @@
 /**
  * [CAMINHO]: src/pages/Voting.tsx
  * [CONTEXTO]: Página de votação integrada com Auditoria v10.0 e Filtro Anti-Lixo.
- * [VERSÃO]: 30.0 (OPERAÇÃO DE GUERRA - FIM DOS CLUBES FANTASMAS E FIX SIMPATIAS)
+ * [VERSÃO]: 31.0 (ESTÁVEL - FIX DEFINITIVO DE PERSISTÊNCIA E SIMPATIAS)
  */
 
 import { useState, useEffect, useCallback, useRef } from "react";
@@ -127,7 +127,6 @@ const Voting = () => {
 
       const [ip, fp] = await Promise.all([getFastIP(), getFingerprint()]);
 
-      // [SEGURANÇA] Mapeamento explícito das simpatias para garantir a gravação correta
       const mainVote: any = {
         user_id: user.id,
         email: user.email,
@@ -154,28 +153,24 @@ const Voting = () => {
       // [BLOQUEIO 1]: Auditoria Silenciosa
       runSilentAudit(supabase, newVote.id, heartClub.name, ip, fp);
 
-      // [BLOQUEIO 2]: Persistência Cirúrgica Anti-Fantasma (Versão 30.0)
-      const selectedClubs = [];
+      // [BLOQUEIO 2]: [FIX DEFINITIVO] Persistência Cirúrgica Anti-Fantasma
+      // Persistimos SOMENTE os clubes realmente selecionados, forçando source="api".
+      const selectedToSave = [
+        ...(heartClub?.name ? [{ ...heartClub, source: "api" }] : []),
+        ...sympathyClubs
+          .filter((s) => s && s.name)
+          .map((s) => ({
+            ...s,
+            source: "api",
+          })),
+      ];
 
-      // Só adicionamos o que o usuário REALMENTE clicou e confirmou
-      if (heartClub && heartClub.name) {
-        selectedClubs.push({ ...heartClub, main: true });
-      }
-
-      sympathyClubs.forEach((s) => {
-        if (s && s.name) {
-          selectedClubs.push({ ...s, main: false });
-        }
-      });
-
-      // Filtramos duplicatas e garantimos que a source não seja 'local' para passar no persist
-      const finalClubsToPersist = selectedClubs.map((c) => ({
-        ...c,
-        source: c.source && c.source !== "local" ? c.source : "api_fallback",
-      }));
+      // Remove duplicados pelo nome para evitar erros de constraint no Supabase
+      const finalClubsToPersist = selectedToSave.filter(
+        (club, index, self) => index === self.findIndex((c) => c.name === club.name),
+      );
 
       if (finalClubsToPersist.length > 0) {
-        // [CUIDADO] Passamos apenas os objetos de clube limpos, sem lixo de busca anterior
         await persistClubsIfMissing(finalClubsToPersist);
       }
 
@@ -374,5 +369,5 @@ export default Voting;
 /**
  * [RODAPÉ TÉCNICO]
  * ARQUIVO: src/pages/Voting.tsx
- * VERSÃO: 30.0 (ESTÁVEL)
+ * VERSÃO: 31.0 (ESTÁVEL)
  */
