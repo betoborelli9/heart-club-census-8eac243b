@@ -64,7 +64,7 @@ export async function searchClubsWithFallback(query: string, limit = 20): Promis
       .or(`nome.ilike.%${term}%,nome_curto.ilike.%${term}%`)
       .limit(limit);
 
-    const localMatches = (cacheRes.data || [])
+    const localMatches = (cacheRows || [])
       .filter((c: any) => isValidClubName(c.nome) && stripAccents(c.nome).includes(normalized))
       .map(mapCacheRow);
 

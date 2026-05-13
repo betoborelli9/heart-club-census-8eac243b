@@ -153,17 +153,10 @@ const Voting = () => {
       // [BLOQUEIO 1]: Auditoria Silenciosa
       runSilentAudit(supabase, newVote.id, heartClub.name, ip, fp);
 
-      // [BLOQUEIO 2]: [FIX DEFINITIVO] Persistência Cirúrgica Anti-Fantasma
-      // Persistimos SOMENTE os clubes realmente selecionados, forçando source="api".
-      const selectedToSave = [
-        ...(heartClub?.name ? [{ ...heartClub, source: "api" }] : []),
-        ...sympathyClubs
-          .filter((s) => s && s.name)
-          .map((s) => ({
-            ...s,
-            source: "api",
-          })),
-      ];
+      // [BLOQUEIO 2]: persiste somente clubes selecionados vindos da API oficial.
+      const selectedToSave: ClubSearchResult[] = [heartClub, ...sympathyClubs].filter(
+        (club): club is ClubSearchResult => !!club?.name && club.source === "api",
+      );
 
       // Remove duplicados pelo nome para evitar erros de constraint no Supabase
       const finalClubsToPersist = selectedToSave.filter(
