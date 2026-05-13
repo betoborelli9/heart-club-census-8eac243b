@@ -1,6 +1,7 @@
 /**
  * [CAMINHO]: src/pages/Voting.tsx
- * [STATUS]: PRODUÇÃO - VERSÃO 27.0 (INTEGRAÇÃO COM AUDITORIA RADICAL)
+ * [CONTEXTO]: Página de votação integrada com Auditoria v10.0 e Filtro Anti-Lixo.
+ * [VERSÃO]: 28.0 (ESTÁVEL - CORREÇÃO DE REDUNDÂNCIA)
  */
 
 import { useState, useEffect, useCallback, useRef } from "react";
@@ -16,11 +17,7 @@ import { ClubLogo } from "@/components/ClubLogo";
 import logo from "@/assets/logo.png";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
-import { 
-  getFingerprint, 
-  getFastIP, 
-  runSilentAudit 
-} from "@/lib/vote-auditor";
+import { getFingerprint, getFastIP, runSilentAudit } from "@/lib/vote-auditor";
 
 type ClubResult = ClubSearchResult;
 const MAX_SYMPATHY_CLUBS = 4;
@@ -34,13 +31,14 @@ const Voting = () => {
   const IS_MASTER_ADMIN = user?.email === "betoborelli9@gmail.com";
   const TEST_MODE = IS_MASTER_ADMIN && searchParams.get("test") === "1";
 
-  // VOTO SAGRADO: torcedor comum só vota uma vez. Master Admin tem acesso permanente.
+  // [BLOQUEIO] Torcedor comum só vota uma vez.
   useEffect(() => {
     if (hasVoted && !IS_MASTER_ADMIN) {
       navigate("/dashboard", { replace: true });
     }
   }, [hasVoted, IS_MASTER_ADMIN, navigate]);
 
+  // [ESTADOS] Busca e Seleção
   const [heartSearch, setHeartSearch] = useState("");
   const [heartResults, setHeartResults] = useState<ClubResult[]>([]);
   const [heartClub, setHeartClub] = useState<ClubResult | null>(null);
@@ -59,8 +57,15 @@ const Voting = () => {
   const heartReqId = useRef(0);
   const sympathyReqId = useRef(0);
 
+  // [LÓGICA] Busca com Debounce Manual
   const performSearch = useCallback(
-    async (query: string, setterResults: any, setterOpen: any, setterLoading: any, reqRef: React.MutableRefObject<number>) => {
+    async (
+      query: string,
+      setterResults: any,
+      setterOpen: any,
+      setterLoading: any,
+      reqRef: React.MutableRefObject<number>,
+    ) => {
       const term = query.trim();
       if (term.length < 3) {
         setterResults([]);
@@ -85,22 +90,30 @@ const Voting = () => {
   );
 
   useEffect(() => {
-    const timer = setTimeout(() => performSearch(heartSearch, setHeartResults, setHeartOpen, setHeartLoading, heartReqId), 300);
+    const timer = setTimeout(
+      () => performSearch(heartSearch, setHeartResults, setHeartOpen, setHeartLoading, heartReqId),
+      300,
+    );
     return () => clearTimeout(timer);
   }, [heartSearch, performSearch]);
 
   useEffect(() => {
-    const timer = setTimeout(() => performSearch(sympathySearch, setSympathyResults, setSympathyOpen, setSympathyLoading, sympathyReqId), 300);
+    const timer = setTimeout(
+      () => performSearch(sympathySearch, setSympathyResults, setSympathyOpen, setSympathyLoading, sympathyReqId),
+      300,
+    );
     return () => clearTimeout(timer);
   }, [sympathySearch, performSearch]);
 
+  // [AÇÃO] Processamento do Voto Sagrado
   const handleConfirmVote = async () => {
     if (!heartClub || !user) return;
-    // Validação anti-spam: bloqueia voto em nome inválido / placeholder
+
     if (!isValidClubName(heartClub.name)) {
       toast({ variant: "destructive", title: "Clube inválido", description: "Selecione um clube real da lista." });
       return;
     }
+
     setSubmitting(true);
     try {
       if (TEST_MODE) {
@@ -125,7 +138,7 @@ const Voting = () => {
         ip_address: ip,
         fingerprint: fp,
         is_original_vote: true,
-        status_aprovacao: "aprovado", 
+        status_aprovacao: "aprovado",
         is_suspicious: false,
         sympathy_1: sympathyClubs[0]?.name ?? null,
         sympathy_2: sympathyClubs[1]?.name ?? null,
@@ -133,32 +146,32 @@ const Voting = () => {
         sympathy_4: sympathyClubs[3]?.name ?? null,
       };
 
-      const { data: newVote, error: voteError } = await supabase
-        .from("votos")
-        .insert([mainVote])
-        .select("id")
-        .single();
+      const { data: newVote, error: voteError } = await supabase.from("votos").insert([mainVote]).select("id").single();
 
       if (voteError) throw voteError;
 
+      // [BLOQUEIO 1]: Auditoria Silenciosa
+      runSilentAudit(supabase, newVote.id, heartClub.name, ip, fp);
+
+      // [BLOQUEIO 2]: Persistência síncrona com filtro anti-lixo (Evita duplicidade e genéricos)
+      const allClubsToPersist = [
+        { club: heartClub, main: true },
+        ...sympathyClubs.map((c) => ({ club: c, main: false })),
+      ];
+
+      const validClubs = allClubsToPersist
+        .map((v) => v.club)
+        .filter((c) => c && (c.id || (c.source && c.source !== "local")));
+
+      if (validClubs.length > 0) {
+        await persistClubsIfMissing(validClubs);
+      }
+
+      await refreshProfile().catch(() => {});
+
+      // [BLOQUEIO 3]: Finalização e Navegação
       toast({ title: "Lealdade registrada com sucesso! 🏟️" });
       navigate("/dashboard");
-
-      // CHAMADA ATUALIZADA: Passando user.id e cep para o Auditor v10.0
-      runSilentAudit(
-        supabase, 
-        newVote.id, 
-        heartClub.name, 
-        ip, 
-        fp
-      );
-
-      (async () => {
-        const allClubs = [{ club: heartClub, main: true }, ...sympathyClubs.map(c => ({ club: c, main: false }))];
-        await persistClubsIfMissing(allClubs.map(v => v.club));
-        refreshProfile().catch(() => {});
-      })();
-
     } catch (err) {
       console.error("[VOTING] erro:", err);
       toast({ variant: "destructive", title: "Erro ao processar votos" });
@@ -168,26 +181,38 @@ const Voting = () => {
     }
   };
 
+  // [COMPONENTE] Dropdown de Resultados
   const ClubDropdown = ({ results, open, loading, onSelect }: any) => {
     if (!open) return null;
     return (
       <div className="absolute top-full left-0 right-0 z-[1000] mt-2 rounded-2xl border border-white/10 max-h-[350px] overflow-y-auto bg-[#1A1A1A] shadow-2xl backdrop-blur-xl">
         {loading ? (
-          <div className="p-6 flex justify-center"><Loader2 className="animate-spin text-primary" /></div>
+          <div className="p-6 flex justify-center">
+            <Loader2 className="animate-spin text-primary" />
+          </div>
         ) : (
           results.map((club: ClubResult, i: number) => (
             <button
               key={i}
               type="button"
-              onMouseDown={(e) => { e.preventDefault(); onSelect(club); }}
+              onMouseDown={(e) => {
+                e.preventDefault();
+                onSelect(club);
+              }}
               className="w-full flex items-center gap-4 px-5 py-4 hover:bg-white/5 border-b border-white/5 last:border-0 text-left group transition-colors"
             >
               <ClubLogo src={club.logo} alt={club.name} size="md" />
               <div className="flex-1 min-w-0">
-                <p className="font-black italic text-base uppercase truncate group-hover:text-primary transition-colors">{club.name}</p>
-                <p className="text-[10px] text-muted-foreground uppercase font-bold">{club.location || `${club.city}, ${club.country}`}</p>
+                <p className="font-black italic text-base uppercase truncate group-hover:text-primary transition-colors">
+                  {club.name}
+                </p>
+                <p className="text-[10px] text-muted-foreground uppercase font-bold">
+                  {club.location || `${club.city}, ${club.country}`}
+                </p>
               </div>
-              <div className="text-[8px] font-black px-2 py-1 bg-primary/10 text-primary rounded uppercase italic">{club.source}</div>
+              <div className="text-[8px] font-black px-2 py-1 bg-primary/10 text-primary rounded uppercase italic">
+                {club.source}
+              </div>
             </button>
           ))
         )}
@@ -215,6 +240,7 @@ const Voting = () => {
           )}
         </div>
 
+        {/* CLUBE DO CORAÇÃO */}
         <div className="space-y-2 relative">
           <label className="text-xs font-black uppercase opacity-60 italic flex items-center gap-2">
             <Heart size={14} className="text-primary" /> Clube do Coração
@@ -226,7 +252,10 @@ const Voting = () => {
                 <p className="font-black italic text-lg uppercase truncate tracking-tighter">{heartClub.name}</p>
                 <p className="text-[10px] text-muted-foreground uppercase">{heartClub.location}</p>
               </div>
-              <button onClick={() => setHeartClub(null)} className="p-2 opacity-40 hover:opacity-100 transition-opacity">
+              <button
+                onClick={() => setHeartClub(null)}
+                className="p-2 opacity-40 hover:opacity-100 transition-opacity"
+              >
                 <X size={20} />
               </button>
             </div>
@@ -246,6 +275,7 @@ const Voting = () => {
           )}
         </div>
 
+        {/* SIMPATIAS */}
         <div className="space-y-3">
           <label className="text-xs font-black uppercase italic flex items-center gap-2 opacity-60">
             <Sparkles size={14} className="text-primary" /> Simpatias ({sympathyClubs.length}/{MAX_SYMPATHY_CLUBS})
@@ -255,7 +285,9 @@ const Voting = () => {
               <div key={idx} className="flex items-center gap-3 glass-card rounded-xl p-3 border border-white/5">
                 <ClubLogo src={club.logo} alt={club.name} size="sm" />
                 <p className="flex-1 text-sm font-bold italic truncate uppercase">{club.name}</p>
-                <button onClick={() => setSympathyClubs((p) => p.filter((_, i) => i !== idx))}><X size={14} /></button>
+                <button onClick={() => setSympathyClubs((p) => p.filter((_, i) => i !== idx))}>
+                  <X size={14} />
+                </button>
               </div>
             ))}
             {sympathyClubs.length < MAX_SYMPATHY_CLUBS && (
@@ -291,6 +323,7 @@ const Voting = () => {
         </Button>
       </div>
 
+      {/* MODAL DE CONFIRMAÇÃO */}
       <Dialog open={showConfirm} onOpenChange={setShowConfirm}>
         <DialogContent className="max-w-sm glass-card border-white/10">
           <DialogHeader>
@@ -302,10 +335,21 @@ const Voting = () => {
             Você jura lealdade ao <strong className="text-primary not-italic uppercase">{heartClub?.name}</strong>?
           </p>
           <DialogFooter className="flex-col gap-2 mt-2">
-            <Button className="w-full btn-orange-gradient h-14 font-black italic text-lg uppercase" onClick={handleConfirmVote} disabled={submitting}>
+            <Button
+              className="w-full btn-orange-gradient h-14 font-black italic text-lg uppercase"
+              onClick={handleConfirmVote}
+              disabled={submitting}
+            >
               {submitting ? <Loader2 className="animate-spin" /> : "SIM, EU JURO!"}
             </Button>
-            <Button variant="ghost" className="w-full text-xs opacity-50 font-bold italic" onClick={() => setShowConfirm(false)} disabled={submitting}>VOLTAR</Button>
+            <Button
+              variant="ghost"
+              className="w-full text-xs opacity-50 font-bold italic"
+              onClick={() => setShowConfirm(false)}
+              disabled={submitting}
+            >
+              VOLTAR
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -318,5 +362,5 @@ export default Voting;
 /**
  * [RODAPÉ TÉCNICO]
  * ARQUIVO: src/pages/Voting.tsx
- * VERSÃO: 27.0
+ * VERSÃO: 28.0 (ESTÁVEL)
  */
