@@ -1,7 +1,7 @@
 /**
  * [CAMINHO]: src/pages/Voting.tsx
  * [CONTEXTO]: Página de votação integrada com Auditoria v10.0 e Filtro Anti-Lixo.
- * [VERSÃO]: 28.0 (ESTÁVEL - CORREÇÃO DE REDUNDÂNCIA)
+ * [VERSÃO]: 29.0 (ESTÁVEL - CORREÇÃO DE PERSISTÊNCIA DE SIMPATIAS)
  */
 
 import { useState, useEffect, useCallback, useRef } from "react";
@@ -153,15 +153,16 @@ const Voting = () => {
       // [BLOQUEIO 1]: Auditoria Silenciosa
       runSilentAudit(supabase, newVote.id, heartClub.name, ip, fp);
 
-      // [BLOQUEIO 2]: Persistência síncrona com filtro anti-lixo (Evita duplicidade e genéricos)
+      // [BLOQUEIO 2]: Persistência síncrona com filtro anti-lixo (Aprimorado para Simpatias)
       const allClubsToPersist = [
         { club: heartClub, main: true },
         ...sympathyClubs.map((c) => ({ club: c, main: false })),
       ];
 
+      // Filtro corrigido: Aceita clubes com nome válido e que vieram de uma fonte de busca (API/Cache)
       const validClubs = allClubsToPersist
         .map((v) => v.club)
-        .filter((c) => c && (c.id || (c.source && c.source !== "local")));
+        .filter((c) => c && c.name && (c.id || (c.source && c.source !== "local")));
 
       if (validClubs.length > 0) {
         await persistClubsIfMissing(validClubs);
@@ -362,5 +363,5 @@ export default Voting;
 /**
  * [RODAPÉ TÉCNICO]
  * ARQUIVO: src/pages/Voting.tsx
- * VERSÃO: 28.0 (ESTÁVEL)
+ * VERSÃO: 29.0 (ESTÁVEL)
  */
