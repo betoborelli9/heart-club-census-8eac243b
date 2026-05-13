@@ -1051,6 +1051,10 @@ export type Database = {
         }[]
       }
       admin_purge_suspicious_to_trash: { Args: never; Returns: Json }
+      apply_vote_fraud_audit: {
+        Args: { p_voto_id: string }
+        Returns: undefined
+      }
       check_fixture_status: { Args: { p_fixture_json: Json }; Returns: boolean }
       clean_dead_competitions: { Args: never; Returns: undefined }
       clean_fictitious_data: { Args: never; Returns: undefined }
