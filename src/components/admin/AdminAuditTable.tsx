@@ -31,6 +31,10 @@ interface VoteRow {
   status_aprovacao: string | null;
   motivo_suspicao: string | null;
   created_at: string;
+  sympathy_1: string | null;
+  sympathy_2: string | null;
+  sympathy_3: string | null;
+  sympathy_4: string | null;
 }
 
 /* ═══════════════════════════════════════════════════════════
