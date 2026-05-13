@@ -63,24 +63,26 @@ export async function searchClubsWithFallback(query: string, limit = 20): Promis
       supabase.functions.invoke("search-clubs", { body: { query: normalized } }),
     ]);
 
-    // 2. PROCESSA CACHE
+    // 2. PROCESSA CACHE (com filtro anti-lixo: precisa ter nome válido)
     const localMatches = (cacheRes.data || [])
-      .filter((c: any) => stripAccents(c.nome).includes(normalized))
+      .filter((c: any) => isValidClubName(c.nome) && stripAccents(c.nome).includes(normalized))
       .map(mapCacheRow);
 
-    // 3. PROCESSA API
-    const apiMatches = (apiRes.data || []).map((t: any) => ({
-      id: `api-${t.api_id}`,
-      name: t.name,
-      shortName: t.name,
-      location: [t.city, t.country].filter(Boolean).join(", "),
-      logo: (t.logo || "").trim(),
-      city: t.city || "",
-      state: "",
-      country: t.country || "",
-      api_id: t.api_id ?? null,
-      source: "api" as const,
-    }));
+    // 3. PROCESSA API (também valida nome)
+    const apiMatches = (apiRes.data || [])
+      .filter((t: any) => isValidClubName(t.name))
+      .map((t: any) => ({
+        id: `api-${t.api_id}`,
+        name: t.name,
+        shortName: t.name,
+        location: [t.city, t.country].filter(Boolean).join(", "),
+        logo: (t.logo || "").trim(),
+        city: t.city || "",
+        state: "",
+        country: t.country || "",
+        api_id: t.api_id ?? null,
+        source: "api" as const,
+      }));
 
     // 4. MERGE INTELIGENTE: Remove duplicados (prefere o da API por ser mais completo)
     const combined = [...apiMatches];
