@@ -31,6 +31,10 @@ interface VoteRow {
   status_aprovacao: string | null;
   motivo_suspicao: string | null;
   created_at: string;
+  sympathy_1: string | null;
+  sympathy_2: string | null;
+  sympathy_3: string | null;
+  sympathy_4: string | null;
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -156,6 +160,18 @@ const AdminAuditTable = () => {
                       <p className="text-xs font-black italic uppercase text-primary leading-tight">{v.clube_nome}</p>
                       <p className="text-[10px] font-black uppercase leading-tight">{v.user_nome || "—"}</p>
                       <p className="text-[9px] italic opacity-60 font-bold">{v.user_email}</p>
+                      {(() => {
+                        const sympathies = [v.sympathy_1, v.sympathy_2, v.sympathy_3, v.sympathy_4].filter(Boolean) as string[];
+                        if (sympathies.length === 0) return null;
+                        return (
+                          <div className="mt-1 flex items-center gap-1 flex-wrap">
+                            <Heart className="w-2.5 h-2.5 text-primary fill-primary" />
+                            <span className="text-[8px] font-black italic uppercase text-primary/80 leading-tight">
+                              SIMPATIAS: {sympathies.join(" • ")}
+                            </span>
+                          </div>
+                        );
+                      })()}
                     </TableCell>
                     <TableCell className="font-mono text-[10px] text-cyan-500">{v.ip_address || "—"}</TableCell>
                     <TableCell>
