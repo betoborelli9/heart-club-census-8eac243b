@@ -57,18 +57,22 @@ export async function searchClubsWithFallback(query: string, limit = 20): Promis
   const normalized = stripAccents(term);
 
   try {
-    // 1. BUSCA PARALELA: Lança as duas buscas ao mesmo tempo para ser ultra rápido
-    const [cacheRes, apiRes] = await Promise.all([
-      supabase.from("clubes_cache").select("*").limit(100),
-      supabase.functions.invoke("search-clubs", { body: { query: normalized } }),
-    ]);
+    // 1. SUPABASE PRIMEIRO: busca real no cache, sem pegar 100 linhas aleatórias.
+    const { data: cacheRows } = await supabase
+      .from("clubes_cache")
+      .select("*")
+      .or(`nome.ilike.%${term}%,nome_curto.ilike.%${term}%`)
+      .limit(limit);
 
-    // 2. PROCESSA CACHE (com filtro anti-lixo: precisa ter nome válido)
     const localMatches = (cacheRes.data || [])
       .filter((c: any) => isValidClubName(c.nome) && stripAccents(c.nome).includes(normalized))
       .map(mapCacheRow);
 
-    // 3. PROCESSA API (também valida nome)
+    if (localMatches.length > 0) return localMatches.slice(0, limit);
+
+    // 2. API-FOOTBALL SOMENTE se não encontrou no cache.
+    const apiRes = await supabase.functions.invoke("search-clubs", { body: { query: term } });
+
     const apiMatches = (apiRes.data || [])
       .filter((t: any) => isValidClubName(t.name))
       .map((t: any) => ({
@@ -84,14 +88,7 @@ export async function searchClubsWithFallback(query: string, limit = 20): Promis
         source: "api" as const,
       }));
 
-    // 4. MERGE INTELIGENTE: Remove duplicados (prefere o da API por ser mais completo)
-    const combined = [...apiMatches];
-    localMatches.forEach((local) => {
-      const exists = combined.some((c) => stripAccents(c.name) === stripAccents(local.name));
-      if (!exists) combined.push(local);
-    });
-
-    return combined.slice(0, limit);
+    return apiMatches.slice(0, limit);
   } catch (err) {
     console.error("[searchClubsWithFallback]", err);
     return [];
