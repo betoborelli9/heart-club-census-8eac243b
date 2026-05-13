@@ -48,6 +48,23 @@ function dedupeHex(list: (string | null | undefined)[]): string[] {
   return out;
 }
 
+function normalizeName(value: unknown): string {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function isSafeClubQuery(value: unknown): boolean {
+  const raw = String(value || "").trim();
+  if (raw.length < 3 || raw.length > 80) return false;
+  if (!/[A-Za-zÀ-ÿ]/.test(raw)) return false;
+  if (/^(selecione|seu clube|novo time|teste|test|xxx|n\/a|na|nenhum|sem nome|undefined|null)$/i.test(raw)) return false;
+  return true;
+}
+
 /* ═══════════════════════════════════════════════════════════
    API FOOTBALL (dados técnicos do clube)
 ═══════════════════════════════════════════════════════════ */
@@ -196,6 +213,26 @@ serve(async (req) => {
       });
     }
 
+    if (club_name && !isSafeClubQuery(club_name)) {
+      return new Response(JSON.stringify({ success: false, error: "clube inválido" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (club_name) {
+      const { data: existing } = await supabase
+        .from("clubes_cache")
+        .select("*")
+        .ilike("nome", club_name)
+        .maybeSingle();
+      if (existing?.api_id || existing?.escudo_url) {
+        return new Response(JSON.stringify({ success: true, club: existing, source: "cache" }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
+
     console.log(`[ENRICH 100.0] → ${club_name} (api_id=${api_id || "n/a"})`);
 
     /* 1️⃣ API-Football: dados técnicos */
@@ -204,6 +241,20 @@ serve(async (req) => {
     const teamInfo = tJson?.response?.[0] || null;
     const team = teamInfo?.team || {};
     const venue = teamInfo?.venue || {};
+
+    if (!team?.id || !team?.name) {
+      return new Response(JSON.stringify({ success: false, error: "clube não encontrado na API-Football" }), {
+        status: 404,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (!api_id && club_name && normalizeName(team.name) !== normalizeName(club_name)) {
+      return new Response(JSON.stringify({ success: false, error: "clube não confirmado pela API-Football" }), {
+        status: 404,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     const finalName: string = team.name || club_name;
     const country: string = team.country || "Brazil";
