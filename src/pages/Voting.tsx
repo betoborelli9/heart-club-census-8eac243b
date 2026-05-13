@@ -11,7 +11,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { useUser } from "@/contexts/UserContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { searchClubsWithFallback, persistClubsIfMissing, ClubSearchResult } from "@/lib/search-clubs";
+import { searchClubsWithFallback, persistClubsIfMissing, isValidClubName, ClubSearchResult } from "@/lib/search-clubs";
 import { ClubLogo } from "@/components/ClubLogo";
 import logo from "@/assets/logo.png";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -96,8 +96,12 @@ const Voting = () => {
 
   const handleConfirmVote = async () => {
     if (!heartClub || !user) return;
+    // Validação anti-spam: bloqueia voto em nome inválido / placeholder
+    if (!isValidClubName(heartClub.name)) {
+      toast({ variant: "destructive", title: "Clube inválido", description: "Selecione um clube real da lista." });
+      return;
+    }
     setSubmitting(true);
-    
     try {
       if (TEST_MODE) {
         navigate(`/testar-clube?club=${encodeURIComponent(heartClub.name)}`);
