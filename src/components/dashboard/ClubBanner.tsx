@@ -84,7 +84,7 @@ const ClubBanner = ({
       const { data } = await supabase
         .from("clubes_cache")
         .select("cor_primaria, cor_secundaria, cor_terciaria, cor_quarta, escudo_url")
-        .ilike("nome", `%${clubName}%`)
+        .ilike("nome", clubName)
         .maybeSingle();
 
       if (cancelled) return;
@@ -109,7 +109,7 @@ const ClubBanner = ({
           const { data: d2 } = await supabase
             .from("clubes_cache")
             .select("cor_primaria, cor_secundaria, cor_terciaria, cor_quarta, escudo_url")
-            .ilike("nome", `%${clubName}%`)
+            .ilike("nome", clubName)
             .maybeSingle();
           if (!cancelled && d2?.cor_primaria) {
             setTheme({

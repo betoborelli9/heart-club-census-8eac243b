@@ -114,27 +114,20 @@ export function isValidClubName(raw: string | null | undefined): boolean {
 
 export async function persistClubsIfMissing(clubs: ClubSearchResult[]): Promise<void> {
   // Só persistimos clubes vindos da API oficial (com api_id) e com nome válido.
-  // Torcedores comuns não conseguem mais "criar" clubes digitando texto livre.
+  // A gravação passa pela Edge Function, que revalida o clube na API-Football.
   const fromApi = clubs.filter(
     (c) => c.source === "api" && !!c.api_id && isValidClubName(c.name) && !!c.logo,
   );
   if (fromApi.length === 0) return;
 
-  const rows = fromApi.map((c) => ({
-    nome: c.name.trim(),
-    nome_curto: (c.shortName || c.name).trim(),
-    cidade: c.city || "Desconhecida",
-    pais: c.country || "Brasil",
-    escudo_url: c.logo,
-    api_id: c.api_id ? String(c.api_id) : null,
-  }));
-
-  const { error } = await supabase
-    .from("clubes_cache")
-    .upsert(rows, { onConflict: "nome", ignoreDuplicates: true });
-
-  // RLS bloqueia não-admins silenciosamente — log apenas para diagnose.
-  if (error) console.warn("[persistClubsIfMissing] bloqueado:", error.message);
+  await Promise.all(
+    fromApi.map(async (club) => {
+      const { error } = await supabase.functions.invoke("enrich-club-colors", {
+        body: { club_name: club.name, api_id: club.api_id },
+      });
+      if (error) console.warn("[persistClubsIfMissing] não persistiu:", club.name, error.message);
+    }),
+  );
 }
 
 /**
