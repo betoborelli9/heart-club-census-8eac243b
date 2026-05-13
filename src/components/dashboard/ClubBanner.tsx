@@ -257,7 +257,7 @@ const ClubBanner = ({
              ═══════════════════════════════════════════════════════════ */}
           {IS_MASTER && (
             <>
-              <NavItem icon={Vote} label="VOTAÇÃO" path="/voting?test=1" variant="orange" />
+              <NavItem icon={Vote} label="VOTAÇÃO" path="/voting" variant="orange" />
               <NavItem icon={FlaskConical} label="TESTAR CLUBE" path="/admin/votos-ficticios" variant="orange" />
               <NavItem icon={ShieldAlert} label="PAINEL MASTER" path="/admin" variant="danger" />
             </>
