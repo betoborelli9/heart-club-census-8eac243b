@@ -57,18 +57,22 @@ export async function searchClubsWithFallback(query: string, limit = 20): Promis
   const normalized = stripAccents(term);
 
   try {
-    // 1. BUSCA PARALELA: Lança as duas buscas ao mesmo tempo para ser ultra rápido
-    const [cacheRes, apiRes] = await Promise.all([
-      supabase.from("clubes_cache").select("*").limit(100),
-      supabase.functions.invoke("search-clubs", { body: { query: normalized } }),
-    ]);
+    // 1. SUPABASE PRIMEIRO: busca real no cache, sem pegar 100 linhas aleatórias.
+    const { data: cacheRows } = await supabase
+      .from("clubes_cache")
+      .select("*")
+      .or(`nome.ilike.%${term}%,nome_curto.ilike.%${term}%`)
+      .limit(limit);
 
-    // 2. PROCESSA CACHE (com filtro anti-lixo: precisa ter nome válido)
-    const localMatches = (cacheRes.data || [])
+    const localMatches = (cacheRows || [])
       .filter((c: any) => isValidClubName(c.nome) && stripAccents(c.nome).includes(normalized))
       .map(mapCacheRow);
 
-    // 3. PROCESSA API (também valida nome)
+    if (localMatches.length > 0) return localMatches.slice(0, limit);
+
+    // 2. API-FOOTBALL SOMENTE se não encontrou no cache.
+    const apiRes = await supabase.functions.invoke("search-clubs", { body: { query: term } });
+
     const apiMatches = (apiRes.data || [])
       .filter((t: any) => isValidClubName(t.name))
       .map((t: any) => ({
@@ -84,14 +88,7 @@ export async function searchClubsWithFallback(query: string, limit = 20): Promis
         source: "api" as const,
       }));
 
-    // 4. MERGE INTELIGENTE: Remove duplicados (prefere o da API por ser mais completo)
-    const combined = [...apiMatches];
-    localMatches.forEach((local) => {
-      const exists = combined.some((c) => stripAccents(c.name) === stripAccents(local.name));
-      if (!exists) combined.push(local);
-    });
-
-    return combined.slice(0, limit);
+    return apiMatches.slice(0, limit);
   } catch (err) {
     console.error("[searchClubsWithFallback]", err);
     return [];
@@ -117,27 +114,20 @@ export function isValidClubName(raw: string | null | undefined): boolean {
 
 export async function persistClubsIfMissing(clubs: ClubSearchResult[]): Promise<void> {
   // Só persistimos clubes vindos da API oficial (com api_id) e com nome válido.
-  // Torcedores comuns não conseguem mais "criar" clubes digitando texto livre.
+  // A gravação passa pela Edge Function, que revalida o clube na API-Football.
   const fromApi = clubs.filter(
     (c) => c.source === "api" && !!c.api_id && isValidClubName(c.name) && !!c.logo,
   );
   if (fromApi.length === 0) return;
 
-  const rows = fromApi.map((c) => ({
-    nome: c.name.trim(),
-    nome_curto: (c.shortName || c.name).trim(),
-    cidade: c.city || "Desconhecida",
-    pais: c.country || "Brasil",
-    escudo_url: c.logo,
-    api_id: c.api_id ? String(c.api_id) : null,
-  }));
-
-  const { error } = await supabase
-    .from("clubes_cache")
-    .upsert(rows, { onConflict: "nome", ignoreDuplicates: true });
-
-  // RLS bloqueia não-admins silenciosamente — log apenas para diagnose.
-  if (error) console.warn("[persistClubsIfMissing] bloqueado:", error.message);
+  await Promise.all(
+    fromApi.map(async (club) => {
+      const { error } = await supabase.functions.invoke("enrich-club-colors", {
+        body: { club_name: club.name, api_id: club.api_id },
+      });
+      if (error) console.warn("[persistClubsIfMissing] não persistiu:", club.name, error.message);
+    }),
+  );
 }
 
 /**
