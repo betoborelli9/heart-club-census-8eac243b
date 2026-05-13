@@ -98,20 +98,44 @@ export async function searchClubsWithFallback(query: string, limit = 20): Promis
 
 export const searchClubsLocal = searchClubsWithFallback;
 
+/**
+ * Validação anti-spam: nome precisa ter ao menos 3 chars, não pode ser
+ * placeholder ("selecione...", "seu clube", "novo time", etc) e precisa
+ * conter ao menos uma letra. Bloqueia entrada de lixo no cache.
+ */
+export function isValidClubName(raw: string | null | undefined): boolean {
+  const name = (raw || "").trim();
+  if (name.length < 3) return false;
+  if (!/[A-Za-zÀ-ÿ]/.test(name)) return false;
+  const blacklist = /^(selecione|seu clube|novo time|teste|test|xxx|n\/a|na|nenhum|sem nome)/i;
+  if (blacklist.test(name)) return false;
+  if (/seu\s+clube/i.test(name)) return false;
+  return true;
+}
+
 export async function persistClubsIfMissing(clubs: ClubSearchResult[]): Promise<void> {
-  const fromApi = clubs.filter((c) => c.source === "api");
+  // Só persistimos clubes vindos da API oficial (com api_id) e com nome válido.
+  // Torcedores comuns não conseguem mais "criar" clubes digitando texto livre.
+  const fromApi = clubs.filter(
+    (c) => c.source === "api" && !!c.api_id && isValidClubName(c.name) && !!c.logo,
+  );
   if (fromApi.length === 0) return;
 
   const rows = fromApi.map((c) => ({
-    nome: c.name,
-    nome_curto: c.shortName || c.name,
+    nome: c.name.trim(),
+    nome_curto: (c.shortName || c.name).trim(),
     cidade: c.city || "Desconhecida",
     pais: c.country || "Brasil",
-    escudo_url: c.logo || null,
+    escudo_url: c.logo,
     api_id: c.api_id ? String(c.api_id) : null,
   }));
 
-  await supabase.from("clubes_cache").upsert(rows, { onConflict: "nome", ignoreDuplicates: true });
+  const { error } = await supabase
+    .from("clubes_cache")
+    .upsert(rows, { onConflict: "nome", ignoreDuplicates: true });
+
+  // RLS bloqueia não-admins silenciosamente — log apenas para diagnose.
+  if (error) console.warn("[persistClubsIfMissing] bloqueado:", error.message);
 }
 
 /**
