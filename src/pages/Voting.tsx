@@ -225,6 +225,14 @@ const Voting = () => {
     );
   };
 
+  if (!isAuthReady || isLoading || !isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background flex flex-col items-center px-4 py-6">
       <div className="w-full max-w-lg space-y-6">
