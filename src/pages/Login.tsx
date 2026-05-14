@@ -17,14 +17,35 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import logo from "@/assets/logo.png";
 
+const SUPABASE_FUNCTIONS_URL = `${import.meta.env.VITE_SUPABASE_URL.replace(/\/$/, "")}/functions/v1/heart-club-auth`;
+const NETWORK_TIMEOUT_MS = 10000;
+
+const withTimeout = async <T,>(promise: Promise<T>, timeoutMs: number): Promise<T> => {
+  let timeoutId: number | undefined;
+  const timeout = new Promise<never>((_, reject) => {
+    timeoutId = window.setTimeout(() => reject(new Error("Tempo de conexão excedido")), timeoutMs);
+  });
+
+  try {
+    return await Promise.race([promise, timeout]);
+  } finally {
+    if (timeoutId) window.clearTimeout(timeoutId);
+  }
+};
+
+const getErrorMessage = (error: unknown, fallback: string) => {
+  return error instanceof Error ? error.message : fallback;
+};
+
 const Login = () => {
   // --- MÓDULO 1: ESTADOS E REDIRECIONAMENTO ---
   const navigate = useNavigate();
-  const { isAuthenticated, isProfileComplete, hasVoted, isLoading } = useUser();
+  const { isAuthenticated, isProfileComplete, hasVoted, isLoading, isAuthReady } = useUser();
   const { toast } = useToast();
 
   const [email, setEmail] = useState("");
   const [loadingProvider, setLoadingProvider] = useState<string | null>(null);
+  const [isConnectingSlow, setIsConnectingSlow] = useState(false);
 
   useEffect(() => {
     if (!isLoading && isAuthenticated) {
@@ -34,16 +55,37 @@ const Login = () => {
     }
   }, [isAuthenticated, isProfileComplete, hasVoted, isLoading, navigate]);
 
+  useEffect(() => {
+    const isWaiting = !!loadingProvider || !isAuthReady || (isAuthenticated && isLoading);
+    if (!isWaiting) {
+      setIsConnectingSlow(false);
+      return;
+    }
+
+    const timer = window.setTimeout(() => setIsConnectingSlow(true), 3000);
+    return () => window.clearTimeout(timer);
+  }, [loadingProvider, isAuthReady, isAuthenticated, isLoading]);
+
   // --- MÓDULO 2: AUTH GOOGLE (OAUTH2) ---
   const handleOAuth = async (provider: "google") => {
     setLoadingProvider(provider);
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider,
-      options: { redirectTo: `${window.location.origin}/login` },
-    });
+    try {
+      const { error } = await withTimeout(
+        supabase.auth.signInWithOAuth({
+          provider,
+          options: { redirectTo: window.location.origin },
+        }),
+        NETWORK_TIMEOUT_MS,
+      );
 
-    if (error) {
-      toast({ variant: "destructive", title: "Erro", description: error.message });
+      if (error) throw error;
+    } catch (error: unknown) {
+      console.warn("[LOGIN] Google indisponível:", error);
+      toast({
+        variant: "destructive",
+        title: "Google indisponível agora",
+        description: "Tente novamente ou use o acesso rápido por email.",
+      });
       setLoadingProvider(null);
     }
   };
@@ -56,14 +98,21 @@ const Login = () => {
 
     setLoadingProvider("email");
 
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), NETWORK_TIMEOUT_MS);
+
     try {
-      // Chamada direta para a URL da sua Edge Function no Supabase
-      const response = await fetch('https://tmttlchkqjtbusfdwyrx.supabase.co/functions/v1/heart-club-auth', {
+      // Chamada direta para a Edge Function usando a URL oficial do ambiente.
+      const response = await fetch(SUPABASE_FUNCTIONS_URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ email: email.trim().toLowerCase() }),
+        body: JSON.stringify({
+          email: email.trim().toLowerCase(),
+          redirectOrigin: window.location.origin,
+        }),
+        signal: controller.signal,
       });
 
       if (!response.ok) {
@@ -75,23 +124,32 @@ const Login = () => {
         title: "Email enviado! ✉️",
         description: "Clique no botão do email para entrar.",
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Erro no disparo:", error);
+      const isTimeout = error instanceof DOMException && error.name === "AbortError";
       toast({
         variant: "destructive",
         title: "Erro ao enviar email",
-        description: error.message || "Tente novamente em instantes.",
+        description: isTimeout
+          ? "A conexão demorou demais. Tente novamente ou entre com Google."
+          : getErrorMessage(error, "Tente novamente em instantes."),
       });
     } finally {
+      window.clearTimeout(timeout);
       setLoadingProvider(null);
     }
   };
 
   // --- MÓDULO 4: INTERFACE ---
-  if (isLoading) {
+  if (!isAuthReady || (isAuthenticated && isLoading)) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-4 px-6 text-center">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        {isConnectingSlow && (
+          <p className="max-w-xs text-sm text-muted-foreground">
+            Tentando conexão estável...
+          </p>
+        )}
       </div>
     );
   }
@@ -112,14 +170,14 @@ const Login = () => {
         {/* GOOGLE LOGIN — DESTAQUE PRINCIPAL */}
         <Button
           variant="outline"
-          className="w-full h-16 font-bold text-base border-white/20 bg-white/[0.04] text-white hover:bg-white/[0.08] hover:border-white/30 transition-all duration-300 shadow-[0_0_20px_rgba(255,255,255,0.03)]"
+          className="w-full h-16 font-bold text-base border-primary/35 bg-background text-foreground hover:bg-secondary hover:border-primary/60 transition-all duration-300 shadow-[0_0_24px_hsl(var(--primary)/0.34)] hover:shadow-[0_0_34px_hsl(var(--primary)/0.52)]"
           onClick={() => handleOAuth("google")}
           disabled={!!loadingProvider}
         >
           {loadingProvider === "google" ? (
             <Loader2 className="mr-3 w-7 h-7 animate-spin" />
           ) : (
-            <svg className="w-7 h-7 mr-3" viewBox="0 0 24 24">
+            <svg className="w-9 h-9 mr-3" viewBox="0 0 24 24" aria-hidden="true">
               <path
                 fill="#4285F4"
                 d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"
@@ -144,10 +202,10 @@ const Login = () => {
         {/* DIVISOR DISCRETO */}
         <div className="relative">
           <div className="absolute inset-0 flex items-center">
-            <span className="w-full border-t border-white/5" />
+            <span className="w-full border-t border-border/50" />
           </div>
           <div className="relative flex justify-center text-[10px] uppercase tracking-widest">
-            <span className="bg-background px-3 text-white/20 font-medium italic">ou entrar com email</span>
+            <span className="bg-background px-3 text-muted-foreground font-medium italic">ou entrar com email</span>
           </div>
         </div>
 
@@ -168,7 +226,8 @@ const Login = () => {
 
           <Button
             type="submit"
-            className="w-full h-12 font-bold btn-orange-gradient rounded-xl"
+            variant="outline"
+            className="w-full h-12 font-bold rounded-xl border-primary/35 bg-background text-foreground hover:bg-secondary hover:border-primary/60 transition-all duration-300 shadow-[0_0_24px_hsl(var(--primary)/0.34)] hover:shadow-[0_0_34px_hsl(var(--primary)/0.52)]"
             disabled={loadingProvider === "email"}
           >
             {loadingProvider === "email" ? (
@@ -179,6 +238,12 @@ const Login = () => {
             Entrar com email
           </Button>
         </form>
+
+        {isConnectingSlow && !!loadingProvider && (
+          <p className="text-center text-sm text-muted-foreground">
+            Tentando conexão estável...
+          </p>
+        )}
 
         <p className="text-center text-xs text-muted-foreground">
           Ao entrar, você concorda com os Termos de Uso e Política de Privacidade.
