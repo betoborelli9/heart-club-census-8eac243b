@@ -1172,6 +1172,13 @@ export type Database = {
           votes: number
         }[]
       }
+      get_votes_count_by_clubs_fuzzy: {
+        Args: { p_club_names: string[] }
+        Returns: {
+          clube_nome: string
+          votes: number
+        }[]
+      }
       get_votos_por_territorio:
         | {
             Args: { nome_local: string; time_id: string; tipo_local: string }
@@ -1187,6 +1194,7 @@ export type Database = {
           }
       is_admin_or_master: { Args: { _user_id: string }; Returns: boolean }
       master_reset_my_vote: { Args: never; Returns: Json }
+      normalize_club_name: { Args: { t: string }; Returns: string }
       purge_fake_votes: { Args: never; Returns: Json }
       purge_invalid_fake_votes: { Args: never; Returns: Json }
       purge_mock_data: { Args: never; Returns: undefined }
