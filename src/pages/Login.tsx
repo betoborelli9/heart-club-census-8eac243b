@@ -11,7 +11,7 @@ import { Mail, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useUser } from "@/contexts/UserContext";
 import { supabase, SUPABASE_URL } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -33,8 +33,16 @@ const withTimeout = async <T,>(promise: Promise<T>, timeoutMs: number): Promise<
   }
 };
 
-const getErrorMessage = (error: unknown, fallback: string) => {
-  return error instanceof Error ? error.message : fallback;
+const sendSupabaseMagicLinkFallback = async (email: string) => {
+  const { error } = await supabase.auth.signInWithOtp({
+    email,
+    options: {
+      emailRedirectTo: window.location.origin,
+      shouldCreateUser: true,
+    },
+  });
+
+  if (error) throw error;
 };
 
 const Login = () => {
@@ -127,13 +135,23 @@ const Login = () => {
     } catch (error: unknown) {
       console.error("Erro no disparo:", error);
       const isTimeout = error instanceof DOMException && error.name === "AbortError";
-      toast({
-        variant: "destructive",
-        title: "Erro ao enviar email",
-        description: isTimeout
-          ? "A conexão demorou demais. Tente novamente ou entre com Google."
-          : "A conexão falhou. Tente novamente ou entre com Google.",
-      });
+
+      try {
+        await withTimeout(sendSupabaseMagicLinkFallback(email.trim().toLowerCase()), NETWORK_TIMEOUT_MS);
+        toast({
+          title: "Email enviado! ✉️",
+          description: isTimeout
+            ? "Usei uma rota estável alternativa. Clique no link recebido para entrar."
+            : "Clique no link recebido para entrar.",
+        });
+      } catch (fallbackError) {
+        console.error("Fallback Supabase falhou:", fallbackError);
+        toast({
+          variant: "destructive",
+          title: "Conexão instável",
+          description: "Não consegui enviar agora. Tente novamente ou entre com Google.",
+        });
+      }
     } finally {
       window.clearTimeout(timeout);
       setLoadingProvider(null);
