@@ -32,6 +32,10 @@ const resolveRedirectOrigin = (origin?: string) => {
   return fallback
 }
 
+const isValidEmail = (email: unknown): email is string => {
+  return typeof email === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()) && email.length <= 254
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
@@ -43,7 +47,15 @@ Deno.serve(async (req) => {
     const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
 
     const { email, redirectOrigin } = await req.json()
+    if (!isValidEmail(email)) {
+      return new Response(JSON.stringify({ error: 'email_invalid' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
+    }
+
     const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY)
+    const normalizedEmail = email.trim().toLowerCase()
 
     const token = crypto.randomUUID()
     const accessUrl = `${resolveRedirectOrigin(redirectOrigin)}/verify?token=${token}&redirect=/voting`
@@ -51,7 +63,7 @@ Deno.serve(async (req) => {
 
     const { error: dbError } = await supabase
       .from('auth_tokens')
-      .insert([{ email: email.trim().toLowerCase(), token, expires_at: expiresAt }])
+      .insert([{ email: normalizedEmail, token, expires_at: expiresAt }])
 
     if (dbError) throw new Error(`Erro Banco: ${dbError.message}`)
 
@@ -64,7 +76,7 @@ Deno.serve(async (req) => {
       },
       body: JSON.stringify({
         from: 'Heart Club <admin@heartclubapp.com>',
-        to: [email],
+        to: [normalizedEmail],
         subject: '⚽ Seu acesso ao Global Fan Census - Heart Club',
         html: `
           <div style="background-color: #000000; padding: 40px 10px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #ffffff;">
@@ -112,13 +124,21 @@ Deno.serve(async (req) => {
       })
     })
 
+    if (!emailRes.ok) {
+      console.error('[heart-club-auth] email provider failed', await emailRes.text())
+      throw new Error('email_delivery_failed')
+    }
+
     return new Response(JSON.stringify({ success: true }), {
       status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     })
 
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Erro interno no envio do acesso'
+    console.error('[heart-club-auth] erro', err)
+    const message = err instanceof Error && err.message === 'email_delivery_failed'
+      ? 'email_delivery_failed'
+      : 'temporary_auth_error'
     return new Response(JSON.stringify({ error: message }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
