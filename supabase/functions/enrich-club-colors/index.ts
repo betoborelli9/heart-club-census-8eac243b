@@ -147,10 +147,10 @@ async function callAIGrounded(clubName: string, country?: string): Promise<any |
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model: "google/gemini-2.5-pro",
         messages: [{ role: "user", content: buildPrompt(clubName, country) }],
         tools: [{ type: "google_search" }],
-        temperature: 0.05,
+        temperature: 0,
       }),
     });
 

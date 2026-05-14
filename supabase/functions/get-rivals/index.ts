@@ -233,28 +233,51 @@ function filterCandidates(candidates: RivalCandidate[], clubName: string): strin
 async function aiFetchRivals(clubName: string, country?: string | null, city?: string | null): Promise<string[]> {
   if (!LOVABLE_KEY) return [];
   const ctx = [city && `cidade: ${city}`, country && `país: ${country}`].filter(Boolean).join("; ");
-  const prompt = `Você é um pesquisador sênior de rivalidades históricas de futebol do Heart Club.
+  const prompt = `Você é o pesquisador sênior oficial de rivalidades históricas do futebol mundial do Heart Club. Sua reputação exige PRECISÃO ABSOLUTA — zero invenção.
 
 CLUBE CONSULTADO: ${clubName}${ctx ? ` (${ctx})` : ""}
 
-OBJETIVO: descobrir rivais REAIS e consagrados de qualquer clube do mundo.
+OBJETIVO: identificar os rivais REAIS, consagrados e documentados desse clube — em qualquer país, divisão ou era.
 
-PROCESSO OBRIGATÓRIO:
-1. Use Google Search para pesquisar simultaneamente fontes em português, inglês e espanhol.
-2. Cruze com Wikipedia/Wikidata quando existir página/seção de "rivalry", "derby", "clássico", "clásico" ou "rivalidade".
-3. Confirme contexto geográfico do clube (cidade/estado/região/país) antes de listar rivais.
-4. Priorize derbies locais/regionais oficiais. Se houver 2+ rivais locais/regionais reconhecidos, NÃO inclua rivais nacionais/inter-estaduais.
-5. Não invente rival por tamanho de torcida, confronto recente, tabela, mídia social ou partida isolada.
-6. Clubes pequenos da mesma cidade só entram se o clássico tiver reconhecimento histórico documentado.
-7. Se as fontes forem fracas ou contraditórias, retorne menos nomes ou lista vazia.
+PROCESSO OBRIGATÓRIO (siga em ordem):
+1. Confirme primeiro a IDENTIDADE do clube: cidade, estado, país, divisão, fundação. Se houver homônimos (ex.: América-MG vs América-RN vs América-RJ), use o contexto fornecido para desambiguar.
+2. Pesquise no Google em português, inglês e espanhol simultaneamente. Termos: "rivalidade", "clássico", "derby", "rivalry", "clásico", "arquirrival", "maior rival", "biggest rival".
+3. Confirme cada rival em pelo menos UMA destas fontes confiáveis:
+   • Wikipedia (página de rivalidade, derby ou clássico)
+   • Wikidata
+   • Site oficial do clube
+   • Federação/liga oficial (CBF, FIFA, UEFA, CONMEBOL, FA, RFEF, etc.)
+   • Globo Esporte, ESPN, BBC Sport, Marca, AS, Olé, Goal.com
+4. Priorize derbies LOCAIS (mesma cidade) e REGIONAIS (mesmo estado). Se existirem 2+ rivais locais/regionais consagrados, NÃO inclua rivais nacionais.
+5. NUNCA invente rival com base em: tamanho de torcida, confronto recente, polêmica em rede social, jogo isolado, tabela atual, ou rivalidade "moderna" sem documentação histórica.
+6. Clubes pequenos da mesma cidade SÓ entram se houver clássico oficial documentado (com nome próprio do clássico).
+7. Se o clube for muito pequeno/desconhecido e não houver fontes sólidas, retorne lista VAZIA. É melhor vazio do que errado.
 
-VALIDAÇÃO ANTI-ERRO:
-- Vasco da Gama (Rio de Janeiro) deve priorizar Flamengo, Fluminense e Botafogo; Corinthians não é rival principal do Vasco.
-- Vila Nova-GO deve priorizar Goiás e Atlético Goianiense/Atlético-GO; Anápolis não deve entrar sem clássico oficial documentado.
-- Para clubes globais, use o derby reconhecido: Boca/River, Celtic/Rangers, Real Madrid/Barcelona/Atlético, Galatasaray/Fenerbahçe/Beşiktaş.
+VALIDAÇÃO ANTI-ERRO (exemplos de referência absolutos):
+• Flamengo → Fluminense (Fla-Flu), Vasco (Clássico dos Milhões), Botafogo (Clássico da Rivalidade). NUNCA Corinthians.
+• Vasco da Gama → Flamengo, Fluminense, Botafogo. NUNCA Corinthians.
+• Corinthians → Palmeiras (Derby Paulista), São Paulo (Majestoso), Santos (Clássico Alvinegro).
+• Palmeiras → Corinthians, São Paulo (Choque-Rei), Santos (Clássico da Saudade).
+• Atlético-MG → Cruzeiro (Clássico Mineiro), América-MG (Clássico das Multidões).
+• Goiás → Vila Nova (Clássico Goianiense), Atlético-GO.
+• Vila Nova-GO → Goiás, Atlético-GO. NUNCA Anápolis sem documentação.
+• Atlético-GO → Goiás, Vila Nova.
+• Bahia → Vitória (Ba-Vi). 
+• Sport → Náutico (Clássico dos Clássicos), Santa Cruz.
+• Ceará → Fortaleza (Clássico-Rei).
+• Grêmio → Internacional (Gre-Nal).
+• Athletico-PR → Coritiba (Atletiba).
+• Real Madrid → Barcelona (El Clásico), Atlético de Madrid (Derbi madrileño).
+• Boca Juniors → River Plate (Superclásico).
+• Celtic → Rangers (Old Firm).
+• Manchester United → Liverpool, Manchester City, Leeds.
+• Galatasaray → Fenerbahçe (Kıtalar Arası Derbi), Beşiktaş.
+• Inter → Milan (Derby della Madonnina), Juventus (Derby d'Italia).
+• Roma → Lazio (Derby della Capitale).
 
-SAÍDA: JSON puro, sem markdown, com até 4 candidatos em ordem de importância.
+SAÍDA: APENAS JSON puro (sem markdown, sem comentários), com 0 a 4 candidatos em ordem de importância.
 Cada candidato precisa ter nome canônico, nome do clássico/rivalidade quando houver, escopo, urls de evidência e confiança 0-1.
+Confiança mínima aceitável: 0.80. Abaixo disso, NÃO inclua.
 {
   "rivals": [
     {
@@ -268,25 +291,38 @@ Cada candidato precisa ter nome canônico, nome do clássico/rivalidade quando h
   ]
 }`;
 
-  try {
+  const callModel = async (model: string) => {
     const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: { Authorization: `Bearer ${LOVABLE_KEY}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model,
         messages: [{ role: "user", content: prompt }],
         tools: [{ type: "google_search" }],
-        temperature: 0.02,
+        temperature: 0,
       }),
     });
     if (!res.ok) {
-      console.error("[get-rivals] AI error:", res.status, await res.text());
-      return [];
+      console.error(`[get-rivals] AI ${model} error:`, res.status, (await res.text()).slice(0, 300));
+      return null;
     }
     const data = await res.json();
-    const parsed = extractJsonObject(data?.choices?.[0]?.message?.content || "");
-    const candidates: RivalCandidate[] = Array.isArray(parsed?.rivals) ? parsed.rivals : [];
-    return filterCandidates(candidates, clubName);
+    return extractJsonObject(data?.choices?.[0]?.message?.content || "");
+  };
+
+  try {
+    // 1ª tentativa: Pro (máxima precisão).
+    let parsed = await callModel("google/gemini-2.5-pro");
+    let candidates: RivalCandidate[] = Array.isArray(parsed?.rivals) ? parsed.rivals : [];
+    let filtered = filterCandidates(candidates, clubName);
+
+    // Fallback Flash apenas se Pro falhou completamente (rate limit / 5xx / parse falhou).
+    if (!filtered.length && !candidates.length) {
+      parsed = await callModel("google/gemini-2.5-flash");
+      candidates = Array.isArray(parsed?.rivals) ? parsed.rivals : [];
+      filtered = filterCandidates(candidates, clubName);
+    }
+    return filtered;
   } catch (e) {
     console.error("[get-rivals] AI exception:", e);
     return [];
