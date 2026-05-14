@@ -12,6 +12,26 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+const resolveRedirectOrigin = (origin?: string) => {
+  const fallback = 'https://heart-club-census.lovable.app'
+
+  if (!origin) return fallback
+
+  try {
+    const url = new URL(origin)
+    const isLovablePreview = url.hostname.endsWith('.lovableproject.com') || url.hostname.endsWith('.lovable.app')
+    const isHeartClubDomain = url.hostname === 'heartclubapp.com' || url.hostname === 'www.heartclubapp.com'
+
+    if (url.protocol === 'https:' && (isLovablePreview || isHeartClubDomain)) {
+      return url.origin
+    }
+  } catch (_) {
+    return fallback
+  }
+
+  return fallback
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
@@ -22,8 +42,9 @@ Deno.serve(async (req) => {
     const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? ''
     const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
 
-    const { email } = await req.json()
+    const { email, redirectOrigin } = await req.json()
     const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY)
+    const accessUrl = `${resolveRedirectOrigin(redirectOrigin)}/verify?token=${token}&redirect=/voting`
 
     const token = crypto.randomUUID()
     const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString()
@@ -60,7 +81,7 @@ Deno.serve(async (req) => {
               </p>
 
               <div style="margin: 40px 0;">
-                <a href="https://www.heartclubapp.com/verify?token=${token}&redirect=/voting"
+                <a href="${accessUrl}"
                    style="background: #ff4500;
                           color: #ffffff;
                           padding: 16px 36px;
