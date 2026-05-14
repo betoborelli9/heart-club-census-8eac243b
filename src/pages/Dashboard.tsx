@@ -32,7 +32,7 @@ import logo from "@/assets/logo.png";
 
 const Dashboard = () => {
   const navigate = useNavigate();
-  const { user, profile, isLoading, signOut } = useUser();
+  const { user, profile, isLoading, isAuthReady, isAuthenticated, signOut } = useUser();
 
   const [heartClubName, setHeartClubName] = useState<string | null>(null);
   const [heartClubData, setHeartClubData] = useState<any>(null);
@@ -44,6 +44,12 @@ const Dashboard = () => {
 
   // TRAVA DE SEGURANÇA MASTER ADMIN
   const isMasterAdmin = user?.email === "betoborelli9@gmail.com";
+
+  useEffect(() => {
+    if (!isAuthReady || isLoading) return;
+    if (!isAuthenticated) navigate("/login", { replace: true });
+    else if (!profile) navigate("/profile-setup", { replace: true });
+  }, [isAuthReady, isLoading, isAuthenticated, profile, navigate]);
 
   useEffect(() => {
     const loadVoto = async () => {
@@ -104,10 +110,10 @@ const Dashboard = () => {
   const secondary = viewedTheme?.secondaryHex || "#000000";
   const isViewingHeart = viewedClubName === heartClubName;
 
-  if (isLoading || !profile)
+  if (!isAuthReady || isLoading || !profile)
     return (
-      <div className="h-screen flex items-center justify-center bg-black">
-        <Loader2 className="animate-spin text-[#ff6200] w-10 h-10" />
+      <div className="h-screen flex items-center justify-center bg-background">
+        <Loader2 className="animate-spin text-primary w-10 h-10" />
       </div>
     );
 
