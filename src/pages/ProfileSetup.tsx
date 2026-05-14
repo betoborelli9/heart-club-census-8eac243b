@@ -23,12 +23,12 @@ import logo from "@/assets/logo.png";
 const ProfileSetup = () => {
   /* ---------- MÓDULO 1: NAVEGAÇÃO E GUARDS ---------- */
   const navigate = useNavigate();
-  const { user, profile, isAuthenticated, isLoading, isProfileComplete, hasVoted, updateProfile } = useUser();
+  const { user, profile, isAuthenticated, isLoading, isAuthReady, isProfileComplete, hasVoted, updateProfile } = useUser();
   const { toast } = useToast();
 
   // Guard: se não autenticado vai para login; se perfil já completo, nunca mais mostra este passo.
   useEffect(() => {
-    if (isLoading) return;
+    if (!isAuthReady || isLoading) return;
     if (!isAuthenticated) {
       navigate("/login", { replace: true });
       return;
@@ -36,7 +36,7 @@ const ProfileSetup = () => {
     if (isProfileComplete) {
       navigate(hasVoted ? "/dashboard" : "/voting", { replace: true });
     }
-  }, [isLoading, isAuthenticated, isProfileComplete, hasVoted, navigate]);
+  }, [isAuthReady, isLoading, isAuthenticated, isProfileComplete, hasVoted, navigate]);
 
   /* ---------- MÓDULO 2: ESTADOS DO FORMULÁRIO ---------- */
   const [nome, setNome] = useState("");
@@ -103,7 +103,7 @@ const ProfileSetup = () => {
 
   const canSubmit = nome.trim() && dataNascimento && genero;
 
-  if (isLoading) {
+  if (!isAuthReady || isLoading || !isAuthenticated) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
