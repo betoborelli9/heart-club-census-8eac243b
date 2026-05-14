@@ -14,12 +14,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useNavigate } from "react-router-dom";
 import { useUser } from "@/contexts/UserContext";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, SUPABASE_URL } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import logo from "@/assets/logo.png";
 
 // Configuração de Resiliência: Torcedor não pode esperar mais de 5s
 const NETWORK_TIMEOUT_MS = 5000;
+const SUPABASE_CONNECTION_ERROR = "Estamos com instabilidade na conexão com o banco de dados. Tente o acesso por e-mail.";
 
 const withTimeout = async <T,>(promise: Promise<T>, timeoutMs: number): Promise<T> => {
   let timeoutId: number | undefined;
@@ -34,6 +35,13 @@ const withTimeout = async <T,>(promise: Promise<T>, timeoutMs: number): Promise<
   }
 };
 
+const verifySupabaseConnection = () =>
+  fetch(`${SUPABASE_URL}/auth/v1/health`, {
+    method: "GET",
+    mode: "no-cors",
+    cache: "no-store",
+  });
+
 const Login = () => {
   // --- MÓDULO 1: ESTADOS, REDIRECIONAMENTO E LIMPEZA DE LOOP ---
   const navigate = useNavigate();
@@ -43,6 +51,7 @@ const Login = () => {
   const [email, setEmail] = useState("");
   const [loadingProvider, setLoadingProvider] = useState<string | null>(null);
   const [isConnectingSlow, setIsConnectingSlow] = useState(false);
+  const [connectionError, setConnectionError] = useState<string | null>(null);
 
   // Monitor de redirecionamento: Se logou, despacha o torcedor para o lugar certo imediatamente
   useEffect(() => {
@@ -64,35 +73,44 @@ const Login = () => {
     return () => window.clearTimeout(timer);
   }, [loadingProvider, isAuthReady, isAuthenticated, isLoading]);
 
-  // --- MÓDULO 2: AUTH GOOGLE (OAUTH2 COM FIX DE DNS E PKCE) ---
+  // --- MÓDULO 2: AUTH GOOGLE (OAUTH2 COM FIX DE DNS E FLUXO IMPLÍCITO) ---
   const handleOAuth = async (provider: "google") => {
     setLoadingProvider(provider);
+    setConnectionError(null);
     try {
       // Limpeza de barra final na URL para evitar erro de Redirect URI no Supabase
       const safeRedirect = window.location.origin.replace(/\/$/, "");
 
-      const { error } = await withTimeout(
+      await withTimeout(verifySupabaseConnection(), NETWORK_TIMEOUT_MS);
+
+      const { data, error } = await withTimeout(
         supabase.auth.signInWithOAuth({
           provider,
           options: {
             redirectTo: safeRedirect,
+            skipBrowserRedirect: true,
+            flowType: "implicit",
             queryParams: {
               prompt: "select_account",
               access_type: "offline",
             },
-          },
+          } as Parameters<typeof supabase.auth.signInWithOAuth>[0]["options"] & { flowType: "implicit" },
         }),
         NETWORK_TIMEOUT_MS,
       );
 
       if (error) throw error;
-    } catch (error: any) {
-      console.error("[LOGIN_ERROR] Falha no OAuth:", error.message);
+      if (!data.url) throw new Error("URL de autenticação indisponível");
+
+      window.location.assign(data.url);
+    } catch (error: unknown) {
+      console.error("[LOGIN_ERROR] Falha no OAuth:", error instanceof Error ? error.message : error);
       toast({
         variant: "destructive",
         title: "Conexão instável",
-        description: "Não conseguimos conectar com o Google agora. Tente o acesso por e-mail.",
+        description: SUPABASE_CONNECTION_ERROR,
       });
+      setConnectionError(SUPABASE_CONNECTION_ERROR);
       setLoadingProvider(null);
     }
   };
@@ -103,6 +121,7 @@ const Login = () => {
     if (!email.trim() || loadingProvider) return;
 
     setLoadingProvider("email");
+    setConnectionError(null);
     const normalizedEmail = email.trim().toLowerCase();
     const safeRedirect = window.location.origin.replace(/\/$/, "");
 
@@ -124,13 +143,14 @@ const Login = () => {
         title: "Email enviado! ✉️",
         description: "Verifique sua caixa de entrada para acessar o Heart Club.",
       });
-    } catch (error: any) {
-      console.error("[LOGIN_ERROR] Falha no Magic Link:", error.message);
+    } catch (error: unknown) {
+      console.error("[LOGIN_ERROR] Falha no Magic Link:", error instanceof Error ? error.message : error);
       toast({
         variant: "destructive",
         title: "Erro ao enviar",
-        description: "Tente novamente em instantes ou entre com Google.",
+        description: SUPABASE_CONNECTION_ERROR,
       });
+      setConnectionError(SUPABASE_CONNECTION_ERROR);
     } finally {
       setLoadingProvider(null);
     }
@@ -209,6 +229,12 @@ const Login = () => {
           </div>
 
           <form onSubmit={handleSendLink} className="space-y-4">
+            {connectionError && (
+              <p className="rounded-md border border-primary/25 bg-secondary/40 px-3 py-2 text-center text-xs text-foreground shadow-[0_0_24px_hsl(var(--primary)/0.16)]">
+                {connectionError}
+              </p>
+            )}
+
             <div className="space-y-2">
               <Label htmlFor="email" className="text-xs uppercase ml-1">
                 Seu melhor e-mail
