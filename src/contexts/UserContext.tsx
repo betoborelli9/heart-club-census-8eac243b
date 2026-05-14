@@ -141,12 +141,21 @@ export function UserProvider({ children }: { children: ReactNode }) {
       const requestId = ++userDataRequestRef.current;
       setIsLoading(true);
 
-      void Promise.allSettled([
-        fetchProfile(userId),
-        checkVoted(userId),
+      void Promise.all([
+        withAuthTimeout(fetchProfile(userId), null),
+        withAuthTimeout(checkVoted(userId), false),
         tryRegisterReferral(userId),
-      ]).catch((error) => {
+      ]).then(([profileData, voted]) => {
+        if (!cancelled && requestId === userDataRequestRef.current) {
+          setProfile(profileData);
+          setHasVoted(voted);
+        }
+      }).catch((error) => {
         console.warn("[AUTH] Falha ao carregar dados do usuário:", error);
+        if (!cancelled && requestId === userDataRequestRef.current) {
+          setProfile(null);
+          setHasVoted(false);
+        }
       }).finally(() => {
         if (!cancelled && requestId === userDataRequestRef.current) {
           setIsLoading(false);
@@ -231,7 +240,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
       .upsert({ id: user.id, ...updates }, { onConflict: "id" });
     
     if (!error) {
-      await fetchProfile(user.id);
+      setProfile(await withAuthTimeout(fetchProfile(user.id), profile));
     }
   };
 
