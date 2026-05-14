@@ -33,6 +33,10 @@ const withTimeout = async <T,>(promise: Promise<T>, timeoutMs: number): Promise<
   }
 };
 
+const getErrorMessage = (error: unknown, fallback: string) => {
+  return error instanceof Error ? error.message : fallback;
+};
+
 const Login = () => {
   // --- MÓDULO 1: ESTADOS E REDIRECIONAMENTO ---
   const navigate = useNavigate();
@@ -75,7 +79,8 @@ const Login = () => {
       );
 
       if (error) throw error;
-    } catch (error: any) {
+    } catch (error: unknown) {
+      console.warn("[LOGIN] Google indisponível:", error);
       toast({
         variant: "destructive",
         title: "Google indisponível agora",
@@ -116,14 +121,15 @@ const Login = () => {
         title: "Email enviado! ✉️",
         description: "Clique no botão do email para entrar.",
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Erro no disparo:", error);
+      const isTimeout = error instanceof DOMException && error.name === "AbortError";
       toast({
         variant: "destructive",
         title: "Erro ao enviar email",
-        description: error.name === "AbortError"
+        description: isTimeout
           ? "A conexão demorou demais. Tente novamente ou entre com Google."
-          : error.message || "Tente novamente em instantes.",
+          : getErrorMessage(error, "Tente novamente em instantes."),
       });
     } finally {
       window.clearTimeout(timeout);
