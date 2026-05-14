@@ -11,7 +11,7 @@ export const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABL
 
 const immediateAuthLock: LockFunc = async (_name, _acquireTimeout, fn) => fn();
 
-const typedSupabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
   auth: {
     storage: localStorage,
     persistSession: true,
@@ -19,8 +19,5 @@ const typedSupabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_
     detectSessionInUrl: true,
     flowType: "implicit",
     lock: immediateAuthLock,
-    lockAcquireTimeout: 300,
   }
 });
-
-export const supabase = typedSupabase as unknown as ReturnType<typeof createClient>;
