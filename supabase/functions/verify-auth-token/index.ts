@@ -54,18 +54,23 @@ Deno.serve(async (req) => {
       })
     }
 
-    // Garantir usuário existente (cria se necessário)
-    const { data: existing } = await supabase.auth.admin.listUsers()
-    const found = existing?.users?.find((u: any) => u.email?.toLowerCase() === data.email.toLowerCase())
-    if (!found) {
-      await supabase.auth.admin.createUser({ email: data.email, email_confirm: true })
-    }
-
-    // Gerar magic link admin → extrair hashed_token para verifyOtp no client
-    const { data: linkData, error: linkErr } = await supabase.auth.admin.generateLink({
+    // Gerar link admin sem varrer a lista de usuários: tenta login e cai para cadastro.
+    let linkType: 'magiclink' | 'signup' = 'magiclink'
+    let { data: linkData, error: linkErr } = await supabase.auth.admin.generateLink({
       type: 'magiclink',
       email: data.email,
     })
+
+    if (linkErr || !linkData?.properties?.hashed_token) {
+      linkType = 'signup'
+      const signupResult = await supabase.auth.admin.generateLink({
+        type: 'signup',
+        email: data.email,
+        options: { data: { email_confirmed_by: 'heart-club-auth' } },
+      })
+      linkData = signupResult.data
+      linkErr = signupResult.error
+    }
 
     if (linkErr || !linkData?.properties?.hashed_token) {
       console.error('[verify-auth-token] generateLink falhou', linkErr)
@@ -81,6 +86,7 @@ Deno.serve(async (req) => {
       valid: true,
       email: data.email,
       token_hash: linkData.properties.hashed_token,
+      type: linkType,
     }), {
       status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     })

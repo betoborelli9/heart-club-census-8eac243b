@@ -43,6 +43,20 @@ interface UserContextType {
 type ProfileUpdate = Partial<Profile> & { faixa_etaria?: string };
 
 const UserContext = createContext<UserContextType | null>(null);
+const AUTH_DATA_TIMEOUT_MS = 3000;
+
+const withAuthTimeout = async <T,>(promise: Promise<T>, fallback: T): Promise<T> => {
+  let timeoutId: number | undefined;
+  const timeout = new Promise<T>((resolve) => {
+    timeoutId = window.setTimeout(() => resolve(fallback), AUTH_DATA_TIMEOUT_MS);
+  });
+
+  try {
+    return await Promise.race([promise, timeout]);
+  } finally {
+    if (timeoutId) window.clearTimeout(timeoutId);
+  }
+};
 
 function calcFaixaEtaria(dataNascimento: string): string {
   const birth = new Date(dataNascimento);
@@ -65,32 +79,33 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const [isAuthReady, setIsAuthReady] = useState(false);
   const userDataRequestRef = useRef(0);
 
-  const fetchProfile = async (userId: string) => {
+  const fetchProfile = async (userId: string): Promise<Profile | null> => {
     const { data } = await supabase
       .from("profiles")
       .select("*")
       .eq("id", userId)
       .maybeSingle();
-    
-    if (data) {
-      setProfile(data as Profile);
-    } else {
-      setProfile(null);
-    }
+
+    return data ? (data as Profile) : null;
   };
 
-  const checkVoted = async (userId: string) => {
+  const checkVoted = async (userId: string): Promise<boolean> => {
     const { count } = await supabase
       .from("votos")
       .select("*", { count: "exact", head: true })
       .eq("user_id", userId);
-    setHasVoted((count ?? 0) > 0);
+
+    return (count ?? 0) > 0;
   };
 
   const refreshProfile = async () => {
     if (user) {
-      await fetchProfile(user.id);
-      await checkVoted(user.id);
+      const [profileData, voted] = await Promise.all([
+        withAuthTimeout(fetchProfile(user.id), profile),
+        withAuthTimeout(checkVoted(user.id), hasVoted),
+      ]);
+      setProfile(profileData);
+      setHasVoted(voted);
     }
   };
 
@@ -126,12 +141,21 @@ export function UserProvider({ children }: { children: ReactNode }) {
       const requestId = ++userDataRequestRef.current;
       setIsLoading(true);
 
-      void Promise.allSettled([
-        fetchProfile(userId),
-        checkVoted(userId),
+      void Promise.all([
+        withAuthTimeout(fetchProfile(userId), null),
+        withAuthTimeout(checkVoted(userId), false),
         tryRegisterReferral(userId),
-      ]).catch((error) => {
+      ]).then(([profileData, voted]) => {
+        if (!cancelled && requestId === userDataRequestRef.current) {
+          setProfile(profileData);
+          setHasVoted(voted);
+        }
+      }).catch((error) => {
         console.warn("[AUTH] Falha ao carregar dados do usuário:", error);
+        if (!cancelled && requestId === userDataRequestRef.current) {
+          setProfile(null);
+          setHasVoted(false);
+        }
       }).finally(() => {
         if (!cancelled && requestId === userDataRequestRef.current) {
           setIsLoading(false);
@@ -216,7 +240,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
       .upsert({ id: user.id, ...updates }, { onConflict: "id" });
     
     if (!error) {
-      await fetchProfile(user.id);
+      setProfile(await withAuthTimeout(fetchProfile(user.id), profile));
     }
   };
 
