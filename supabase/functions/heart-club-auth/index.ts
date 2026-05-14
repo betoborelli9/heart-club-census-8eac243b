@@ -25,7 +25,7 @@ const resolveRedirectOrigin = (origin?: string) => {
     if (url.protocol === 'https:' && (isLovablePreview || isHeartClubDomain)) {
       return url.origin
     }
-  } catch (_) {
+  } catch {
     return fallback
   }
 
@@ -44,9 +44,9 @@ Deno.serve(async (req) => {
 
     const { email, redirectOrigin } = await req.json()
     const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY)
-    const accessUrl = `${resolveRedirectOrigin(redirectOrigin)}/verify?token=${token}&redirect=/voting`
 
     const token = crypto.randomUUID()
+    const accessUrl = `${resolveRedirectOrigin(redirectOrigin)}/verify?token=${token}&redirect=/voting`
     const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString()
 
     const { error: dbError } = await supabase
