@@ -14,12 +14,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useNavigate } from "react-router-dom";
 import { useUser } from "@/contexts/UserContext";
-import { supabase, SUPABASE_URL } from "@/integrations/supabase/client";
+import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import logo from "@/assets/logo.png";
 
-// Configuração de Resiliência: Torcedor não pode esperar mais de 5s
-const NETWORK_TIMEOUT_MS = 5000;
+// Configuração de Resiliência: Torcedor não pode esperar preso no loading
+const NETWORK_TIMEOUT_MS = 3000;
 const SUPABASE_CONNECTION_ERROR = "Estamos com instabilidade na conexão com o banco de dados. Tente o acesso por e-mail.";
 
 const withTimeout = async <T,>(promise: Promise<T>, timeoutMs: number): Promise<T> => {
@@ -34,13 +34,6 @@ const withTimeout = async <T,>(promise: Promise<T>, timeoutMs: number): Promise<
     if (timeoutId) window.clearTimeout(timeoutId);
   }
 };
-
-const verifySupabaseConnection = () =>
-  fetch(`${SUPABASE_URL}/auth/v1/health`, {
-    method: "GET",
-    mode: "no-cors",
-    cache: "no-store",
-  });
 
 const Login = () => {
   // --- MÓDULO 1: ESTADOS, REDIRECIONAMENTO E LIMPEZA DE LOOP ---
@@ -80,8 +73,6 @@ const Login = () => {
     try {
       // Limpeza de barra final na URL para evitar erro de Redirect URI no Supabase
       const safeRedirect = window.location.origin.replace(/\/$/, "");
-
-      await withTimeout(verifySupabaseConnection(), NETWORK_TIMEOUT_MS);
 
       const { data, error } = await withTimeout(
         supabase.auth.signInWithOAuth({
