@@ -14,7 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useNavigate } from "react-router-dom";
 import { useUser } from "@/contexts/UserContext";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, SUPABASE_URL } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import logo from "@/assets/logo.png";
 
@@ -34,6 +34,13 @@ const withTimeout = async <T,>(promise: Promise<T>, timeoutMs: number): Promise<
     if (timeoutId) window.clearTimeout(timeoutId);
   }
 };
+
+const verifySupabaseConnection = () =>
+  fetch(`${SUPABASE_URL}/auth/v1/health`, {
+    method: "GET",
+    mode: "no-cors",
+    cache: "no-store",
+  });
 
 const Login = () => {
   // --- MÓDULO 1: ESTADOS, REDIRECIONAMENTO E LIMPEZA DE LOOP ---
@@ -66,7 +73,7 @@ const Login = () => {
     return () => window.clearTimeout(timer);
   }, [loadingProvider, isAuthReady, isAuthenticated, isLoading]);
 
-  // --- MÓDULO 2: AUTH GOOGLE (OAUTH2 COM FIX DE DNS E PKCE) ---
+  // --- MÓDULO 2: AUTH GOOGLE (OAUTH2 COM FIX DE DNS E FLUXO IMPLÍCITO) ---
   const handleOAuth = async (provider: "google") => {
     setLoadingProvider(provider);
     setConnectionError(null);
@@ -74,11 +81,14 @@ const Login = () => {
       // Limpeza de barra final na URL para evitar erro de Redirect URI no Supabase
       const safeRedirect = window.location.origin.replace(/\/$/, "");
 
-      const { error } = await withTimeout(
+      await withTimeout(verifySupabaseConnection(), NETWORK_TIMEOUT_MS);
+
+      const { data, error } = await withTimeout(
         supabase.auth.signInWithOAuth({
           provider,
           options: {
             redirectTo: safeRedirect,
+            skipBrowserRedirect: true,
             flowType: "implicit",
             queryParams: {
               prompt: "select_account",
@@ -90,6 +100,9 @@ const Login = () => {
       );
 
       if (error) throw error;
+      if (!data.url) throw new Error("URL de autenticação indisponível");
+
+      window.location.assign(data.url);
     } catch (error: any) {
       console.error("[LOGIN_ERROR] Falha no OAuth:", error.message);
       toast({
