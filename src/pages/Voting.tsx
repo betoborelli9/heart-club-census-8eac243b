@@ -25,7 +25,7 @@ const MAX_SYMPATHY_CLUBS = 4;
 const Voting = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { user, profile, hasVoted, refreshProfile } = useUser();
+  const { user, profile, hasVoted, isLoading, isAuthReady, isAuthenticated, refreshProfile } = useUser();
   const { toast } = useToast();
 
   const IS_MASTER_ADMIN = user?.email === "betoborelli9@gmail.com";
@@ -33,10 +33,15 @@ const Voting = () => {
 
   // [BLOQUEIO] Torcedor comum só vota uma vez.
   useEffect(() => {
+    if (!isAuthReady || isLoading) return;
+    if (!isAuthenticated) {
+      navigate("/login", { replace: true });
+      return;
+    }
     if (hasVoted && !IS_MASTER_ADMIN) {
       navigate("/dashboard", { replace: true });
     }
-  }, [hasVoted, IS_MASTER_ADMIN, navigate]);
+  }, [isAuthReady, isLoading, isAuthenticated, hasVoted, IS_MASTER_ADMIN, navigate]);
 
   // [ESTADOS] Busca e Seleção
   const [heartSearch, setHeartSearch] = useState("");
