@@ -108,7 +108,10 @@ const Login = () => {
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ email: email.trim().toLowerCase() }),
+        body: JSON.stringify({
+          email: email.trim().toLowerCase(),
+          redirectOrigin: window.location.origin,
+        }),
         signal: controller.signal,
       });
 
