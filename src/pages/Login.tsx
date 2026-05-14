@@ -20,6 +20,19 @@ import logo from "@/assets/logo.png";
 const SUPABASE_FUNCTIONS_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/heart-club-auth`;
 const NETWORK_TIMEOUT_MS = 10000;
 
+const withTimeout = async <T,>(promise: Promise<T>, timeoutMs: number): Promise<T> => {
+  let timeoutId: number | undefined;
+  const timeout = new Promise<never>((_, reject) => {
+    timeoutId = window.setTimeout(() => reject(new Error("Tempo de conexão excedido")), timeoutMs);
+  });
+
+  try {
+    return await Promise.race([promise, timeout]);
+  } finally {
+    if (timeoutId) window.clearTimeout(timeoutId);
+  }
+};
+
 const Login = () => {
   // --- MÓDULO 1: ESTADOS E REDIRECIONAMENTO ---
   const navigate = useNavigate();
@@ -53,10 +66,13 @@ const Login = () => {
   const handleOAuth = async (provider: "google") => {
     setLoadingProvider(provider);
     try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider,
-        options: { redirectTo: window.location.origin },
-      });
+      const { error } = await withTimeout(
+        supabase.auth.signInWithOAuth({
+          provider,
+          options: { redirectTo: window.location.origin },
+        }),
+        NETWORK_TIMEOUT_MS,
+      );
 
       if (error) throw error;
     } catch (error: any) {
@@ -213,6 +229,12 @@ const Login = () => {
             Entrar com email
           </Button>
         </form>
+
+        {isConnectingSlow && !!loadingProvider && (
+          <p className="text-center text-sm text-muted-foreground">
+            Tentando conexão estável...
+          </p>
+        )}
 
         <p className="text-center text-xs text-muted-foreground">
           Ao entrar, você concorda com os Termos de Uso e Política de Privacidade.
