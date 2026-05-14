@@ -40,6 +40,8 @@ interface UserContextType {
   updateProfile: (data: Partial<Profile>) => Promise<void>;
 }
 
+type ProfileUpdate = Partial<Profile> & { faixa_etaria?: string };
+
 const UserContext = createContext<UserContextType | null>(null);
 
 function calcFaixaEtaria(dataNascimento: string): string {
@@ -203,7 +205,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
     if (!user) return;
 
     // Calculate faixa_etaria if birthdate provided
-    const updates: any = { ...data };
+    const updates: ProfileUpdate = { ...data };
     if (data.data_nascimento) {
       updates.faixa_etaria = calcFaixaEtaria(data.data_nascimento);
     }
