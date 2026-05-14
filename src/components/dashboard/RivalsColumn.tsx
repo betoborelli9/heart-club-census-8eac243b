@@ -33,10 +33,60 @@ export default function RivalsColumn({ clubName, refCode, primaryColor = "#ff620
       }
 
       setLoading(true);
-      const { data, error } = await supabase.functions.invoke("get-rivals", {
-        body: { club_name: clubName, force_refresh: true },
-      });
 
+      // 1) INSTANTÂNEO: tenta cache local em clubes_cache.rivais
+      const { data: cacheRow } = await supabase
+        .from("clubes_cache")
+        .select("rivais")
+        .ilike("nome", clubName)
+        .maybeSingle();
+
+      const cachedNames: string[] = Array.isArray((cacheRow as any)?.rivais)
+        ? ((cacheRow as any).rivais as string[]).filter(Boolean)
+        : [];
+
+      const renderWithVotes = async (baseList: RivalItem[]) => {
+        const rivalNames = baseList.map((r) => r.name);
+        let votesMap: Record<string, number> = {};
+        if (rivalNames.length) {
+          const { data: counts } = await supabase.rpc("get_votes_count_by_clubs", {
+            p_club_names: rivalNames,
+          });
+          (counts || []).forEach((row: any) => {
+            votesMap[row.clube_nome] = Number(row.votes) || 0;
+          });
+        }
+        if (cancelled) return;
+        setRivals(baseList.map((r) => ({ ...r, votes: votesMap[r.name] || 0 })));
+      };
+
+      if (cachedNames.length) {
+        // Resolver escudos via clubes_cache em batch (instantâneo)
+        const { data: clubs } = await supabase
+          .from("clubes_cache")
+          .select("nome, escudo_url, cidade, pais")
+          .in("nome", cachedNames);
+        const byName = new Map<string, any>();
+        (clubs || []).forEach((c: any) => byName.set(c.nome, c));
+        const baseList: RivalItem[] = cachedNames.slice(0, 4).map((name) => {
+          const c = byName.get(name);
+          return {
+            name,
+            logo: c?.escudo_url || null,
+            city: c?.cidade || null,
+            country: c?.pais || null,
+            source: c ? "cache" : "missing",
+          };
+        });
+        await renderWithVotes(baseList);
+        setLoading(false);
+        return;
+      }
+
+      // 2) FALLBACK: sem cache → consultar Gemini/Wikipedia via edge function
+      const { data, error } = await supabase.functions.invoke("get-rivals", {
+        body: { club_name: clubName },
+      });
       if (cancelled) return;
 
       if (error) {
@@ -48,22 +98,7 @@ export default function RivalsColumn({ clubName, refCode, primaryColor = "#ff620
         const baseList: RivalItem[] = (details.length ? details : names.map((name: string) => ({ name, logo: null })))
           .filter((r: RivalItem) => r?.name)
           .slice(0, 4);
-
-        // Buscar votos oficiais (is_original_vote) para cada rival
-        const rivalNames = baseList.map((r) => r.name);
-        let votesMap: Record<string, number> = {};
-        if (rivalNames.length) {
-          const { data: votos } = await supabase
-            .from("votos")
-            .select("clube_nome")
-            .in("clube_nome", rivalNames)
-            .eq("is_original_vote", true);
-          (votos || []).forEach((v: any) => {
-            votesMap[v.clube_nome] = (votesMap[v.clube_nome] || 0) + 1;
-          });
-        }
-        if (cancelled) return;
-        setRivals(baseList.map((r) => ({ ...r, votes: votesMap[r.name] || 0 })));
+        await renderWithVotes(baseList);
       }
       setLoading(false);
     };

@@ -1165,6 +1165,13 @@ export type Database = {
         Args: { p_level: string; p_limit?: number; p_value: string }
         Returns: Json
       }
+      get_votes_count_by_clubs: {
+        Args: { p_club_names: string[] }
+        Returns: {
+          clube_nome: string
+          votes: number
+        }[]
+      }
       get_votos_por_territorio:
         | {
             Args: { nome_local: string; time_id: string; tipo_local: string }
