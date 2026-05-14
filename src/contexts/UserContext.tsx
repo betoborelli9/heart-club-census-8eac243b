@@ -130,6 +130,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let cancelled = false;
+    let authFallback: number | undefined;
 
     const resetAnonymousState = () => {
       setProfile(null);
@@ -163,7 +164,27 @@ export function UserProvider({ children }: { children: ReactNode }) {
       });
     };
 
-    const authFallback = window.setTimeout(() => {
+    const applySession = (nextSession: Session | null, source: "initial" | "event") => {
+      if (cancelled) return;
+
+      if (authFallback) window.clearTimeout(authFallback);
+      setSession(nextSession);
+      setUser(nextSession?.user ?? null);
+      setIsAuthReady(true);
+
+      if (nextSession?.user) {
+        // Supabase recomenda não chamar outras APIs dentro do callback de auth.
+        // Adiar evita deadlocks e mantém o login respondendo rápido.
+        window.setTimeout(() => {
+          if (!cancelled) loadUserData(nextSession.user.id);
+        }, source === "event" ? 0 : 1);
+      } else {
+        userDataRequestRef.current += 1;
+        resetAnonymousState();
+      }
+    };
+
+    authFallback = window.setTimeout(() => {
       if (!cancelled) {
         setIsAuthReady(true);
         setIsLoading(false);
@@ -172,48 +193,25 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (_event, session) => {
-        if (cancelled) return;
-
-        clearTimeout(authFallback);
-        setSession(session);
-        setUser(session?.user ?? null);
-        setIsAuthReady(true);
-
-        if (session?.user) {
-          loadUserData(session.user.id);
-        } else {
-          userDataRequestRef.current += 1;
-          resetAnonymousState();
-        }
+        applySession(session, "event");
       }
     );
 
     supabase.auth.getSession()
       .then(({ data: { session } }) => {
-        if (cancelled) return;
-
-        clearTimeout(authFallback);
-        setSession(session);
-        setUser(session?.user ?? null);
-        setIsAuthReady(true);
-
-        if (session?.user) {
-          loadUserData(session.user.id);
-        } else {
-          resetAnonymousState();
-        }
+        applySession(session, "initial");
       })
       .catch((error) => {
         if (cancelled) return;
         console.warn("[AUTH] Sessão Supabase indisponível:", error);
-        clearTimeout(authFallback);
+        if (authFallback) window.clearTimeout(authFallback);
         setIsAuthReady(true);
         resetAnonymousState();
       });
 
     return () => {
       cancelled = true;
-      clearTimeout(authFallback);
+      if (authFallback) window.clearTimeout(authFallback);
       subscription.unsubscribe();
     };
   }, []);
