@@ -103,8 +103,8 @@ const Login = () => {
       if (!data.url) throw new Error("URL de autenticação indisponível");
 
       window.location.assign(data.url);
-    } catch (error: any) {
-      console.error("[LOGIN_ERROR] Falha no OAuth:", error.message);
+    } catch (error: unknown) {
+      console.error("[LOGIN_ERROR] Falha no OAuth:", error instanceof Error ? error.message : error);
       toast({
         variant: "destructive",
         title: "Conexão instável",
@@ -143,8 +143,8 @@ const Login = () => {
         title: "Email enviado! ✉️",
         description: "Verifique sua caixa de entrada para acessar o Heart Club.",
       });
-    } catch (error: any) {
-      console.error("[LOGIN_ERROR] Falha no Magic Link:", error.message);
+    } catch (error: unknown) {
+      console.error("[LOGIN_ERROR] Falha no Magic Link:", error instanceof Error ? error.message : error);
       toast({
         variant: "destructive",
         title: "Erro ao enviar",
