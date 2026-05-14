@@ -13,12 +13,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useNavigate } from "react-router-dom";
 import { useUser } from "@/contexts/UserContext";
-import { supabase, SUPABASE_URL } from "@/integrations/supabase/client";
+import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import logo from "@/assets/logo.png";
 
-const SUPABASE_FUNCTIONS_URL = `${SUPABASE_URL}/functions/v1/heart-club-auth`;
-const NETWORK_TIMEOUT_MS = 8000;
+const NETWORK_TIMEOUT_MS = 6000;
 
 const withTimeout = async <T,>(promise: Promise<T>, timeoutMs: number): Promise<T> => {
   let timeoutId: number | undefined;
@@ -99,61 +98,28 @@ const Login = () => {
   };
 
   // --- MÓDULO 3: AUTH EMAIL (FETCH DIRETO PARA EDGE FUNCTION) ---
-  // Substituindo invoke por fetch para garantir compatibilidade total.
   const handleSendLink = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email.trim()) return;
 
     setLoadingProvider("email");
-
-    const controller = new AbortController();
-    const timeout = window.setTimeout(() => controller.abort(), NETWORK_TIMEOUT_MS);
+    const normalizedEmail = email.trim().toLowerCase();
 
     try {
-      // Chamada direta para a Edge Function usando a URL oficial do ambiente.
-      const response = await fetch(SUPABASE_FUNCTIONS_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          email: email.trim().toLowerCase(),
-          redirectOrigin: window.location.origin,
-        }),
-        signal: controller.signal,
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Erro ao processar login");
-      }
+      await withTimeout(sendSupabaseMagicLinkFallback(normalizedEmail), NETWORK_TIMEOUT_MS);
 
       toast({
         title: "Email enviado! ✉️",
-        description: "Clique no botão do email para entrar.",
+        description: "Clique no link recebido para entrar no Heart Club.",
       });
     } catch (error: unknown) {
       console.error("Erro no disparo:", error);
-      const isTimeout = error instanceof DOMException && error.name === "AbortError";
-
-      try {
-        await withTimeout(sendSupabaseMagicLinkFallback(email.trim().toLowerCase()), NETWORK_TIMEOUT_MS);
-        toast({
-          title: "Email enviado! ✉️",
-          description: isTimeout
-            ? "Usei uma rota estável alternativa. Clique no link recebido para entrar."
-            : "Clique no link recebido para entrar.",
-        });
-      } catch (fallbackError) {
-        console.error("Fallback Supabase falhou:", fallbackError);
-        toast({
-          variant: "destructive",
-          title: "Conexão instável",
-          description: "Não consegui enviar agora. Tente novamente ou entre com Google.",
-        });
-      }
+      toast({
+        variant: "destructive",
+        title: "Conexão instável",
+        description: "Não consegui enviar agora. Tente novamente ou entre com Google.",
+      });
     } finally {
-      window.clearTimeout(timeout);
       setLoadingProvider(null);
     }
   };
