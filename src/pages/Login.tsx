@@ -13,12 +13,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useUser } from "@/contexts/UserContext";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, SUPABASE_URL } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import logo from "@/assets/logo.png";
 
-const SUPABASE_FUNCTIONS_URL = `${import.meta.env.VITE_SUPABASE_URL.replace(/\/$/, "")}/functions/v1/heart-club-auth`;
-const NETWORK_TIMEOUT_MS = 10000;
+const SUPABASE_FUNCTIONS_URL = `${SUPABASE_URL}/functions/v1/heart-club-auth`;
+const NETWORK_TIMEOUT_MS = 8000;
 
 const withTimeout = async <T,>(promise: Promise<T>, timeoutMs: number): Promise<T> => {
   let timeoutId: number | undefined;
@@ -84,7 +84,7 @@ const Login = () => {
       toast({
         variant: "destructive",
         title: "Google indisponível agora",
-        description: "Tente novamente ou use o acesso rápido por email.",
+        description: "Tente novamente ou use o acesso rápido por email. Você não ficará preso nesta tela.",
       });
       setLoadingProvider(null);
     }
@@ -132,7 +132,7 @@ const Login = () => {
         title: "Erro ao enviar email",
         description: isTimeout
           ? "A conexão demorou demais. Tente novamente ou entre com Google."
-          : getErrorMessage(error, "Tente novamente em instantes."),
+          : "A conexão falhou. Tente novamente ou entre com Google.",
       });
     } finally {
       window.clearTimeout(timeout);
