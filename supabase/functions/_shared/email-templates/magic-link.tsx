@@ -5,6 +5,7 @@ import { Html, Head, Body, Container, Section, Text, Img, Hr } from 'npm:@react-
 interface MagicLinkEmailProps {
   siteName?: string;
   siteUrl?: string;
+  confirmationUrl?: string;
   token?: string;
   recipient?: string;
 }
@@ -15,6 +16,7 @@ const BANNER_URL = 'https://www.heartclubapp.com/email-banner.png';
 export default function MagicLinkEmail({
   siteName = 'Heart Club',
   siteUrl = 'https://www.heartclubapp.com',
+  confirmationUrl = siteUrl,
   token = '000000',
   recipient = '',
 }: MagicLinkEmailProps) {
@@ -45,8 +47,14 @@ export default function MagicLinkEmail({
             Sua voz é parte de uma história que está sendo escrita por milhões de torcedores.
           </Text>
 
+          <Section style={buttonSection}>
+            <a href={confirmationUrl} style={buttonStyle}>
+              Entrar no Heart Club
+            </a>
+          </Section>
+
           <Text style={paragraphCenter}>
-            Use o código abaixo para acessar sua conta:
+            Se o botão não abrir, use este código:
           </Text>
 
           {/* CÓDIGO 6 DÍGITOS EM DESTAQUE */}
@@ -127,6 +135,24 @@ const paragraphCenter = {
   color: '#444444',
   margin: '8px 24px 12px',
   textAlign: 'center' as const,
+};
+
+const buttonSection = {
+  textAlign: 'center' as const,
+  margin: '28px 24px 18px',
+};
+
+const buttonStyle = {
+  backgroundColor: 'hsl(24, 100%, 50%)',
+  color: '#ffffff',
+  display: 'inline-block',
+  padding: '15px 28px',
+  borderRadius: '10px',
+  fontSize: '15px',
+  fontWeight: '800' as const,
+  fontStyle: 'italic' as const,
+  textDecoration: 'none',
+  textTransform: 'uppercase' as const,
 };
 
 const codeBox = {
