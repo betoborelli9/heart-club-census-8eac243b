@@ -188,14 +188,14 @@ const Login = () => {
         {/* GOOGLE LOGIN — DESTAQUE PRINCIPAL */}
         <Button
           variant="outline"
-          className="w-full h-16 font-bold text-base border-primary/35 bg-background text-foreground hover:bg-secondary hover:border-primary/60 transition-all duration-300 shadow-[0_0_24px_hsl(var(--primary)/0.34)] hover:shadow-[0_0_34px_hsl(var(--primary)/0.52)]"
+          className="w-full h-14 font-bold text-base rounded-md border-primary/35 bg-background text-foreground hover:bg-secondary hover:border-primary/60 transition-all duration-300 shadow-[0_0_24px_hsl(var(--primary)/0.34)] hover:shadow-[0_0_34px_hsl(var(--primary)/0.52)] [&_.google-mark]:!h-7 [&_.google-mark]:!w-7"
           onClick={() => handleOAuth("google")}
           disabled={!!loadingProvider}
         >
           {loadingProvider === "google" ? (
             <Loader2 className="mr-3 w-7 h-7 animate-spin" />
           ) : (
-            <svg className="w-9 h-9 mr-3" viewBox="0 0 24 24" aria-hidden="true">
+            <svg className="google-mark mr-3" viewBox="0 0 24 24" aria-hidden="true">
               <path
                 fill="#4285F4"
                 d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"
@@ -245,8 +245,8 @@ const Login = () => {
           <Button
             type="submit"
             variant="outline"
-            className="w-full h-12 font-bold rounded-xl border-primary/35 bg-background text-foreground hover:bg-secondary hover:border-primary/60 transition-all duration-300 shadow-[0_0_24px_hsl(var(--primary)/0.34)] hover:shadow-[0_0_34px_hsl(var(--primary)/0.52)]"
-            disabled={loadingProvider === "email"}
+            className="w-full h-14 font-bold rounded-md border-primary/35 bg-background text-foreground hover:bg-secondary hover:border-primary/60 transition-all duration-300 shadow-[0_0_24px_hsl(var(--primary)/0.34)] hover:shadow-[0_0_34px_hsl(var(--primary)/0.52)]"
+            disabled={!!loadingProvider}
           >
             {loadingProvider === "email" ? (
               <Loader2 className="w-5 h-5 animate-spin" />
