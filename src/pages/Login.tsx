@@ -17,14 +17,18 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import logo from "@/assets/logo.png";
 
+const SUPABASE_FUNCTIONS_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/heart-club-auth`;
+const NETWORK_TIMEOUT_MS = 10000;
+
 const Login = () => {
   // --- MÓDULO 1: ESTADOS E REDIRECIONAMENTO ---
   const navigate = useNavigate();
-  const { isAuthenticated, isProfileComplete, hasVoted, isLoading } = useUser();
+  const { isAuthenticated, isProfileComplete, hasVoted, isLoading, isAuthReady } = useUser();
   const { toast } = useToast();
 
   const [email, setEmail] = useState("");
   const [loadingProvider, setLoadingProvider] = useState<string | null>(null);
+  const [isConnectingSlow, setIsConnectingSlow] = useState(false);
 
   useEffect(() => {
     if (!isLoading && isAuthenticated) {
@@ -34,16 +38,33 @@ const Login = () => {
     }
   }, [isAuthenticated, isProfileComplete, hasVoted, isLoading, navigate]);
 
+  useEffect(() => {
+    const isWaiting = !!loadingProvider || !isAuthReady || (isAuthenticated && isLoading);
+    if (!isWaiting) {
+      setIsConnectingSlow(false);
+      return;
+    }
+
+    const timer = window.setTimeout(() => setIsConnectingSlow(true), 3000);
+    return () => window.clearTimeout(timer);
+  }, [loadingProvider, isAuthReady, isAuthenticated, isLoading]);
+
   // --- MÓDULO 2: AUTH GOOGLE (OAUTH2) ---
   const handleOAuth = async (provider: "google") => {
     setLoadingProvider(provider);
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider,
-      options: { redirectTo: `${window.location.origin}/login` },
-    });
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider,
+        options: { redirectTo: window.location.origin },
+      });
 
-    if (error) {
-      toast({ variant: "destructive", title: "Erro", description: error.message });
+      if (error) throw error;
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Google indisponível agora",
+        description: "Tente novamente ou use o acesso rápido por email.",
+      });
       setLoadingProvider(null);
     }
   };
@@ -56,14 +77,18 @@ const Login = () => {
 
     setLoadingProvider("email");
 
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), NETWORK_TIMEOUT_MS);
+
     try {
-      // Chamada direta para a URL da sua Edge Function no Supabase
-      const response = await fetch('https://tmttlchkqjtbusfdwyrx.supabase.co/functions/v1/heart-club-auth', {
+      // Chamada direta para a Edge Function usando a URL oficial do ambiente.
+      const response = await fetch(SUPABASE_FUNCTIONS_URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({ email: email.trim().toLowerCase() }),
+        signal: controller.signal,
       });
 
       if (!response.ok) {
@@ -80,18 +105,26 @@ const Login = () => {
       toast({
         variant: "destructive",
         title: "Erro ao enviar email",
-        description: error.message || "Tente novamente em instantes.",
+        description: error.name === "AbortError"
+          ? "A conexão demorou demais. Tente novamente ou entre com Google."
+          : error.message || "Tente novamente em instantes.",
       });
     } finally {
+      window.clearTimeout(timeout);
       setLoadingProvider(null);
     }
   };
 
   // --- MÓDULO 4: INTERFACE ---
-  if (isLoading) {
+  if (!isAuthReady || (isAuthenticated && isLoading)) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-4 px-6 text-center">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        {isConnectingSlow && (
+          <p className="max-w-xs text-sm text-muted-foreground">
+            Tentando conexão estável...
+          </p>
+        )}
       </div>
     );
   }
