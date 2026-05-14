@@ -29,7 +29,7 @@ const Login = () => {
     setLoadingProvider(provider);
     const { error } = await supabase.auth.signInWithOAuth({
       provider,
-      options: { redirectTo: `${window.location.origin}/login` },
+      options: { redirectTo: `${window.location.origin}/` }, // corrigido
     });
     if (error) {
       toast({ variant: "destructive", title: "Erro", description: error.message });
@@ -43,7 +43,7 @@ const Login = () => {
     setLoadingProvider("magic");
     const { error } = await supabase.auth.signInWithOtp({
       email,
-      options: { emailRedirectTo: `${window.location.origin}/login` },
+      options: { emailRedirectTo: `${window.location.origin}/` }, // corrigido
     });
     if (error) {
       toast({ variant: "destructive", title: "Erro", description: error.message });
