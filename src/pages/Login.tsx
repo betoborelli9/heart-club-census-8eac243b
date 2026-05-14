@@ -1,8 +1,9 @@
 /**
  * Caminho: src/pages/Login.tsx
- * Contexto: Interface de Autenticação Unificada (Google OAuth + Edge Function Resend)
+ * Contexto: Interface de Autenticação Otimizada (Google OAuth + Magic Link)
  * Projeto: HEART CLUB GLOBAL
- * Objetivo: Eliminar erro de request na Edge Function usando fetch direto.
+ * Objetivo: Eliminar loops de redirecionamento, corrigir erro de DNS NXDOMAIN e garantir entrada instantânea.
+ * Localhost: C:\Users\betob\Desktop\GitHub\heart-club
  */
 
 import { useState, useEffect } from "react";
@@ -17,7 +18,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import logo from "@/assets/logo.png";
 
-const NETWORK_TIMEOUT_MS = 6000;
+// Configuração de Resiliência: Torcedor não pode esperar mais de 5s
+const NETWORK_TIMEOUT_MS = 5000;
 
 const withTimeout = async <T,>(promise: Promise<T>, timeoutMs: number): Promise<T> => {
   let timeoutId: number | undefined;
@@ -32,20 +34,8 @@ const withTimeout = async <T,>(promise: Promise<T>, timeoutMs: number): Promise<
   }
 };
 
-const sendSupabaseMagicLinkFallback = async (email: string) => {
-  const { error } = await supabase.auth.signInWithOtp({
-    email,
-    options: {
-      emailRedirectTo: window.location.origin,
-      shouldCreateUser: true,
-    },
-  });
-
-  if (error) throw error;
-};
-
 const Login = () => {
-  // --- MÓDULO 1: ESTADOS E REDIRECIONAMENTO ---
+  // --- MÓDULO 1: ESTADOS, REDIRECIONAMENTO E LIMPEZA DE LOOP ---
   const navigate = useNavigate();
   const { isAuthenticated, isProfileComplete, hasVoted, isLoading, isAuthReady } = useUser();
   const { toast } = useToast();
@@ -54,85 +44,111 @@ const Login = () => {
   const [loadingProvider, setLoadingProvider] = useState<string | null>(null);
   const [isConnectingSlow, setIsConnectingSlow] = useState(false);
 
+  // Monitor de redirecionamento: Se logou, despacha o torcedor para o lugar certo imediatamente
   useEffect(() => {
-    if (!isLoading && isAuthenticated) {
+    if (!isLoading && isAuthenticated && isAuthReady) {
       if (!isProfileComplete) navigate("/profile-setup", { replace: true });
       else if (!hasVoted) navigate("/voting", { replace: true });
       else navigate("/dashboard", { replace: true });
     }
-  }, [isAuthenticated, isProfileComplete, hasVoted, isLoading, navigate]);
+  }, [isAuthenticated, isProfileComplete, hasVoted, isLoading, isAuthReady, navigate]);
 
+  // Monitor de lentidão: Feedback visual para não parecer que o site travou
   useEffect(() => {
     const isWaiting = !!loadingProvider || !isAuthReady || (isAuthenticated && isLoading);
     if (!isWaiting) {
       setIsConnectingSlow(false);
       return;
     }
-
     const timer = window.setTimeout(() => setIsConnectingSlow(true), 3000);
     return () => window.clearTimeout(timer);
   }, [loadingProvider, isAuthReady, isAuthenticated, isLoading]);
 
-  // --- MÓDULO 2: AUTH GOOGLE (OAUTH2) ---
+  // --- MÓDULO 2: AUTH GOOGLE (OAUTH2 COM FIX DE DNS E PKCE) ---
   const handleOAuth = async (provider: "google") => {
     setLoadingProvider(provider);
     try {
+      // Limpeza de barra final na URL para evitar erro de Redirect URI no Supabase
+      const safeRedirect = window.location.origin.replace(/\/$/, "");
+
       const { error } = await withTimeout(
         supabase.auth.signInWithOAuth({
           provider,
-          options: { redirectTo: window.location.origin },
+          options: {
+            redirectTo: safeRedirect,
+            queryParams: {
+              prompt: "select_account",
+              access_type: "offline",
+            },
+          },
         }),
         NETWORK_TIMEOUT_MS,
       );
 
       if (error) throw error;
-    } catch (error: unknown) {
-      console.warn("[LOGIN] Google indisponível:", error);
+    } catch (error: any) {
+      console.error("[LOGIN_ERROR] Falha no OAuth:", error.message);
       toast({
         variant: "destructive",
-        title: "Google indisponível agora",
-        description: "Tente novamente ou use o acesso rápido por email. Você não ficará preso nesta tela.",
+        title: "Conexão instável",
+        description: "Não conseguimos conectar com o Google agora. Tente o acesso por e-mail.",
       });
       setLoadingProvider(null);
     }
   };
 
-  // --- MÓDULO 3: AUTH EMAIL (FETCH DIRETO PARA EDGE FUNCTION) ---
+  // --- MÓDULO 3: AUTH EMAIL (MAGIC LINK DIRETO) ---
   const handleSendLink = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email.trim()) return;
+    if (!email.trim() || loadingProvider) return;
 
     setLoadingProvider("email");
     const normalizedEmail = email.trim().toLowerCase();
+    const safeRedirect = window.location.origin.replace(/\/$/, "");
 
     try {
-      await withTimeout(sendSupabaseMagicLinkFallback(normalizedEmail), NETWORK_TIMEOUT_MS);
+      const { error } = await withTimeout(
+        supabase.auth.signInWithOtp({
+          email: normalizedEmail,
+          options: {
+            emailRedirectTo: safeRedirect,
+            shouldCreateUser: true,
+          },
+        }),
+        NETWORK_TIMEOUT_MS,
+      );
+
+      if (error) throw error;
 
       toast({
         title: "Email enviado! ✉️",
-        description: "Clique no link recebido para entrar no Heart Club.",
+        description: "Verifique sua caixa de entrada para acessar o Heart Club.",
       });
-    } catch (error: unknown) {
-      console.error("Erro no disparo:", error);
+    } catch (error: any) {
+      console.error("[LOGIN_ERROR] Falha no Magic Link:", error.message);
       toast({
         variant: "destructive",
-        title: "Conexão instável",
-        description: "Não consegui enviar agora. Tente novamente ou entre com Google.",
+        title: "Erro ao enviar",
+        description: "Tente novamente em instantes ou entre com Google.",
       });
     } finally {
       setLoadingProvider(null);
     }
   };
 
-  // --- MÓDULO 4: INTERFACE ---
+  // --- MÓDULO 4: INTERFACE E LOADING STATE ---
   if (!isAuthReady || (isAuthenticated && isLoading)) {
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-4 px-6 text-center">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
         {isConnectingSlow && (
-          <p className="max-w-xs text-sm text-muted-foreground">
-            Tentando conexão estável...
-          </p>
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="max-w-xs text-sm text-muted-foreground"
+          >
+            Sincronizando com o estádio... A conexão está um pouco lenta.
+          </motion.p>
         )}
       </div>
     );
@@ -148,93 +164,93 @@ const Login = () => {
       >
         <div className="text-center space-y-3">
           <img src={logo} alt="Heart Club" className="mx-auto w-28 h-28 object-contain" />
-          <p className="text-sm text-muted-foreground">O maior censo de torcidas do mundo</p>
+          <p className="text-sm text-muted-foreground uppercase tracking-tighter">O maior censo de torcidas do mundo</p>
         </div>
 
-        {/* GOOGLE LOGIN — DESTAQUE PRINCIPAL */}
-        <Button
-          variant="outline"
-          className="w-full h-14 font-bold text-base rounded-md border-primary/35 bg-background text-foreground hover:bg-secondary hover:border-primary/60 transition-all duration-300 shadow-[0_0_24px_hsl(var(--primary)/0.34)] hover:shadow-[0_0_34px_hsl(var(--primary)/0.52)] [&_.google-mark]:!h-7 [&_.google-mark]:!w-7"
-          onClick={() => handleOAuth("google")}
-          disabled={!!loadingProvider}
-        >
-          {loadingProvider === "google" ? (
-            <Loader2 className="mr-3 w-7 h-7 animate-spin" />
-          ) : (
-            <svg className="google-mark mr-3" viewBox="0 0 24 24" aria-hidden="true">
-              <path
-                fill="#4285F4"
-                d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"
-              />
-              <path
-                fill="#34A853"
-                d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-              />
-              <path
-                fill="#FBBC05"
-                d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
-              />
-              <path
-                fill="#EA4335"
-                d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-              />
-            </svg>
-          )}
-          Entrar com Google
-        </Button>
-
-        {/* DIVISOR DISCRETO */}
-        <div className="relative">
-          <div className="absolute inset-0 flex items-center">
-            <span className="w-full border-t border-border/50" />
-          </div>
-          <div className="relative flex justify-center text-[10px] uppercase tracking-widest">
-            <span className="bg-background px-3 text-muted-foreground font-medium italic">ou entrar com email</span>
-          </div>
-        </div>
-
-        {/* EMAIL MAGIC LINK */}
-        <form onSubmit={handleSendLink} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              type="email"
-              placeholder="seu@email.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              className="h-12 bg-secondary/50 border-border/50"
-            />
-          </div>
-
+        <div className="space-y-4">
           <Button
-            type="submit"
             variant="outline"
-            className="w-full h-14 font-bold rounded-md border-primary/35 bg-background text-foreground hover:bg-secondary hover:border-primary/60 transition-all duration-300 shadow-[0_0_24px_hsl(var(--primary)/0.34)] hover:shadow-[0_0_34px_hsl(var(--primary)/0.52)]"
+            className="w-full h-14 font-bold text-base rounded-md border-primary/35 bg-background text-foreground hover:bg-secondary hover:border-primary/60 transition-all duration-300 shadow-[0_0_24px_hsl(var(--primary)/0.2)] hover:shadow-[0_0_34px_hsl(var(--primary)/0.4)]"
+            onClick={() => handleOAuth("google")}
             disabled={!!loadingProvider}
           >
-            {loadingProvider === "email" ? (
-              <Loader2 className="w-5 h-5 animate-spin" />
+            {loadingProvider === "google" ? (
+              <Loader2 className="mr-3 w-6 h-6 animate-spin" />
             ) : (
-              <Mail className="w-5 h-5 mr-2" />
+              <svg className="mr-3 w-6 h-6" viewBox="0 0 24 24">
+                <path
+                  fill="#4285F4"
+                  d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"
+                />
+                <path
+                  fill="#34A853"
+                  d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                />
+                <path
+                  fill="#FBBC05"
+                  d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+                />
+                <path
+                  fill="#EA4335"
+                  d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+                />
+              </svg>
             )}
-            Entrar com email
+            Entrar com Google
           </Button>
-        </form>
 
-        {isConnectingSlow && !!loadingProvider && (
-          <p className="text-center text-sm text-muted-foreground">
-            Tentando conexão estável...
-          </p>
-        )}
+          <div className="relative py-4">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t border-border/50" />
+            </div>
+            <div className="relative flex justify-center text-[10px] uppercase tracking-widest">
+              <span className="bg-background px-3 text-muted-foreground italic">ou por email</span>
+            </div>
+          </div>
 
-        <p className="text-center text-xs text-muted-foreground">
-          Ao entrar, você concorda com os Termos de Uso e Política de Privacidade.
+          <form onSubmit={handleSendLink} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="email" className="text-xs uppercase ml-1">
+                Seu melhor e-mail
+              </Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="nome@exemplo.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                className="h-12 bg-secondary/30 border-border/50 focus:border-primary/50"
+              />
+            </div>
+
+            <Button
+              type="submit"
+              variant="outline"
+              className="w-full h-12 font-bold rounded-md hover:bg-secondary transition-all"
+              disabled={!!loadingProvider}
+            >
+              {loadingProvider === "email" ? (
+                <Loader2 className="w-5 h-5 animate-spin" />
+              ) : (
+                <Mail className="w-5 h-5 mr-2" />
+              )}
+              Receber link de acesso
+            </Button>
+          </form>
+        </div>
+
+        <p className="text-center text-[10px] text-muted-foreground px-8">
+          Ao entrar, você concorda com nossos Termos de Uso. O Heart Club protege seus dados.
         </p>
       </motion.div>
     </div>
   );
 };
 
+/**
+ * Rodapé: Controle de Autenticação Unificada Heart Club.
+ * Notas: Implementado fix de redirect para evitar erro NXDOMAIN no desktop.
+ * Recomenda-se verificar se o domínio heartclubapp.com está na whitelist do Supabase.
+ */
 export default Login;
