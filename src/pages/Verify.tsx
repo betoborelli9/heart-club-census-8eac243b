@@ -36,14 +36,15 @@ const Verify = () => {
 
   useEffect(() => {
     const validateToken = async () => {
-      const token = searchParams.get("token");
-      const redirect = searchParams.get("redirect") || "/voting";
+      try {
+        const token = searchParams.get("token");
+        const redirect = searchParams.get("redirect") || "/voting";
 
-      if (!token) {
-        toast.error("Token de acesso ausente.");
-        navigate("/login");
-        return;
-      }
+        if (!token) {
+          toast.error("Token de acesso ausente.");
+          navigate("/login");
+          return;
+        }
 
       // Validação via Edge Function (service role) — evita bloqueio de RLS
       const { data, error } = await withTimeout(
@@ -81,8 +82,13 @@ const Verify = () => {
         return;
       }
 
-      toast.success("Acesso autorizado! Bem-vindo ao Heart Club.");
-      navigate(redirect);
+        toast.success("Acesso autorizado! Bem-vindo ao Heart Club.");
+        navigate(redirect);
+      } catch (error) {
+        console.error("[VERIFY] conexão instável", error);
+        toast.error("Conexão instável. Solicite um novo acesso.");
+        navigate("/login");
+      }
     };
 
     validateToken();
