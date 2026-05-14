@@ -1062,6 +1062,7 @@ export type Database = {
       check_fixture_status: { Args: { p_fixture_json: Json }; Returns: boolean }
       clean_dead_competitions: { Args: never; Returns: undefined }
       clean_fictitious_data: { Args: never; Returns: undefined }
+      club_name_tokens: { Args: { t: string }; Returns: string[] }
       fake_votes_summary: { Args: never; Returns: Json }
       get_active_competitions_v2: {
         Args: { p_team_id: number }
