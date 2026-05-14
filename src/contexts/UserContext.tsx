@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import React, { createContext, useContext, useState, useEffect, useRef, ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Session, User } from "@supabase/supabase-js";
 
@@ -32,6 +32,7 @@ interface UserContextType {
   profile: Profile | null;
   hasVoted: boolean;
   isLoading: boolean;
+  isAuthReady: boolean;
   isAuthenticated: boolean;
   isProfileComplete: boolean;
   signOut: () => Promise<void>;
@@ -59,6 +60,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [hasVoted, setHasVoted] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [isAuthReady, setIsAuthReady] = useState(false);
+  const userDataRequestRef = useRef(0);
 
   const fetchProfile = async (userId: string) => {
     const { data } = await supabase
@@ -109,44 +112,88 @@ export function UserProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
+    let cancelled = false;
+
+    const resetAnonymousState = () => {
+      setProfile(null);
+      setHasVoted(false);
+      setIsLoading(false);
+    };
+
+    const loadUserData = (userId: string) => {
+      const requestId = ++userDataRequestRef.current;
+      setIsLoading(true);
+
+      void Promise.allSettled([
+        fetchProfile(userId),
+        checkVoted(userId),
+        tryRegisterReferral(userId),
+      ]).catch((error) => {
+        console.warn("[AUTH] Falha ao carregar dados do usuário:", error);
+      }).finally(() => {
+        if (!cancelled && requestId === userDataRequestRef.current) {
+          setIsLoading(false);
+        }
+      });
+    };
+
+    const authFallback = window.setTimeout(() => {
+      if (!cancelled) {
+        setIsAuthReady(true);
+        setIsLoading(false);
+      }
+    }, 3000);
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+      (_event, session) => {
+        if (cancelled) return;
+
+        clearTimeout(authFallback);
         setSession(session);
         setUser(session?.user ?? null);
-        
+        setIsAuthReady(true);
+
         if (session?.user) {
-          // Use setTimeout to avoid Supabase deadlock
-          setTimeout(async () => {
-            await fetchProfile(session.user.id);
-            await checkVoted(session.user.id);
-            await tryRegisterReferral(session.user.id);
-            setIsLoading(false);
-          }, 0);
+          loadUserData(session.user.id);
         } else {
-          setProfile(null);
-          setHasVoted(false);
-          setIsLoading(false);
+          userDataRequestRef.current += 1;
+          resetAnonymousState();
         }
       }
     );
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        fetchProfile(session.user.id)
-          .then(() => checkVoted(session.user.id))
-          .then(() => tryRegisterReferral(session.user.id))
-          .then(() => setIsLoading(false));
-      } else {
-        setIsLoading(false);
-      }
-    });
+    supabase.auth.getSession()
+      .then(({ data: { session } }) => {
+        if (cancelled) return;
 
-    return () => subscription.unsubscribe();
+        clearTimeout(authFallback);
+        setSession(session);
+        setUser(session?.user ?? null);
+        setIsAuthReady(true);
+
+        if (session?.user) {
+          loadUserData(session.user.id);
+        } else {
+          resetAnonymousState();
+        }
+      })
+      .catch((error) => {
+        if (cancelled) return;
+        console.warn("[AUTH] Sessão Supabase indisponível:", error);
+        clearTimeout(authFallback);
+        setIsAuthReady(true);
+        resetAnonymousState();
+      });
+
+    return () => {
+      cancelled = true;
+      clearTimeout(authFallback);
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signOut = async () => {
+    userDataRequestRef.current += 1;
     await supabase.auth.signOut();
     setProfile(null);
     setHasVoted(false);
@@ -185,7 +232,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
   return (
     <UserContext.Provider value={{
-      user, session, profile, hasVoted, isLoading, isAuthenticated,
+      user, session, profile, hasVoted, isLoading, isAuthReady, isAuthenticated,
       isProfileComplete, signOut, refreshProfile, updateProfile,
     }}>
       {children}
