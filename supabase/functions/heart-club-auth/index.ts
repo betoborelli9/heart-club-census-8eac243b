@@ -118,7 +118,8 @@ Deno.serve(async (req) => {
     })
 
   } catch (err) {
-    return new Response(JSON.stringify({ error: err.message }), {
+    const message = err instanceof Error ? err.message : 'Erro interno no envio do acesso'
+    return new Response(JSON.stringify({ error: message }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     })
