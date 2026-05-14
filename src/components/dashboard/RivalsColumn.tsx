@@ -49,7 +49,7 @@ export default function RivalsColumn({ clubName, refCode, primaryColor = "#ff620
         const rivalNames = baseList.map((r) => r.name);
         let votesMap: Record<string, number> = {};
         if (rivalNames.length) {
-          const { data: counts } = await supabase.rpc("get_votes_count_by_clubs", {
+          const { data: counts } = await supabase.rpc("get_votes_count_by_clubs_fuzzy" as any, {
             p_club_names: rivalNames,
           });
           (counts || []).forEach((row: any) => {
