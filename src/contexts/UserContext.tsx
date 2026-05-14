@@ -44,6 +44,13 @@ type ProfileUpdate = Partial<Profile> & { faixa_etaria?: string };
 
 const UserContext = createContext<UserContextType | null>(null);
 const AUTH_DATA_TIMEOUT_MS = 3000;
+const AUTH_CALLBACK_TIMEOUT_MS = 10000;
+
+const hasAuthCallbackParams = () => {
+  const search = new URLSearchParams(window.location.search);
+  const hash = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+  return search.has("code") || hash.has("access_token") || hash.has("refresh_token") || hash.has("token_hash");
+};
 
 const withAuthTimeout = async <T,>(promise: Promise<T>, fallback: T): Promise<T> => {
   let timeoutId: number | undefined;
@@ -189,7 +196,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
         setIsAuthReady(true);
         setIsLoading(false);
       }
-    }, 3000);
+    }, hasAuthCallbackParams() ? AUTH_CALLBACK_TIMEOUT_MS : AUTH_DATA_TIMEOUT_MS);
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (_event, session) => {
