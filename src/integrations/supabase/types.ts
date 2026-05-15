@@ -1082,6 +1082,14 @@ export type Database = {
       }
       get_club_vote_ranking: { Args: { p_limit?: number }; Returns: Json }
       get_club_vote_summary: { Args: { p_club_name: string }; Returns: Json }
+      get_clubs_full_counts: {
+        Args: { p_club_names: string[] }
+        Returns: {
+          clube_nome: string
+          heart_votes: number
+          sympathy_votes: number
+        }[]
+      }
       get_distinct_regions: {
         Args: { p_level: string; p_parent?: string }
         Returns: Json
