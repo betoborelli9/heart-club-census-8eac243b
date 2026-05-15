@@ -1225,6 +1225,7 @@ export type Database = {
         }
         Returns: Json
       }
+      seed_fake_votes_multi: { Args: { p_quantidade?: number }; Returns: Json }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
       unaccent: { Args: { "": string }; Returns: string }

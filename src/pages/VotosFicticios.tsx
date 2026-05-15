@@ -61,22 +61,9 @@ const VotosFicticios = () => {
       return;
     }
     setWorking(true);
-    const cityLabel = syncCity.trim() || "(cidade)";
-    const toastId = toast.loading(`Sincronizando bairros oficiais de ${cityLabel}...`);
-    const { count, source, error: syncError } = await syncNeighborhoods({
-      city: syncCity, state: syncState, country: syncCountry,
-    });
-    if (syncError || count === 0) {
-      setWorking(false);
-      toast.error("Falha ao sincronizar bairros: " + (syncError?.message || "nenhum bairro retornado"), { id: toastId });
-      return;
-    }
-    toast.loading(`${count.toLocaleString("pt-BR")} bairros sincronizados (${source}). Gerando votos...`, { id: toastId });
-    const { data, error } = await supabase.rpc("seed_fake_votes", {
+    const toastId = toast.loading(`Distribuindo ${quantidade.toLocaleString("pt-BR")} votos fictícios pelas regiões do Brasil...`);
+    const { data, error } = await supabase.rpc("seed_fake_votes_multi" as any, {
       p_quantidade: quantidade,
-      p_city: syncCity,
-      p_state: syncState,
-      p_country: syncCountry,
     } as any);
     setWorking(false);
     if (error) {
@@ -84,7 +71,8 @@ const VotosFicticios = () => {
       return;
     }
     const inseridos = (data as any)?.inseridos ?? quantidade;
-    toast.success(`✅ ${inseridos.toLocaleString("pt-BR")} votos fictícios gerados em ${cityLabel}!`, { id: toastId });
+    const cidades = (data as any)?.cidades_disponiveis ?? 0;
+    toast.success(`✅ ${inseridos.toLocaleString("pt-BR")} votos fictícios distribuídos por ${cidades} cidades brasileiras!`, { id: toastId });
     fetchSummary();
   };
 
