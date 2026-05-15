@@ -36,28 +36,39 @@ export default function SympathyCarousel({ sympathies, heartClubName, viewedClub
         : sympathies;
       const targetNames = allNames.slice(0, 5);
 
+      // Logos (cache local + clubes_cache)
       await Promise.all(
         targetNames.map(async (name) => {
           const local = CLUBS_DATA.find((c: any) => norm(c.nome) === norm(name));
           let url = (local as any)?.logoUrl || null;
-          let vts = 0;
-          try {
-            const { data } = await supabase
-              .from("clubes_cache")
-              .select("escudo_url")
-              .ilike("nome", name)
-              .maybeSingle();
-            if (!url) url = (data as any)?.escudo_url || null;
-          } catch {}
-          try {
-            const { data: summary } = await supabase.rpc("get_club_vote_summary", { p_club_name: name });
-            const s: any = summary;
-            vts = Number(s?.total_votes || 0) + Number(s?.sympathizers || 0);
-          } catch {}
+          if (!url) {
+            try {
+              const { data } = await supabase
+                .from("clubes_cache")
+                .select("escudo_url")
+                .ilike("nome", name)
+                .maybeSingle();
+              url = (data as any)?.escudo_url || null;
+            } catch {}
+          }
           outLogos[name] = url;
-          outVotes[name] = vts;
+          outVotes[name] = 0;
         }),
       );
+
+      // Contagem autônoma de votos (heart + simpatia) via RPC fuzzy
+      try {
+        const { data: counts } = await supabase.rpc("get_clubs_full_counts" as any, {
+          p_club_names: targetNames,
+        });
+        (counts || []).forEach((row: any) => {
+          const isHeart = heartClubName && norm(row.clube_nome) === norm(heartClubName);
+          outVotes[row.clube_nome] = isHeart
+            ? Number(row.heart_votes || 0)
+            : Number(row.sympathy_votes || 0);
+        });
+      } catch {}
+
       if (!cancelled) {
         setLogos(outLogos);
         setVotes(outVotes);
