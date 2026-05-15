@@ -256,7 +256,7 @@ const VotosFicticios = () => {
         </section>
 
         {/* [BLOCO: AÇÕES SECUNDÁRIAS] */}
-        <section className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <section className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Button
             onClick={() => navigate("/mapa-calor")}
             variant="outline"
@@ -265,20 +265,12 @@ const VotosFicticios = () => {
             <BarChart3 className="w-4 h-4 mr-2" /> Ver Mapa de Calor
           </Button>
           <Button
-            onClick={handlePurgeInvalid}
-            disabled={working}
-            variant="outline"
-            className="border-yellow-500/40 text-yellow-300 hover:bg-yellow-500/10 h-14 font-black italic uppercase"
-          >
-            <Trash2 className="w-4 h-4 mr-2" /> Limpar Inválidos
-          </Button>
-          <Button
             onClick={handlePurge}
             disabled={working}
             variant="outline"
             className="border-red-500/40 text-red-400 hover:bg-red-500/10 h-14 font-black italic uppercase"
           >
-            <Trash2 className="w-4 h-4 mr-2" /> Limpar Todos
+            <Trash2 className="w-4 h-4 mr-2" /> Limpar Votos Fictícios
           </Button>
         </section>
       </main>
