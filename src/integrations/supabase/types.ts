@@ -1035,6 +1035,7 @@ export type Database = {
       admin_get_votes_with_tracking: {
         Args: never
         Returns: {
+          bairro: string
           cep: string
           cidade: string
           clube_nome: string

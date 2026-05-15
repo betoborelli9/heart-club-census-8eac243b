@@ -25,6 +25,7 @@ interface VoteRow {
   user_nome: string | null;
   ip_address: string | null;
   cep: string | null;
+  bairro: string | null;
   cidade: string;
   estado: string;
   is_suspicious: boolean | null;
@@ -179,6 +180,9 @@ const AdminAuditTable = () => {
                         <MapPin size={10} className="text-muted-foreground" />
                         <span className="text-[10px] font-black">{v.cep || "—"}</span>
                       </div>
+                      {v.bairro && (
+                        <p className="text-[10px] uppercase font-black text-primary leading-tight">{v.bairro}</p>
+                      )}
                       <p className="text-[9px] uppercase opacity-60 leading-tight font-bold">{v.cidade}, {v.estado}</p>
                     </TableCell>
                     <TableCell className="text-right">
