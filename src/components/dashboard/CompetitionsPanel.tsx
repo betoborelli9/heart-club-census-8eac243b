@@ -153,16 +153,25 @@ export default function CompetitionsPanel({ clubName, primaryColor = "#ff6200" }
           ))}
         </TabsList>
 
-        {competitions.map((c) => (
-          <TabsContent key={c.leagueId} value={String(c.leagueId)} className="space-y-4 mt-3">
-            <MatchCard match={c.liveMatch || c.nextMatch} live={!!c.liveMatch} primaryColor={primaryColor} />
-            <StandingsTable
-              rows={c.standings}
-              meTeamId={team?.id}
-              primaryColor={primaryColor}
-            />
-          </TabsContent>
-        ))}
+        {competitions.map((c) => {
+          const focusMatch = c.liveMatch || c.nextMatch;
+          const opponentId = focusMatch
+            ? focusMatch.home.id === team?.id
+              ? focusMatch.away.id
+              : focusMatch.home.id
+            : undefined;
+          return (
+            <TabsContent key={c.leagueId} value={String(c.leagueId)} className="space-y-4 mt-3">
+              <MatchCard match={focusMatch} live={!!c.liveMatch} primaryColor={primaryColor} />
+              <StandingsTable
+                rows={c.standings}
+                meTeamId={team?.id}
+                opponentTeamId={opponentId}
+                primaryColor={primaryColor}
+              />
+            </TabsContent>
+          );
+        })}
       </Tabs>
     </section>
   );
@@ -226,17 +235,18 @@ function MatchCard({ match, live, primaryColor }: { match: Match | null; live: b
 function StandingsTable({
   rows,
   meTeamId,
+  opponentTeamId,
   primaryColor,
 }: {
   rows: StandingRow[];
   meTeamId?: number;
+  opponentTeamId?: number;
   primaryColor: string;
 }) {
   if (!rows.length) return <p className="text-[11px] italic text-white/40">Sem classificação disponível.</p>;
-  // Padrão SofaScore/GE: coluna Time fixa (sticky) à esquerda, colunas numéricas
-  // centralizadas e uniformes, cabeçalho sempre visível acompanhando o scroll horizontal.
   const stickyBg = "bg-[#0b0b0b]";
   const headerBg = "bg-[#141414]";
+  const opponentBg = "bg-[#2a1f3d]";
   const numCol = "text-center px-1 py-1.5 w-7 border-b border-white/[0.06] tabular-nums";
   const fmt = (v: number | undefined | null) => (v === undefined || v === null ? 0 : v);
   return (
@@ -263,24 +273,35 @@ function StandingsTable({
         <tbody>
           {rows.map((r) => {
             const isMe = !!(meTeamId && r.teamId === meTeamId);
-            const rowBg = isMe ? "bg-white/[0.08]" : stickyBg;
+            const isOpponent = !isMe && !!(opponentTeamId && r.teamId === opponentTeamId);
+            const rowBg = isMe ? "bg-white/[0.08]" : isOpponent ? opponentBg : stickyBg;
+            const rowClass = isMe ? "bg-white/[0.04]" : isOpponent ? "bg-[#a78bfa]/10" : "";
             return (
-              <tr key={`${r.teamId}-${r.position}`} className={isMe ? "bg-white/[0.04]" : ""}>
+              <tr key={`${r.teamId}-${r.position}`} className={rowClass}>
                 <td
-                  className={`sticky left-0 z-10 ${rowBg} py-1.5 pl-1.5 pr-1 border-b border-white/[0.06] min-w-[110px]`}
+                  className={`sticky left-0 z-10 ${rowBg} py-1.5 pl-1.5 pr-1 border-b border-white/[0.06] min-w-[110px] ${
+                    isOpponent ? "border-l-4 border-l-dashed border-l-[#a78bfa]" : ""
+                  }`}
                   style={isMe ? { boxShadow: `inset 3px 0 0 ${primaryColor}` } : undefined}
                 >
                   <div className="flex items-center gap-1.5 min-w-0">
                     <span className="w-3 font-mono text-white/50 shrink-0 text-right text-[9px]">{r.position}</span>
                     <ClubLogo src={r.logo} alt={r.name} size="xs" className="w-3.5 h-3.5 shrink-0" />
-                    <span className={`truncate text-[10px] ${isMe ? "font-black text-white" : "text-white/85"}`}>
+                    <span
+                      className={`truncate text-[10px] ${
+                        isMe ? "font-black text-white" : isOpponent ? "font-bold text-[#c4b5fd]" : "text-white/85"
+                      }`}
+                    >
                       {r.name}
+                      {isOpponent && (
+                        <span className="ml-1 text-[8px] font-mono uppercase text-[#a78bfa]/80">· alvo</span>
+                      )}
                     </span>
                   </div>
                 </td>
                 <td
                   className={`${numCol} font-black`}
-                  style={{ color: isMe ? primaryColor : "rgba(255,255,255,0.95)" }}
+                  style={{ color: isMe ? primaryColor : isOpponent ? "#c4b5fd" : "rgba(255,255,255,0.95)" }}
                 >
                   {fmt(r.points)}
                 </td>
