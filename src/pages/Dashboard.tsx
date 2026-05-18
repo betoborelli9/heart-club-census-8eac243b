@@ -190,7 +190,7 @@ const Dashboard = () => {
                 </button>
               </div>
             )}
-            <div className="glass-card rounded-[32px] p-2 min-h-[600px]">
+            <div className="glass-card rounded-[32px] p-2">
               <NewsFeedCards teamName={viewedClubName} primaryColor={primary} />
             </div>
           </section>
