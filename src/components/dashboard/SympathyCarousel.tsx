@@ -56,16 +56,14 @@ export default function SympathyCarousel({ sympathies, heartClubName, viewedClub
         }),
       );
 
-      // Contagem autônoma de votos (heart + simpatia) via RPC fuzzy
+      // Contagem autônoma: SEMPRE somente votos como clube do coração.
+      // Votos de simpatia NÃO entram no somatório dos cards.
       try {
         const { data: counts } = await supabase.rpc("get_clubs_full_counts" as any, {
           p_club_names: targetNames,
         });
         (counts || []).forEach((row: any) => {
-          const isHeart = heartClubName && norm(row.clube_nome) === norm(heartClubName);
-          outVotes[row.clube_nome] = isHeart
-            ? Number(row.heart_votes || 0)
-            : Number(row.sympathy_votes || 0);
+          outVotes[row.clube_nome] = Number(row.heart_votes || 0);
         });
       } catch {}
 
