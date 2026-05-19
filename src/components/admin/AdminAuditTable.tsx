@@ -36,6 +36,9 @@ interface VoteRow {
   sympathy_2: string | null;
   sympathy_3: string | null;
   sympathy_4: string | null;
+  referral_source: string | null;
+  referral_ambassador_name: string | null;
+  referral_code: string | null;
 }
 
 /* ═══════════════════════════════════════════════════════════
