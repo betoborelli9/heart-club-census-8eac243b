@@ -12,7 +12,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Trash2, RefreshCw, Check, Heart, XOctagon, MapPin } from "lucide-react";
+import { Trash2, RefreshCw, Check, Heart, XOctagon, MapPin, UserCheck, Sparkles } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 /* ═══════════════════════════════════════════════════════════
@@ -36,6 +36,9 @@ interface VoteRow {
   sympathy_2: string | null;
   sympathy_3: string | null;
   sympathy_4: string | null;
+  referral_source: string | null;
+  referral_ambassador_name: string | null;
+  referral_code: string | null;
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -173,6 +176,22 @@ const AdminAuditTable = () => {
                           </div>
                         );
                       })()}
+                      {v.referral_source === 'embaixador' ? (
+                        <div className="mt-1 flex items-center gap-1 flex-wrap">
+                          <UserCheck className="w-2.5 h-2.5 text-emerald-400" />
+                          <span className="text-[8px] font-black italic uppercase text-emerald-400 leading-tight">
+                            INDICADO POR: {v.referral_ambassador_name || "—"}
+                            {v.referral_code ? ` • CÓD: ${v.referral_code}` : ""}
+                          </span>
+                        </div>
+                      ) : (
+                        <div className="mt-1 flex items-center gap-1 flex-wrap">
+                          <Sparkles className="w-2.5 h-2.5 text-cyan-400" />
+                          <span className="text-[8px] font-black italic uppercase text-cyan-400 leading-tight">
+                            ORGÂNICO
+                          </span>
+                        </div>
+                      )}
                     </TableCell>
                     <TableCell className="font-mono text-[10px] text-cyan-500">{v.ip_address || "—"}</TableCell>
                     <TableCell>
