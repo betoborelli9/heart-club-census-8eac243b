@@ -1045,6 +1045,9 @@ export type Database = {
           ip_address: string
           is_suspicious: boolean
           motivo_suspicao: string
+          referral_ambassador_name: string
+          referral_code: string
+          referral_source: string
           status_aprovacao: string
           sympathy_1: string
           sympathy_2: string

@@ -12,7 +12,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Trash2, RefreshCw, Check, Heart, XOctagon, MapPin } from "lucide-react";
+import { Trash2, RefreshCw, Check, Heart, XOctagon, MapPin, UserCheck, Sparkles } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 /* ═══════════════════════════════════════════════════════════
