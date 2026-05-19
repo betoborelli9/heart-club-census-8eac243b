@@ -176,6 +176,22 @@ const AdminAuditTable = () => {
                           </div>
                         );
                       })()}
+                      {v.referral_source === 'embaixador' ? (
+                        <div className="mt-1 flex items-center gap-1 flex-wrap">
+                          <UserCheck className="w-2.5 h-2.5 text-emerald-400" />
+                          <span className="text-[8px] font-black italic uppercase text-emerald-400 leading-tight">
+                            INDICADO POR: {v.referral_ambassador_name || "—"}
+                            {v.referral_code ? ` • CÓD: ${v.referral_code}` : ""}
+                          </span>
+                        </div>
+                      ) : (
+                        <div className="mt-1 flex items-center gap-1 flex-wrap">
+                          <Sparkles className="w-2.5 h-2.5 text-cyan-400" />
+                          <span className="text-[8px] font-black italic uppercase text-cyan-400 leading-tight">
+                            ORGÂNICO
+                          </span>
+                        </div>
+                      )}
                     </TableCell>
                     <TableCell className="font-mono text-[10px] text-cyan-500">{v.ip_address || "—"}</TableCell>
                     <TableCell>
