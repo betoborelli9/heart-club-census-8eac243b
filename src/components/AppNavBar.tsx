@@ -38,7 +38,7 @@ export default function AppNavBar() {
               }
             >
               <Icon className="h-5 w-5 shrink-0" />
-              <span className="tracking-tight text-center w-full truncate sm:hidden">{shortLabel}</span>
+              <span className="tracking-tight text-center w-full truncate block sm:hidden">{shortLabel}</span>
               <span className="tracking-wide hidden sm:inline">{label}</span>
             </NavLink>
           </li>
