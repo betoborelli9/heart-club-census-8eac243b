@@ -205,7 +205,7 @@ const Dashboard = () => {
 
       {/* RODAPÉ TAB BAR - PROTEÇÃO DE LINKS DE GESTÃO */}
       <footer className="fixed bottom-0 left-0 right-0 h-20 md:h-16 bg-black/80 backdrop-blur-2xl border-t border-white/5 z-[100] flex items-center justify-center">
-        <nav className="w-full px-3 grid grid-cols-4 items-center gap-1 md:w-auto md:px-0 md:flex md:gap-16">
+        <nav className="w-full px-3 flex items-center justify-around gap-1 md:w-auto md:px-0 md:justify-start md:gap-16">
           <button className="flex flex-col items-center justify-center gap-1 text-[#ff6200] min-w-0" onClick={() => navigate("/dashboard")}>
             <Home className="w-5 h-5" />
             <span className="block text-center text-[10px] leading-none font-bold uppercase tracking-normal md:text-[9px] md:tracking-widest">Início</span>
