@@ -9,11 +9,11 @@ import { Home, Trophy, Map, Users, Megaphone } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const ITEMS = [
-  { to: "/dashboard", label: "Início", icon: Home },
-  { to: "/stats", label: "Ranking", icon: Trophy },
-  { to: "/mapa-calor", label: "Mapa de Calor", icon: Map },
-  { to: "/embaixadores", label: "Embaixadores", icon: Users },
-  { to: "/embaixador", label: "Painel", icon: Megaphone },
+  { to: "/dashboard", label: "Início", shortLabel: "Início", icon: Home },
+  { to: "/stats", label: "Ranking", shortLabel: "Ranking", icon: Trophy },
+  { to: "/mapa-calor", label: "Mapa de Calor", shortLabel: "Mapa", icon: Map },
+  { to: "/embaixadores", label: "Embaixadores", shortLabel: "Embaix.", icon: Users },
+  { to: "/embaixador", label: "Painel", shortLabel: "Painel", icon: Megaphone },
 ];
 
 export default function AppNavBar() {
