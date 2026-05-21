@@ -1519,6 +1519,30 @@ const MapaCalor = () => {
                   </div>
                 )}
               </div>
+              {/* [VISÃO GERAL ↔ CORAÇÃO]: alternância entre mapa de todos os clubes e mapa filtrado */}
+              <div className="mt-3 flex items-center gap-2 flex-wrap">
+                <button
+                  onClick={() => {
+                    setActiveClubName("");
+                    setActiveClubInfo(null);
+                    setCompareClubName(null);
+                  }}
+                  className={`px-3 py-1.5 rounded-xl text-[10px] font-black italic uppercase tracking-widest transition-colors ${!activeClubName ? "bg-primary text-primary-foreground" : "bg-white/5 border border-white/10 text-muted-foreground hover:text-primary"}`}
+                >
+                  🌎 Mapa Geral
+                </button>
+                {heartClubName && (
+                  <button
+                    onClick={() => {
+                      setActiveClubName(heartClubName);
+                      setActiveClubInfo(CLUBS_DATA.find((c) => c.nome === heartClubName) || null);
+                    }}
+                    className={`px-3 py-1.5 rounded-xl text-[10px] font-black italic uppercase tracking-widest transition-colors ${activeClubName === heartClubName ? "bg-primary text-primary-foreground" : "bg-white/5 border border-primary/30 text-primary hover:bg-primary/10"}`}
+                  >
+                    ❤️ {heartClubName}
+                  </button>
+                )}
+              </div>
               {activeClubName && (
                 <div className={`mt-3 grid gap-2 ${compareData ? "grid-cols-2" : "grid-cols-1"}`}>
                   <div className="p-3 rounded-xl bg-white/5 border border-primary/30">
