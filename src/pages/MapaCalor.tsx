@@ -782,8 +782,10 @@ const MapaCalor = () => {
         .maybeSingle();
       const name = data?.clube_nome || "";
       setHeartClubName(name);
-      setActiveClubName(name);
-      setActiveClubInfo(CLUBS_DATA.find((c) => c.nome === name) || null);
+      // [VISÃO GERAL]: por padrão o mapa mostra TODOS os clubes votantes.
+      // O torcedor clica no card do coração ou pesquisa um clube para filtrar.
+      // setActiveClubName fica "" → RPC agrega todos os clubes.
+      setActiveClubInfo(null);
       const { data: profileData } = await supabase
         .from("profiles")
         .select("cep, cidade, estado, bairro, latitude, longitude, address_confirmed")
