@@ -838,7 +838,7 @@ const MapaCalor = () => {
   }, [user, addressReloadKey]);
 
   useEffect(() => {
-    if (!activeClubName) return;
+    // activeClubName === "" → busca TODOS os clubes (visão geral).
     const fetchOne = async (clubName: string): Promise<HeatEntry[]> => {
       if (viewMode === "city" && activeCity) {
         const { data, error } = await supabase.rpc("get_heatmap_neighborhoods", {
