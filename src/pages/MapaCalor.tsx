@@ -782,8 +782,10 @@ const MapaCalor = () => {
         .maybeSingle();
       const name = data?.clube_nome || "";
       setHeartClubName(name);
-      setActiveClubName(name);
-      setActiveClubInfo(CLUBS_DATA.find((c) => c.nome === name) || null);
+      // [VISÃO GERAL]: por padrão o mapa mostra TODOS os clubes votantes.
+      // O torcedor clica no card do coração ou pesquisa um clube para filtrar.
+      // setActiveClubName fica "" → RPC agrega todos os clubes.
+      setActiveClubInfo(null);
       const { data: profileData } = await supabase
         .from("profiles")
         .select("cep, cidade, estado, bairro, latitude, longitude, address_confirmed")
@@ -836,7 +838,7 @@ const MapaCalor = () => {
   }, [user, addressReloadKey]);
 
   useEffect(() => {
-    if (!activeClubName) return;
+    // activeClubName === "" → busca TODOS os clubes (visão geral).
     const fetchOne = async (clubName: string): Promise<HeatEntry[]> => {
       if (viewMode === "city" && activeCity) {
         const { data, error } = await supabase.rpc("get_heatmap_neighborhoods", {
@@ -1515,6 +1517,30 @@ const MapaCalor = () => {
                       </button>
                     ))}
                   </div>
+                )}
+              </div>
+              {/* [VISÃO GERAL ↔ CORAÇÃO]: alternância entre mapa de todos os clubes e mapa filtrado */}
+              <div className="mt-3 flex items-center gap-2 flex-wrap">
+                <button
+                  onClick={() => {
+                    setActiveClubName("");
+                    setActiveClubInfo(null);
+                    setCompareClubName(null);
+                  }}
+                  className={`px-3 py-1.5 rounded-xl text-[10px] font-black italic uppercase tracking-widest transition-colors ${!activeClubName ? "bg-primary text-primary-foreground" : "bg-white/5 border border-white/10 text-muted-foreground hover:text-primary"}`}
+                >
+                  🌎 Mapa Geral
+                </button>
+                {heartClubName && (
+                  <button
+                    onClick={() => {
+                      setActiveClubName(heartClubName);
+                      setActiveClubInfo(CLUBS_DATA.find((c) => c.nome === heartClubName) || null);
+                    }}
+                    className={`px-3 py-1.5 rounded-xl text-[10px] font-black italic uppercase tracking-widest transition-colors ${activeClubName === heartClubName ? "bg-primary text-primary-foreground" : "bg-white/5 border border-primary/30 text-primary hover:bg-primary/10"}`}
+                  >
+                    ❤️ {heartClubName}
+                  </button>
                 )}
               </div>
               {activeClubName && (
