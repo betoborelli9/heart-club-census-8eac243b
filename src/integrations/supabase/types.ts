@@ -192,6 +192,7 @@ export type Database = {
           status: string
           suggested_value: string | null
           user_display_name: string | null
+          user_email: string | null
           user_id: string
         }
         Insert: {
@@ -206,6 +207,7 @@ export type Database = {
           status?: string
           suggested_value?: string | null
           user_display_name?: string | null
+          user_email?: string | null
           user_id: string
         }
         Update: {
@@ -220,6 +222,7 @@ export type Database = {
           status?: string
           suggested_value?: string | null
           user_display_name?: string | null
+          user_email?: string | null
           user_id?: string
         }
         Relationships: []

@@ -246,6 +246,7 @@ serve(async (req) => {
       .eq("id", user.id)
       .maybeSingle();
 
+    const userEmail = user.email || null;
     const country = cache?.pais || null;
     const results: any[] = [];
     const updatePayload: Record<string, unknown> = {};
@@ -263,10 +264,9 @@ serve(async (req) => {
             ? oldValueRaw.join(", ")
             : String(oldValueRaw);
 
-      // se igual ao atual, pula
       if (oldValue !== null && oldValue.toLowerCase() === suggested.toLowerCase()) continue;
 
-      // ── OVERRIDE DO TORCEDOR (rivais) — sem IA, apenas registra ──
+      // ── OVERRIDE DO TORCEDOR (rivais) — sem IA ──
       if (USER_OVERRIDE_FIELDS.has(field)) {
         let finalArr: string[] = [];
         if (field === "rivais") {
@@ -280,7 +280,8 @@ serve(async (req) => {
 
         await admin.from("club_corrections").insert({
           user_id: user.id,
-          user_display_name: profile?.nome_exibicao || user.email || null,
+          user_email: userEmail,
+          user_display_name: profile?.nome_exibicao || userEmail || null,
           clube_nome: clubName,
           field_name: field,
           old_value: oldValue,
@@ -292,9 +293,7 @@ serve(async (req) => {
         });
 
         results.push({
-          field,
-          suggested,
-          applied: finalArr.join(", "),
+          field, suggested, applied: finalArr.join(", "),
           verdict: "user_override",
           reasoning: "Aplicado conforme indicação do torcedor.",
           status: "applied",
@@ -302,18 +301,20 @@ serve(async (req) => {
         continue;
       }
 
+      // ── PERMISSÃO TOTAL AO TORCEDOR ──
+      // Aplica SEMPRE a sugestão. A IA agora só AUDITA (não bloqueia).
       const verdict = await aiValidateField(clubName, country, field, suggested);
-      const finalValue = verdict.verdict === "rejected" ? null : coerceValue(field, verdict.value ?? suggested);
-      const status = verdict.verdict === "rejected" ? "rejected" : "applied";
+      const finalValue = coerceValue(field, suggested);
+      const status = "applied";
 
-      if (status === "applied" && finalValue !== null) {
+      if (finalValue !== null) {
         updatePayload[field] = finalValue;
       }
 
-      // Log da correção
       await admin.from("club_corrections").insert({
         user_id: user.id,
-        user_display_name: profile?.nome_exibicao || user.email || null,
+        user_email: userEmail,
+        user_display_name: profile?.nome_exibicao || userEmail || null,
         clube_nome: clubName,
         field_name: field,
         old_value: oldValue,
@@ -325,9 +326,7 @@ serve(async (req) => {
       });
 
       results.push({
-        field,
-        suggested,
-        applied: finalValue,
+        field, suggested, applied: finalValue,
         verdict: verdict.verdict,
         reasoning: verdict.reasoning,
         status,
