@@ -31,8 +31,13 @@ async function af(path: string): Promise<any> {
     headers: { "x-apisports-key": API_KEY },
   });
   if (!res.ok) throw new Error(`api-football ${res.status}`);
-  return res.json();
+  const j = await res.json();
+  if (j?.errors && (Array.isArray(j.errors) ? j.errors.length : Object.keys(j.errors).length)) {
+    console.warn(`[af] ${path} errors:`, JSON.stringify(j.errors));
+  }
+  return j;
 }
+
 
 async function resolveTeam(clubName: string): Promise<{ id: number; name: string; logo: string } | null> {
   // 1) cache por nome em team_leagues_mapping
