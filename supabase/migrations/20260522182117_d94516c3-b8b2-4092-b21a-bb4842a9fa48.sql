@@ -1,0 +1,1 @@
+ALTER TABLE public.club_corrections ADD COLUMN IF NOT EXISTS user_email text;
