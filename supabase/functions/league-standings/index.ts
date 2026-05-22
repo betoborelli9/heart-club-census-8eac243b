@@ -31,8 +31,13 @@ async function af(path: string): Promise<any> {
     headers: { "x-apisports-key": API_KEY },
   });
   if (!res.ok) throw new Error(`api-football ${res.status}`);
-  return res.json();
+  const j = await res.json();
+  if (j?.errors && (Array.isArray(j.errors) ? j.errors.length : Object.keys(j.errors).length)) {
+    console.warn(`[af] ${path} errors:`, JSON.stringify(j.errors));
+  }
+  return j;
 }
+
 
 async function resolveTeam(clubName: string): Promise<{ id: number; name: string; logo: string } | null> {
   // 1) cache por nome em team_leagues_mapping
@@ -62,19 +67,38 @@ async function getCurrentLeagues(teamId: number, teamName: string, teamLogo: str
     .maybeSingle();
   if (cached && Date.now() - new Date(cached.updated_at as any).getTime() < TTL_24H) {
     const lj: any = cached.leagues_json || {};
-    if (Array.isArray(lj.leagues)) return lj.leagues;
+    // Só usa cache se tiver pelo menos uma liga — cache vazio é tratado como miss
+    if (Array.isArray(lj.leagues) && lj.leagues.length > 0) return lj.leagues;
   }
   const j = await af(`/leagues?team=${teamId}&current=true`);
-  const leagues = (j?.response || [])
-    .filter((x: any) => x?.seasons?.[0]?.current)
-    .map((x: any) => ({
-      id: x.league.id,
-      name: x.league.name,
-      logo: x.league.logo,
-      type: x.league.type,
-      country: x.country?.name,
-      season: x.seasons[0].year,
-    }));
+  const raw = j?.response || [];
+  console.log(`[leagues] team=${teamId} raw=${raw.length}`);
+  let leagues = raw.map((x: any) => ({
+    id: x.league.id,
+    name: x.league.name,
+    logo: x.league.logo,
+    type: x.league.type,
+    country: x.country?.name,
+    season: x.seasons?.[0]?.year,
+  })).filter((l: any) => l.id && l.season);
+  // Fallback: se current=true não trouxer nada, busca todas e pega a temporada mais recente por liga
+  if (leagues.length === 0) {
+    const j2 = await af(`/leagues?team=${teamId}`);
+    const all = j2?.response || [];
+    console.log(`[leagues] fallback all=${all.length}`);
+    leagues = all.map((x: any) => {
+      const seasons = x.seasons || [];
+      const latest = seasons.reduce((a: any, b: any) => (a?.year > b?.year ? a : b), seasons[0]);
+      return {
+        id: x.league.id,
+        name: x.league.name,
+        logo: x.league.logo,
+        type: x.league.type,
+        country: x.country?.name,
+        season: latest?.year,
+      };
+    }).filter((l: any) => l.id && l.season);
+  }
   await supabase.from("team_leagues_mapping").upsert({
     team_id: teamId,
     team_name: teamName,
@@ -83,6 +107,7 @@ async function getCurrentLeagues(teamId: number, teamName: string, teamLogo: str
   });
   return leagues;
 }
+
 
 async function getStandings(leagueId: number, season: number) {
   const TTL_15M = 15 * 60 * 1000;
