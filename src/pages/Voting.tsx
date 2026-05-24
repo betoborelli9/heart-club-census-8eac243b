@@ -402,12 +402,66 @@ const Voting = () => {
           </div>
         </div>
 
+        {/* IDENTIDADE (PASSO 1) — exibida se perfil incompleto OU master admin */}
+        {needsIdentity && (
+          <div className="space-y-3 glass-card rounded-xl p-5 border border-primary/30">
+            <p className="text-xs font-black uppercase italic text-primary flex items-center gap-2">
+              <UserIcon size={14} /> Sua identidade
+            </p>
+
+            <div className="space-y-2">
+              <Label className="text-[11px] font-bold uppercase opacity-60">
+                Como você quer ser chamado
+              </Label>
+              <Input
+                value={nickname}
+                onChange={(e) => setNickname(e.target.value)}
+                placeholder="Seu apelido"
+                className="h-12 rounded-xl bg-card border-white/5"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-2">
+              <div className="space-y-2">
+                <Label className="text-[11px] font-bold uppercase opacity-60">Sexo</Label>
+                <Select value={genero} onValueChange={setGenero}>
+                  <SelectTrigger className="h-12 rounded-xl bg-card border-white/5">
+                    <SelectValue placeholder="Sexo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="masculino">Masculino</SelectItem>
+                    <SelectItem value="feminino">Feminino</SelectItem>
+                    <SelectItem value="outros">Outro</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-[11px] font-bold uppercase opacity-60 flex items-center gap-1">
+                  <Cake size={11} /> Ano nasc.
+                </Label>
+                <Select value={anoNasc} onValueChange={setAnoNasc}>
+                  <SelectTrigger className="h-12 rounded-xl bg-card border-white/5">
+                    <SelectValue placeholder="Ano" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-72">
+                    {ANOS.map((y) => (
+                      <SelectItem key={y} value={y}>
+                        {y}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </div>
+        )}
+
         <Button
           className="w-full h-16 font-black italic text-xl btn-orange-gradient rounded-2xl shadow-xl shadow-primary/20 transition-all active:scale-95"
           disabled={!heartClub || submitting}
           onClick={() => setShowConfirm(true)}
         >
-          {submitting ? <Loader2 className="animate-spin" /> : "JURAR LEALDADE"}
+          {submitting ? <Loader2 className="animate-spin" /> : "JURO LEALDADE"}
         </Button>
       </div>
 
