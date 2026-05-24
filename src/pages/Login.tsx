@@ -19,8 +19,9 @@ const Login = () => {
 
   useEffect(() => {
     if (!isLoading && isAuthenticated) {
-      if (!isProfileComplete) navigate("/profile-setup", { replace: true });
-      else if (!hasVoted) navigate("/voting", { replace: true });
+      // Fluxo unificado: após login vai direto para /voting.
+      // Identidade (nome/sexo/nascimento) é capturada dentro da própria votação.
+      if (!hasVoted) navigate("/voting", { replace: true });
       else navigate("/dashboard", { replace: true });
     }
   }, [isAuthenticated, isProfileComplete, hasVoted, isLoading, navigate]);
@@ -29,7 +30,7 @@ const Login = () => {
     setLoadingProvider(provider);
     const { error } = await supabase.auth.signInWithOAuth({
       provider,
-      options: { redirectTo: `${window.location.origin}/` }, // corrigido
+      options: { redirectTo: `${window.location.origin}/` },
     });
     if (error) {
       toast({ variant: "destructive", title: "Erro", description: error.message });
@@ -43,10 +44,14 @@ const Login = () => {
     setLoadingProvider("magic");
     const { error } = await supabase.auth.signInWithOtp({
       email,
-      options: { emailRedirectTo: `${window.location.origin}/` }, // corrigido
+      options: { emailRedirectTo: `${window.location.origin}/` },
     });
     if (error) {
-      toast({ variant: "destructive", title: "Erro", description: error.message });
+      toast({
+        variant: "destructive",
+        title: "Estamos com problema",
+        description: "Entre com o Google.",
+      });
     } else {
       toast({ title: "Link enviado! ✉️", description: "Verifique seu email para acessar sua conta." });
     }
