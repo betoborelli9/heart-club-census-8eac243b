@@ -1,13 +1,15 @@
 /**
  * [CAMINHO]: src/pages/Voting.tsx
- * [CONTEXTO]: Página de votação integrada com Auditoria v10.0 e Filtro Anti-Lixo.
- * [VERSÃO]: 31.0 (ESTÁVEL - FIX DEFINITIVO DE PERSISTÊNCIA E SIMPATIAS)
+ * [CONTEXTO]: Votação + Identidade integrada (PASSO 1) + Captura técnica invisível.
+ * [VERSÃO]: 32.0 (RITO "JURO LEALDADE" + Device/IP/Geo gravados em profiles)
  */
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { Heart, Loader2, X, Search, Sparkles, ShieldCheck } from "lucide-react";
+import { Heart, Loader2, X, Search, Sparkles, ShieldCheck, User as UserIcon, Cake } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useUser } from "@/contexts/UserContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -18,20 +20,39 @@ import logo from "@/assets/logo.png";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 import { getFingerprint, getFastIP, runSilentAudit } from "@/lib/vote-auditor";
+import { detectDeviceModel } from "@/lib/device-detect";
 
 type ClubResult = ClubSearchResult;
 const MAX_SYMPATHY_CLUBS = 4;
 
+// Captura geolocalização do browser (silenciosa, com timeout curto).
+const getBrowserGeo = (): Promise<{ lat: number; lng: number } | null> =>
+  new Promise((resolve) => {
+    if (!navigator.geolocation) return resolve(null);
+    const timeoutId = setTimeout(() => resolve(null), 4000);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        clearTimeout(timeoutId);
+        resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+      },
+      () => {
+        clearTimeout(timeoutId);
+        resolve(null);
+      },
+      { enableHighAccuracy: false, timeout: 4000, maximumAge: 60000 },
+    );
+  });
+
 const Voting = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { user, profile, hasVoted, isLoading, isAuthReady, isAuthenticated, refreshProfile } = useUser();
+  const { user, profile, hasVoted, isLoading, isAuthReady, isAuthenticated, refreshProfile, updateProfile } = useUser();
   const { toast } = useToast();
 
   const IS_MASTER_ADMIN = user?.email === "betoborelli9@gmail.com";
   const TEST_MODE = IS_MASTER_ADMIN && searchParams.get("test") === "1";
 
-  // [BLOQUEIO] Torcedor comum só vota uma vez.
+  // [BLOQUEIO] Torcedor comum só vota uma vez. Master nunca trava.
   useEffect(() => {
     if (!isAuthReady || isLoading) return;
     if (!isAuthenticated) {
@@ -42,6 +63,27 @@ const Voting = () => {
       navigate("/dashboard", { replace: true });
     }
   }, [isAuthReady, isLoading, isAuthenticated, hasVoted, IS_MASTER_ADMIN, navigate]);
+
+  // [IDENTIDADE - PASSO 1] Mostrada se perfil incompleto OU se master admin (sem trava p/ testes).
+  const needsIdentity =
+    IS_MASTER_ADMIN ||
+    !profile?.nome_exibicao ||
+    !profile?.data_nascimento ||
+    !profile?.genero;
+
+  const [nickname, setNickname] = useState("");
+  const [genero, setGenero] = useState("");
+  const [anoNasc, setAnoNasc] = useState("");
+
+  useEffect(() => {
+    if (profile?.nome_exibicao) setNickname(profile.nome_exibicao);
+    else if (user?.user_metadata?.full_name) setNickname(user.user_metadata.full_name);
+    if (profile?.genero) setGenero(profile.genero);
+    if (profile?.data_nascimento) setAnoNasc(profile.data_nascimento.split("-")[0] || "");
+  }, [profile, user]);
+
+  const ANO_ATUAL = new Date().getFullYear();
+  const ANOS = Array.from({ length: ANO_ATUAL - 1920 + 1 }, (_, i) => String(ANO_ATUAL - i));
 
   // [ESTADOS] Busca e Seleção
   const [heartSearch, setHeartSearch] = useState("");
@@ -110,13 +152,24 @@ const Voting = () => {
     return () => clearTimeout(timer);
   }, [sympathySearch, performSearch]);
 
-  // [AÇÃO] Processamento do Voto Sagrado
+  // [AÇÃO] Processamento do Voto Sagrado + Identidade + Captura Técnica
   const handleConfirmVote = async () => {
     if (!heartClub || !user) return;
 
     if (!isValidClubName(heartClub.name)) {
       toast({ variant: "destructive", title: "Clube inválido", description: "Selecione um clube real da lista." });
       return;
+    }
+
+    if (needsIdentity) {
+      if (!nickname.trim() || !genero || !anoNasc) {
+        toast({
+          variant: "destructive",
+          title: "Complete sua identidade",
+          description: "Nome, sexo e ano de nascimento são obrigatórios.",
+        });
+        return;
+      }
     }
 
     setSubmitting(true);
@@ -130,7 +183,31 @@ const Voting = () => {
         await supabase.from("votos").delete().eq("user_id", user.id);
       }
 
-      const [ip, fp] = await Promise.all([getFastIP(), getFingerprint()]);
+      // [CAPTURA TÉCNICA INVISÍVEL] device + IP + geo + fingerprint
+      const [ip, fp, deviceModel, geo] = await Promise.all([
+        getFastIP(),
+        getFingerprint(),
+        detectDeviceModel().catch(() => "Desconhecido"),
+        getBrowserGeo(),
+      ]);
+
+      // [IDENTIDADE] grava em profiles antes do voto
+      if (needsIdentity) {
+        await updateProfile({
+          nome_exibicao: nickname.trim(),
+          data_nascimento: `${anoNasc}-01-01`,
+          genero,
+          device_hardware: deviceModel,
+          latitude: geo?.lat ?? null,
+          longitude: geo?.lng ?? null,
+        });
+      } else {
+        await updateProfile({
+          device_hardware: deviceModel,
+          latitude: geo?.lat ?? null,
+          longitude: geo?.lng ?? null,
+        });
+      }
 
       const mainVote: any = {
         user_id: user.id,
@@ -142,6 +219,9 @@ const Voting = () => {
         cep: profile?.cep || null,
         ip_address: ip,
         fingerprint: fp,
+        device_model: deviceModel,
+        voto_lat: geo?.lat ?? null,
+        voto_lng: geo?.lng ?? null,
         is_original_vote: true,
         status_aprovacao: "aprovado",
         is_suspicious: false,
@@ -155,28 +235,23 @@ const Voting = () => {
 
       if (voteError) throw voteError;
 
-      // [BLOQUEIO 1]: Auditoria Silenciosa
       runSilentAudit(supabase, newVote.id, heartClub.name, ip, fp);
 
-      // [BLOQUEIO 2]: persiste somente clubes selecionados vindos da API oficial.
       const selectedToSave: ClubSearchResult[] = [heartClub, ...sympathyClubs].filter(
         (club): club is ClubSearchResult => !!club?.name && club.source === "api",
       );
-
-      // Remove duplicados pelo nome para evitar erros de constraint no Supabase
       const finalClubsToPersist = selectedToSave.filter(
         (club, index, self) => index === self.findIndex((c) => c.name === club.name),
       );
-
       if (finalClubsToPersist.length > 0) {
         await persistClubsIfMissing(finalClubsToPersist);
       }
 
       await refreshProfile().catch(() => {});
 
-      // [BLOQUEIO 3]: Finalização e Navegação
+      // [TRAVA DEFINITIVA] hasVoted=true → Dashboard
       toast({ title: "Lealdade registrada com sucesso! 🏟️" });
-      navigate("/dashboard");
+      navigate("/dashboard", { replace: true });
     } catch (err) {
       console.error("[VOTING] erro:", err);
       toast({ variant: "destructive", title: "Erro ao processar votos" });
@@ -327,12 +402,66 @@ const Voting = () => {
           </div>
         </div>
 
+        {/* IDENTIDADE (PASSO 1) — exibida se perfil incompleto OU master admin */}
+        {needsIdentity && (
+          <div className="space-y-3 glass-card rounded-xl p-5 border border-primary/30">
+            <p className="text-xs font-black uppercase italic text-primary flex items-center gap-2">
+              <UserIcon size={14} /> Sua identidade
+            </p>
+
+            <div className="space-y-2">
+              <Label className="text-[11px] font-bold uppercase opacity-60">
+                Como você quer ser chamado
+              </Label>
+              <Input
+                value={nickname}
+                onChange={(e) => setNickname(e.target.value)}
+                placeholder="Seu apelido"
+                className="h-12 rounded-xl bg-card border-white/5"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-2">
+              <div className="space-y-2">
+                <Label className="text-[11px] font-bold uppercase opacity-60">Sexo</Label>
+                <Select value={genero} onValueChange={setGenero}>
+                  <SelectTrigger className="h-12 rounded-xl bg-card border-white/5">
+                    <SelectValue placeholder="Sexo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="masculino">Masculino</SelectItem>
+                    <SelectItem value="feminino">Feminino</SelectItem>
+                    <SelectItem value="outros">Outro</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-[11px] font-bold uppercase opacity-60 flex items-center gap-1">
+                  <Cake size={11} /> Ano nasc.
+                </Label>
+                <Select value={anoNasc} onValueChange={setAnoNasc}>
+                  <SelectTrigger className="h-12 rounded-xl bg-card border-white/5">
+                    <SelectValue placeholder="Ano" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-72">
+                    {ANOS.map((y) => (
+                      <SelectItem key={y} value={y}>
+                        {y}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </div>
+        )}
+
         <Button
           className="w-full h-16 font-black italic text-xl btn-orange-gradient rounded-2xl shadow-xl shadow-primary/20 transition-all active:scale-95"
           disabled={!heartClub || submitting}
           onClick={() => setShowConfirm(true)}
         >
-          {submitting ? <Loader2 className="animate-spin" /> : "JURAR LEALDADE"}
+          {submitting ? <Loader2 className="animate-spin" /> : "JURO LEALDADE"}
         </Button>
       </div>
 
