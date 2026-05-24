@@ -152,13 +152,24 @@ const Voting = () => {
     return () => clearTimeout(timer);
   }, [sympathySearch, performSearch]);
 
-  // [AÇÃO] Processamento do Voto Sagrado
+  // [AÇÃO] Processamento do Voto Sagrado + Identidade + Captura Técnica
   const handleConfirmVote = async () => {
     if (!heartClub || !user) return;
 
     if (!isValidClubName(heartClub.name)) {
       toast({ variant: "destructive", title: "Clube inválido", description: "Selecione um clube real da lista." });
       return;
+    }
+
+    if (needsIdentity) {
+      if (!nickname.trim() || !genero || !anoNasc) {
+        toast({
+          variant: "destructive",
+          title: "Complete sua identidade",
+          description: "Nome, sexo e ano de nascimento são obrigatórios.",
+        });
+        return;
+      }
     }
 
     setSubmitting(true);
@@ -172,7 +183,31 @@ const Voting = () => {
         await supabase.from("votos").delete().eq("user_id", user.id);
       }
 
-      const [ip, fp] = await Promise.all([getFastIP(), getFingerprint()]);
+      // [CAPTURA TÉCNICA INVISÍVEL] device + IP + geo + fingerprint
+      const [ip, fp, deviceModel, geo] = await Promise.all([
+        getFastIP(),
+        getFingerprint(),
+        detectDeviceModel().catch(() => "Desconhecido"),
+        getBrowserGeo(),
+      ]);
+
+      // [IDENTIDADE] grava em profiles antes do voto
+      if (needsIdentity) {
+        await updateProfile({
+          nome_exibicao: nickname.trim(),
+          data_nascimento: `${anoNasc}-01-01`,
+          genero,
+          device_hardware: deviceModel,
+          latitude: geo?.lat ?? null,
+          longitude: geo?.lng ?? null,
+        });
+      } else {
+        await updateProfile({
+          device_hardware: deviceModel,
+          latitude: geo?.lat ?? null,
+          longitude: geo?.lng ?? null,
+        });
+      }
 
       const mainVote: any = {
         user_id: user.id,
@@ -184,6 +219,9 @@ const Voting = () => {
         cep: profile?.cep || null,
         ip_address: ip,
         fingerprint: fp,
+        device_model: deviceModel,
+        voto_lat: geo?.lat ?? null,
+        voto_lng: geo?.lng ?? null,
         is_original_vote: true,
         status_aprovacao: "aprovado",
         is_suspicious: false,
@@ -197,28 +235,23 @@ const Voting = () => {
 
       if (voteError) throw voteError;
 
-      // [BLOQUEIO 1]: Auditoria Silenciosa
       runSilentAudit(supabase, newVote.id, heartClub.name, ip, fp);
 
-      // [BLOQUEIO 2]: persiste somente clubes selecionados vindos da API oficial.
       const selectedToSave: ClubSearchResult[] = [heartClub, ...sympathyClubs].filter(
         (club): club is ClubSearchResult => !!club?.name && club.source === "api",
       );
-
-      // Remove duplicados pelo nome para evitar erros de constraint no Supabase
       const finalClubsToPersist = selectedToSave.filter(
         (club, index, self) => index === self.findIndex((c) => c.name === club.name),
       );
-
       if (finalClubsToPersist.length > 0) {
         await persistClubsIfMissing(finalClubsToPersist);
       }
 
       await refreshProfile().catch(() => {});
 
-      // [BLOQUEIO 3]: Finalização e Navegação
+      // [TRAVA DEFINITIVA] hasVoted=true → Dashboard
       toast({ title: "Lealdade registrada com sucesso! 🏟️" });
-      navigate("/dashboard");
+      navigate("/dashboard", { replace: true });
     } catch (err) {
       console.error("[VOTING] erro:", err);
       toast({ variant: "destructive", title: "Erro ao processar votos" });
