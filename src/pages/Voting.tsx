@@ -25,23 +25,9 @@ import { detectDeviceModel } from "@/lib/device-detect";
 type ClubResult = ClubSearchResult;
 const MAX_SYMPATHY_CLUBS = 4;
 
-// Captura geolocalização do browser (silenciosa, com timeout curto).
-const getBrowserGeo = (): Promise<{ lat: number; lng: number } | null> =>
-  new Promise((resolve) => {
-    if (!navigator.geolocation) return resolve(null);
-    const timeoutId = setTimeout(() => resolve(null), 4000);
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        clearTimeout(timeoutId);
-        resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude });
-      },
-      () => {
-        clearTimeout(timeoutId);
-        resolve(null);
-      },
-      { enableHighAccuracy: false, timeout: 4000, maximumAge: 60000 },
-    );
-  });
+// [SILENCIOSO] Não pedimos permissão de geolocalização ao torcedor.
+// Coordenadas serão derivadas do IP no backend, sem prompt do browser.
+const getBrowserGeo = async (): Promise<{ lat: number; lng: number } | null> => null;
 
 const Voting = () => {
   const navigate = useNavigate();
