@@ -99,7 +99,32 @@ const Voting = () => {
   const [sympathyLoading, setSympathyLoading] = useState(false);
 
   const [showConfirm, setShowConfirm] = useState(false);
+  const [showIdentity, setShowIdentity] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+
+  // Ao clicar JURO LEALDADE: se identidade incompleta, abre overlay de cadastro;
+  // caso contrário, abre confirmação direto.
+  const handleJuroLealdade = () => {
+    if (!heartClub) return;
+    if (needsIdentity) {
+      setShowIdentity(true);
+    } else {
+      setShowConfirm(true);
+    }
+  };
+
+  const handleIdentityContinue = () => {
+    if (!nickname.trim() || !genero || !anoNasc) {
+      toast({
+        variant: "destructive",
+        title: "Complete seu cadastro",
+        description: "Nome, sexo e ano de nascimento são obrigatórios.",
+      });
+      return;
+    }
+    setShowIdentity(false);
+    setShowConfirm(true);
+  };
 
   const heartReqId = useRef(0);
   const sympathyReqId = useRef(0);
