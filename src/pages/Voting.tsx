@@ -99,7 +99,32 @@ const Voting = () => {
   const [sympathyLoading, setSympathyLoading] = useState(false);
 
   const [showConfirm, setShowConfirm] = useState(false);
+  const [showIdentity, setShowIdentity] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+
+  // Ao clicar JURO LEALDADE: se identidade incompleta, abre overlay de cadastro;
+  // caso contrário, abre confirmação direto.
+  const handleJuroLealdade = () => {
+    if (!heartClub) return;
+    if (needsIdentity) {
+      setShowIdentity(true);
+    } else {
+      setShowConfirm(true);
+    }
+  };
+
+  const handleIdentityContinue = () => {
+    if (!nickname.trim() || !genero || !anoNasc) {
+      toast({
+        variant: "destructive",
+        title: "Complete seu cadastro",
+        description: "Nome, sexo e ano de nascimento são obrigatórios.",
+      });
+      return;
+    }
+    setShowIdentity(false);
+    setShowConfirm(true);
+  };
 
   const heartReqId = useRef(0);
   const sympathyReqId = useRef(0);
@@ -402,13 +427,24 @@ const Voting = () => {
           </div>
         </div>
 
-        {/* IDENTIDADE (PASSO 1) — exibida se perfil incompleto OU master admin */}
-        {needsIdentity && (
-          <div className="space-y-3 glass-card rounded-xl p-5 border border-primary/30">
-            <p className="text-xs font-black uppercase italic text-primary flex items-center gap-2">
-              <UserIcon size={14} /> Sua identidade
-            </p>
+        <Button
+          className="w-full h-16 font-black italic text-xl btn-orange-gradient rounded-2xl shadow-xl shadow-primary/20 transition-all active:scale-95"
+          disabled={!heartClub || submitting}
+          onClick={handleJuroLealdade}
+        >
+          {submitting ? <Loader2 className="animate-spin" /> : "JURO LEALDADE"}
+        </Button>
+      </div>
 
+      {/* MODAL DE IDENTIDADE (PASSO 1) — sobreposto, só na primeira vez */}
+      <Dialog open={showIdentity} onOpenChange={(o) => !submitting && setShowIdentity(o)}>
+        <DialogContent className="max-w-sm glass-card border-primary/30">
+          <DialogHeader>
+            <DialogTitle className="italic text-xl font-black uppercase tracking-tighter text-center flex items-center justify-center gap-2">
+              <UserIcon size={18} className="text-primary" /> Sua identidade
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
             <div className="space-y-2">
               <Label className="text-[11px] font-bold uppercase opacity-60">
                 Como você quer ser chamado
@@ -420,7 +456,6 @@ const Voting = () => {
                 className="h-12 rounded-xl bg-card border-white/5"
               />
             </div>
-
             <div className="grid grid-cols-2 gap-2">
               <div className="space-y-2">
                 <Label className="text-[11px] font-bold uppercase opacity-60">Sexo</Label>
@@ -454,16 +489,17 @@ const Voting = () => {
               </div>
             </div>
           </div>
-        )}
+          <DialogFooter className="flex-col gap-2 mt-2">
+            <Button
+              className="w-full btn-orange-gradient h-14 font-black italic text-lg uppercase"
+              onClick={handleIdentityContinue}
+            >
+              CONTINUAR
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
-        <Button
-          className="w-full h-16 font-black italic text-xl btn-orange-gradient rounded-2xl shadow-xl shadow-primary/20 transition-all active:scale-95"
-          disabled={!heartClub || submitting}
-          onClick={() => setShowConfirm(true)}
-        >
-          {submitting ? <Loader2 className="animate-spin" /> : "JURO LEALDADE"}
-        </Button>
-      </div>
 
       {/* MODAL DE CONFIRMAÇÃO */}
       <Dialog open={showConfirm} onOpenChange={setShowConfirm}>
