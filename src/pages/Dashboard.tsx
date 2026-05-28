@@ -127,15 +127,16 @@ const Dashboard = () => {
 
       {/* HEADER */}
       <header className="h-16 border-b border-white/5 bg-black/60 backdrop-blur-xl sticky top-0 z-[60]">
-        <div className="max-w-[1440px] mx-auto px-6 h-full flex items-center justify-between gap-8">
-          <div className="flex items-center gap-3 cursor-pointer group" onClick={() => navigate("/dashboard")}>
-            <img src={logo} alt="Logo" className="h-7 w-auto" />
-            <span className="font-black italic text-xl tracking-tighter uppercase">Heart Club</span>
+        <div className="max-w-[1440px] mx-auto px-4 md:px-6 h-full flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3 cursor-pointer group min-w-0" onClick={() => navigate("/dashboard")}>
+            <img src={logo} alt="Logo" className="h-7 w-auto shrink-0" />
+            <span className="font-black italic text-xl tracking-tighter uppercase truncate">Heart Club</span>
           </div>
-          <div className="flex-1 max-w-xl">
+          {/* Desktop: pesquisa inline no header */}
+          <div className="hidden md:block flex-1 max-w-xl">
             <ClubSearch onSelect={(club) => handlePickClub(club.name)} />
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4 shrink-0">
             <Button variant="ghost" size="icon" onClick={() => signOut()} className="text-white/30 hover:text-white">
               <LogOut className="w-5 h-5" />
             </Button>
@@ -144,6 +145,11 @@ const Dashboard = () => {
       </header>
 
       <main className="max-w-[1440px] mx-auto px-4 md:px-6 py-6 space-y-6 pb-24">
+        {/* Mobile: pesquisa larga entre o header e o banner */}
+        <div className="md:hidden">
+          <ClubSearch onSelect={(club) => handlePickClub(club.name)} />
+        </div>
+
         <ClubBanner
           clubName={heartClubName || "SELECIONE SEU CLUBE"}
           clubData={heartClubData}
@@ -154,6 +160,7 @@ const Dashboard = () => {
           ambassadorLevel={profile.nivel_embaixador || "BRONZE"}
           showProfileInfo={true}
         />
+
 
         {heartClubName && <ClubIdentityCard clubName={heartClubName} />}
 
