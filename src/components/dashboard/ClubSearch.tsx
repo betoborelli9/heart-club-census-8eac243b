@@ -57,7 +57,8 @@ export const ClubSearch = ({ onSelect }: { onSelect: (club: ClubSearchResult) =>
       </div>
 
       {results.length > 0 && (
-        <div className="absolute top-14 left-1 right-1 sm:left-0 sm:right-0 bg-card border border-border rounded-2xl overflow-hidden z-[1200] shadow-[0_20px_50px_hsl(0_0%_0%_/_0.7)] max-h-[60vh] overflow-y-auto">
+        <div className="fixed sm:absolute top-auto sm:top-14 left-2 right-2 sm:left-0 sm:right-0 mt-2 sm:mt-0 bg-card border border-border rounded-2xl overflow-hidden z-[1200] shadow-[0_20px_50px_hsl(0_0%_0%_/_0.7)] max-h-[60vh] overflow-y-auto" style={{ top: 'var(--search-dropdown-top, 64px)' }}>
+
           {results.map((club) => (
             <button
               key={`${club.id}-${club.shortName}-${club.source}`}
