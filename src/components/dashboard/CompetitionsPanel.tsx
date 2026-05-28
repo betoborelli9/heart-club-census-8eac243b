@@ -204,12 +204,14 @@ function MatchCard({ match, live, primaryColor }: { match: Match | null; live: b
         )}
         {match.league.round && <span className="text-white/30 truncate max-w-[140px]">{match.league.round}</span>}
       </div>
-      <div className="flex items-center gap-2">
-        <div className="flex-1 flex items-center gap-2 min-w-0">
-          <ClubLogo src={match.home.logo} alt={match.home.name} size="xs" className="w-7 h-7 shrink-0" />
-          <span className="text-[11px] font-black italic uppercase text-white truncate">{match.home.name}</span>
+      <div className="flex items-start gap-2">
+        <div className="flex-1 flex flex-col items-center gap-1.5 min-w-0">
+          <ClubLogo src={match.home.logo} alt={match.home.name} size="sm" className="w-10 h-10 shrink-0" />
+          <span className="text-[10px] font-black italic uppercase text-white text-center leading-tight break-words w-full">
+            {match.home.name}
+          </span>
         </div>
-        <div className="px-3 py-1 rounded-md bg-black/40 text-center min-w-[60px]">
+        <div className="px-3 py-1 rounded-md bg-black/40 text-center min-w-[60px] mt-2 shrink-0">
           {isLive || match.goals.home != null ? (
             <span className="text-base font-black" style={{ color: primaryColor }}>
               {match.goals.home ?? 0} - {match.goals.away ?? 0}
@@ -218,9 +220,11 @@ function MatchCard({ match, live, primaryColor }: { match: Match | null; live: b
             <span className="text-[11px] font-black text-white/60">{timeStr}</span>
           )}
         </div>
-        <div className="flex-1 flex items-center gap-2 justify-end min-w-0">
-          <span className="text-[11px] font-black italic uppercase text-white truncate text-right">{match.away.name}</span>
-          <ClubLogo src={match.away.logo} alt={match.away.name} size="xs" className="w-7 h-7 shrink-0" />
+        <div className="flex-1 flex flex-col items-center gap-1.5 min-w-0">
+          <ClubLogo src={match.away.logo} alt={match.away.name} size="sm" className="w-10 h-10 shrink-0" />
+          <span className="text-[10px] font-black italic uppercase text-white text-center leading-tight break-words w-full">
+            {match.away.name}
+          </span>
         </div>
       </div>
       {match.venue && (
