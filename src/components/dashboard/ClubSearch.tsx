@@ -42,22 +42,22 @@ export const ClubSearch = ({ onSelect }: { onSelect: (club: ClubSearchResult) =>
   }, []);
 
   return (
-    <div className="relative w-full max-w-md mx-auto" ref={searchRef}>
+    <div className="relative w-full max-w-md mx-auto px-1 sm:px-0" ref={searchRef}>
       <div className="relative z-[1100]">
-        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+        <Search className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
         <Input
           value={query}
           placeholder="Pesquisar clubes..."
-          className="bg-card/90 border-border pl-11 rounded-full h-12 text-foreground focus:ring-2 focus:ring-primary"
+          className="w-full bg-card/90 border-border pl-9 sm:pl-11 pr-10 rounded-full h-12 text-foreground focus:ring-2 focus:ring-primary"
           onChange={(e) => handleSearch(e.target.value)}
         />
         {loading && (
-          <Loader2 className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-primary animate-spin" />
+          <Loader2 className="absolute right-3 sm:right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-primary animate-spin" />
         )}
       </div>
 
       {results.length > 0 && (
-        <div className="absolute top-14 left-0 right-0 bg-card border border-border rounded-2xl overflow-hidden z-[1200] shadow-[0_20px_50px_hsl(0_0%_0%_/_0.7)] max-h-[400px] overflow-y-auto">
+        <div className="absolute top-14 left-1 right-1 sm:left-0 sm:right-0 bg-card border border-border rounded-2xl overflow-hidden z-[1200] shadow-[0_20px_50px_hsl(0_0%_0%_/_0.7)] max-h-[60vh] overflow-y-auto">
           {results.map((club) => (
             <button
               key={`${club.id}-${club.shortName}-${club.source}`}
@@ -67,16 +67,16 @@ export const ClubSearch = ({ onSelect }: { onSelect: (club: ClubSearchResult) =>
                 setResults([]);
                 setQuery("");
               }}
-              className="w-full flex items-center gap-4 p-4 hover:bg-secondary/60 border-b border-border/40 text-left cursor-pointer group"
+              className="w-full flex items-center gap-3 p-3 sm:p-4 hover:bg-secondary/60 border-b border-border/40 text-left cursor-pointer group"
             >
               <div className="w-10 h-10 bg-background rounded-full flex items-center justify-center p-1.5 shrink-0">
                 <ClubLogo src={club.logo} alt={club.name} size="sm" />
               </div>
-              <div className="flex flex-col flex-1">
-                <span className="font-black text-sm text-foreground uppercase italic tracking-wider group-hover:text-primary transition-colors">
+              <div className="flex flex-col flex-1 min-w-0">
+                <span className="font-black text-xs sm:text-sm text-foreground uppercase italic tracking-wider group-hover:text-primary transition-colors break-words leading-tight">
                   {club.name}
                 </span>
-                <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">
+                <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest break-words leading-tight mt-0.5">
                   {club.location}
                   {club.mascote && ` • 🐾 ${club.mascote}`}
                 </span>
