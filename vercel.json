@@ -1,4 +1,42 @@
 {
+  "redirects": [
+    {
+      "source": "/:path((?!api/).*)",
+      "has": [
+        { "type": "host", "value": "heartclubapp.com" },
+        { "type": "header", "key": "x-vercel-ip-country", "value": "BR" }
+      ],
+      "destination": "https://votenoseutime.com.br/:path",
+      "permanent": false
+    },
+    {
+      "source": "/:path((?!api/).*)",
+      "has": [
+        { "type": "host", "value": "www.heartclubapp.com" },
+        { "type": "header", "key": "x-vercel-ip-country", "value": "BR" }
+      ],
+      "destination": "https://votenoseutime.com.br/:path",
+      "permanent": false
+    },
+    {
+      "source": "/:path((?!api/).*)",
+      "has": [
+        { "type": "host", "value": "votenoseutime.com.br" },
+        { "type": "header", "key": "x-vercel-ip-country", "value": "(?!BR$).*" }
+      ],
+      "destination": "https://heartclubapp.com/:path",
+      "permanent": false
+    },
+    {
+      "source": "/:path((?!api/).*)",
+      "has": [
+        { "type": "host", "value": "www.votenoseutime.com.br" },
+        { "type": "header", "key": "x-vercel-ip-country", "value": "(?!BR$).*" }
+      ],
+      "destination": "https://heartclubapp.com/:path",
+      "permanent": false
+    }
+  ],
   "rewrites": [
     { "source": "/(.*)", "destination": "/index.html" }
   ]
