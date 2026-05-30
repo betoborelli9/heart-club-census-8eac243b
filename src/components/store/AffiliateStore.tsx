@@ -9,6 +9,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useUser } from "@/contexts/UserContext";
 import { ClubLogo } from "@/components/ClubLogo";
+import { useClubLogos, normalizeClubName } from "@/lib/club-logo-resolver";
 import { ShoppingBag, ExternalLink, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
