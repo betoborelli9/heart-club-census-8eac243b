@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 import { Heart, Newspaper } from "lucide-react";
 import { CLUBS_DATA } from "@/clubes-data";
 import { supabase } from "@/integrations/supabase/client";
+import { ClubLogo } from "@/components/ClubLogo";
 
 interface Props {
   sympathies: string[];
