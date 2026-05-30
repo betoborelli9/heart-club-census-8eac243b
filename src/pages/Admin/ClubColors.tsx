@@ -238,7 +238,7 @@ const ClubColors = () => {
           ) : result ? (
             <div className="w-full flex flex-col items-center gap-16">
               <div className="w-full flex flex-col md:flex-row items-center gap-10 bg-white/[0.03] p-10 rounded-[4rem] border border-white/10 shadow-2xl relative overflow-hidden group">
-                <img src={selectedClub?.logo || ""} className="w-40 h-40 object-contain drop-shadow-2xl z-10" alt="" />
+                <ClubLogo src={selectedClub?.logo} alt={selectedClub?.name || ""} size="xl" className="w-40 h-40 drop-shadow-2xl z-10" />
                 <div className="flex-1 text-center md:text-left z-10">
                   <h2 className="text-5xl md:text-7xl font-black italic uppercase tracking-tighter text-white leading-[0.9]">
                     {result.nome_confirmado}
