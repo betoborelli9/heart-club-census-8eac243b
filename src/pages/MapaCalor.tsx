@@ -1753,16 +1753,7 @@ const MapaCalor = () => {
                 <div className="absolute top-3 left-3 z-[500] flex items-center gap-2">
                   <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl bg-black/75 backdrop-blur-md border border-primary/40">
                     <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center overflow-hidden shrink-0">
-                      {activeClubLogo ? (
-                        <img
-                          src={activeClubLogo}
-                          alt={activeClubName}
-                          className="w-full h-full object-contain p-0.5"
-                          referrerPolicy="no-referrer"
-                        />
-                      ) : (
-                        <Trophy className="w-4 h-4 text-muted-foreground" />
-                      )}
+                      <ClubLogo src={activeClubLogo || undefined} alt={activeClubName} size="sm" />
                     </div>
                     <div>
                       <p className="text-[7px] text-primary font-black uppercase tracking-widest leading-none">
