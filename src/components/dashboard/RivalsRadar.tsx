@@ -11,6 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { ClubLogo } from "@/components/ClubLogo";
 import { CLUBS_DATA } from "@/clubes-data";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useClubLogos, normalizeClubName } from "@/lib/club-logo-resolver";
 
 interface Rival {
   nome: string;
