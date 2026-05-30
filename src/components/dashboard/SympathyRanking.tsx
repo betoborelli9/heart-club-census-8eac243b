@@ -79,7 +79,7 @@ const SympathyRanking = () => {
                   </span>
                   {isTop && <Sparkles className="w-3.5 h-3.5 text-primary" />}
                 </div>
-                <ClubLogo src={clubData?.logoUrl} alt={row.club} size="lg" />
+                <ClubLogo src={clubData?.logoUrl || logoMap[normalize(row.club)]} alt={row.club} size="lg" />
                 <h3 className="text-sm font-black italic text-center leading-tight line-clamp-2 min-h-[2.5rem]">
                   {row.club}
                 </h3>
