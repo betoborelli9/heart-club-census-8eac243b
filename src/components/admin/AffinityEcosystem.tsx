@@ -235,7 +235,7 @@ export default function AffinityEcosystem() {
                   <div className="text-[9px] uppercase opacity-60 italic font-black">
                     {a.main ? "Principal" : `Afinidade ${i}`}
                   </div>
-                  <ClubLogo src={undefined} alt={a.club} size="md" />
+                  <ClubLogo src={logoFor(a.club)} alt={a.club} size="md" />
                   <p className="text-xs font-black italic mt-1 truncate">{a.club}</p>
                   <p className="text-primary font-black italic text-sm">{a.pct ?? 0}%</p>
                 </div>
