@@ -61,6 +61,12 @@ export default function AffiliateStore() {
     } catch {}
   };
 
+  const allClubNames = vote
+    ? [vote.clube_nome, vote.sympathy_1, vote.sympathy_2, vote.sympathy_3, vote.sympathy_4]
+        .filter((c): c is string => Boolean(c && c.trim()))
+    : [];
+  const clubLogoMap = useClubLogos(allClubNames);
+
   if (loading) return null;
   if (!vote) {
     return (
@@ -71,8 +77,7 @@ export default function AffiliateStore() {
     );
   }
 
-  const clubs = [vote.clube_nome, vote.sympathy_1, vote.sympathy_2, vote.sympathy_3, vote.sympathy_4]
-    .filter((c): c is string => Boolean(c && c.trim()));
+  const clubs = allClubNames;
 
   return (
     <section className="rounded-2xl border border-primary/30 bg-gradient-to-br from-black via-zinc-950 to-black p-5 shadow-[0_0_30px_rgba(255,98,0,0.12)]">
