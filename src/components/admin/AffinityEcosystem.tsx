@@ -97,6 +97,10 @@ export default function AffinityEcosystem() {
     });
   }, [data]);
 
+  const logoNames = data ? [data.club, ...data.affinities.map((a: any) => a.club)] : [];
+  const clubLogoMap = useClubLogos(logoNames);
+  const logoFor = (name: string) => clubLogoMap[normalizeClubName(name)];
+
   return (
     <div className="space-y-6">
       <div className="rounded-2xl p-6 border border-primary/30 bg-gradient-to-br from-black to-zinc-900 shadow-[0_0_40px_rgba(255,98,0,0.15)]">
