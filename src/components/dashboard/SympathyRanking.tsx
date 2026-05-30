@@ -9,9 +9,9 @@ import { Heart, Loader2, Sparkles } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { CLUBS_DATA } from "@/clubes-data";
 import { ClubLogo } from "@/components/ClubLogo";
+import { useClubLogos, normalizeClubName } from "@/lib/club-logo-resolver";
 
-const normalize = (v: string) =>
-  v.normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toLowerCase();
+const normalize = normalizeClubName;
 
 type RankRow = { club: string; votes: number };
 
