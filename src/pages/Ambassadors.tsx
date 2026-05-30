@@ -52,6 +52,7 @@ import { ClubLogo } from "@/components/ClubLogo";
 import ClubBanner from "@/components/dashboard/ClubBanner";
 import { useClubTheme } from "@/hooks/useClubTheme";
 import { toast } from "@/hooks/use-toast";
+import { useClubLogos, normalizeClubName } from "@/lib/club-logo-resolver";
 import logo from "@/assets/logo.png";
 
 /* [MÓDULO: HELPERS] */
@@ -420,6 +421,14 @@ const Ambassadors = () => {
 
   const rivalClubData = (name: string | null) => resolveClub(name);
 
+  const allClubNames = [
+    ...activityFeed.map((e) => e.clube_nome || ""),
+    ...ranking.map((e) => e.clube_nome || ""),
+  ].filter(Boolean);
+  const clubLogoMap = useClubLogos(allClubNames);
+  const logoFor = (name: string | null | undefined) =>
+    name ? (resolveClub(name)?.logoUrl || clubLogoMap[normalizeClubName(name)]) : undefined;
+
   return (
     <div data-build={BUILD_SYNC_TAG} className="min-h-screen bg-[#0a0a0a] text-white font-sans">
       {/* [MÓDULO: HEADER] */}
@@ -648,7 +657,7 @@ const Ambassadors = () => {
                         </p>
                       </div>
                       {entry.clube_nome && (
-                        <ClubLogo src={cd?.logoUrl} alt={entry.clube_nome} size="xs" />
+                        <ClubLogo src={logoFor(entry.clube_nome)} alt={entry.clube_nome} size="xs" />
                       )}
                     </motion.div>
                   );
@@ -730,7 +739,7 @@ const Ambassadors = () => {
                                 </td>
                                 <td className="py-3 px-2">
                                   <div className="flex items-center gap-2">
-                                    <ClubLogo src={rc?.logoUrl} alt={entry.clube_nome || ""} size="xs" />
+                                    <ClubLogo src={logoFor(entry.clube_nome)} alt={entry.clube_nome || ""} size="xs" />
                                     <span className="text-xs text-white/60 hidden md:inline">{entry.clube_nome}</span>
                                   </div>
                                 </td>

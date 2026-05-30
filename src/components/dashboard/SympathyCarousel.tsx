@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 import { Heart, Newspaper } from "lucide-react";
 import { CLUBS_DATA } from "@/clubes-data";
 import { supabase } from "@/integrations/supabase/client";
+import { ClubLogo } from "@/components/ClubLogo";
 
 interface Props {
   sympathies: string[];
@@ -102,13 +103,7 @@ export default function SympathyCarousel({ sympathies, heartClubName, viewedClub
           </div>
         )}
         <div className="w-12 h-12 mb-2 flex items-center justify-center bg-black/20 rounded-xl p-1">
-          {logos[name] ? (
-            <img src={logos[name]!} alt={name} className="max-w-full max-h-full object-contain" />
-          ) : (
-            <div className="w-full h-full rounded-full border border-white/10 flex items-center justify-center">
-              <span className="text-[8px] text-white/20 italic">Logo</span>
-            </div>
-          )}
+          <ClubLogo src={logos[name] || undefined} alt={name} size="md" />
         </div>
         <p className="text-[10px] font-black italic uppercase text-white/90 truncate w-full text-center px-1">
           {name}

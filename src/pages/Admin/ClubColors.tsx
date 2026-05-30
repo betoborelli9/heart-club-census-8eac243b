@@ -19,6 +19,7 @@ import { useUser } from "@/contexts/UserContext";
 import { supabase } from "@/integrations/supabase/client";
 import { searchClubsWithFallback, type ClubSearchResult } from "@/lib/search-clubs";
 import { toast } from "sonner";
+import { ClubLogo } from "@/components/ClubLogo";
 
 interface ClubeCacheRow {
   nome: string;
@@ -213,7 +214,7 @@ const ClubColors = () => {
                     onClick={() => handleInvestigate(club)}
                     className="w-full flex items-center gap-5 p-5 hover:bg-white/5 border-b border-white/5 last:border-0 text-left transition-colors"
                   >
-                    <img src={club.logo || ""} alt="" className="w-12 h-12 object-contain" />
+                    <ClubLogo src={club.logo} alt={club.name} size="md" />
                     <div className="flex-1">
                       <p className="font-black italic text-lg uppercase leading-none tracking-tighter">{club.name}</p>
                       <p className="text-[10px] font-bold text-white/30 uppercase mt-1">{club.location}</p>
@@ -237,7 +238,7 @@ const ClubColors = () => {
           ) : result ? (
             <div className="w-full flex flex-col items-center gap-16">
               <div className="w-full flex flex-col md:flex-row items-center gap-10 bg-white/[0.03] p-10 rounded-[4rem] border border-white/10 shadow-2xl relative overflow-hidden group">
-                <img src={selectedClub?.logo || ""} className="w-40 h-40 object-contain drop-shadow-2xl z-10" alt="" />
+                <ClubLogo src={selectedClub?.logo} alt={selectedClub?.name || ""} size="xl" className="w-40 h-40 drop-shadow-2xl z-10" />
                 <div className="flex-1 text-center md:text-left z-10">
                   <h2 className="text-5xl md:text-7xl font-black italic uppercase tracking-tighter text-white leading-[0.9]">
                     {result.nome_confirmado}

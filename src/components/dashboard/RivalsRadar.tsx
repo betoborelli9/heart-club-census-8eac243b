@@ -11,6 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { ClubLogo } from "@/components/ClubLogo";
 import { CLUBS_DATA } from "@/clubes-data";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useClubLogos, normalizeClubName } from "@/lib/club-logo-resolver";
 
 interface Rival {
   nome: string;
@@ -87,24 +88,33 @@ export default function RivalsRadar({ excludeClub }: Props) {
         <p className="text-xs italic text-white/30">Sem dados suficientes.</p>
       )}
 
-      {rivals && rivals.length > 0 && (
-        <ul className="space-y-1.5">
-          {rivals.map((r) => (
-            <li
-              key={r.nome}
-              className="flex items-center gap-4 px-4 py-3 rounded-lg bg-white/[0.01] border border-white/[0.03] transition-colors hover:bg-white/[0.025]"
-            >
-              <ClubLogo src={r.logo} alt={r.nome} className="w-5 h-5 shrink-0 opacity-80" />
-              <span className="flex-1 text-sm font-bold italic text-white/85 truncate">
-                {r.nome}
-              </span>
-              <span className="text-[11px] font-mono tracking-tight text-emerald-400/80">
-                +{r.growth}%
-              </span>
-            </li>
-          ))}
-        </ul>
-      )}
+      {rivals && rivals.length > 0 && <RivalsList rivals={rivals} />}
     </section>
+  );
+}
+
+function RivalsList({ rivals }: { rivals: Rival[] }) {
+  const logoMap = useClubLogos(rivals.map((r) => r.nome));
+  return (
+    <ul className="space-y-1.5">
+      {rivals.map((r) => (
+        <li
+          key={r.nome}
+          className="flex items-center gap-4 px-4 py-3 rounded-lg bg-white/[0.01] border border-white/[0.03] transition-colors hover:bg-white/[0.025]"
+        >
+          <ClubLogo
+            src={r.logo || logoMap[normalizeClubName(r.nome)]}
+            alt={r.nome}
+            className="w-5 h-5 shrink-0 opacity-80"
+          />
+          <span className="flex-1 text-sm font-bold italic text-white/85 truncate">
+            {r.nome}
+          </span>
+          <span className="text-[11px] font-mono tracking-tight text-emerald-400/80">
+            +{r.growth}%
+          </span>
+        </li>
+      ))}
+    </ul>
   );
 }

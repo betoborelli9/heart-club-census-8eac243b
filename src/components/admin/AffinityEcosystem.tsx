@@ -13,6 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { ClubLogo } from "@/components/ClubLogo";
+import { useClubLogos, normalizeClubName } from "@/lib/club-logo-resolver";
 
 type Affinity = { club: string; value: number; pct: number };
 type Eco = { club: string; total_fans: number; affinities: Affinity[] };
@@ -95,6 +96,10 @@ export default function AffinityEcosystem() {
       return { ...a, x, y, strength, cx, cy };
     });
   }, [data]);
+
+  const logoNames = data ? [data.club, ...data.affinities.map((a: any) => a.club)] : [];
+  const clubLogoMap = useClubLogos(logoNames);
+  const logoFor = (name: string) => clubLogoMap[normalizeClubName(name)];
 
   return (
     <div className="space-y-6">
@@ -189,7 +194,7 @@ export default function AffinityEcosystem() {
                 {data.affinities.map((a, i) => (
                   <div key={i} className="flex items-center gap-3 p-2 rounded-lg bg-white/5">
                     <div className="text-primary font-black italic w-6">{i + 1}.</div>
-                    <ClubLogo src={undefined} alt={a.club} size="sm" />
+                    <ClubLogo src={logoFor(a.club)} alt={a.club} size="sm" />
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-bold italic truncate">{a.club}</p>
                       <div className="h-1.5 bg-white/10 rounded-full overflow-hidden mt-1">
@@ -230,7 +235,7 @@ export default function AffinityEcosystem() {
                   <div className="text-[9px] uppercase opacity-60 italic font-black">
                     {a.main ? "Principal" : `Afinidade ${i}`}
                   </div>
-                  <ClubLogo src={undefined} alt={a.club} size="md" />
+                  <ClubLogo src={logoFor(a.club)} alt={a.club} size="md" />
                   <p className="text-xs font-black italic mt-1 truncate">{a.club}</p>
                   <p className="text-primary font-black italic text-sm">{a.pct ?? 0}%</p>
                 </div>

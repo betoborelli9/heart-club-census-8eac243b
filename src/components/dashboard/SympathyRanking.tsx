@@ -9,9 +9,9 @@ import { Heart, Loader2, Sparkles } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { CLUBS_DATA } from "@/clubes-data";
 import { ClubLogo } from "@/components/ClubLogo";
+import { useClubLogos, normalizeClubName } from "@/lib/club-logo-resolver";
 
-const normalize = (v: string) =>
-  v.normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toLowerCase();
+const normalize = normalizeClubName;
 
 type RankRow = { club: string; votes: number };
 
@@ -27,6 +27,8 @@ const SympathyRanking = () => {
     };
     load();
   }, []);
+
+  const logoMap = useClubLogos(rows.map((r) => r.club));
 
   return (
     <section className="space-y-4">
@@ -77,7 +79,7 @@ const SympathyRanking = () => {
                   </span>
                   {isTop && <Sparkles className="w-3.5 h-3.5 text-primary" />}
                 </div>
-                <ClubLogo src={clubData?.logoUrl} alt={row.club} size="lg" />
+                <ClubLogo src={clubData?.logoUrl || logoMap[normalize(row.club)]} alt={row.club} size="lg" />
                 <h3 className="text-sm font-black italic text-center leading-tight line-clamp-2 min-h-[2.5rem]">
                   {row.club}
                 </h3>
