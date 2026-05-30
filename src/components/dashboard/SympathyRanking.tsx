@@ -28,6 +28,8 @@ const SympathyRanking = () => {
     load();
   }, []);
 
+  const logoMap = useClubLogos(rows.map((r) => r.club));
+
   return (
     <section className="space-y-4">
       <header className="flex items-center gap-2">
