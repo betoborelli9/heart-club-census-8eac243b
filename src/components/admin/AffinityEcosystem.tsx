@@ -141,9 +141,18 @@ export default function AffinityEcosystem() {
         <div className="flex justify-center py-12"><Loader2 className="animate-spin text-primary w-8 h-8" /></div>
       )}
 
-      {data && !loading && (
-        <>
-          <div className="grid lg:grid-cols-2 gap-6">
+      {data && !loading && <DataView data={data} graph={graph} />}
+    </section>
+  );
+}
+
+function DataView({ data, graph }: { data: any; graph: any[] | null }) {
+  const allNames = [data.club, ...data.affinities.map((a: any) => a.club)];
+  const logoMap = useClubLogos(allNames);
+  const logoFor = (name: string) => logoMap[normalizeClubName(name)];
+  return (
+    <>
+      <div className="hidden" />
             {/* Network graph */}
             <div className="rounded-2xl border border-white/10 bg-black/60 p-4">
               <h3 className="text-sm font-black italic uppercase mb-3 text-primary">
