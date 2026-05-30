@@ -19,6 +19,7 @@ import { useUser } from "@/contexts/UserContext";
 import { supabase } from "@/integrations/supabase/client";
 import { searchClubsWithFallback, type ClubSearchResult } from "@/lib/search-clubs";
 import { toast } from "sonner";
+import { ClubLogo } from "@/components/ClubLogo";
 
 interface ClubeCacheRow {
   nome: string;
