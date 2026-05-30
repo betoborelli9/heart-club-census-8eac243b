@@ -13,6 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { ClubLogo } from "@/components/ClubLogo";
+import { useClubLogos, normalizeClubName } from "@/lib/club-logo-resolver";
 
 type Affinity = { club: string; value: number; pct: number };
 type Eco = { club: string; total_fans: number; affinities: Affinity[] };
