@@ -657,7 +657,7 @@ const Ambassadors = () => {
                         </p>
                       </div>
                       {entry.clube_nome && (
-                        <ClubLogo src={cd?.logoUrl} alt={entry.clube_nome} size="xs" />
+                        <ClubLogo src={logoFor(entry.clube_nome)} alt={entry.clube_nome} size="xs" />
                       )}
                     </motion.div>
                   );
