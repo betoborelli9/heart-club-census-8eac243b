@@ -61,15 +61,45 @@ export default function RivalsColumn({ clubName, refCode, primaryColor = "#ff620
       };
 
       if (cachedNames.length) {
-        // Resolver escudos via clubes_cache em batch (instantâneo)
-        const { data: clubs } = await supabase
+        // 1a) match exato
+        const { data: clubsExact } = await supabase
           .from("clubes_cache")
           .select("nome, escudo_url, cidade, pais")
           .in("nome", cachedNames);
-        const byName = new Map<string, any>();
-        (clubs || []).forEach((c: any) => byName.set(c.nome, c));
+
+        const resolved = new Map<string, any>();
+        (clubsExact || []).forEach((c: any) => resolved.set(c.nome, c));
+
+        // 1b) fallback fuzzy por tokens significativos para nomes não casados
+        const STOP = new Set([
+          "sport","club","clube","de","da","do","dos","das","e","futebol",
+          "esporte","sociedade","associacao","association","football","fc",
+          "cf","ec","sc","u19","u20","u23",
+        ]);
+        const tokenize = (n: string) =>
+          n.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase()
+            .split(/[^a-z0-9]+/)
+            .filter((t) => t.length > 2 && !STOP.has(t))
+            .sort((a, b) => b.length - a.length);
+
+        const missing = cachedNames.filter((n) => !resolved.has(n));
+        await Promise.all(
+          missing.map(async (fullName) => {
+            const tokens = tokenize(fullName).slice(0, 3);
+            if (!tokens.length) return;
+            const orFilter = tokens.map((t) => `nome.ilike.%${t}%`).join(",");
+            const { data: hit } = await supabase
+              .from("clubes_cache")
+              .select("nome, escudo_url, cidade, pais")
+              .or(orFilter)
+              .limit(1)
+              .maybeSingle();
+            if (hit) resolved.set(fullName, hit);
+          }),
+        );
+
         const baseList: RivalItem[] = cachedNames.slice(0, 4).map((name) => {
-          const c = byName.get(name);
+          const c = resolved.get(name);
           return {
             name,
             logo: c?.escudo_url || null,
@@ -82,6 +112,7 @@ export default function RivalsColumn({ clubName, refCode, primaryColor = "#ff620
         setLoading(false);
         return;
       }
+
 
       // 2) FALLBACK: sem cache → consultar Gemini/Wikipedia via edge function
       const { data, error } = await supabase.functions.invoke("get-rivals", {
