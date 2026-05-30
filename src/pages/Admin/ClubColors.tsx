@@ -214,7 +214,7 @@ const ClubColors = () => {
                     onClick={() => handleInvestigate(club)}
                     className="w-full flex items-center gap-5 p-5 hover:bg-white/5 border-b border-white/5 last:border-0 text-left transition-colors"
                   >
-                    <img src={club.logo || ""} alt="" className="w-12 h-12 object-contain" />
+                    <ClubLogo src={club.logo} alt={club.name} size="md" />
                     <div className="flex-1">
                       <p className="font-black italic text-lg uppercase leading-none tracking-tighter">{club.name}</p>
                       <p className="text-[10px] font-bold text-white/30 uppercase mt-1">{club.location}</p>
