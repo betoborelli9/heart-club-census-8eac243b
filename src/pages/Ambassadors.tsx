@@ -739,7 +739,7 @@ const Ambassadors = () => {
                                 </td>
                                 <td className="py-3 px-2">
                                   <div className="flex items-center gap-2">
-                                    <ClubLogo src={rc?.logoUrl} alt={entry.clube_nome || ""} size="xs" />
+                                    <ClubLogo src={logoFor(entry.clube_nome)} alt={entry.clube_nome || ""} size="xs" />
                                     <span className="text-xs text-white/60 hidden md:inline">{entry.clube_nome}</span>
                                   </div>
                                 </td>
