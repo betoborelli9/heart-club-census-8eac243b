@@ -194,7 +194,7 @@ export default function AffinityEcosystem() {
                 {data.affinities.map((a, i) => (
                   <div key={i} className="flex items-center gap-3 p-2 rounded-lg bg-white/5">
                     <div className="text-primary font-black italic w-6">{i + 1}.</div>
-                    <ClubLogo src={undefined} alt={a.club} size="sm" />
+                    <ClubLogo src={logoFor(a.club)} alt={a.club} size="sm" />
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-bold italic truncate">{a.club}</p>
                       <div className="h-1.5 bg-white/10 rounded-full overflow-hidden mt-1">
