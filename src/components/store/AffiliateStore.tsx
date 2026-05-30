@@ -93,7 +93,7 @@ export default function AffiliateStore() {
         {clubs.map((clubName, idx) => (
           <div key={clubName} className={`rounded-xl border p-3 ${idx === 0 ? "border-primary bg-primary/5" : "border-white/10 bg-white/5"}`}>
             <div className="flex items-center gap-3 mb-2">
-              <ClubLogo src={undefined} alt={clubName} size="sm" />
+              <ClubLogo src={clubLogoMap[normalizeClubName(clubName)]} alt={clubName} size="sm" />
               <div className="flex-1 min-w-0">
                 <p className="font-black italic text-sm truncate uppercase">{clubName}</p>
                 <p className="text-[9px] opacity-60 uppercase font-bold flex items-center gap-1">
