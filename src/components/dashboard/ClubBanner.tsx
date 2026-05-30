@@ -81,11 +81,16 @@ const ClubBanner = ({
     if (!clubName) return;
     let cancelled = false;
     const fetchTheme = async () => {
-      const { data } = await supabase
+      // ilike pode trazer múltiplas linhas (ex.: "Vila Nova" + "Vila Nova Futebol Clube").
+      // Priorizamos a linha com escudo_url + cor_primaria preenchidos.
+      const { data: rows } = await supabase
         .from("clubes_cache")
         .select("cor_primaria, cor_secundaria, cor_terciaria, cor_quarta, escudo_url")
         .ilike("nome", clubName)
-        .maybeSingle();
+        .order("escudo_url", { ascending: false, nullsFirst: false })
+        .order("cor_primaria", { ascending: false, nullsFirst: false })
+        .limit(1);
+      const data = rows?.[0] || null;
 
       if (cancelled) return;
 
@@ -106,11 +111,14 @@ const ClubBanner = ({
         setEnriching(true);
         try {
           await supabase.functions.invoke("enrich-club-colors", { body: { club_name: clubName } });
-          const { data: d2 } = await supabase
+          const { data: rows2 } = await supabase
             .from("clubes_cache")
             .select("cor_primaria, cor_secundaria, cor_terciaria, cor_quarta, escudo_url")
             .ilike("nome", clubName)
-            .maybeSingle();
+            .order("escudo_url", { ascending: false, nullsFirst: false })
+            .order("cor_primaria", { ascending: false, nullsFirst: false })
+            .limit(1);
+          const d2 = rows2?.[0] || null;
           if (!cancelled && d2?.cor_primaria) {
             setTheme({
               cor_primaria: d2.cor_primaria,
