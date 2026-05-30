@@ -44,12 +44,15 @@ export default function SympathyCarousel({ sympathies, heartClubName, viewedClub
           let url = (local as any)?.logoUrl || null;
           if (!url) {
             try {
-              const { data } = await supabase
+              // ilike pode retornar múltiplas linhas (ex.: "Vila Nova" + "Vila Nova Futebol Clube").
+              // Ordenamos por escudo_url para priorizar a linha que possui escudo válido.
+              const { data: rows } = await supabase
                 .from("clubes_cache")
                 .select("escudo_url")
                 .ilike("nome", name)
-                .maybeSingle();
-              url = (data as any)?.escudo_url || null;
+                .order("escudo_url", { ascending: false, nullsFirst: false })
+                .limit(1);
+              url = (rows?.[0] as any)?.escudo_url || null;
             } catch {}
           }
           outLogos[name] = url;
