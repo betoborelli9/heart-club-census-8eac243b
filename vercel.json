@@ -1,7 +1,7 @@
 {
   "redirects": [
     {
-      "source": "/:path((?!api/).*)",
+      "source": "/:path((?!api/|logos/|assets/|.*\\.(?:png|jpg|jpeg|gif|svg|webp|ico|css|js|map|woff2?|ttf|otf|mp4|webm|json|txt|xml)$).*)",
       "has": [
         { "type": "host", "value": "heartclubapp.com" },
         { "type": "header", "key": "x-vercel-ip-country", "value": "BR" }
@@ -10,7 +10,7 @@
       "permanent": false
     },
     {
-      "source": "/:path((?!api/).*)",
+      "source": "/:path((?!api/|logos/|assets/|.*\\.(?:png|jpg|jpeg|gif|svg|webp|ico|css|js|map|woff2?|ttf|otf|mp4|webm|json|txt|xml)$).*)",
       "has": [
         { "type": "host", "value": "www.heartclubapp.com" },
         { "type": "header", "key": "x-vercel-ip-country", "value": "BR" }
@@ -19,7 +19,7 @@
       "permanent": false
     },
     {
-      "source": "/:path((?!api/).*)",
+      "source": "/:path((?!api/|logos/|assets/|.*\\.(?:png|jpg|jpeg|gif|svg|webp|ico|css|js|map|woff2?|ttf|otf|mp4|webm|json|txt|xml)$).*)",
       "has": [
         { "type": "host", "value": "votenoseutime.com.br" },
         { "type": "header", "key": "x-vercel-ip-country", "value": "(?!BR$).*" }
@@ -28,13 +28,29 @@
       "permanent": false
     },
     {
-      "source": "/:path((?!api/).*)",
+      "source": "/:path((?!api/|logos/|assets/|.*\\.(?:png|jpg|jpeg|gif|svg|webp|ico|css|js|map|woff2?|ttf|otf|mp4|webm|json|txt|xml)$).*)",
       "has": [
         { "type": "host", "value": "www.votenoseutime.com.br" },
         { "type": "header", "key": "x-vercel-ip-country", "value": "(?!BR$).*" }
       ],
       "destination": "https://heartclubapp.com/:path",
       "permanent": false
+    }
+  ],
+  "headers": [
+    {
+      "source": "/logos/(.*)",
+      "headers": [
+        { "key": "Access-Control-Allow-Origin", "value": "*" },
+        { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
+      ]
+    },
+    {
+      "source": "/assets/(.*)",
+      "headers": [
+        { "key": "Access-Control-Allow-Origin", "value": "*" },
+        { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
+      ]
     }
   ],
   "rewrites": [
