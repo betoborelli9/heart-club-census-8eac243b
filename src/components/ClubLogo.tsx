@@ -93,7 +93,8 @@ export const ClubLogo = ({ src, alt, size = "md", className, loading = "lazy", f
       title={alt}
     >
       <img
-        src={src}
+        src={normalizedSrc}
+
         alt={alt}
         className="w-full h-full object-contain p-0.5"
         referrerPolicy="no-referrer"
