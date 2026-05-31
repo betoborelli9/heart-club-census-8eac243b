@@ -109,15 +109,15 @@ async function getCurrentLeagues(teamId: number, teamName: string, teamLogo: str
 }
 
 
-async function getStandings(leagueId: number, season: number) {
-  const TTL_15M = 15 * 60 * 1000;
+async function getStandings(leagueId: number, season: number, bypassCache = false) {
+  const TTL_2M = 2 * 60 * 1000;
   const { data: cached } = await supabase
     .from("competition_standings_cache")
     .select("standings_json, updated_at")
     .eq("league_id", leagueId)
     .eq("season", season)
     .maybeSingle();
-  if (cached && Date.now() - new Date(cached.updated_at as any).getTime() < TTL_15M) {
+  if (!bypassCache && cached && Date.now() - new Date(cached.updated_at as any).getTime() < TTL_2M) {
     return cached.standings_json as any;
   }
   const j = await af(`/standings?league=${leagueId}&season=${season}`);
