@@ -34,14 +34,37 @@ interface ClubLogoProps {
   fetchPriority?: "high" | "low" | "auto";
 }
 
+/**
+ * Normaliza a URL do escudo para evitar ERR_NAME_NOT_RESOLVED.
+ * - data:/blob: → mantém
+ * - http(s):// → mantém
+ * - // (protocol-relative) → prefixa https:
+ * - "dominio.tld/..." (sem protocolo) → prefixa https://
+ * - "arquivo.png" ou "pasta/arquivo.png" → prefixa "/" (raiz absoluta)
+ * - "/..." → mantém
+ */
+const normalizeLogoSrc = (raw: string): string => {
+  const s = raw.trim();
+  if (!s) return s;
+  if (/^(data:|blob:|https?:\/\/)/i.test(s)) return s;
+  if (s.startsWith("//")) return `https:${s}`;
+  if (s.startsWith("/")) return s;
+  // Detecta domínio sem protocolo (ex.: "votenoseutime.com.br/26550.png")
+  if (/^[a-z0-9-]+(\.[a-z0-9-]+)+\//i.test(s)) return `https://${s}`;
+  // Caminho relativo simples → torna absoluto à raiz para funcionar em qualquer rota/domínio
+  return `/${s.replace(/^\.?\/+/, "")}`;
+};
+
 export const ClubLogo = ({ src, alt, size = "md", className, loading = "lazy", fetchPriority = "auto" }: ClubLogoProps) => {
   const [error, setError] = useState(false);
+  const normalizedSrc = typeof src === "string" ? normalizeLogoSrc(src) : src;
 
   /* ═══════════════════════════════════════════════════════════
       MÓDULO: RENDERIZAÇÃO DE FALLBACK (ERRO OU AUSÊNCIA)
      ═══════════════════════════════════════════════════════════ */
 
-  if (!src || error) {
+  if (!normalizedSrc || error) {
+
     return (
       <div
         className={cn(
