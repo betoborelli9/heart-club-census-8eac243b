@@ -285,6 +285,7 @@ serve(async (req) => {
 
     const fixtures = await getFixtures(team.id);
 
+
     // VERDADE DE CAMPO: competição só está ativa se o time tem jogo futuro ou ao vivo nela.
     // Sem fixture pendente => time eliminado / torneio encerrado => não exibe.
     const activeLeagueIds = new Set<number>([
