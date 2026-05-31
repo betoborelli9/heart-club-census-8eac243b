@@ -192,13 +192,29 @@ serve(async (req) => {
       );
     }
 
-    const leagues = await getCurrentLeagues(team.id, team.name, team.logo);
+    const fixtures = await getFixtures(team.id);
 
-    // Standings em paralelo
+    // Para classificação AO VIVO: buscar todas as partidas em curso de cada liga ativa
+    // e aplicar deltas (pontos / J / V / E / D / SG) provisórios em cima do standings oficial.
+    const liveByLeague = new Map<number, any[]>();
+    await Promise.all(
+      leagues.map(async (lg: any) => {
+        try {
+          const j = await af(`/fixtures?league=${lg.id}&season=${lg.season}&live=all`);
+          const arr = (j?.response || []).filter((f: any) => f?.fixture?.status?.short && f.fixture.status.short !== "NS");
+          if (arr.length) liveByLeague.set(lg.id, arr);
+        } catch {
+          // silencioso — segue com standings oficiais
+        }
+      }),
+    );
+
+    // Standings em paralelo (bypass cache quando há jogo ao vivo na liga)
     const standingsResults = await Promise.all(
       leagues.map(async (lg: any) => {
         try {
-          const s = await getStandings(lg.id, lg.season);
+          const hasLive = liveByLeague.has(lg.id);
+          const s = await getStandings(lg.id, lg.season, hasLive);
           // Achatar groups (pega o primeiro grupo do time, ou todos se for liga única)
           const flatRows: any[] = [];
           (s.groups || []).forEach((grp: any[], gi: number) => {
@@ -219,6 +235,46 @@ serve(async (req) => {
               }),
             );
           });
+          // Aplica deltas ao vivo
+          const liveFx = liveByLeague.get(lg.id) || [];
+          if (liveFx.length && flatRows.length) {
+            const byId = new Map<number, any>();
+            flatRows.forEach((r) => r.teamId && byId.set(r.teamId, r));
+            for (const f of liveFx) {
+              const hId = f.teams?.home?.id;
+              const aId = f.teams?.away?.id;
+              const hG = f.goals?.home ?? 0;
+              const aG = f.goals?.away ?? 0;
+              const rh = hId ? byId.get(hId) : null;
+              const ra = aId ? byId.get(aId) : null;
+              const apply = (row: any, gf: number, ga: number, result: "W" | "D" | "L") => {
+                if (!row) return;
+                row.played = (row.played ?? 0) + 1;
+                row.goalsDiff = (row.goalsDiff ?? 0) + (gf - ga);
+                if (result === "W") {
+                  row.points = (row.points ?? 0) + 3;
+                  row.win = (row.win ?? 0) + 1;
+                } else if (result === "D") {
+                  row.points = (row.points ?? 0) + 1;
+                  row.draw = (row.draw ?? 0) + 1;
+                } else {
+                  row.lose = (row.lose ?? 0) + 1;
+                }
+                row.isLive = true;
+              };
+              const homeRes = hG > aG ? "W" : hG === aG ? "D" : "L";
+              const awayRes = aG > hG ? "W" : aG === hG ? "D" : "L";
+              apply(rh, hG, aG, homeRes);
+              apply(ra, aG, hG, awayRes);
+            }
+            // Reordena e recalcula posição (provisória)
+            flatRows.sort((a, b) =>
+              (b.points ?? 0) - (a.points ?? 0) ||
+              (b.goalsDiff ?? 0) - (a.goalsDiff ?? 0) ||
+              (b.win ?? 0) - (a.win ?? 0),
+            );
+            flatRows.forEach((r, i) => (r.position = i + 1));
+          }
           return { league: lg, standings: flatRows };
         } catch {
           return { league: lg, standings: [] };
