@@ -192,7 +192,8 @@ serve(async (req) => {
       );
     }
 
-    const fixtures = await getFixtures(team.id);
+    const leagues = await getCurrentLeagues(team.id, team.name, team.logo);
+
 
     // Para classificação AO VIVO: buscar todas as partidas em curso de cada liga ativa
     // e aplicar deltas (pontos / J / V / E / D / SG) provisórios em cima do standings oficial.
