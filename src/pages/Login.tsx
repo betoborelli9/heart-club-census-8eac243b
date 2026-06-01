@@ -8,23 +8,28 @@ import { useNavigate } from "react-router-dom";
 import { useUser } from "@/contexts/UserContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { isMasterEmail } from "@/lib/master";
 import logo from "@/assets/logo.png";
 
 const Login = () => {
   const navigate = useNavigate();
-  const { isAuthenticated, isProfileComplete, hasVoted, isLoading } = useUser();
+  const { user, isAuthenticated, isProfileComplete, hasVoted, isLoading } = useUser();
   const { toast } = useToast();
   const [email, setEmail] = useState("");
   const [loadingProvider, setLoadingProvider] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isLoading && isAuthenticated) {
-      // Fluxo unificado: após login vai direto para /voting.
-      // Identidade (nome/sexo/nascimento) é capturada dentro da própria votação.
+      // Master Admin entra sempre direto no dashboard (como torcedor comum).
+      // Os fluxos de "primeira vez" só são reabertos via MasterTestPanel.
+      if (isMasterEmail(user?.email)) {
+        navigate("/dashboard", { replace: true });
+        return;
+      }
       if (!hasVoted) navigate("/voting", { replace: true });
       else navigate("/dashboard", { replace: true });
     }
-  }, [isAuthenticated, isProfileComplete, hasVoted, isLoading, navigate]);
+  }, [user, isAuthenticated, isProfileComplete, hasVoted, isLoading, navigate]);
 
   const handleOAuth = async (provider: "google" | "azure") => {
     setLoadingProvider(provider);
