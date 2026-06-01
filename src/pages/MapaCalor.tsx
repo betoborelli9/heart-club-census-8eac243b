@@ -828,8 +828,12 @@ const MapaCalor = () => {
         await supabase.from("votos").update(updates).eq("user_id", user.id).eq("is_original_vote", true);
       }
       // [PORTARIA]: address_confirmed é a única chave de liberação do território.
+      // [MASTER TEST]: ?force_onboarding=1 reabre o modal mesmo já confirmado,
+      // sem alterar address_confirmed real no perfil.
+      const forceOnboarding =
+        new URLSearchParams(window.location.search).get("force_onboarding") === "1";
       setAddressConfirmed(addressConfirmed);
-      if (!addressConfirmed) {
+      if (!addressConfirmed || forceOnboarding) {
         setAddressOpen(true);
       }
       setAddressChecked(true);
