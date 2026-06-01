@@ -1876,7 +1876,10 @@ const MapaCalor = () => {
       <AddressModal
         open={addressOpen}
         onOpenChange={(v: boolean) => {
-          if (!v && !addressConfirmed) return; // gatekeeper: trava fechamento sem confirmação
+          const forceOnboarding =
+            new URLSearchParams(window.location.search).get("force_onboarding") === "1";
+          // Em modo teste do master, permite fechar livremente o modal.
+          if (!v && !addressConfirmed && !forceOnboarding) return;
           setAddressOpen(v);
         }}
         clubName={heartClubName}
