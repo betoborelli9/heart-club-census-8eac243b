@@ -113,12 +113,22 @@ const Dashboard = () => {
   const secondary = viewedTheme?.secondaryHex || "#000000";
   const isViewingHeart = viewedClubName === heartClubName;
 
-  if (!isAuthReady || isLoading || !profile)
+  if (!isAuthReady || isLoading || (!profile && !isMasterAdmin))
     return (
       <div className="h-screen flex items-center justify-center bg-background">
         <Loader2 className="animate-spin text-primary w-10 h-10" />
       </div>
     );
+
+  // Perfil efetivo: master sem perfil ganha placeholders neutros para renderizar
+  // o dashboard exatamente como o torcedor comum veria após preencher tudo.
+  const effectiveProfile = profile ?? {
+    nome_exibicao: "MASTER",
+    cidade: "BRASIL",
+    estado: "",
+    nivel_embaixador: "BRONZE",
+    codigo_indicacao: null as string | null,
+  };
 
   return (
     <div className="min-h-screen bg-[#050505] text-white font-sans selection:bg-[#ff6200]/30 overflow-x-hidden">
