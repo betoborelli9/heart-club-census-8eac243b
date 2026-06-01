@@ -157,10 +157,10 @@ const Dashboard = () => {
           clubName={heartClubName || "SELECIONE SEU CLUBE"}
           clubData={heartClubData}
           theme={heartTheme}
-          profileName={profile.nome_exibicao || "TORCEDOR"}
-          profileCity={profile.cidade || "BRASIL"}
-          profileState={profile.estado || ""}
-          ambassadorLevel={profile.nivel_embaixador || "BRONZE"}
+          profileName={effectiveProfile.nome_exibicao || "TORCEDOR"}
+          profileCity={effectiveProfile.cidade || "BRASIL"}
+          profileState={effectiveProfile.estado || ""}
+          ambassadorLevel={effectiveProfile.nivel_embaixador || "BRONZE"}
           showProfileInfo={true}
         />
 
@@ -181,7 +181,7 @@ const Dashboard = () => {
         <div className="grid grid-cols-1 lg:grid-cols-[26%_40%_34%] gap-6">
           <aside className="space-y-4">
             <div className="glass-card rounded-3xl p-5 lg:sticky lg:top-24">
-              <RivalsColumn clubName={viewedClubName} refCode={profile.codigo_indicacao} primaryColor={primary} />
+              <RivalsColumn clubName={viewedClubName} refCode={effectiveProfile.codigo_indicacao} primaryColor={primary} />
             </div>
           </aside>
 
