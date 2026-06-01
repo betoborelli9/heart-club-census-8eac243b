@@ -828,8 +828,12 @@ const MapaCalor = () => {
         await supabase.from("votos").update(updates).eq("user_id", user.id).eq("is_original_vote", true);
       }
       // [PORTARIA]: address_confirmed é a única chave de liberação do território.
+      // [MASTER TEST]: ?force_onboarding=1 reabre o modal mesmo já confirmado,
+      // sem alterar address_confirmed real no perfil.
+      const forceOnboarding =
+        new URLSearchParams(window.location.search).get("force_onboarding") === "1";
       setAddressConfirmed(addressConfirmed);
-      if (!addressConfirmed) {
+      if (!addressConfirmed || forceOnboarding) {
         setAddressOpen(true);
       }
       setAddressChecked(true);
@@ -1872,7 +1876,10 @@ const MapaCalor = () => {
       <AddressModal
         open={addressOpen}
         onOpenChange={(v: boolean) => {
-          if (!v && !addressConfirmed) return; // gatekeeper: trava fechamento sem confirmação
+          const forceOnboarding =
+            new URLSearchParams(window.location.search).get("force_onboarding") === "1";
+          // Em modo teste do master, permite fechar livremente o modal.
+          if (!v && !addressConfirmed && !forceOnboarding) return;
           setAddressOpen(v);
         }}
         clubName={heartClubName}

@@ -11,6 +11,8 @@ import { useNavigate } from "react-router-dom";
 import { useUser } from "@/contexts/UserContext";
 import { supabase } from "@/integrations/supabase/client";
 import { CLUBS_DATA } from "@/clubes-data";
+import { isMasterEmail } from "@/lib/master";
+import MasterTestPanel from "@/components/MasterTestPanel";
 
 /* ═══════════════════════════════════════════════════════════
     MÓDULO 1: COMPONENTES DO DASHBOARD
@@ -43,13 +45,14 @@ const Dashboard = () => {
   const [viewedLogo, setViewedLogo] = useState<string | null>(null);
 
   // TRAVA DE SEGURANÇA MASTER ADMIN
-  const isMasterAdmin = user?.email === "betoborelli9@gmail.com";
+  const isMasterAdmin = isMasterEmail(user?.email);
 
   useEffect(() => {
     if (!isAuthReady || isLoading) return;
     if (!isAuthenticated) navigate("/login", { replace: true });
-    else if (!profile) navigate("/profile-setup", { replace: true });
-  }, [isAuthReady, isLoading, isAuthenticated, profile, navigate]);
+    // Master Admin entra sempre, mesmo sem perfil — navega como torcedor comum.
+    else if (!profile && !isMasterAdmin) navigate("/profile-setup", { replace: true });
+  }, [isAuthReady, isLoading, isAuthenticated, profile, isMasterAdmin, navigate]);
 
   useEffect(() => {
     const loadVoto = async () => {
@@ -110,12 +113,22 @@ const Dashboard = () => {
   const secondary = viewedTheme?.secondaryHex || "#000000";
   const isViewingHeart = viewedClubName === heartClubName;
 
-  if (!isAuthReady || isLoading || !profile)
+  if (!isAuthReady || isLoading || (!profile && !isMasterAdmin))
     return (
       <div className="h-screen flex items-center justify-center bg-background">
         <Loader2 className="animate-spin text-primary w-10 h-10" />
       </div>
     );
+
+  // Perfil efetivo: master sem perfil ganha placeholders neutros para renderizar
+  // o dashboard exatamente como o torcedor comum veria após preencher tudo.
+  const effectiveProfile = profile ?? {
+    nome_exibicao: "MASTER",
+    cidade: "BRASIL",
+    estado: "",
+    nivel_embaixador: "BRONZE",
+    codigo_indicacao: null as string | null,
+  };
 
   return (
     <div className="min-h-screen bg-[#050505] text-white font-sans selection:bg-[#ff6200]/30 overflow-x-hidden">
@@ -154,10 +167,10 @@ const Dashboard = () => {
           clubName={heartClubName || "SELECIONE SEU CLUBE"}
           clubData={heartClubData}
           theme={heartTheme}
-          profileName={profile.nome_exibicao || "TORCEDOR"}
-          profileCity={profile.cidade || "BRASIL"}
-          profileState={profile.estado || ""}
-          ambassadorLevel={profile.nivel_embaixador || "BRONZE"}
+          profileName={effectiveProfile.nome_exibicao || "TORCEDOR"}
+          profileCity={effectiveProfile.cidade || "BRASIL"}
+          profileState={effectiveProfile.estado || ""}
+          ambassadorLevel={effectiveProfile.nivel_embaixador || "BRONZE"}
           showProfileInfo={true}
         />
 
@@ -178,7 +191,7 @@ const Dashboard = () => {
         <div className="grid grid-cols-1 lg:grid-cols-[26%_40%_34%] gap-6">
           <aside className="space-y-4">
             <div className="glass-card rounded-3xl p-5 lg:sticky lg:top-24">
-              <RivalsColumn clubName={viewedClubName} refCode={profile.codigo_indicacao} primaryColor={primary} />
+              <RivalsColumn clubName={viewedClubName} refCode={effectiveProfile.codigo_indicacao} primaryColor={primary} />
             </div>
           </aside>
 
@@ -261,6 +274,9 @@ const Dashboard = () => {
           )}
         </nav>
       </footer>
+
+      {/* Painel flutuante de testes — exclusivo do Master Admin */}
+      <MasterTestPanel />
     </div>
   );
 };

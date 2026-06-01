@@ -200,7 +200,17 @@ const Ambassadors = () => {
    * sem ter completado WhatsApp + Profissão. Data de nascimento já é
    * coletada em outro fluxo (ProfileSetup), então não duplicamos aqui. */
   useEffect(() => {
-    if (!profile || isLoading) return;
+    if (isLoading) return;
+    // [MASTER TEST]: ?force_onboarding=1 reabre o modal de censo para inspeção,
+    // mesmo que o perfil já esteja completo. Não altera dados reais.
+    const forceOnboarding =
+      typeof window !== "undefined" &&
+      new URLSearchParams(window.location.search).get("force_onboarding") === "1";
+    if (forceOnboarding) {
+      setShowCensusModal(true);
+      return;
+    }
+    if (!profile) return;
     const needsCensus = !profile.profissao || !profile.telefone;
     setShowCensusModal(needsCensus);
   }, [profile, isLoading]);
@@ -769,7 +779,16 @@ const Ambassadors = () => {
       </main>
 
       {/* [MÓDULO: MODAL DE CAPTURA (CENSO)] */}
-      <Dialog open={showCensusModal} onOpenChange={() => {}}>
+      <Dialog
+        open={showCensusModal}
+        onOpenChange={(v) => {
+          // [MASTER TEST] Permite fechar o modal apenas em modo teste forçado.
+          const forceOnboarding =
+            typeof window !== "undefined" &&
+            new URLSearchParams(window.location.search).get("force_onboarding") === "1";
+          if (!v && forceOnboarding) setShowCensusModal(false);
+        }}
+      >
         <DialogContent className="bg-[#0a0a0a] border-white/10 text-white sm:max-w-md [&>button]:hidden">
           <DialogHeader>
             <DialogTitle className="text-xl font-black italic uppercase text-center">
