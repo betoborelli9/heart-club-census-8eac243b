@@ -11,6 +11,8 @@ import { useNavigate } from "react-router-dom";
 import { useUser } from "@/contexts/UserContext";
 import { supabase } from "@/integrations/supabase/client";
 import { CLUBS_DATA } from "@/clubes-data";
+import { isMasterEmail } from "@/lib/master";
+import MasterTestPanel from "@/components/MasterTestPanel";
 
 /* ═══════════════════════════════════════════════════════════
     MÓDULO 1: COMPONENTES DO DASHBOARD
@@ -45,11 +47,15 @@ const Dashboard = () => {
   // TRAVA DE SEGURANÇA MASTER ADMIN
   const isMasterAdmin = user?.email === "betoborelli9@gmail.com";
 
+  // TRAVA DE SEGURANÇA MASTER ADMIN
+  const isMasterAdmin = isMasterEmail(user?.email);
+
   useEffect(() => {
     if (!isAuthReady || isLoading) return;
     if (!isAuthenticated) navigate("/login", { replace: true });
-    else if (!profile) navigate("/profile-setup", { replace: true });
-  }, [isAuthReady, isLoading, isAuthenticated, profile, navigate]);
+    // Master Admin entra sempre, mesmo sem perfil — navega como torcedor comum.
+    else if (!profile && !isMasterAdmin) navigate("/profile-setup", { replace: true });
+  }, [isAuthReady, isLoading, isAuthenticated, profile, isMasterAdmin, navigate]);
 
   useEffect(() => {
     const loadVoto = async () => {
