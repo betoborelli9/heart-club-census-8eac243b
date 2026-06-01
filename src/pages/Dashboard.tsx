@@ -274,6 +274,9 @@ const Dashboard = () => {
           )}
         </nav>
       </footer>
+
+      {/* Painel flutuante de testes — exclusivo do Master Admin */}
+      <MasterTestPanel />
     </div>
   );
 };
