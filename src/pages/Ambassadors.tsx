@@ -779,7 +779,16 @@ const Ambassadors = () => {
       </main>
 
       {/* [MÓDULO: MODAL DE CAPTURA (CENSO)] */}
-      <Dialog open={showCensusModal} onOpenChange={() => {}}>
+      <Dialog
+        open={showCensusModal}
+        onOpenChange={(v) => {
+          // [MASTER TEST] Permite fechar o modal apenas em modo teste forçado.
+          const forceOnboarding =
+            typeof window !== "undefined" &&
+            new URLSearchParams(window.location.search).get("force_onboarding") === "1";
+          if (!v && forceOnboarding) setShowCensusModal(false);
+        }}
+      >
         <DialogContent className="bg-[#0a0a0a] border-white/10 text-white sm:max-w-md [&>button]:hidden">
           <DialogHeader>
             <DialogTitle className="text-xl font-black italic uppercase text-center">
