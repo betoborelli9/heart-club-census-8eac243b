@@ -45,9 +45,6 @@ const Dashboard = () => {
   const [viewedLogo, setViewedLogo] = useState<string | null>(null);
 
   // TRAVA DE SEGURANÇA MASTER ADMIN
-  const isMasterAdmin = user?.email === "betoborelli9@gmail.com";
-
-  // TRAVA DE SEGURANÇA MASTER ADMIN
   const isMasterAdmin = isMasterEmail(user?.email);
 
   useEffect(() => {
