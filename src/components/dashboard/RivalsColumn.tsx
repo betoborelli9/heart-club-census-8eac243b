@@ -87,14 +87,17 @@ export default function RivalsColumn({ clubName, refCode, primaryColor = "#ff620
           missing.map(async (fullName) => {
             const tokens = tokenize(fullName).slice(0, 3);
             if (!tokens.length) return;
-            const orFilter = tokens.map((t) => `nome.ilike.%${t}%`).join(",");
-            const { data: hit } = await supabase
-              .from("clubes_cache")
-              .select("nome, escudo_url, cidade, pais")
-              .or(orFilter)
-              .limit(1)
-              .maybeSingle();
-            if (hit) resolved.set(fullName, hit);
+            // AND lógico: clube precisa conter TODOS os tokens significativos
+            // (evita que "Atlético Goianiense" case com "Atlético Paranaense").
+            let q = supabase.from("clubes_cache").select("nome, escudo_url, cidade, pais");
+            tokens.forEach((t) => {
+              q = q.ilike("nome", `%${t}%`);
+            });
+            const { data: hits } = await q.limit(5);
+            if (hits && hits.length) {
+              const best = [...hits].sort((a: any, b: any) => a.nome.length - b.nome.length)[0];
+              resolved.set(fullName, best);
+            }
           }),
         );
 
