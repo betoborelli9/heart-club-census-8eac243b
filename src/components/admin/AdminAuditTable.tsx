@@ -47,6 +47,7 @@ interface VoteRow {
 const AdminAuditTable = () => {
   const [votes, setVotes] = useState<VoteRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [backfilling, setBackfilling] = useState(false);
   const [actingId, setActingId] = useState<string | null>(null);
   const [openSympathyId, setOpenSympathyId] = useState<string | null>(null);
   const [sympathyCache, setSympathyCache] = useState<Record<string, string[]>>({});
