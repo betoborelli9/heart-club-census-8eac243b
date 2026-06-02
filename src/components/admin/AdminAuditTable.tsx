@@ -123,11 +123,43 @@ const AdminAuditTable = () => {
   /* ═══════════════════════════════════════════════════════
       🎨 MÓDULO 3: RENDERIZAÇÃO COM ANIMAÇÕES DE ALERTA
      ═══════════════════════════════════════════════════════ */
+  /* 🌍 MÓDULO 2.3: BACKFILL DE LOCALIZAÇÃO (Cidade/Estado/País via IP)
+     Preenche os votos antigos sem localização usando o IP gravado.
+     Não altera votos que já têm cidade definida. */
+  const handleBackfillLocation = async () => {
+    setBackfilling(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("backfill-vote-location");
+      if (error) throw error;
+      const updated = (data as any)?.updated ?? 0;
+      const scanned = (data as any)?.scanned ?? 0;
+      toast({
+        title: "Localização Atualizada",
+        description: `${updated} voto(s) preenchido(s) de ${scanned} analisado(s).`,
+      });
+      await fetchVotes();
+    } catch (err: any) {
+      console.error("[BACKFILL ERROR]:", err);
+      toast({
+        variant: "destructive",
+        title: "Falha no backfill",
+        description: err?.message || "Tente novamente em alguns instantes.",
+      });
+    } finally {
+      setBackfilling(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
-      <Button onClick={fetchVotes} variant="outline" size="sm" disabled={loading} className="font-black italic uppercase">
-        <RefreshCw className={`mr-2 h-4 w-4 ${loading ? "animate-spin" : ""}`} /> Atualizar Base
-      </Button>
+      <div className="flex flex-wrap gap-2">
+        <Button onClick={fetchVotes} variant="outline" size="sm" disabled={loading} className="font-black italic uppercase">
+          <RefreshCw className={`mr-2 h-4 w-4 ${loading ? "animate-spin" : ""}`} /> Atualizar Base
+        </Button>
+        <Button onClick={handleBackfillLocation} variant="outline" size="sm" disabled={backfilling} className="font-black italic uppercase border-primary text-primary hover:bg-primary/10">
+          <Globe2 className={`mr-2 h-4 w-4 ${backfilling ? "animate-spin" : ""}`} /> {backfilling ? "Atualizando…" : "Preencher Localização (IP)"}
+        </Button>
+      </div>
 
       <Card className="overflow-hidden border-border bg-card">
         <Table>
