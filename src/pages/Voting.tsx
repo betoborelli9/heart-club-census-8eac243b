@@ -21,6 +21,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 
 import { getFingerprint, getFastIP, runSilentAudit } from "@/lib/vote-auditor";
 import { detectDeviceModel } from "@/lib/device-detect";
+import { captureIpAudit } from "@/lib/address";
 
 type ClubResult = ClubSearchResult;
 const MAX_SYMPATHY_CLUBS = 4;
@@ -202,37 +203,51 @@ const Voting = () => {
         getBrowserGeo(),
       ]);
 
+      // [GEO IP — SILENCIOSO] Fallback automático de cidade/estado/país via IP
+      // quando o torcedor ainda não tem localização no profile. Nunca pede
+      // permissão ao navegador. Falha vira nulls e o voto segue normalmente.
+      const needsGeoFallback =
+        !profile?.cidade || !profile?.estado || !profile?.pais;
+      const ipGeo = needsGeoFallback ? await captureIpAudit() : null;
+      const normalizedPais = (() => {
+        const raw = profile?.pais || ipGeo?.pais || "BR";
+        const lower = raw.toLowerCase().trim();
+        if (lower === "brazil" || lower === "brasil") return "BR";
+        return raw;
+      })();
+      const finalCidade = profile?.cidade || ipGeo?.cidade || "";
+      const finalEstado = profile?.estado || ipGeo?.estado || "";
+
       // [IDENTIDADE] grava em profiles antes do voto
+      const profilePatch: any = {
+        device_hardware: deviceModel,
+        latitude: geo?.lat ?? ipGeo?.lat ?? null,
+        longitude: geo?.lng ?? ipGeo?.lng ?? null,
+      };
       if (needsIdentity) {
-        await updateProfile({
-          nome_exibicao: nickname.trim(),
-          data_nascimento: `${anoNasc}-01-01`,
-          genero,
-          device_hardware: deviceModel,
-          latitude: geo?.lat ?? null,
-          longitude: geo?.lng ?? null,
-        });
-      } else {
-        await updateProfile({
-          device_hardware: deviceModel,
-          latitude: geo?.lat ?? null,
-          longitude: geo?.lng ?? null,
-        });
+        profilePatch.nome_exibicao = nickname.trim();
+        profilePatch.data_nascimento = `${anoNasc}-01-01`;
+        profilePatch.genero = genero;
       }
+      // Persiste localização derivada do IP no profile, sem sobrescrever o que já existe.
+      if (!profile?.cidade && ipGeo?.cidade) profilePatch.cidade = ipGeo.cidade;
+      if (!profile?.estado && ipGeo?.estado) profilePatch.estado = ipGeo.estado;
+      if (!profile?.pais && normalizedPais) profilePatch.pais = normalizedPais;
+      await updateProfile(profilePatch);
 
       const mainVote: any = {
         user_id: user.id,
         email: user.email,
         clube_nome: heartClub.name,
-        cidade: profile?.cidade || "",
-        estado: profile?.estado || "",
-        pais: profile?.pais || "BR",
+        cidade: finalCidade,
+        estado: finalEstado,
+        pais: normalizedPais,
         cep: profile?.cep || null,
         ip_address: ip,
         fingerprint: fp,
         device_model: deviceModel,
-        voto_lat: geo?.lat ?? null,
-        voto_lng: geo?.lng ?? null,
+        voto_lat: geo?.lat ?? ipGeo?.lat ?? null,
+        voto_lng: geo?.lng ?? ipGeo?.lng ?? null,
         is_original_vote: true,
         status_aprovacao: "aprovado",
         is_suspicious: false,
