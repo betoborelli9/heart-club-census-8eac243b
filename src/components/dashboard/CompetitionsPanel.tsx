@@ -168,7 +168,10 @@ export default function CompetitionsPanel({ clubName, primaryColor = "#ff6200" }
                 meTeamId={team?.id}
                 opponentTeamId={opponentId}
                 primaryColor={primaryColor}
+                leagueId={c.leagueId}
+                leagueName={c.leagueName}
               />
+
             </TabsContent>
           );
         })}
