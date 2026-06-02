@@ -21,6 +21,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 
 import { getFingerprint, getFastIP, runSilentAudit } from "@/lib/vote-auditor";
 import { detectDeviceModel } from "@/lib/device-detect";
+import { captureIpAudit } from "@/lib/address";
 
 type ClubResult = ClubSearchResult;
 const MAX_SYMPATHY_CLUBS = 4;
