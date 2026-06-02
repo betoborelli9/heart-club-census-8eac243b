@@ -239,16 +239,47 @@ function MatchCard({ match, live, primaryColor }: { match: Match | null; live: b
   );
 }
 
+type ZoneKey = "lib_g" | "lib_p" | "sul" | "reb" | "acesso" | "reb_c";
+
+const ZONE_META: Record<ZoneKey, { color: string; label: string }> = {
+  lib_g: { color: "#10b981", label: "Libertadores (Fase de Grupos)" },
+  lib_p: { color: "#34d399", label: "Pré-Libertadores" },
+  sul: { color: "#3b82f6", label: "Sul-Americana" },
+  reb: { color: "#ef4444", label: "Rebaixamento" },
+  acesso: { color: "#10b981", label: "Acesso à Série A" },
+  reb_c: { color: "#ef4444", label: "Rebaixamento à Série C" },
+};
+
+// Mapeia posição → zona, baseado em leagueId (API-Football).
+// 71 = Brasileirão Série A, 72 = Brasileirão Série B.
+function getZoneForPosition(leagueId: number, pos: number, total: number): ZoneKey | null {
+  if (leagueId === 71) {
+    if (pos <= 4) return "lib_g";
+    if (pos <= 6) return "lib_p";
+    if (pos <= 12) return "sul";
+    if (pos > total - 4) return "reb";
+  }
+  if (leagueId === 72) {
+    if (pos <= 4) return "acesso";
+    if (pos > total - 4) return "reb_c";
+  }
+  return null;
+}
+
 function StandingsTable({
   rows,
   meTeamId,
   opponentTeamId,
   primaryColor,
+  leagueId,
+  leagueName,
 }: {
   rows: StandingRow[];
   meTeamId?: number;
   opponentTeamId?: number;
   primaryColor: string;
+  leagueId?: number;
+  leagueName?: string;
 }) {
   if (!rows.length) return <p className="text-[11px] italic text-white/40">Sem classificação disponível.</p>;
   const stickyBg = "bg-[#0b0b0b]";
@@ -256,74 +287,115 @@ function StandingsTable({
   const opponentBg = "bg-[#2a1f3d]";
   const numCol = "text-center px-1 py-1.5 w-7 border-b border-white/[0.06] tabular-nums";
   const fmt = (v: number | undefined | null) => (v === undefined || v === null ? 0 : v);
+  const total = rows.length;
+  const lid = leagueId ?? 0;
+
+  // legenda dinâmica — apenas zonas presentes nesta tabela
+  const presentZones: ZoneKey[] = [];
+  rows.forEach((r) => {
+    const z = getZoneForPosition(lid, r.position, total);
+    if (z && !presentZones.includes(z)) presentZones.push(z);
+  });
+
   return (
-    <div className="overflow-x-auto md:overflow-x-visible -mx-4 px-4 md:mx-0 md:px-0 thin-orange-scroll rounded-lg">
-      <table className="w-full text-[10px] min-w-[360px] md:min-w-0 border-separate border-spacing-0">
-        <thead>
-          <tr className="text-[9px] font-mono uppercase tracking-wider text-white/70">
-            <th
-              className={`sticky left-0 z-20 ${headerBg} text-left py-1.5 pl-1.5 pr-1 border-b border-white/15 min-w-[110px]`}
-            >
-              <div className="flex items-center gap-1.5">
-                <span className="w-3 inline-block text-white/50">#</span>
-                <span>Time</span>
-              </div>
-            </th>
-            <th className={`${numCol} ${headerBg} border-white/15 font-bold`} style={{ color: primaryColor }}>P</th>
-            <th className={`${numCol} ${headerBg} border-white/15`}>J</th>
-            <th className={`${numCol} ${headerBg} border-white/15`}>V</th>
-            <th className={`${numCol} ${headerBg} border-white/15`}>E</th>
-            <th className={`${numCol} ${headerBg} border-white/15`}>D</th>
-            <th className={`${numCol} ${headerBg} border-white/15 w-9`}>SG</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((r) => {
-            const isMe = !!(meTeamId && r.teamId === meTeamId);
-            const isOpponent = !isMe && !!(opponentTeamId && r.teamId === opponentTeamId);
-            const rowBg = isMe ? "bg-white/[0.08]" : isOpponent ? opponentBg : stickyBg;
-            const rowClass = isMe ? "bg-white/[0.04]" : isOpponent ? "bg-[#a78bfa]/10" : "";
-            return (
-              <tr key={`${r.teamId}-${r.position}`} className={rowClass}>
-                <td
-                  className={`sticky left-0 z-10 ${rowBg} py-1.5 pl-1.5 pr-1 border-b border-white/[0.06] min-w-[110px] ${
-                    isOpponent ? "border-l-4 border-l-dashed border-l-[#a78bfa]" : ""
-                  }`}
-                  style={isMe ? { boxShadow: `inset 3px 0 0 ${primaryColor}` } : undefined}
-                >
-                  <div className="flex items-center gap-1.5 min-w-0">
-                    <span className="w-3 font-mono text-white/50 shrink-0 text-right text-[9px]">{r.position}</span>
-                    <ClubLogo src={r.logo} alt={r.name} size="xs" className="w-3.5 h-3.5 shrink-0" />
-                    <span
-                      className={`truncate text-[10px] ${
-                        isMe ? "font-black text-white" : isOpponent ? "font-bold text-[#c4b5fd]" : "text-white/85"
-                      }`}
-                    >
-                      {r.name}
-                      {isOpponent && (
-                        <span className="ml-1 text-[8px] font-mono uppercase text-[#a78bfa]/80">· alvo</span>
-                      )}
-                    </span>
-                  </div>
-                </td>
-                <td
-                  className={`${numCol} font-black`}
-                  style={{ color: isMe ? primaryColor : isOpponent ? "#c4b5fd" : "rgba(255,255,255,0.95)" }}
-                >
-                  {fmt(r.points)}
-                </td>
-                <td className={`${numCol} text-white/70`}>{fmt(r.played)}</td>
-                <td className={`${numCol} text-white/70`}>{fmt(r.win)}</td>
-                <td className={`${numCol} text-white/70`}>{fmt(r.draw)}</td>
-                <td className={`${numCol} text-white/70`}>{fmt(r.lose)}</td>
-                <td className={`${numCol} text-white/70 w-9`}>
-                  {(r.goalsDiff ?? 0) > 0 ? `+${r.goalsDiff}` : fmt(r.goalsDiff)}
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+    <div className="space-y-2">
+      <div className="overflow-x-auto md:overflow-x-visible -mx-4 px-4 md:mx-0 md:px-0 thin-orange-scroll rounded-lg">
+        <table className="w-full text-[10px] min-w-[360px] md:min-w-0 border-separate border-spacing-0">
+          <thead>
+            <tr className="text-[9px] font-mono uppercase tracking-wider text-white/70">
+              <th
+                className={`sticky left-0 z-20 ${headerBg} text-left py-1.5 pl-1.5 pr-1 border-b border-white/15 min-w-[110px]`}
+              >
+                <div className="flex items-center gap-1.5">
+                  <span className="w-3 inline-block text-white/50">#</span>
+                  <span>Time</span>
+                </div>
+              </th>
+              <th className={`${numCol} ${headerBg} border-white/15 font-bold`} style={{ color: primaryColor }}>P</th>
+              <th className={`${numCol} ${headerBg} border-white/15`}>J</th>
+              <th className={`${numCol} ${headerBg} border-white/15`}>V</th>
+              <th className={`${numCol} ${headerBg} border-white/15`}>E</th>
+              <th className={`${numCol} ${headerBg} border-white/15`}>D</th>
+              <th className={`${numCol} ${headerBg} border-white/15 w-9`}>SG</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((r) => {
+              const isMe = !!(meTeamId && r.teamId === meTeamId);
+              const isOpponent = !isMe && !!(opponentTeamId && r.teamId === opponentTeamId);
+              const rowBg = isMe ? "bg-white/[0.08]" : isOpponent ? opponentBg : stickyBg;
+              const rowClass = isMe ? "bg-white/[0.04]" : isOpponent ? "bg-[#a78bfa]/10" : "";
+              const zone = getZoneForPosition(lid, r.position, total);
+              const zoneColor = zone ? ZONE_META[zone].color : null;
+              return (
+                <tr key={`${r.teamId}-${r.position}`} className={rowClass}>
+                  <td
+                    className={`sticky left-0 z-10 ${rowBg} py-1.5 pl-1.5 pr-1 border-b border-white/[0.06] min-w-[110px] ${
+                      isOpponent ? "border-l-4 border-l-dashed border-l-[#a78bfa]" : ""
+                    }`}
+                    style={
+                      isMe
+                        ? { boxShadow: `inset 3px 0 0 ${primaryColor}` }
+                        : zoneColor
+                        ? { boxShadow: `inset 3px 0 0 ${zoneColor}` }
+                        : undefined
+                    }
+                  >
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <span
+                        className="w-3 font-mono shrink-0 text-right text-[9px]"
+                        style={{ color: zoneColor || "rgba(255,255,255,0.5)" }}
+                      >
+                        {r.position}
+                      </span>
+                      <ClubLogo src={r.logo} alt={r.name} size="xs" className="w-3.5 h-3.5 shrink-0" />
+                      <span
+                        className={`truncate text-[10px] ${
+                          isMe ? "font-black text-white" : isOpponent ? "font-bold text-[#c4b5fd]" : "text-white/85"
+                        }`}
+                      >
+                        {r.name}
+                        {isOpponent && (
+                          <span className="ml-1 text-[8px] font-mono uppercase text-[#a78bfa]/80">· alvo</span>
+                        )}
+                      </span>
+                    </div>
+                  </td>
+                  <td
+                    className={`${numCol} font-black`}
+                    style={{ color: isMe ? primaryColor : isOpponent ? "#c4b5fd" : "rgba(255,255,255,0.95)" }}
+                  >
+                    {fmt(r.points)}
+                  </td>
+                  <td className={`${numCol} text-white/70`}>{fmt(r.played)}</td>
+                  <td className={`${numCol} text-white/70`}>{fmt(r.win)}</td>
+                  <td className={`${numCol} text-white/70`}>{fmt(r.draw)}</td>
+                  <td className={`${numCol} text-white/70`}>{fmt(r.lose)}</td>
+                  <td className={`${numCol} text-white/70 w-9`}>
+                    {(r.goalsDiff ?? 0) > 0 ? `+${r.goalsDiff}` : fmt(r.goalsDiff)}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      {presentZones.length > 0 && (
+        <div className="flex flex-wrap gap-x-3 gap-y-1.5 px-1 pt-1 border-t border-white/5">
+          {presentZones.map((z) => (
+            <div key={z} className="flex items-center gap-1.5">
+              <span
+                className="inline-block w-2.5 h-2.5 rounded-sm shrink-0"
+                style={{ backgroundColor: ZONE_META[z].color }}
+              />
+              <span className="text-[8.5px] font-bold uppercase tracking-wider text-white/55">
+                {ZONE_META[z].label}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
