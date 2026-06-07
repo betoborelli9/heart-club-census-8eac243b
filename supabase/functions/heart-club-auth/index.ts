@@ -13,7 +13,7 @@ const corsHeaders = {
 }
 
 const resolveRedirectOrigin = (origin?: string) => {
-  const fallback = 'https://heart-club-census.lovable.app'
+  const fallback = 'https://votenoseuclube.com.br'
 
   if (!origin) return fallback
 
