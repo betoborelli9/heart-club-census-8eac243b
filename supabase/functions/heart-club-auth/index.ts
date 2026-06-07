@@ -13,7 +13,7 @@ const corsHeaders = {
 }
 
 const resolveRedirectOrigin = (origin?: string) => {
-  const fallback = 'https://votenoseuclube.com.br'
+  const fallback = 'https://votenoseutime.com.br'
 
   if (!origin) return fallback
 
@@ -21,7 +21,9 @@ const resolveRedirectOrigin = (origin?: string) => {
     const url = new URL(origin)
     const isLovablePreview = url.hostname.endsWith('.lovableproject.com') || url.hostname.endsWith('.lovable.app')
     const isHeartClubDomain = url.hostname === 'heartclubapp.com' || url.hostname === 'www.heartclubapp.com'
-    const isVoteDomain = url.hostname === 'votenoseuclube.com.br' || url.hostname === 'www.votenoseuclube.com.br'
+    const isVoteDomain =
+      url.hostname === 'votenoseutime.com.br' || url.hostname === 'www.votenoseutime.com.br' ||
+      url.hostname === 'votenoseuclube.com.br' || url.hostname === 'www.votenoseuclube.com.br'
 
     if (url.protocol === 'https:' && (isLovablePreview || isHeartClubDomain || isVoteDomain)) {
       return url.origin
