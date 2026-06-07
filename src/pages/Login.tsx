@@ -47,18 +47,21 @@ const Login = () => {
     e.preventDefault();
     if (!email.trim()) return;
     setLoadingProvider("magic");
-    const { error } = await supabase.auth.signInWithOtp({
-      email,
-      options: { emailRedirectTo: `${window.location.origin}/` },
-    });
-    if (error) {
+    try {
+      const { data, error } = await supabase.functions.invoke("heart-club-auth", {
+        body: { email: email.trim(), redirectOrigin: window.location.origin },
+      });
+      if (error || (data && (data as any).error)) {
+        throw new Error(((data as any)?.error as string) || error?.message || "auth_failed");
+      }
+      toast({ title: "Link enviado! ✉️", description: "Verifique seu email para acessar sua conta." });
+    } catch (err) {
+      console.error("[LOGIN] magic link falhou", err);
       toast({
         variant: "destructive",
         title: "Estamos com problema",
-        description: "Entre com o Google.",
+        description: "Não foi possível enviar o link. Tente novamente ou entre com o Google.",
       });
-    } else {
-      toast({ title: "Link enviado! ✉️", description: "Verifique seu email para acessar sua conta." });
     }
     setLoadingProvider(null);
   };
