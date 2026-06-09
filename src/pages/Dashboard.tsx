@@ -43,6 +43,13 @@ const Dashboard = () => {
   const [sympathies, setSympathies] = useState<string[]>([]);
   const [fadeKey, setFadeKey] = useState(0);
   const [viewedLogo, setViewedLogo] = useState<string | null>(null);
+  const [viewedClubMeta, setViewedClubMeta] = useState<{
+    apiId: string | null;
+    cidade: string | null;
+    pais: string | null;
+    mascote: string | null;
+    nomeCurto: string | null;
+  } | null>(null);
 
   // TRAVA DE SEGURANÇA MASTER ADMIN
   const isMasterAdmin = isMasterEmail(user?.email);
@@ -90,10 +97,23 @@ const Dashboard = () => {
       }
       const { data } = await supabase
         .from("clubes_cache")
-        .select("escudo_url")
+        .select("escudo_url, api_id, cidade, pais, mascote, nome_curto")
         .ilike("nome", viewedClubName)
         .maybeSingle();
-      if (!cancelled) setViewedLogo(data?.escudo_url || null);
+      if (!cancelled) {
+        setViewedLogo(data?.escudo_url || null);
+        setViewedClubMeta(
+          data
+            ? {
+                apiId: data.api_id ?? null,
+                cidade: data.cidade ?? null,
+                pais: data.pais ?? null,
+                mascote: data.mascote ?? null,
+                nomeCurto: data.nome_curto ?? null,
+              }
+            : null,
+        );
+      }
     };
     fetchLogo();
     return () => { cancelled = true; };
@@ -211,7 +231,7 @@ const Dashboard = () => {
               </div>
             )}
             <div className="glass-card rounded-[32px] p-2">
-              <NewsFeedCards teamName={viewedClubName} primaryColor={primary} />
+              <NewsFeedCards teamName={viewedClubName} primaryColor={primary} clubMeta={viewedClubMeta} />
             </div>
           </section>
 
