@@ -255,9 +255,9 @@ serve(async (req) => {
       "amistoso beneficente", "racha",
     ];
 
-    // FRESHNESS — janela ampla (10 dias) porque o fallback Bing às vezes
-    // devolve artigos um pouco mais antigos. O client ordena por mais recente.
-    const FRESHNESS_MS = 10 * 24 * 60 * 60 * 1000;
+    // FRESHNESS — janela de 21 dias (Bing News RSS, usado como fallback,
+    // muitas vezes devolve artigos mais antigos do que o Google News).
+    const FRESHNESS_MS = 21 * 24 * 60 * 60 * 1000;
     const now = Date.now();
 
     const debug = { total: 0, relev: 0, fresh: 0, ctx: 0, ambig: 0, accepted: 0 };
