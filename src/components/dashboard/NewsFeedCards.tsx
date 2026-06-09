@@ -61,7 +61,6 @@ export default function NewsFeedCards({ teamName, primaryColor = "#ff6200", club
             apiId: clubMeta?.apiId ?? null,
             cidade: clubMeta?.cidade ?? null,
             pais: clubMeta?.pais ?? null,
-            mascote: clubMeta?.mascote ?? null,
             nomeCurto: clubMeta?.nomeCurto ?? null,
           },
         });
