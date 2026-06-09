@@ -336,10 +336,10 @@ serve(async (req) => {
       }
 
       items.push({
-        title: cleanTitle,
-        link,
+        title: decodeHtmlEntities(cleanTitle),
+        link: decodeHtmlEntities(link),
         pubDate,
-        source,
+        source: decodeHtmlEntities(source),
         imageUrl,
         guid: get("guid") || `${titleNorm}-${items.length}`,
       });
