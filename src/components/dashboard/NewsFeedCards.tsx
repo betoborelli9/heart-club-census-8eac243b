@@ -19,9 +19,18 @@ interface NewsItem {
   time?: string;
 }
 
+interface ClubMeta {
+  apiId: string | null;
+  cidade: string | null;
+  pais: string | null;
+  mascote: string | null;
+  nomeCurto: string | null;
+}
+
 interface Props {
   teamName: string | null;
   primaryColor?: string;
+  clubMeta?: ClubMeta | null;
 }
 
 const timeAgo = (d?: string) => {
