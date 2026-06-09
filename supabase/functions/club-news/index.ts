@@ -156,7 +156,7 @@ serve(async (req) => {
     const clubName: string = body?.clubName;
     const cidade: string | null = body?.cidade ?? null;
     const pais: string | null = body?.pais ?? null;
-    const mascote: string | null = body?.mascote ?? null;
+    const estado: string | null = body?.estado ?? null;
 
     if (!clubName || typeof clubName !== "string" || clubName.length > 100) {
       return new Response(JSON.stringify({ error: "clubName inválido" }), {
