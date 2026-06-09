@@ -285,7 +285,6 @@ serve(async (req) => {
 
       const pubDate = get("pubDate");
       const pubMs = pubDate ? new Date(pubDate).getTime() : NaN;
-      if (debug.relev <= 2) console.log(`[club-news] sample pubDate="${pubDate}" parsed=${pubMs} age=${now - pubMs}ms`);
       if (!isNaN(pubMs) && now - pubMs > FRESHNESS_MS) continue;
       debug.fresh++;
 
