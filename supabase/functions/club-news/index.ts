@@ -26,6 +26,22 @@ function normalize(s: string): string {
     .trim();
 }
 
+// Decodifica entidades HTML básicas (&#225;, &amp;, &quot;…) — Bing News e
+// outros feeds devolvem títulos com entidades numéricas que o React não
+// renderiza automaticamente.
+function decodeHtmlEntities(s: string): string {
+  if (!s) return s;
+  return s
+    .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(Number(n)))
+    .replace(/&#x([0-9a-fA-F]+);/g, (_, n) => String.fromCharCode(parseInt(n, 16)))
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'")
+    .replace(/&nbsp;/g, " ");
+}
+
 function extractSource(title: string): { cleanTitle: string; source: string } {
   const match = title.match(/^(.*)\s-\s([^-]+)$/);
   if (match) return { cleanTitle: match[1].trim(), source: match[2].trim() };
