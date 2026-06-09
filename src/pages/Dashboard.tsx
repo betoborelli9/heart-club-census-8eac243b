@@ -96,7 +96,7 @@ const Dashboard = () => {
       }
       const { data } = await supabase
         .from("clubes_cache")
-        .select("escudo_url, api_id, cidade, pais, mascote, nome_curto")
+        .select("escudo_url, api_id, cidade, pais, nome_curto")
         .ilike("nome", viewedClubName)
         .maybeSingle();
       if (!cancelled) {
@@ -107,7 +107,6 @@ const Dashboard = () => {
                 apiId: data.api_id ?? null,
                 cidade: data.cidade ?? null,
                 pais: data.pais ?? null,
-                mascote: data.mascote ?? null,
                 nomeCurto: data.nome_curto ?? null,
               }
             : null,
