@@ -185,7 +185,7 @@ serve(async (req) => {
       "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
 
     async function fetchRss(url: string): Promise<string | null> {
-      for (let attempt = 0; attempt < 3; attempt++) {
+      for (let attempt = 0; attempt < 2; attempt++) {
         try {
           const r = await fetch(url, {
             headers: {
@@ -195,19 +195,28 @@ serve(async (req) => {
             },
           });
           if (r.ok) return await r.text();
-          console.warn(`[club-news] RSS ${r.status} attempt ${attempt + 1}`);
+          console.warn(`[club-news] RSS ${r.status} attempt ${attempt + 1} → ${url}`);
           if (r.status !== 503 && r.status !== 429) return null;
         } catch (e) {
           console.warn(`[club-news] RSS fetch error attempt ${attempt + 1}:`, e);
         }
-        await new Promise((res) => setTimeout(res, 500 * (attempt + 1)));
+        await new Promise((res) => setTimeout(res, 400 * (attempt + 1)));
       }
       return null;
     }
 
-    const xml = await fetchRss(rssUrl);
+    // 🛡️ FALLBACK MULTI-FONTE: Google News bloqueia Deno Deploy via 503.
+    // Tentamos Google primeiro; se falhar, caímos para Bing News RSS.
+    const bingQuery = encodeURIComponent(queryParts.join(" "));
+    const bingUrl = `https://www.bing.com/news/search?q=${bingQuery}&format=rss&cc=br&setlang=pt-BR`;
+
+    let xml = await fetchRss(rssUrl);
     if (!xml) {
-      console.error("Google News RSS failed after retries");
+      console.warn("[club-news] Google News falhou, tentando Bing News…");
+      xml = await fetchRss(bingUrl);
+    }
+    if (!xml) {
+      console.error("[club-news] Nenhuma fonte RSS respondeu");
       return new Response(JSON.stringify([]), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
