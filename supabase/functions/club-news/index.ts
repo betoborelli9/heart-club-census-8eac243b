@@ -181,12 +181,33 @@ serve(async (req) => {
     const rssUrl =
       `https://news.google.com/rss/search?q=${query}&hl=pt-BR&gl=BR&ceid=BR:pt-419`;
 
-    const rssResponse = await fetch(rssUrl, {
-      headers: { "User-Agent": "HeartClub/1.0" },
-    });
+    const BROWSER_UA =
+      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
 
-    if (!rssResponse.ok) {
-      console.error("Google News RSS error:", rssResponse.status);
+    async function fetchRss(url: string): Promise<string | null> {
+      for (let attempt = 0; attempt < 3; attempt++) {
+        try {
+          const r = await fetch(url, {
+            headers: {
+              "User-Agent": BROWSER_UA,
+              "Accept": "application/rss+xml, application/xml, text/xml, */*",
+              "Accept-Language": "pt-BR,pt;q=0.9,en;q=0.8",
+            },
+          });
+          if (r.ok) return await r.text();
+          console.warn(`[club-news] RSS ${r.status} attempt ${attempt + 1}`);
+          if (r.status !== 503 && r.status !== 429) return null;
+        } catch (e) {
+          console.warn(`[club-news] RSS fetch error attempt ${attempt + 1}:`, e);
+        }
+        await new Promise((res) => setTimeout(res, 500 * (attempt + 1)));
+      }
+      return null;
+    }
+
+    const xml = await fetchRss(rssUrl);
+    if (!xml) {
+      console.error("Google News RSS failed after retries");
       return new Response(JSON.stringify([]), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
