@@ -46,7 +46,7 @@ const timeAgo = (d?: string) => {
   return `${Math.floor(hrs / 24)}d`;
 };
 
-export default function NewsFeedCards({ teamName, primaryColor = "#ff6200" }: Props) {
+export default function NewsFeedCards({ teamName, primaryColor = "#ff6200", clubMeta }: Props) {
   const [news, setNews] = useState<NewsItem[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -56,7 +56,16 @@ export default function NewsFeedCards({ teamName, primaryColor = "#ff6200" }: Pr
       if (!teamName) return;
       setLoading(true);
       try {
-        const { data } = await supabase.functions.invoke("club-news", { body: { clubName: teamName } });
+        const { data } = await supabase.functions.invoke("club-news", {
+          body: {
+            clubName: teamName,
+            apiId: clubMeta?.apiId ?? null,
+            cidade: clubMeta?.cidade ?? null,
+            pais: clubMeta?.pais ?? null,
+            mascote: clubMeta?.mascote ?? null,
+            nomeCurto: clubMeta?.nomeCurto ?? null,
+          },
+        });
         const raw: NewsItem[] = Array.isArray(data) ? data : data?.data || [];
 
         // FILTRO DE VALIDADE (anti-zumbi):
