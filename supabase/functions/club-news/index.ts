@@ -259,7 +259,10 @@ serve(async (req) => {
     const FRESHNESS_MS = 48 * 60 * 60 * 1000;
     const now = Date.now();
 
+    const debug = { total: 0, relev: 0, fresh: 0, ctx: 0, ambig: 0, accepted: 0 };
+
     while ((match = itemRegex.exec(xml)) !== null && items.length < 12) {
+      debug.total++;
       const block = match[1];
 
       const get = (tag: string) => {
@@ -272,28 +275,36 @@ serve(async (req) => {
       };
 
       const rawTitle = get("title");
-      const { cleanTitle, source } = extractSource(rawTitle);
+      const { cleanTitle, source: parsedSource } = extractSource(rawTitle);
+      const bingSource = (block.match(/<News:Source>([\s\S]*?)<\/News:Source>/) || [])[1];
+      const source = (bingSource || parsedSource || "Notícias").trim();
+
       if (!isStrictlyRelevant(cleanTitle, clubName)) continue;
+      debug.relev++;
 
       const pubDate = get("pubDate");
       const pubMs = pubDate ? new Date(pubDate).getTime() : NaN;
       if (!isNaN(pubMs) && now - pubMs > FRESHNESS_MS) continue;
+      debug.fresh++;
 
-      const description = get("description");
+      const description = get("description").replace(/<[^>]+>/g, " ");
       const haystack = normalize(`${cleanTitle} ${description}`);
 
       // Bloqueio explícito de futebol amador / várzea.
       if (AMATEUR_BLACKLIST.some((b) => haystack.includes(b))) continue;
 
-      // Exige contexto de futebol profissional no título ou descrição.
-      if (!FOOTBALL_CTX.some((c) => haystack.includes(c))) continue;
+      // Contexto de futebol é PREFERIDO, não obrigatório — muitas manchetes
+      // de clubes grandes não citam "futebol" mas são claramente sobre o clube.
+      // Só aplicamos o filtro quando o nome do clube é genérico (raiz ambígua).
+      if (ambiguous && !FOOTBALL_CTX.some((c) => haystack.includes(c))) continue;
+      debug.ctx++;
 
-      // ANTI-HOMÔNIMO: se o clube tem raiz ambígua (Atlético, Vila Nova,
-      // América, etc.), exige discriminador geográfico (cidade, estado, UF).
+      // ANTI-HOMÔNIMO: se o clube tem raiz ambígua, exige discriminador geográfico.
       if (ambiguous && discriminators.length > 0) {
         const ok = discriminators.some((d) => d && haystack.includes(d));
         if (!ok) continue;
       }
+      debug.ambig++;
 
       const titleNorm = normalize(cleanTitle);
       if (seenTitles.has(titleNorm)) continue;
@@ -315,7 +326,10 @@ serve(async (req) => {
         imageUrl,
         guid: get("guid") || `${titleNorm}-${items.length}`,
       });
+      debug.accepted++;
     }
+
+    console.log(`[club-news] ${clubName} →`, JSON.stringify(debug));
 
     return new Response(JSON.stringify(items), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
