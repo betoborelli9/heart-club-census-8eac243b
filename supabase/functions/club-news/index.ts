@@ -213,7 +213,6 @@ serve(async (req) => {
       });
     }
 
-    const xml = await rssResponse.text();
     const items: any[] = [];
     const seenTitles = new Set<string>();
 
