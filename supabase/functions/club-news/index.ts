@@ -26,6 +26,22 @@ function normalize(s: string): string {
     .trim();
 }
 
+// Decodifica entidades HTML básicas (&#225;, &amp;, &quot;…) — Bing News e
+// outros feeds devolvem títulos com entidades numéricas que o React não
+// renderiza automaticamente.
+function decodeHtmlEntities(s: string): string {
+  if (!s) return s;
+  return s
+    .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(Number(n)))
+    .replace(/&#x([0-9a-fA-F]+);/g, (_, n) => String.fromCharCode(parseInt(n, 16)))
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'")
+    .replace(/&nbsp;/g, " ");
+}
+
 function extractSource(title: string): { cleanTitle: string; source: string } {
   const match = title.match(/^(.*)\s-\s([^-]+)$/);
   if (match) return { cleanTitle: match[1].trim(), source: match[2].trim() };
@@ -185,7 +201,7 @@ serve(async (req) => {
       "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
 
     async function fetchRss(url: string): Promise<string | null> {
-      for (let attempt = 0; attempt < 3; attempt++) {
+      for (let attempt = 0; attempt < 2; attempt++) {
         try {
           const r = await fetch(url, {
             headers: {
@@ -195,19 +211,28 @@ serve(async (req) => {
             },
           });
           if (r.ok) return await r.text();
-          console.warn(`[club-news] RSS ${r.status} attempt ${attempt + 1}`);
+          console.warn(`[club-news] RSS ${r.status} attempt ${attempt + 1} → ${url}`);
           if (r.status !== 503 && r.status !== 429) return null;
         } catch (e) {
           console.warn(`[club-news] RSS fetch error attempt ${attempt + 1}:`, e);
         }
-        await new Promise((res) => setTimeout(res, 500 * (attempt + 1)));
+        await new Promise((res) => setTimeout(res, 400 * (attempt + 1)));
       }
       return null;
     }
 
-    const xml = await fetchRss(rssUrl);
+    // 🛡️ FALLBACK MULTI-FONTE: Google News bloqueia Deno Deploy via 503.
+    // Tentamos Google primeiro; se falhar, caímos para Bing News RSS.
+    const bingQuery = encodeURIComponent(queryParts.join(" "));
+    const bingUrl = `https://www.bing.com/news/search?q=${bingQuery}&format=rss&cc=br&setlang=pt-BR`;
+
+    let xml = await fetchRss(rssUrl);
     if (!xml) {
-      console.error("Google News RSS failed after retries");
+      console.warn("[club-news] Google News falhou, tentando Bing News…");
+      xml = await fetchRss(bingUrl);
+    }
+    if (!xml) {
+      console.error("[club-news] Nenhuma fonte RSS respondeu");
       return new Response(JSON.stringify([]), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -246,11 +271,15 @@ serve(async (req) => {
       "amistoso beneficente", "racha",
     ];
 
-    // FRESHNESS — só notícias das últimas 48h.
-    const FRESHNESS_MS = 48 * 60 * 60 * 1000;
+    // FRESHNESS — janela de 21 dias (Bing News RSS, usado como fallback,
+    // muitas vezes devolve artigos mais antigos do que o Google News).
+    const FRESHNESS_MS = 21 * 24 * 60 * 60 * 1000;
     const now = Date.now();
 
+    const debug = { total: 0, relev: 0, fresh: 0, ctx: 0, ambig: 0, accepted: 0 };
+
     while ((match = itemRegex.exec(xml)) !== null && items.length < 12) {
+      debug.total++;
       const block = match[1];
 
       const get = (tag: string) => {
@@ -263,28 +292,36 @@ serve(async (req) => {
       };
 
       const rawTitle = get("title");
-      const { cleanTitle, source } = extractSource(rawTitle);
+      const { cleanTitle, source: parsedSource } = extractSource(rawTitle);
+      const bingSource = (block.match(/<News:Source>([\s\S]*?)<\/News:Source>/) || [])[1];
+      const source = (bingSource || parsedSource || "Notícias").trim();
+
       if (!isStrictlyRelevant(cleanTitle, clubName)) continue;
+      debug.relev++;
 
       const pubDate = get("pubDate");
       const pubMs = pubDate ? new Date(pubDate).getTime() : NaN;
       if (!isNaN(pubMs) && now - pubMs > FRESHNESS_MS) continue;
+      debug.fresh++;
 
-      const description = get("description");
+      const description = get("description").replace(/<[^>]+>/g, " ");
       const haystack = normalize(`${cleanTitle} ${description}`);
 
       // Bloqueio explícito de futebol amador / várzea.
       if (AMATEUR_BLACKLIST.some((b) => haystack.includes(b))) continue;
 
-      // Exige contexto de futebol profissional no título ou descrição.
-      if (!FOOTBALL_CTX.some((c) => haystack.includes(c))) continue;
+      // Contexto de futebol é PREFERIDO, não obrigatório — muitas manchetes
+      // de clubes grandes não citam "futebol" mas são claramente sobre o clube.
+      // Só aplicamos o filtro quando o nome do clube é genérico (raiz ambígua).
+      if (ambiguous && !FOOTBALL_CTX.some((c) => haystack.includes(c))) continue;
+      debug.ctx++;
 
-      // ANTI-HOMÔNIMO: se o clube tem raiz ambígua (Atlético, Vila Nova,
-      // América, etc.), exige discriminador geográfico (cidade, estado, UF).
+      // ANTI-HOMÔNIMO: se o clube tem raiz ambígua, exige discriminador geográfico.
       if (ambiguous && discriminators.length > 0) {
         const ok = discriminators.some((d) => d && haystack.includes(d));
         if (!ok) continue;
       }
+      debug.ambig++;
 
       const titleNorm = normalize(cleanTitle);
       if (seenTitles.has(titleNorm)) continue;
@@ -299,14 +336,17 @@ serve(async (req) => {
       }
 
       items.push({
-        title: cleanTitle,
-        link,
+        title: decodeHtmlEntities(cleanTitle),
+        link: decodeHtmlEntities(link),
         pubDate,
-        source,
+        source: decodeHtmlEntities(source),
         imageUrl,
         guid: get("guid") || `${titleNorm}-${items.length}`,
       });
+      debug.accepted++;
     }
+
+    console.log(`[club-news] ${clubName} →`, JSON.stringify(debug));
 
     return new Response(JSON.stringify(items), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
