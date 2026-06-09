@@ -122,6 +122,7 @@ const AMBIGUOUS_ROOTS = [
   "juventude", "santos", "river", "boca", "vitoria", "guarani", "portuguesa",
   "operario", "uniao", "central", "remo", "paysandu", "botafogo", "fluminense",
   "palmeiras", "corinthians", "ferroviario", "ferroviaria", "industrial",
+  "vila", "real", "uniao", "comercial", "olimpia", "independente", "metropol",
 ];
 
 function clubHasAmbiguousRoot(clubName: string): boolean {
