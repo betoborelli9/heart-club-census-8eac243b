@@ -47,7 +47,6 @@ const Dashboard = () => {
     apiId: string | null;
     cidade: string | null;
     pais: string | null;
-    mascote: string | null;
     nomeCurto: string | null;
   } | null>(null);
 
