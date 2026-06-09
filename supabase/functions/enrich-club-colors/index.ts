@@ -220,17 +220,28 @@ serve(async (req) => {
       });
     }
 
-    if (club_name) {
-      const { data: existing } = await supabase
+    // 🛡️ DEDUP: procura por api_id E por nome normalizado (sem acento/caixa)
+    let existing: any = null;
+    if (api_id) {
+      const { data } = await supabase
         .from("clubes_cache")
         .select("*")
-        .ilike("nome", club_name)
+        .eq("api_id", String(api_id))
         .maybeSingle();
-      if (existing?.api_id || existing?.escudo_url) {
-        return new Response(JSON.stringify({ success: true, club: existing, source: "cache" }), {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
+      if (data) existing = data;
+    }
+    if (!existing && club_name) {
+      const norm = normalizeName(club_name);
+      const { data: rows } = await supabase
+        .from("clubes_cache")
+        .select("*")
+        .or(`nome.ilike.${club_name},nome_curto.ilike.${club_name}`);
+      existing = (rows || []).find((r: any) => normalizeName(r.nome) === norm || normalizeName(r.nome_curto) === norm) || null;
+    }
+    if (existing && (existing.api_id || existing.escudo_url)) {
+      return new Response(JSON.stringify({ success: true, club: existing, source: "cache" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     console.log(`[ENRICH 100.0] → ${club_name} (api_id=${api_id || "n/a"})`);
@@ -307,11 +318,36 @@ serve(async (req) => {
 
     console.log(`[ENRICH 100.0] payload:`, JSON.stringify(payload));
 
-    const { data, error } = await supabase
-      .from("clubes_cache")
-      .upsert(payload, { onConflict: "nome" })
-      .select()
-      .single();
+    // 🛡️ Anti-duplicidade: se já existe (mesmo nome normalizado OU mesmo api_id),
+    // faz UPDATE pelo id; caso contrário, INSERT. Não usa upsert por "nome" (case/acento sensível).
+    let dupExisting: any = existing || null;
+    if (!dupExisting) {
+      const norm = normalizeName(finalName);
+      const { data: rows } = await supabase
+        .from("clubes_cache")
+        .select("id, nome, api_id")
+        .or(`api_id.eq.${payload.api_id ?? "__none__"},nome.ilike.${finalName}`);
+      dupExisting = (rows || []).find((r: any) =>
+        (payload.api_id && r.api_id && String(r.api_id) === String(payload.api_id)) ||
+        normalizeName(r.nome) === norm
+      ) || null;
+    }
+
+    let data: any, error: any;
+    if (dupExisting?.id) {
+      ({ data, error } = await supabase
+        .from("clubes_cache")
+        .update(payload)
+        .eq("id", dupExisting.id)
+        .select()
+        .single());
+    } else {
+      ({ data, error } = await supabase
+        .from("clubes_cache")
+        .insert(payload)
+        .select()
+        .single());
+    }
 
     if (error) throw error;
 
