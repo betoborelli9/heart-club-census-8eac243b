@@ -104,7 +104,8 @@ export default function RivalsColumn({ clubName, refCode, primaryColor = "#ff620
         const baseList: RivalItem[] = cachedNames.slice(0, 4).map((name) => {
           const c = resolved.get(name);
           return {
-            name,
+            // Prefere o nome curto/canônico do cache (evita truncar "AMÉRICA FUTEBOL CLU...")
+            name: c?.nome || name,
             logo: c?.escudo_url || null,
             city: c?.cidade || null,
             country: c?.pais || null,
@@ -179,8 +180,10 @@ export default function RivalsColumn({ clubName, refCode, primaryColor = "#ff620
                 />
               </div>
               <div className="flex-1 min-w-0">
-                <h3 className="text-[10px] font-black uppercase italic text-white truncate leading-tight">{rival.name}</h3>
-                <span className="text-[8px] font-bold text-white/30 uppercase truncate block leading-tight">
+                <h3 className="text-[11px] font-black uppercase italic text-white leading-tight break-words">
+                  {rival.name}
+                </h3>
+                <span className="text-[8px] font-bold text-white/30 uppercase truncate block leading-tight mt-0.5">
                   {[rival.city, rival.country].filter(Boolean).join(" • ") || "Rival Histórico"}
                 </span>
               </div>
