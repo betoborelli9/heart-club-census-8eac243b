@@ -318,11 +318,36 @@ serve(async (req) => {
 
     console.log(`[ENRICH 100.0] payload:`, JSON.stringify(payload));
 
-    const { data, error } = await supabase
-      .from("clubes_cache")
-      .upsert(payload, { onConflict: "nome" })
-      .select()
-      .single();
+    // 🛡️ Anti-duplicidade: se já existe (mesmo nome normalizado OU mesmo api_id),
+    // faz UPDATE pelo id; caso contrário, INSERT. Não usa upsert por "nome" (case/acento sensível).
+    let dupExisting: any = existing || null;
+    if (!dupExisting) {
+      const norm = normalizeName(finalName);
+      const { data: rows } = await supabase
+        .from("clubes_cache")
+        .select("id, nome, api_id")
+        .or(`api_id.eq.${payload.api_id ?? "__none__"},nome.ilike.${finalName}`);
+      dupExisting = (rows || []).find((r: any) =>
+        (payload.api_id && r.api_id && String(r.api_id) === String(payload.api_id)) ||
+        normalizeName(r.nome) === norm
+      ) || null;
+    }
+
+    let data: any, error: any;
+    if (dupExisting?.id) {
+      ({ data, error } = await supabase
+        .from("clubes_cache")
+        .update(payload)
+        .eq("id", dupExisting.id)
+        .select()
+        .single());
+    } else {
+      ({ data, error } = await supabase
+        .from("clubes_cache")
+        .insert(payload)
+        .select()
+        .single());
+    }
 
     if (error) throw error;
 
