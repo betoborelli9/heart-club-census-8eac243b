@@ -70,11 +70,13 @@ export default function RivalsColumn({ clubName, refCode, primaryColor = "#ff620
         const resolved = new Map<string, any>();
         (clubsExact || []).forEach((c: any) => resolved.set(c.nome, c));
 
-        // 1b) fallback fuzzy por tokens significativos para nomes não casados
+        // 1b) fallback fuzzy: usa apenas o token MAIS distintivo (nome próprio)
+        // Ex.: "Botafogo de Futebol e Regatas" → token "botafogo" → casa com "Botafogo".
         const STOP = new Set([
           "sport","club","clube","de","da","do","dos","das","e","futebol",
-          "esporte","sociedade","associacao","association","football","fc",
-          "cf","ec","sc","u19","u20","u23",
+          "esporte","esportes","sociedade","associacao","association","football","fc",
+          "cf","ec","sc","ac","u19","u20","u23","regatas","regata","atletico",
+          "atletica","gremio","real","city","united","junior","juniors","the",
         ]);
         const tokenize = (n: string) =>
           n.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase()
@@ -85,15 +87,15 @@ export default function RivalsColumn({ clubName, refCode, primaryColor = "#ff620
         const missing = cachedNames.filter((n) => !resolved.has(n));
         await Promise.all(
           missing.map(async (fullName) => {
-            const tokens = tokenize(fullName).slice(0, 3);
+            const tokens = tokenize(fullName);
             if (!tokens.length) return;
-            // AND lógico: clube precisa conter TODOS os tokens significativos
-            // (evita que "Atlético Goianiense" case com "Atlético Paranaense").
-            let q = supabase.from("clubes_cache").select("nome, escudo_url, cidade, pais");
-            tokens.forEach((t) => {
-              q = q.ilike("nome", `%${t}%`);
-            });
-            const { data: hits } = await q.limit(5);
+            // Tenta token mais distintivo (mais longo) e escolhe a linha mais curta.
+            const primary = tokens[0];
+            const { data: hits } = await supabase
+              .from("clubes_cache")
+              .select("nome, escudo_url, cidade, pais")
+              .ilike("nome", `%${primary}%`)
+              .limit(10);
             if (hits && hits.length) {
               const best = [...hits].sort((a: any, b: any) => a.nome.length - b.nome.length)[0];
               resolved.set(fullName, best);
