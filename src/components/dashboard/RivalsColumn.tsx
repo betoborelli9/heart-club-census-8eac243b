@@ -104,7 +104,8 @@ export default function RivalsColumn({ clubName, refCode, primaryColor = "#ff620
         const baseList: RivalItem[] = cachedNames.slice(0, 4).map((name) => {
           const c = resolved.get(name);
           return {
-            name,
+            // Prefere o nome curto/canônico do cache (evita truncar "AMÉRICA FUTEBOL CLU...")
+            name: c?.nome || name,
             logo: c?.escudo_url || null,
             city: c?.cidade || null,
             country: c?.pais || null,
