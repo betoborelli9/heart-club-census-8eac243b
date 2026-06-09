@@ -231,7 +231,7 @@ const Dashboard = () => {
               </div>
             )}
             <div className="glass-card rounded-[32px] p-2">
-              <NewsFeedCards teamName={viewedClubName} primaryColor={primary} />
+              <NewsFeedCards teamName={viewedClubName} primaryColor={primary} clubMeta={viewedClubMeta} />
             </div>
           </section>
 
