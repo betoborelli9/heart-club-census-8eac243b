@@ -72,7 +72,7 @@ export default function NewsFeedCards({ teamName, primaryColor = "#ff6200", club
         //   "ao vivo", "tempo real" só valem se publicados nas últimas 24h
         //   (notícias de pré-jogo de partida que já aconteceu são removidas).
         const now = Date.now();
-        const MAX_AGE = 21 * 24 * 60 * 60 * 1000; // 21 dias
+        const MAX_AGE = 60 * 24 * 60 * 60 * 1000; // 60 dias
         const H24 = 24 * 60 * 60 * 1000;
         const PRE_MATCH_RX = /(onde\s+assistir|escala[cç][aã]o|escala[cç][oõ]es|prov[aá]vel|pr[eé][- ]?jogo|ao\s+vivo|tempo\s+real|minuto\s+a\s+minuto)/i;
         const fresh = raw.filter((item) => {

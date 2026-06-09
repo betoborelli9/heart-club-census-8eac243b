@@ -56,13 +56,17 @@ function getClubTokens(clubName: string): string[] {
 
 function isStrictlyRelevant(title: string, clubName: string): boolean {
   const titleNorm = normalize(title);
-  const tokens = getClubTokens(clubName);
+  const fullNorm = normalize(clubName);
+  if (titleNorm.includes(fullNorm)) return true;
 
+  const tokens = getClubTokens(clubName);
   if (tokens.length === 0) return false;
+
+  // aceita "vila-go", "atletico-mg", etc. (token + UF)
+  if (new RegExp(`\\b${tokens[0]}[- ]?[a-z]{2}\\b`).test(titleNorm)) return true;
 
   const matches = tokens.filter((token) => titleNorm.includes(token));
   if (tokens.length === 1) return matches.length === 1;
-
   return matches.length >= Math.min(tokens.length, 2);
 }
 
@@ -271,9 +275,9 @@ serve(async (req) => {
       "amistoso beneficente", "racha",
     ];
 
-    // FRESHNESS — janela de 21 dias (Bing News RSS, usado como fallback,
-    // muitas vezes devolve artigos mais antigos do que o Google News).
-    const FRESHNESS_MS = 21 * 24 * 60 * 60 * 1000;
+    // FRESHNESS — janela de 60 dias (Bing News RSS, fallback, costuma trazer
+    // resultados mais antigos; preferimos mostrar algo a deixar o feed vazio).
+    const FRESHNESS_MS = 60 * 24 * 60 * 60 * 1000;
     const now = Date.now();
 
     const debug = { total: 0, relev: 0, fresh: 0, ctx: 0, ambig: 0, accepted: 0 };
@@ -309,17 +313,20 @@ serve(async (req) => {
 
       // Bloqueio explícito de futebol amador / várzea.
       if (AMATEUR_BLACKLIST.some((b) => haystack.includes(b))) continue;
-
-      // Contexto de futebol é PREFERIDO, não obrigatório — muitas manchetes
-      // de clubes grandes não citam "futebol" mas são claramente sobre o clube.
-      // Só aplicamos o filtro quando o nome do clube é genérico (raiz ambígua).
-      if (ambiguous && !FOOTBALL_CTX.some((c) => haystack.includes(c))) continue;
       debug.ctx++;
 
-      // ANTI-HOMÔNIMO: se o clube tem raiz ambígua, exige discriminador geográfico.
+      // ANTI-HOMÔNIMO suave: se o clube tem raiz ambígua E o título contém
+      // marcador de outro estado, descarta. Caso contrário, aceita.
       if (ambiguous && discriminators.length > 0) {
-        const ok = discriminators.some((d) => d && haystack.includes(d));
-        if (!ok) continue;
+        const titleN = normalize(cleanTitle);
+        const ufMatches = titleN.match(/\b([a-z]{2})\b/g) || [];
+        const knownUF = discriminators.find((d) => d.length === 2);
+        const hasOwn = discriminators.some((d) => d && haystack.includes(d));
+        const conflictsUF = knownUF && ufMatches.some((u) =>
+          /^(mg|sp|rj|rs|pr|sc|ba|ce|pe|rn|pb|al|se|pi|ma|am|pa|ap|rr|ro|ac|to|mt|ms|go|df|es)$/.test(u) &&
+          u !== knownUF
+        );
+        if (conflictsUF && !hasOwn) continue;
       }
       debug.ambig++;
 
