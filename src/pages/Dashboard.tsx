@@ -43,6 +43,13 @@ const Dashboard = () => {
   const [sympathies, setSympathies] = useState<string[]>([]);
   const [fadeKey, setFadeKey] = useState(0);
   const [viewedLogo, setViewedLogo] = useState<string | null>(null);
+  const [viewedClubMeta, setViewedClubMeta] = useState<{
+    apiId: string | null;
+    cidade: string | null;
+    pais: string | null;
+    mascote: string | null;
+    nomeCurto: string | null;
+  } | null>(null);
 
   // TRAVA DE SEGURANÇA MASTER ADMIN
   const isMasterAdmin = isMasterEmail(user?.email);
