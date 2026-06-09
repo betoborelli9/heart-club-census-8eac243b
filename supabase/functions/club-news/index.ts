@@ -56,13 +56,17 @@ function getClubTokens(clubName: string): string[] {
 
 function isStrictlyRelevant(title: string, clubName: string): boolean {
   const titleNorm = normalize(title);
-  const tokens = getClubTokens(clubName);
+  const fullNorm = normalize(clubName);
+  if (titleNorm.includes(fullNorm)) return true;
 
+  const tokens = getClubTokens(clubName);
   if (tokens.length === 0) return false;
+
+  // aceita "vila-go", "atletico-mg", etc. (token + UF)
+  if (new RegExp(`\\b${tokens[0]}[- ]?[a-z]{2}\\b`).test(titleNorm)) return true;
 
   const matches = tokens.filter((token) => titleNorm.includes(token));
   if (tokens.length === 1) return matches.length === 1;
-
   return matches.length >= Math.min(tokens.length, 2);
 }
 
