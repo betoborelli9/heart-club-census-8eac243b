@@ -120,7 +120,7 @@ export default function NewsFeedCards({ teamName, primaryColor = "#ff6200", club
     return () => {
       cancelled = true;
     };
-  }, [teamName]);
+  }, [teamName, clubMeta?.apiId, clubMeta?.cidade, clubMeta?.pais, clubMeta?.mascote]);
 
   return (
     <section className="p-4 space-y-4">
