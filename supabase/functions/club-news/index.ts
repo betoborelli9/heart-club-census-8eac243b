@@ -171,6 +171,7 @@ serve(async (req) => {
     // clubes homônimos em outras cidades/países.
     const queryParts = [`"${clubName}"`, "futebol"];
     if (cidade) queryParts.push(cidade);
+    if (estado) queryParts.push(estado);
     if (pais && normalize(pais) !== "brazil" && normalize(pais) !== "brasil") {
       queryParts.push(pais);
     } else {
