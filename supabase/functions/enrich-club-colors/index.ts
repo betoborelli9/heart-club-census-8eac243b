@@ -220,17 +220,28 @@ serve(async (req) => {
       });
     }
 
-    if (club_name) {
-      const { data: existing } = await supabase
+    // 🛡️ DEDUP: procura por api_id E por nome normalizado (sem acento/caixa)
+    let existing: any = null;
+    if (api_id) {
+      const { data } = await supabase
         .from("clubes_cache")
         .select("*")
-        .ilike("nome", club_name)
+        .eq("api_id", String(api_id))
         .maybeSingle();
-      if (existing?.api_id || existing?.escudo_url) {
-        return new Response(JSON.stringify({ success: true, club: existing, source: "cache" }), {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
+      if (data) existing = data;
+    }
+    if (!existing && club_name) {
+      const norm = normalizeName(club_name);
+      const { data: rows } = await supabase
+        .from("clubes_cache")
+        .select("*")
+        .or(`nome.ilike.${club_name},nome_curto.ilike.${club_name}`);
+      existing = (rows || []).find((r: any) => normalizeName(r.nome) === norm || normalizeName(r.nome_curto) === norm) || null;
+    }
+    if (existing && (existing.api_id || existing.escudo_url)) {
+      return new Response(JSON.stringify({ success: true, club: existing, source: "cache" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     console.log(`[ENRICH 100.0] → ${club_name} (api_id=${api_id || "n/a"})`);
