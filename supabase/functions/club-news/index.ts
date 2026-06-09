@@ -122,6 +122,7 @@ const AMBIGUOUS_ROOTS = [
   "juventude", "santos", "river", "boca", "vitoria", "guarani", "portuguesa",
   "operario", "uniao", "central", "remo", "paysandu", "botafogo", "fluminense",
   "palmeiras", "corinthians", "ferroviario", "ferroviaria", "industrial",
+  "vila", "real", "uniao", "comercial", "olimpia", "independente", "metropol",
 ];
 
 function clubHasAmbiguousRoot(clubName: string): boolean {
@@ -156,7 +157,7 @@ serve(async (req) => {
     const clubName: string = body?.clubName;
     const cidade: string | null = body?.cidade ?? null;
     const pais: string | null = body?.pais ?? null;
-    const mascote: string | null = body?.mascote ?? null;
+    const estado: string | null = body?.estado ?? null;
 
     if (!clubName || typeof clubName !== "string" || clubName.length > 100) {
       return new Response(JSON.stringify({ error: "clubName inválido" }), {
@@ -170,6 +171,7 @@ serve(async (req) => {
     // clubes homônimos em outras cidades/países.
     const queryParts = [`"${clubName}"`, "futebol"];
     if (cidade) queryParts.push(cidade);
+    if (estado) queryParts.push(estado);
     if (pais && normalize(pais) !== "brazil" && normalize(pais) !== "brasil") {
       queryParts.push(pais);
     } else {
@@ -197,14 +199,36 @@ serve(async (req) => {
     const itemRegex = /<item>([\s\S]*?)<\/item>/g;
     let match;
 
-    // DISCRIMINADORES: tokens que, quando presentes no título/descrição,
-    // confirmam que a notícia é do clube certo (e não de um homônimo).
+    // DISCRIMINADORES GEOGRÁFICOS (sem mascote — mascote não aparece em notícia):
+    // cidade, estado por extenso, e a UF (sigla) derivada da cidade.
     const discriminators: string[] = [];
     if (cidade) discriminators.push(normalize(cidade));
-    if (mascote) discriminators.push(normalize(mascote));
+    if (estado) discriminators.push(normalize(estado));
     const uf = cidade ? UF_BY_CITY[normalize(cidade)] : null;
-    if (uf) discriminators.push(uf); // ex.: "mg", "sp"
+    if (uf) discriminators.push(uf); // ex.: "mg", "sp", "go"
     const ambiguous = clubHasAmbiguousRoot(clubName);
+
+    // CONTEXTO DE FUTEBOL PROFISSIONAL — toda notícia precisa conter pelo
+    // menos um destes termos no título ou descrição, eliminando manchetes
+    // genéricas e conteúdos não esportivos.
+    const FOOTBALL_CTX = [
+      "futebol", "campeonato", "brasileir", "serie a", "serie b", "serie c",
+      "serie d", "copa", "libertadores", "sul-americana", "sulamericana",
+      "estadual", "tecnico", "treinador", "jogador", "atacante", "zagueiro",
+      "goleiro", "meia", "lateral", "elenco", "rodada", "partida", "jogo",
+      "gol ", "contrato", "transferencia", "torcida", "presidente",
+      "estadio", "sub-20", "sub-17", "profissional", "clube",
+    ];
+
+    // BLACKLIST — termos que indicam futebol amador, várzea, escolinha etc.
+    const AMATEUR_BLACKLIST = [
+      "amador", "varzea", "pelada", "society", "escolinha",
+      "amistoso beneficente", "racha",
+    ];
+
+    // FRESHNESS — só notícias das últimas 48h.
+    const FRESHNESS_MS = 48 * 60 * 60 * 1000;
+    const now = Date.now();
 
     while ((match = itemRegex.exec(xml)) !== null && items.length < 12) {
       const block = match[1];
@@ -222,10 +246,22 @@ serve(async (req) => {
       const { cleanTitle, source } = extractSource(rawTitle);
       if (!isStrictlyRelevant(cleanTitle, clubName)) continue;
 
-      // ANTI-HOMÔNIMO: se o nome do clube tem raiz ambígua, exige
-      // discriminador (cidade, mascote, UF) no título ou descrição.
+      const pubDate = get("pubDate");
+      const pubMs = pubDate ? new Date(pubDate).getTime() : NaN;
+      if (!isNaN(pubMs) && now - pubMs > FRESHNESS_MS) continue;
+
+      const description = get("description");
+      const haystack = normalize(`${cleanTitle} ${description}`);
+
+      // Bloqueio explícito de futebol amador / várzea.
+      if (AMATEUR_BLACKLIST.some((b) => haystack.includes(b))) continue;
+
+      // Exige contexto de futebol profissional no título ou descrição.
+      if (!FOOTBALL_CTX.some((c) => haystack.includes(c))) continue;
+
+      // ANTI-HOMÔNIMO: se o clube tem raiz ambígua (Atlético, Vila Nova,
+      // América, etc.), exige discriminador geográfico (cidade, estado, UF).
       if (ambiguous && discriminators.length > 0) {
-        const haystack = normalize(`${cleanTitle} ${get("description")}`);
         const ok = discriminators.some((d) => d && haystack.includes(d));
         if (!ok) continue;
       }
@@ -245,7 +281,7 @@ serve(async (req) => {
       items.push({
         title: cleanTitle,
         link,
-        pubDate: get("pubDate"),
+        pubDate,
         source,
         imageUrl,
         guid: get("guid") || `${titleNorm}-${items.length}`,

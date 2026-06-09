@@ -23,7 +23,6 @@ interface ClubMeta {
   apiId: string | null;
   cidade: string | null;
   pais: string | null;
-  mascote: string | null;
   nomeCurto: string | null;
 }
 
@@ -62,7 +61,6 @@ export default function NewsFeedCards({ teamName, primaryColor = "#ff6200", club
             apiId: clubMeta?.apiId ?? null,
             cidade: clubMeta?.cidade ?? null,
             pais: clubMeta?.pais ?? null,
-            mascote: clubMeta?.mascote ?? null,
             nomeCurto: clubMeta?.nomeCurto ?? null,
           },
         });
@@ -120,7 +118,7 @@ export default function NewsFeedCards({ teamName, primaryColor = "#ff6200", club
     return () => {
       cancelled = true;
     };
-  }, [teamName, clubMeta?.apiId, clubMeta?.cidade, clubMeta?.pais, clubMeta?.mascote]);
+  }, [teamName, clubMeta?.apiId, clubMeta?.cidade, clubMeta?.pais]);
 
   return (
     <section className="p-4 space-y-4">
