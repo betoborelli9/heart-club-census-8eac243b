@@ -255,8 +255,9 @@ serve(async (req) => {
       "amistoso beneficente", "racha",
     ];
 
-    // FRESHNESS — só notícias das últimas 48h.
-    const FRESHNESS_MS = 48 * 60 * 60 * 1000;
+    // FRESHNESS — janela ampla (10 dias) porque o fallback Bing às vezes
+    // devolve artigos um pouco mais antigos. O client ordena por mais recente.
+    const FRESHNESS_MS = 10 * 24 * 60 * 60 * 1000;
     const now = Date.now();
 
     const debug = { total: 0, relev: 0, fresh: 0, ctx: 0, ambig: 0, accepted: 0 };
