@@ -8,14 +8,15 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Search, Loader2, X, Plus } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { ClubLogo } from "@/components/ClubLogo";
-import { supabase } from "@/integrations/supabase/client";
+import { searchClubsWithFallback, type ClubSearchResult } from "@/lib/search-clubs";
 
 interface ClubRow {
-  id: number;
+  id: string;
   nome: string;
   cidade: string | null;
   pais: string | null;
   escudo_url: string | null;
+  source: "local" | "api";
 }
 
 interface Props {
@@ -46,7 +47,7 @@ export default function RivalsCombobox({ value, onChange, excludeName, placehold
 
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
-    if (query.trim().length < 2) {
+    if (query.trim().length < 3) {
       setResults([]);
       setLoading(false);
       return;
@@ -54,17 +55,21 @@ export default function RivalsCombobox({ value, onChange, excludeName, placehold
     setLoading(true);
     debounceRef.current = setTimeout(async () => {
       const q = query.trim();
-      const { data } = await supabase
-        .from("clubes_cache")
-        .select("id, nome, cidade, pais, escudo_url")
-        .or(`nome.ilike.%${q}%,nome_curto.ilike.%${q}%`)
-        .limit(12);
-      const rows = (data as ClubRow[]) || [];
+      // Hybrid search: clubes_cache FIRST + API-Football fallback (same as Voting page)
+      const found: ClubSearchResult[] = await searchClubsWithFallback(q, 15);
       const exNorm = excludeName ? norm(excludeName) : "";
       const valSet = new Set(value.map(norm));
-      setResults(
-        rows.filter((r) => norm(r.nome) !== exNorm && !valSet.has(norm(r.nome))),
-      );
+      const rows: ClubRow[] = found
+        .filter((r) => norm(r.name) !== exNorm && !valSet.has(norm(r.name)))
+        .map((r) => ({
+          id: r.id,
+          nome: r.name,
+          cidade: r.city || null,
+          pais: r.country || null,
+          escudo_url: r.logo || null,
+          source: r.source,
+        }));
+      setResults(rows);
       setLoading(false);
     }, 250);
   }, [query, value, excludeName]);
