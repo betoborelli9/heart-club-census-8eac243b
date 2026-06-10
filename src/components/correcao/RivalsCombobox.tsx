@@ -8,7 +8,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Search, Loader2, X, Plus } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { ClubLogo } from "@/components/ClubLogo";
-import { searchClubsWithFallback, type ClubSearchResult } from "@/lib/search-clubs";
+import { searchClubsWithFallback, persistClubsIfMissing, type ClubSearchResult } from "@/lib/search-clubs";
 
 interface ClubRow {
   id: string;
@@ -74,14 +74,32 @@ export default function RivalsCombobox({ value, onChange, excludeName, placehold
     }, 250);
   }, [query, value, excludeName]);
 
-  const addByName = (name: string) => {
+  const addByName = (name: string, club?: ClubRow) => {
     const clean = name.trim();
     if (!clean) return;
     if (value.some((v) => norm(v) === norm(clean))) return;
     if (value.length >= 6) return;
-    onChange([...value, clean]);
+    onChange([...value, club?.nome || clean]);
     setQuery("");
     setResults([]);
+    // Se veio da API-Football, persiste no clubes_cache em background
+    // para que o escudo apareça na coluna de Rivais do Dashboard.
+    if (club?.source === "api") {
+      persistClubsIfMissing([
+        {
+          id: club.id,
+          name: club.nome,
+          shortName: club.nome,
+          location: [club.cidade, club.pais].filter(Boolean).join(", "),
+          logo: club.escudo_url || "",
+          city: club.cidade || "",
+          state: "",
+          country: club.pais || "",
+          source: "api",
+          api_id: Number(String(club.id).replace(/^api-/, "")) || null,
+        },
+      ]).catch(() => {});
+    }
   };
 
   const remove = (name: string) => onChange(value.filter((v) => v !== name));
@@ -152,7 +170,7 @@ export default function RivalsCombobox({ value, onChange, excludeName, placehold
               type="button"
               onMouseDown={(e) => {
                 e.preventDefault();
-                addByName(club.nome);
+                addByName(club.nome, club);
               }}
               className="w-full flex items-center gap-3 p-2.5 hover:bg-white/5 border-b border-white/5 text-left"
             >
