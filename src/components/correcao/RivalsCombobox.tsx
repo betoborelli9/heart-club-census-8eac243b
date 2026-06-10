@@ -74,14 +74,32 @@ export default function RivalsCombobox({ value, onChange, excludeName, placehold
     }, 250);
   }, [query, value, excludeName]);
 
-  const addByName = (name: string) => {
+  const addByName = (name: string, club?: ClubRow) => {
     const clean = name.trim();
     if (!clean) return;
     if (value.some((v) => norm(v) === norm(clean))) return;
     if (value.length >= 6) return;
-    onChange([...value, clean]);
+    onChange([...value, club?.nome || clean]);
     setQuery("");
     setResults([]);
+    // Se veio da API-Football, persiste no clubes_cache em background
+    // para que o escudo apareça na coluna de Rivais do Dashboard.
+    if (club?.source === "api") {
+      persistClubsIfMissing([
+        {
+          id: club.id,
+          name: club.nome,
+          shortName: club.nome,
+          location: [club.cidade, club.pais].filter(Boolean).join(", "),
+          logo: club.escudo_url || "",
+          city: club.cidade || "",
+          state: "",
+          country: club.pais || "",
+          source: "api",
+          api_id: Number(String(club.id).replace(/^api-/, "")) || null,
+        },
+      ]).catch(() => {});
+    }
   };
 
   const remove = (name: string) => onChange(value.filter((v) => v !== name));
