@@ -8,7 +8,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Search, Loader2, X, Plus } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { ClubLogo } from "@/components/ClubLogo";
-import { searchClubsWithFallback, type ClubSearchResult } from "@/lib/search-clubs";
+import { searchClubsWithFallback, persistClubsIfMissing, type ClubSearchResult } from "@/lib/search-clubs";
 
 interface ClubRow {
   id: string;
