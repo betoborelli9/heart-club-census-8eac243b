@@ -170,7 +170,7 @@ export default function RivalsCombobox({ value, onChange, excludeName, placehold
               type="button"
               onMouseDown={(e) => {
                 e.preventDefault();
-                addByName(club.nome);
+                addByName(club.nome, club);
               }}
               className="w-full flex items-center gap-3 p-2.5 hover:bg-white/5 border-b border-white/5 text-left"
             >
