@@ -313,7 +313,7 @@ function StandingsTable({
               >
                 <div className="flex items-center gap-1.5">
                   <span className="w-3 inline-block text-white/50">#</span>
-                  <span>Time</span>
+                  <span>{t("competitions.team_col")}</span>
                 </div>
               </th>
               <th className={`${numCol} ${headerBg} border-white/15 font-bold`} style={{ color: primaryColor }}>P</th>
