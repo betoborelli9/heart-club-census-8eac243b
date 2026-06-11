@@ -119,13 +119,13 @@ export default function AmbassadorCenter() {
                 {badge.data?.emoji ?? "🎖️"}
               </div>
               <div>
-                <p className="text-[11px] uppercase tracking-wider text-muted-foreground">Seu Nível</p>
+                <p className="text-[11px] uppercase tracking-wider text-muted-foreground">{t("ambassador_center.your_level")}</p>
                 <p className="text-2xl font-black italic" style={{ color: badge.data?.color ?? "#fff" }}>
-                  {badge.data?.label ?? "Recruta"}
+                  {badge.data?.label ?? t("ambassador_center.rookie")}
                 </p>
                 {topBairro && (
                   <p className="text-xs italic mt-1 flex items-center gap-1 text-yellow-500">
-                    <Crown className="w-3 h-3" /> Dono do Bairro {topBairro.bairro}
+                    <Crown className="w-3 h-3" /> {t("ambassador_center.owner_of", { name: topBairro.bairro })}
                   </p>
                 )}
               </div>
