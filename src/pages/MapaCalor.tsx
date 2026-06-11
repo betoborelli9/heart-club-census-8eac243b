@@ -735,6 +735,7 @@ function FitToGeoJson({ data, deps }: { data: any | null; deps: any[] }) {
 
 const MapaCalor = () => {
   const navigate = useNavigate();
+  const { t } = useTranslationApp();
   const { user, signOut } = useUser();
   const [heartClubName, setHeartClubName] = useState("");
   const [activeClubName, setActiveClubName] = useState("");
