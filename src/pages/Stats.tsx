@@ -27,6 +27,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { CLUBS_DATA } from "@/clubes-data";
 import { searchClubsWithFallback } from "@/lib/search-clubs";
 import { getHistoricalRivals } from "@/lib/rivalries";
+import { useTranslationApp } from "@/hooks/useTranslationApp";
 
 // ─────────────────────────────────────────────────────────
 // Helpers
@@ -93,12 +94,12 @@ interface RankRow { club: string; votes: number; growth_24h: number; growth_7d: 
 interface RegionOpt { name: string; votes: number; }
 interface NeighborhoodRow { neighborhood: string; votes: number; }
 
-const LEVEL_META: Record<Level, { label: string; icon: any }> = {
-  global: { label: "Global", icon: Globe },
-  country: { label: "País", icon: Flag },
-  state: { label: "Estado", icon: MapPin },
-  city: { label: "Cidade", icon: Building2 },
-  neighborhood: { label: "Bairro", icon: Home },
+const LEVEL_ICONS: Record<Level, any> = {
+  global: Globe,
+  country: Flag,
+  state: MapPin,
+  city: Building2,
+  neighborhood: Home,
 };
 
 // ─────────────────────────────────────────────────────────
@@ -109,6 +110,8 @@ const Stats = () => {
   const navigate = useNavigate();
   const { user } = useUser();
   const { toast } = useToast();
+  const { t } = useTranslationApp();
+  const levelLabel = (lv: Level) => t(`ranking.scope.${lv}`);
 
   // ROI tracking — counts /stats page views for the Revenue Terminal
   useEffect(() => {
