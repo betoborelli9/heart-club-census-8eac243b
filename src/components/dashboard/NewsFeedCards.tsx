@@ -143,7 +143,7 @@ export default function NewsFeedCards({ teamName, primaryColor = "#ff6200", club
         </div>
       ) : news.length === 0 ? (
         <p className="text-[10px] text-white/40 italic py-6 text-center uppercase font-black">
-          No momento não há notícias publicadas nas últimas 48 horas.
+          {t("news.empty_48h")}
         </p>
       ) : (
         <ul className="flex flex-col">
