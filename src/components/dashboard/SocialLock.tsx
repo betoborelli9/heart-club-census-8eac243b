@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { useUser } from "@/contexts/UserContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useTranslationApp } from "@/hooks/useTranslationApp";
 
 const SOCIAL_LINKS = [
   {
@@ -23,6 +24,7 @@ const SOCIAL_LINKS = [
 const SocialLock = () => {
   const { user } = useUser();
   const { toast } = useToast();
+  const { t } = useTranslationApp();
   const [followedPlatforms, setFollowedPlatforms] = useState<Set<string>>(new Set());
   const [unlocked, setUnlocked] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -49,9 +51,12 @@ const SocialLock = () => {
       );
       if (error) throw error;
       setUnlocked(true);
-      toast({ title: "Conteúdo desbloqueado! 🎉", description: "Você tem acesso ao Card de Embaixador e Duelo de Censo." });
+      toast({
+        title: t("components.social_lock.unlocked_title"),
+        description: t("components.social_lock.unlocked_desc"),
+      });
     } catch {
-      toast({ variant: "destructive", title: "Erro ao salvar" });
+      toast({ variant: "destructive", title: t("components.social_lock.save_error") });
     } finally {
       setSaving(false);
     }
@@ -63,8 +68,8 @@ const SocialLock = () => {
         <Card className="glass-card border-primary/30 glow-border">
           <CardContent className="pt-5 text-center space-y-2">
             <Unlock className="w-8 h-8 text-primary mx-auto" />
-            <p className="text-sm font-bold text-foreground">Conteúdo Premium Liberado!</p>
-            <p className="text-xs text-muted-foreground">Card de Embaixador e Duelo de Censo disponíveis.</p>
+            <p className="text-sm font-bold text-foreground">{t("components.social_lock.premium_title")}</p>
+            <p className="text-xs text-muted-foreground">{t("components.social_lock.premium_desc")}</p>
           </CardContent>
         </Card>
       </motion.div>
@@ -81,9 +86,9 @@ const SocialLock = () => {
               <Lock className="w-5 h-5 text-primary" />
             </div>
             <div>
-              <h3 className="text-sm font-bold text-foreground">Social Lock</h3>
+              <h3 className="text-sm font-bold text-foreground">{t("components.social_lock.title")}</h3>
               <p className="text-xs text-muted-foreground">
-                Siga o Heart Club para desbloquear features exclusivas
+                {t("components.social_lock.subtitle")}
               </p>
             </div>
           </div>
@@ -121,12 +126,17 @@ const SocialLock = () => {
             onClick={handleConfirmFollow}
           >
             {followedPlatforms.size < 2
-              ? `Siga ${2 - followedPlatforms.size} rede${2 - followedPlatforms.size > 1 ? "s" : ""} para desbloquear`
-              : "Já sigo! Desbloquear"}
+              ? t(
+                  2 - followedPlatforms.size > 1
+                    ? "components.social_lock.follow_n_other"
+                    : "components.social_lock.follow_n_one",
+                  { count: 2 - followedPlatforms.size },
+                )
+              : t("components.social_lock.already_follow")}
           </Button>
 
           <p className="text-[10px] text-center text-muted-foreground">
-            🔓 Desbloqueia: Card de Embaixador personalizado + Duelo de Censo
+            {t("components.social_lock.unlocks_hint")}
           </p>
         </CardContent>
       </Card>

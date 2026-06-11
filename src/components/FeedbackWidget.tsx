@@ -14,10 +14,12 @@ import { useClubTheme } from "@/hooks/useClubTheme";
 import { toast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { useTranslationApp } from "@/hooks/useTranslationApp";
 
 type FeedbackType = "sugestao" | "erro";
 
 export default function FeedbackWidget() {
+  const { t } = useTranslationApp();
   const { user, profile } = useUser();
   const clubName = (profile as any)?.clube_coracao ?? null;
   const theme = useClubTheme(clubName);
@@ -30,7 +32,11 @@ export default function FeedbackWidget() {
 
   const handleSubmit = async () => {
     if (!message.trim() || message.trim().length < 5) {
-      toast({ title: "Mensagem muito curta", description: "Conte um pouco mais (mín. 5 caracteres).", variant: "destructive" });
+      toast({
+        title: t("feedback.error.message_too_short_title"),
+        description: t("feedback.error.message_too_short_desc"),
+        variant: "destructive",
+      });
       return;
     }
     setSending(true);
@@ -43,10 +49,17 @@ export default function FeedbackWidget() {
     });
     setSending(false);
     if (error) {
-      toast({ title: "Falha ao enviar", description: "Tente novamente em instantes.", variant: "destructive" });
+      toast({
+        title: t("feedback.error.send_failed_title"),
+        description: t("feedback.error.send_failed_desc"),
+        variant: "destructive",
+      });
       return;
     }
-    toast({ title: "Recebido! 💬", description: "Obrigado por ajudar a evoluir o Heart Club." });
+    toast({
+      title: t("feedback.success.feedback_received_title"),
+      description: t("feedback.success.feedback_received_desc"),
+    });
     setMessage("");
     setOpen(false);
   };
@@ -63,7 +76,7 @@ export default function FeedbackWidget() {
           border: `2px solid ${glow}`,
           boxShadow: `0 0 12px ${glow}cc, 0 0 28px ${glow}66, inset 0 0 6px ${glow}40`,
         }}
-        aria-label="Enviar feedback"
+        aria-label={t("components.feedback_widget.fab_aria")}
       >
         <MessageCircle className="w-5 h-5" style={{ color: glow }} />
       </motion.button>
@@ -91,7 +104,7 @@ export default function FeedbackWidget() {
             >
               <div className="flex items-center justify-between mb-4">
                 <h2 className="italic font-bold text-white text-lg" style={{ color: glow }}>
-                  Fale com o Heart Club
+                  {t("components.feedback_widget.modal_title")}
                 </h2>
                 <button onClick={() => setOpen(false)} className="text-white/60 hover:text-white">
                   <X className="w-5 h-5" />
@@ -108,7 +121,7 @@ export default function FeedbackWidget() {
                     border: `1px solid ${type === "sugestao" ? "#ff6200" : "#ffffff30"}`,
                   }}
                 >
-                  <Lightbulb className="w-4 h-4" /> Sugestão de Melhoria
+                  <Lightbulb className="w-4 h-4" /> {t("components.feedback_widget.suggestion")}
                 </button>
                 <button
                   onClick={() => setType("erro")}
@@ -119,14 +132,14 @@ export default function FeedbackWidget() {
                     border: `1px solid ${type === "erro" ? "#ff6200" : "#ffffff30"}`,
                   }}
                 >
-                  <Bug className="w-4 h-4" /> Reportar Erro
+                  <Bug className="w-4 h-4" /> {t("components.feedback_widget.bug_report")}
                 </button>
               </div>
 
               <Textarea
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
-                placeholder={type === "sugestao" ? "Sua ideia para tornar o Heart Club ainda mais épico..." : "Descreva o erro: o que aconteceu, em qual tela, o que esperava..."}
+                placeholder={type === "sugestao" ? t("components.feedback_widget.placeholder_suggestion") : t("components.feedback_widget.placeholder_bug")}
                 rows={5}
                 maxLength={1000}
                 className="bg-black border-white/20 text-white placeholder:text-white/40 italic"
@@ -144,11 +157,11 @@ export default function FeedbackWidget() {
                   boxShadow: `0 0 14px ${glow}80`,
                 }}
               >
-                {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : "Enviar Feedback"}
+                {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : t("components.feedback_widget.send")}
               </Button>
 
               <p className="text-[10px] text-white/30 mt-3 italic text-center">
-                Sua URL atual será incluída automaticamente para nos ajudar a investigar.
+                {t("components.feedback_widget.url_disclaimer")}
               </p>
             </motion.div>
           </motion.div>

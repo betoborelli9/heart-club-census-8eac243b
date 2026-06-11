@@ -9,6 +9,7 @@ import { Search, Loader2, X, Plus } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { ClubLogo } from "@/components/ClubLogo";
 import { searchClubsWithFallback, persistClubsIfMissing, type ClubSearchResult } from "@/lib/search-clubs";
+import { useTranslationApp } from "@/hooks/useTranslationApp";
 
 interface ClubRow {
   id: string;
@@ -30,6 +31,7 @@ const norm = (s: string) =>
   s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
 
 export default function RivalsCombobox({ value, onChange, excludeName, placeholder }: Props) {
+  const { t } = useTranslationApp();
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<ClubRow[]>([]);
   const [loading, setLoading] = useState(false);
@@ -127,7 +129,7 @@ export default function RivalsCombobox({ value, onChange, excludeName, placehold
                 type="button"
                 onClick={() => remove(rival)}
                 className="w-5 h-5 rounded-full hover:bg-[#ff6200]/30 inline-flex items-center justify-center"
-                aria-label={`Remover ${rival}`}
+                aria-label={t("components.rivals_combobox.remove_aria", { name: rival })}
               >
                 <X className="w-3 h-3" />
               </button>
@@ -152,7 +154,7 @@ export default function RivalsCombobox({ value, onChange, excludeName, placehold
               addByName(query);
             }
           }}
-          placeholder={placeholder || "Digite o nome do rival..."}
+          placeholder={placeholder || t("components.rivals_combobox.placeholder")}
           disabled={value.length >= 6}
           className="bg-white/5 border-[#ff6200]/40 text-white pl-10 focus-visible:ring-[#ff6200]"
         />
@@ -198,7 +200,7 @@ export default function RivalsCombobox({ value, onChange, excludeName, placehold
             >
               <Plus className="w-4 h-4 text-[#ff6200]" />
               <span className="text-xs italic text-white/80">
-                Adicionar <span className="font-bold text-[#ff6200]">"{query.trim()}"</span> mesmo assim
+                {t("components.rivals_combobox.add_manual_prefix")} <span className="font-bold text-[#ff6200]">"{query.trim()}"</span> {t("components.rivals_combobox.add_manual_suffix")}
               </span>
             </button>
           )}
@@ -206,7 +208,7 @@ export default function RivalsCombobox({ value, onChange, excludeName, placehold
       )}
 
       <p className="text-[10px] italic text-white/40 mt-1.5">
-        Selecione no banco para garantir o escudo certo. Máx. 6 rivais.
+        {t("components.rivals_combobox.hint")}
       </p>
     </div>
   );
