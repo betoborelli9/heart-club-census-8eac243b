@@ -366,15 +366,15 @@ const Ambassadors = () => {
   const shareWhatsApp = () => window.open(`https://wa.me/?text=${encodeURIComponent(referralMessage)}`, "_blank");
   const shareTelegram = () => window.open(`https://t.me/share/url?url=${encodeURIComponent(referralLink)}&text=${encodeURIComponent(referralMessage)}`, "_blank");
   const shareEmail = () => {
-    const subject = encodeURIComponent("Te convido para o Heart Club Census 🧡");
+    const subject = encodeURIComponent(t("ambassadors.share_subject"));
     window.location.href = `mailto:?subject=${subject}&body=${encodeURIComponent(referralMessage)}`;
   };
   const shareCopyLink = async () => {
     try {
       await navigator.clipboard.writeText(referralLink);
-      toast({ title: "Link copiado!", description: "Cole onde quiser compartilhar." });
+      toast({ title: t("ambassadors.link_copied"), description: t("ambassadors.link_copied_desc") });
     } catch {
-      toast({ title: "Não foi possível copiar", variant: "destructive" });
+      toast({ title: t("ambassadors.copy_fail"), variant: "destructive" });
     }
   };
   const shareNative = async () => {
