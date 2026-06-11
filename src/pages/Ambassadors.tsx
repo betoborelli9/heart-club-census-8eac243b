@@ -646,8 +646,8 @@ const Ambassadors = () => {
                   const dateRef = entry.voto_created_at || entry.created_at;
                   const localizacao = [entry.cidade, entry.estado].filter(Boolean).join(" · ");
                   const acao = entry.clube_nome
-                    ? <>acaba de votar no <span className="text-[#ff6200]">{entry.clube_nome}</span></>
-                    : <span className="text-white/50">entrou no Heart Club</span>;
+                    ? <>{t("ambassadors.feed_voted")} <span className="text-[#ff6200]">{entry.clube_nome}</span></>
+                    : <span className="text-white/50">{t("ambassadors.feed_joined")}</span>;
                   return (
                     <motion.div
                       key={entry.id}
