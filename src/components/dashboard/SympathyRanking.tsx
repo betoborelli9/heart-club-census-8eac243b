@@ -37,11 +37,11 @@ const SympathyRanking = () => {
       <header className="flex items-center gap-2">
         <Heart className="w-5 h-5 text-primary" fill="currentColor" />
         <h2 className="text-xl md:text-2xl font-black italic uppercase tracking-tight">
-          Clubes Mais Queridos <span className="text-primary">(Simpatia)</span>
+          {t("sympathy.title_prefix")} <span className="text-primary">{t("sympathy.title_suffix")}</span>
         </h2>
       </header>
       <p className="text-xs md:text-sm text-white/60 italic">
-        Quais clubes os torcedores mais escolhem como seu segundo time.
+        {t("sympathy.subtitle")}
       </p>
 
       {loading ? (
@@ -50,7 +50,7 @@ const SympathyRanking = () => {
         </div>
       ) : rows.length === 0 ? (
         <p className="text-sm text-white/50 italic py-6 text-center">
-          Ainda não há votos de simpatia registrados.
+          {t("sympathy.empty")}
         </p>
       ) : (
         <div className="flex gap-3 overflow-x-auto pb-3 -mx-2 px-2 snap-x snap-mandatory">
