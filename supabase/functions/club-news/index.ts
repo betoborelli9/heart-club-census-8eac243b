@@ -275,9 +275,8 @@ serve(async (req) => {
       "amistoso beneficente", "racha",
     ];
 
-    // FRESHNESS — janela de 60 dias (Bing News RSS, fallback, costuma trazer
-    // resultados mais antigos; preferimos mostrar algo a deixar o feed vazio).
-    const FRESHNESS_MS = 60 * 24 * 60 * 60 * 1000;
+    // FRESHNESS — janela RÍGIDA de 48h. Sem pubDate válido = descartada.
+    const FRESHNESS_MS = 48 * 60 * 60 * 1000;
     const now = Date.now();
 
     const debug = { total: 0, relev: 0, fresh: 0, ctx: 0, ambig: 0, accepted: 0 };
@@ -305,7 +304,8 @@ serve(async (req) => {
 
       const pubDate = get("pubDate");
       const pubMs = pubDate ? new Date(pubDate).getTime() : NaN;
-      if (!isNaN(pubMs) && now - pubMs > FRESHNESS_MS) continue;
+      if (isNaN(pubMs)) continue;
+      if (now - pubMs > FRESHNESS_MS) continue;
       debug.fresh++;
 
       const description = get("description").replace(/<[^>]+>/g, " ");
