@@ -171,16 +171,16 @@ export default function AmbassadorCenter() {
             </p>
             <div className="flex flex-wrap gap-2">
               <Button onClick={() => shareTo("wa")} className="bg-green-600 hover:bg-green-700 text-white">
-                <MessageCircle className="w-4 h-4 mr-1" /> WhatsApp
+                <MessageCircle className="w-4 h-4 mr-1" /> {t("ambassador_center.wa")}
               </Button>
               <Button onClick={() => shareTo("tg")} className="bg-sky-500 hover:bg-sky-600 text-white">
-                <Send className="w-4 h-4 mr-1" /> Telegram
+                <Send className="w-4 h-4 mr-1" /> {t("ambassador_center.tg")}
               </Button>
               <Button onClick={() => shareTo("ig")} variant="outline">
-                <Instagram className="w-4 h-4 mr-1" /> Instagram
+                <Instagram className="w-4 h-4 mr-1" /> {t("ambassador_center.ig")}
               </Button>
               <Button onClick={() => shareTo("native")} variant="ghost">
-                <Share2 className="w-4 h-4 mr-1" /> Mais
+                <Share2 className="w-4 h-4 mr-1" /> {t("ambassador_center.more")}
               </Button>
             </div>
           </CardContent>
