@@ -18,6 +18,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useNavigate } from "react-router-dom";
 import { useUser } from "@/contexts/UserContext";
 import { useToast } from "@/hooks/use-toast";
+import { useTranslationApp } from "@/hooks/useTranslationApp";
 import logo from "@/assets/logo.png";
 
 const ProfileSetup = () => {
@@ -25,6 +26,7 @@ const ProfileSetup = () => {
   const navigate = useNavigate();
   const { user, profile, isAuthenticated, isLoading, isAuthReady, isProfileComplete, hasVoted, updateProfile } = useUser();
   const { toast } = useToast();
+  const { t } = useTranslationApp();
 
   // Guard: se não autenticado vai para login; se perfil já completo, nunca mais mostra este passo.
   useEffect(() => {
@@ -64,10 +66,10 @@ const ProfileSetup = () => {
   }, [profile, user]);
 
   const MESES = [
-    { v: "01", l: "Janeiro" }, { v: "02", l: "Fevereiro" }, { v: "03", l: "Março" },
-    { v: "04", l: "Abril" }, { v: "05", l: "Maio" }, { v: "06", l: "Junho" },
-    { v: "07", l: "Julho" }, { v: "08", l: "Agosto" }, { v: "09", l: "Setembro" },
-    { v: "10", l: "Outubro" }, { v: "11", l: "Novembro" }, { v: "12", l: "Dezembro" },
+    { v: "01", l: t("profile.months.1") }, { v: "02", l: t("profile.months.2") }, { v: "03", l: t("profile.months.3") },
+    { v: "04", l: t("profile.months.4") }, { v: "05", l: t("profile.months.5") }, { v: "06", l: t("profile.months.6") },
+    { v: "07", l: t("profile.months.7") }, { v: "08", l: t("profile.months.8") }, { v: "09", l: t("profile.months.9") },
+    { v: "10", l: t("profile.months.10") }, { v: "11", l: t("profile.months.11") }, { v: "12", l: t("profile.months.12") },
   ];
   const DIAS = Array.from({ length: 31 }, (_, i) => String(i + 1).padStart(2, "0"));
   const ANO_ATUAL = new Date().getFullYear();
@@ -77,25 +79,21 @@ const ProfileSetup = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!nome.trim() || !dataNascimento || !genero) {
-      toast({ variant: "destructive", title: "Campos obrigatórios ausentes." });
+      toast({ variant: "destructive", title: t("profile.required_missing") });
       return;
     }
     
     setSaving(true);
     try {
-      /**
-       * ATENÇÃO: CEP, Cidade e Estado foram removidos deste fluxo.
-       * A captura de localização agora é EXCLUSIVA do AddressModal no Mapa de Calor.
-       */
       await updateProfile({
         nome_exibicao: nome.trim(),
         data_nascimento: dataNascimento,
         genero,
       });
-      toast({ title: "Perfil salvo! ✅" });
+      toast({ title: t("profile.saved") });
       navigate("/voting", { replace: true });
     } catch (error) {
-      toast({ variant: "destructive", title: "Erro ao atualizar perfil no Supabase." });
+      toast({ variant: "destructive", title: t("profile.save_error") });
     } finally {
       setSaving(false);
     }
@@ -125,19 +123,19 @@ const ProfileSetup = () => {
       >
         <div className="text-center space-y-2">
           <img src={logo} alt="Heart Club" className="mx-auto h-12 w-auto object-contain" />
-          <h1 className="text-2xl font-display font-bold text-foreground">Complete seu perfil</h1>
-          <p className="text-sm text-muted-foreground">Identidade básica para a comunidade.</p>
+          <h1 className="text-2xl font-display font-bold text-foreground">{t("profile.title")}</h1>
+          <p className="text-sm text-muted-foreground">{t("profile.subtitle")}</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-5">
           <div className="glass-card rounded-xl p-5 space-y-4">
             {/* Campo: Nome */}
             <div className="space-y-2">
-              <Label className="text-sm text-muted-foreground">Nome de Exibição</Label>
+              <Label className="text-sm text-muted-foreground">{t("profile.display_name")}</Label>
               <Input 
                 value={nome} 
                 onChange={e => setNome(e.target.value)} 
-                placeholder="Seu apelido ou nome" 
+                placeholder={t("profile.display_name_placeholder")} 
                 className="h-12 bg-secondary/30 border-border/30" 
                 required 
               />
@@ -146,12 +144,12 @@ const ProfileSetup = () => {
             {/* Campo: Nascimento (Dia / Mês / Ano) */}
             <div className="space-y-2">
               <Label className="text-sm text-muted-foreground flex items-center gap-2">
-                <Cake className="w-4 h-4 text-primary" /> Data de Nascimento
+                <Cake className="w-4 h-4 text-primary" /> {t("profile.birth_date")}
               </Label>
               <div className="grid grid-cols-3 gap-2">
                 <Select value={dia} onValueChange={setDia}>
                   <SelectTrigger className="h-12 bg-secondary/30 border-border/30 focus:border-primary data-[state=open]:border-primary">
-                    <SelectValue placeholder="Dia" />
+                    <SelectValue placeholder={t("profile.day")} />
                   </SelectTrigger>
                   <SelectContent className="max-h-64">
                     {DIAS.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}
@@ -159,7 +157,7 @@ const ProfileSetup = () => {
                 </Select>
                 <Select value={mes} onValueChange={setMes}>
                   <SelectTrigger className="h-12 bg-secondary/30 border-border/30 focus:border-primary data-[state=open]:border-primary">
-                    <SelectValue placeholder="Mês" />
+                    <SelectValue placeholder={t("profile.month")} />
                   </SelectTrigger>
                   <SelectContent className="max-h-64">
                     {MESES.map(m => <SelectItem key={m.v} value={m.v}>{m.l}</SelectItem>)}
@@ -167,7 +165,7 @@ const ProfileSetup = () => {
                 </Select>
                 <Select value={ano} onValueChange={setAno}>
                   <SelectTrigger className="h-12 bg-secondary/30 border-border/30 focus:border-primary data-[state=open]:border-primary">
-                    <SelectValue placeholder="Ano" />
+                    <SelectValue placeholder={t("profile.year")} />
                   </SelectTrigger>
                   <SelectContent className="max-h-64">
                     {ANOS.map(y => <SelectItem key={y} value={y}>{y}</SelectItem>)}
@@ -178,16 +176,16 @@ const ProfileSetup = () => {
 
             {/* Campo: Gênero */}
             <div className="space-y-2">
-              <Label className="text-sm text-muted-foreground">Gênero</Label>
+              <Label className="text-sm text-muted-foreground">{t("profile.gender")}</Label>
               <Select value={genero} onValueChange={setGenero}>
                 <SelectTrigger className="h-12 bg-secondary/30 border-border/30">
-                  <SelectValue placeholder="Selecione" />
+                  <SelectValue placeholder={t("profile.select")} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="masculino">Masculino</SelectItem>
-                  <SelectItem value="feminino">Feminino</SelectItem>
-                  <SelectItem value="outros">Outros</SelectItem>
-                  <SelectItem value="prefiro-nao-dizer">Prefiro não dizer</SelectItem>
+                  <SelectItem value="masculino">{t("profile.male")}</SelectItem>
+                  <SelectItem value="feminino">{t("profile.female")}</SelectItem>
+                  <SelectItem value="outros">{t("profile.other")}</SelectItem>
+                  <SelectItem value="prefiro-nao-dizer">{t("profile.prefer_not_say")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -199,7 +197,7 @@ const ProfileSetup = () => {
             disabled={!canSubmit || saving}
           >
             {saving ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <ChevronRight className="w-5 h-5 mr-2" />}
-            Continuar para Votação
+            {t("profile.continue")}
           </Button>
         </form>
       </motion.div>

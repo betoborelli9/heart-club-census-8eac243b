@@ -228,7 +228,7 @@ const Dashboard = () => {
                   onClick={() => heartClubName && handlePickClub(heartClubName)}
                   className="text-[10px] font-black italic uppercase text-[#ff6200] flex items-center gap-1"
                 >
-                  <Heart className="w-3 h-3 fill-current" /> Voltar ao Coração
+                  <Heart className="w-3 h-3 fill-current" /> {t("navbar.back_to_heart")}
                 </button>
               </div>
             )}
@@ -250,21 +250,21 @@ const Dashboard = () => {
         <nav className="w-full px-3 flex items-center justify-around gap-1 md:w-auto md:px-0 md:justify-start md:gap-16">
           <button className="flex flex-col items-center justify-center gap-1 text-[#ff6200] min-w-0" onClick={() => navigate("/dashboard")}>
             <Home className="w-5 h-5" />
-            <span className="block text-center text-[10px] leading-none font-bold uppercase tracking-normal md:text-[9px] md:tracking-widest">Início</span>
+            <span className="block text-center text-[10px] leading-none font-bold uppercase tracking-normal md:text-[9px] md:tracking-widest">{t("navbar.home")}</span>
           </button>
           <button
             className="flex flex-col items-center justify-center gap-1 text-white/40 hover:text-white min-w-0"
             onClick={() => navigate("/ranking")}
           >
             <BarChart3 className="w-5 h-5" />
-            <span className="block text-center text-[10px] leading-none font-bold uppercase tracking-normal md:text-[9px] md:tracking-widest">Ranking</span>
+            <span className="block text-center text-[10px] leading-none font-bold uppercase tracking-normal md:text-[9px] md:tracking-widest">{t("navbar.ranking")}</span>
           </button>
           <button
             className="flex flex-col items-center justify-center gap-1 text-white/40 hover:text-white min-w-0"
             onClick={() => navigate("/mapa-calor")}
           >
             <Map className="w-5 h-5" />
-            <span className="block text-center text-[10px] leading-none font-bold uppercase tracking-normal md:text-[9px] md:tracking-widest">Mapa</span>
+            <span className="block text-center text-[10px] leading-none font-bold uppercase tracking-normal md:text-[9px] md:tracking-widest">{t("navbar.map")}</span>
           </button>
           
           {/* LINKS RESTRITOS BETOBORELLI9 NO RODAPÉ */}
@@ -275,14 +275,14 @@ const Dashboard = () => {
                 onClick={() => navigate("/voting")}
               >
                 <Vote className="w-5 h-5" />
-                <span className="block text-center text-[10px] leading-none font-bold uppercase tracking-normal md:text-[9px] md:tracking-widest">Votação</span>
+                <span className="block text-center text-[10px] leading-none font-bold uppercase tracking-normal md:text-[9px] md:tracking-widest">{t("navbar.voting")}</span>
               </button>
               <button
                 className="flex flex-col items-center justify-center gap-1 text-white/40 hover:text-white min-w-0"
                 onClick={() => navigate("/admin")}
               >
                 <LayoutDashboard className="w-5 h-5" />
-                <span className="block text-center text-[10px] leading-none font-bold uppercase tracking-normal md:text-[9px] md:tracking-widest">Admin</span>
+                <span className="block text-center text-[10px] leading-none font-bold uppercase tracking-normal md:text-[9px] md:tracking-widest">{t("navbar.admin")}</span>
               </button>
             </>
           ) : (
@@ -291,7 +291,7 @@ const Dashboard = () => {
               onClick={() => navigate("/embaixadores")}
             >
               <Users className="w-5 h-5" />
-              <span className="block text-center text-[10px] leading-none font-bold uppercase tracking-normal md:text-[9px] md:tracking-widest">Embaixador</span>
+              <span className="block text-center text-[10px] leading-none font-bold uppercase tracking-normal md:text-[9px] md:tracking-widest">{t("navbar.ambassadors")}</span>
             </button>
           )}
         </nav>

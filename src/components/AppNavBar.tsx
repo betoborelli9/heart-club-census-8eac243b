@@ -1,26 +1,27 @@
 /**
  * 📁 src/components/AppNavBar.tsx
  * 🧭 Barra de navegação inferior unificada — links para todas as páginas principais.
- * Aparece em Dashboard, Stats, MapaCalor, Embaixadores etc.
  */
 
 import { NavLink } from "react-router-dom";
 import { Home, Trophy, Map, Users, Megaphone } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-const ITEMS = [
-  { to: "/dashboard", label: "Início", shortLabel: "Início", icon: Home },
-  { to: "/stats", label: "Ranking", shortLabel: "Ranking", icon: Trophy },
-  { to: "/mapa-calor", label: "Mapa de Calor", shortLabel: "Mapa", icon: Map },
-  { to: "/embaixadores", label: "Embaixadores", shortLabel: "Embaix.", icon: Users },
-  { to: "/embaixador", label: "Painel", shortLabel: "Painel", icon: Megaphone },
-];
+import { useTranslationApp } from "@/hooks/useTranslationApp";
 
 export default function AppNavBar() {
+  const { t } = useTranslationApp();
+  const ITEMS = [
+    { to: "/dashboard", label: t("navbar.home"), shortLabel: t("navbar.home"), icon: Home },
+    { to: "/stats", label: t("navbar.ranking"), shortLabel: t("navbar.ranking"), icon: Trophy },
+    { to: "/mapa-calor", label: t("navbar.map_long"), shortLabel: t("navbar.map"), icon: Map },
+    { to: "/embaixadores", label: t("navbar.ambassadors_long"), shortLabel: t("navbar.ambassadors_short"), icon: Users },
+    { to: "/embaixador", label: t("navbar.panel"), shortLabel: t("navbar.panel"), icon: Megaphone },
+  ];
+
   return (
     <nav
       className="fixed bottom-0 inset-x-0 z-40 bg-black/95 backdrop-blur border-t border-primary/30"
-      aria-label="Navegação principal"
+      aria-label={t("navbar.aria")}
     >
       <ul className="max-w-6xl mx-auto flex justify-around items-stretch">
         {ITEMS.map(({ to, label, shortLabel, icon: Icon }) => (
