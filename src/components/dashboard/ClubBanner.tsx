@@ -16,6 +16,7 @@ import { Flame, BarChart3, Crown, Users, MapPin, Trophy, ShieldAlert, Vote, Flas
 import { ClubLogo } from "@/components/ClubLogo";
 import { useUser } from "@/contexts/UserContext";
 import { supabase } from "@/integrations/supabase/client";
+import { useTranslationApp } from "@/hooks/useTranslationApp";
 
 /* ═══════════════════════════════════════════════════════════
     MÓDULO: INTERFACE DE PROPS
@@ -59,6 +60,7 @@ const ClubBanner = ({
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useUser();
+  const { t } = useTranslationApp();
 
   const CHUMBO_PRIMARY = "#111111";
   const CHUMBO_SECONDARY = "#2a2a2a";
@@ -207,7 +209,7 @@ const ClubBanner = ({
               {showProfileInfo && (
                 <div className="hidden md:flex flex-col text-white ml-8 h-full justify-center">
                   <h2 className="text-3xl font-black italic uppercase tracking-tighter leading-none mb-2" style={textOutlineStyle}>
-                    {profileName || "CARREGANDO..."}
+                    {profileName || t("club_banner.loading")}
                   </h2>
                   <div className="flex items-center gap-2 text-xs font-bold uppercase opacity-90 italic" style={textOutlineStyle}>
                     <MapPin size={12} className="text-white/70" />
@@ -216,7 +218,7 @@ const ClubBanner = ({
                   {canSeeAmbassador && (
                     <div className="flex items-center gap-2 mt-2 text-xs font-black italic uppercase tracking-widest" style={textOutlineStyle}>
                       <Trophy size={14} className={IS_MASTER ? "text-cyan-400 animate-pulse" : "text-orange-500"} />
-                      <span className={IS_MASTER ? "text-cyan-200" : "text-white"}>EMBAIXADOR {displayLevel}</span>
+                      <span className={IS_MASTER ? "text-cyan-200" : "text-white"}>{t("club_banner.ambassador", { level: displayLevel })}</span>
                     </div>
                   )}
                 </div>
@@ -227,7 +229,7 @@ const ClubBanner = ({
               {showProfileInfo && (
                 <div className="flex-1 md:hidden flex flex-col justify-center items-end text-white">
                   <h2 className="text-xl font-black italic uppercase tracking-tighter leading-none mb-1" style={textOutlineStyle}>
-                    {profileName || "CARREGANDO..."}
+                    {profileName || t("club_banner.loading")}
                   </h2>
                   <div className="flex items-center gap-1.5 text-[9px] font-bold uppercase opacity-90 italic" style={textOutlineStyle}>
                     <MapPin size={12} className="text-white/70" />
@@ -236,7 +238,7 @@ const ClubBanner = ({
                   {canSeeAmbassador && (
                     <div className="flex items-center gap-1.5 mt-1 text-[9px] font-black text-white italic uppercase tracking-widest" style={textOutlineStyle}>
                       <Trophy size={12} className={IS_MASTER ? "text-cyan-400 animate-pulse" : "text-orange-500"} />
-                      <span>EMBAIXADOR {ambassadorLevel || "BRONZE"}</span>
+                      <span>{t("club_banner.ambassador", { level: ambassadorLevel || "BRONZE" })}</span>
                     </div>
                   )}
                 </div>
@@ -244,7 +246,7 @@ const ClubBanner = ({
 
               <div className="flex flex-col items-end justify-end text-white mt-auto">
                 <span className="text-[8px] md:text-[9px] font-black uppercase italic opacity-70 tracking-[0.3em] mb-[-4px]" style={textOutlineStyle}>
-                  Clube do Coração
+                  {t("club_banner.heart_label")}
                 </span>
                 <h1 className="text-xl md:text-4xl font-black italic uppercase tracking-tighter leading-none" style={textOutlineStyle}>
                   {clubName}
@@ -255,9 +257,9 @@ const ClubBanner = ({
         </section>
 
         <nav className="flex items-center justify-center gap-1.5 bg-[#1a1a1a] px-4 py-3.5 overflow-x-auto no-scrollbar">
-          <NavItem icon={Flame} label="MAPA DE CALOR" path="/mapa-calor" active={isActive("/mapa-calor")} />
-          <NavItem icon={BarChart3} label="RANKING" path="/ranking" active={isActive("/ranking")} />
-          <NavItem icon={Users} label="EMBAIXADORES" path="/embaixadores" active={isActive("/embaixadores")} />
+          <NavItem icon={Flame} label={t("club_banner.nav.heatmap")} path="/mapa-calor" active={isActive("/mapa-calor")} />
+          <NavItem icon={BarChart3} label={t("club_banner.nav.ranking")} path="/ranking" active={isActive("/ranking")} />
+          <NavItem icon={Users} label={t("club_banner.nav.ambassadors")} path="/embaixadores" active={isActive("/embaixadores")} />
           <div className="w-[1px] h-6 bg-white/10 mx-2 hidden md:block" />
           
           {/* ═══════════════════════════════════════════════════════════
@@ -265,9 +267,9 @@ const ClubBanner = ({
              ═══════════════════════════════════════════════════════════ */}
           {IS_MASTER && (
             <>
-              <NavItem icon={Vote} label="VOTAÇÃO" path="/voting" variant="orange" />
-              <NavItem icon={FlaskConical} label="TESTAR CLUBE" path="/admin/votos-ficticios" variant="orange" />
-              <NavItem icon={ShieldAlert} label="PAINEL MASTER" path="/admin" variant="danger" />
+              <NavItem icon={Vote} label={t("club_banner.nav.voting")} path="/voting" variant="orange" />
+              <NavItem icon={FlaskConical} label={t("club_banner.nav.test_club")} path="/admin/votos-ficticios" variant="orange" />
+              <NavItem icon={ShieldAlert} label={t("club_banner.nav.master_panel")} path="/admin" variant="danger" />
             </>
           )}
         </nav>
@@ -279,7 +281,7 @@ const ClubBanner = ({
                 <Sparkles size={16} className="text-[#ff6200] animate-pulse" />
               </div>
               <p className="text-[12px] md:text-[13px] italic font-semibold text-white/85 leading-snug" style={{ fontFamily: "Verdana, sans-serif" }}>
-                O manto está chegando! O <span className="text-[#ff6200] not-italic font-black uppercase">{clubName}</span> é uma nova força no Censo Global e estamos processando as cores e o escudo oficial. Continue navegando, daqui a pouco seu Dashboard estará com a cara da sua paixão!
+                {t("club_banner.enriching", { club: clubName })}
               </p>
             </div>
           </div>

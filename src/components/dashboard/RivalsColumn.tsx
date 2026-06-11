@@ -8,6 +8,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import ShareTropaModal from "@/components/dashboard/ShareTropaModal";
 import { ClubLogo } from "@/components/ClubLogo";
+import { useTranslationApp } from "@/hooks/useTranslationApp";
 
 type RivalItem = {
   name: string;
@@ -19,6 +20,7 @@ type RivalItem = {
 };
 
 export default function RivalsColumn({ clubName, refCode, primaryColor = "#ff6200" }: any) {
+  const { t } = useTranslationApp();
   const [rivals, setRivals] = useState<RivalItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
@@ -182,7 +184,7 @@ export default function RivalsColumn({ clubName, refCode, primaryColor = "#ff620
       <header className="flex items-center gap-2 mb-2">
         <Swords className="w-4 h-4" style={{ color: primaryColor }} />
         <h2 className="text-[11px] font-black uppercase italic tracking-widest text-white/60">
-          Monitoramento de Rivais
+          {t("rivals.title")}
         </h2>
       </header>
 
@@ -190,11 +192,11 @@ export default function RivalsColumn({ clubName, refCode, primaryColor = "#ff620
         {loading ? (
           <div className="py-4 flex items-center justify-center gap-2 text-[10px] text-white/35 uppercase font-black italic">
             <Loader2 className="w-3.5 h-3.5 animate-spin" style={{ color: primaryColor }} />
-            Validando clássicos reais...
+            {t("rivals.validating")}
           </div>
         ) : rivals.length === 0 ? (
           <div className="py-4 text-center text-[10px] text-white/25 uppercase font-black italic">
-            Nenhuma rivalidade histórica confirmada.
+            {t("rivals.empty")}
           </div>
         ) : (
           rivals.map((rival, i) => (
@@ -205,7 +207,7 @@ export default function RivalsColumn({ clubName, refCode, primaryColor = "#ff620
               <div className="w-9 h-9 shrink-0 flex items-center justify-center bg-black/40 rounded-lg p-1 border border-white/10 group-hover:border-white/20 transition-colors">
                 <ClubLogo
                   src={rival.logo || undefined}
-                  alt={`Escudo do ${rival.name}`}
+                  alt={`${rival.name}`}
                   size="md"
                   className="w-full h-full rounded-lg bg-transparent group-hover:scale-110 transition-transform duration-500"
                   loading="eager"
@@ -217,7 +219,7 @@ export default function RivalsColumn({ clubName, refCode, primaryColor = "#ff620
                   {rival.name}
                 </h3>
                 <span className="text-[8px] font-bold text-white/30 uppercase truncate block leading-tight mt-0.5">
-                  {[rival.city, rival.country].filter(Boolean).join(" • ") || "Rival Histórico"}
+                  {[rival.city, rival.country].filter(Boolean).join(" • ") || t("rivals.historic")}
                 </span>
               </div>
               <div className="shrink-0 flex flex-col items-end leading-none">
@@ -225,10 +227,10 @@ export default function RivalsColumn({ clubName, refCode, primaryColor = "#ff620
                   className="text-sm font-black italic tabular-nums"
                   style={{ color: primaryColor }}
                 >
-                  {(rival.votes ?? 0).toLocaleString("pt-BR")}
+                  {(rival.votes ?? 0).toLocaleString()}
                 </span>
                 <span className="text-[7px] font-black uppercase italic text-white/40 tracking-widest mt-0.5">
-                  Votos
+                  {t("rivals.votes")}
                 </span>
               </div>
             </div>

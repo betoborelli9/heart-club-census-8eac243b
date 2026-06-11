@@ -9,6 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { ClubLogo } from "@/components/ClubLogo";
 import { supabase } from "@/integrations/supabase/client";
+import { useTranslationApp } from "@/hooks/useTranslationApp";
 
 interface Props {
   clubName: string | null;
@@ -56,6 +57,7 @@ interface Competition {
 const LIVE_STATUSES = new Set(["1H", "2H", "HT", "ET", "BT", "P", "LIVE"]);
 
 export default function CompetitionsPanel({ clubName, primaryColor = "#ff6200" }: Props) {
+  const { t, language } = useTranslationApp();
   const [loading, setLoading] = useState(true);
   const [team, setTeam] = useState<{ id: number; name: string; logo: string } | null>(null);
   const [competitions, setCompetitions] = useState<Competition[]>([]);
@@ -117,11 +119,11 @@ export default function CompetitionsPanel({ clubName, primaryColor = "#ff6200" }
         <header className="flex items-center gap-2 pb-2">
           <Trophy className="w-4 h-4" style={{ color: primaryColor }} />
           <h3 className="text-[11px] font-black italic uppercase tracking-widest text-white">
-            Competições Ativas
+            {t("competitions.title")}
           </h3>
         </header>
         <p className="text-[11px] italic text-white/40 py-3">
-          {clubName ? "Nenhuma competição ativa encontrada." : "Selecione um clube."}
+          {clubName ? t("competitions.empty") : t("competitions.select_club")}
         </p>
       </section>
     );
@@ -132,9 +134,9 @@ export default function CompetitionsPanel({ clubName, primaryColor = "#ff6200" }
       <header className="flex items-center gap-2 pb-2 border-b border-white/5">
         <Trophy className="w-4 h-4" style={{ color: primaryColor }} />
         <h3 className="text-[11px] font-black italic uppercase tracking-widest text-white flex-1">
-          Competições Ativas
+          {t("competitions.title")}
         </h3>
-        <span className="text-[9px] font-mono text-white/30">{competitions.length} torneio(s)</span>
+        <span className="text-[9px] font-mono text-white/30">{t("competitions.tournaments", { count: competitions.length })}</span>
       </header>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
@@ -181,16 +183,18 @@ export default function CompetitionsPanel({ clubName, primaryColor = "#ff6200" }
 }
 
 function MatchCard({ match, live, primaryColor }: { match: Match | null; live: boolean; primaryColor: string }) {
+  const { t, language } = useTranslationApp();
   if (!match) {
     return (
       <div className="rounded-xl bg-white/[0.02] border border-white/5 p-3 text-[11px] italic text-white/40">
-        Sem jogo agendado nesta competição.
+        {t("competitions.no_match")}
       </div>
     );
   }
   const dt = new Date(match.date);
-  const dateStr = dt.toLocaleDateString("pt-BR", { day: "2-digit", month: "short", weekday: "short" }).replace(/\./g, "");
-  const timeStr = dt.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+  const locale = language === "en" ? "en-US" : language === "es" ? "es-ES" : "pt-BR";
+  const dateStr = dt.toLocaleDateString(locale, { day: "2-digit", month: "short", weekday: "short" }).replace(/\./g, "");
+  const timeStr = dt.toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" });
   const isLive = live || LIVE_STATUSES.has(match.status || "");
 
   return (
@@ -198,7 +202,7 @@ function MatchCard({ match, live, primaryColor }: { match: Match | null; live: b
       <div className="flex items-center justify-between text-[9px] font-mono uppercase tracking-widest">
         {isLive ? (
           <span className="flex items-center gap-1.5 text-red-500">
-            <Radio className="w-3 h-3 animate-pulse" /> AO VIVO {match.elapsed ? `· ${match.elapsed}'` : ""}
+            <Radio className="w-3 h-3 animate-pulse" /> {t("competitions.live")} {match.elapsed ? `· ${match.elapsed}'` : ""}
           </span>
         ) : (
           <span className="flex items-center gap-1.5 text-white/40">
@@ -281,7 +285,8 @@ function StandingsTable({
   leagueId?: number;
   leagueName?: string;
 }) {
-  if (!rows.length) return <p className="text-[11px] italic text-white/40">Sem classificação disponível.</p>;
+  const { t } = useTranslationApp();
+  if (!rows.length) return <p className="text-[11px] italic text-white/40">{t("competitions.no_standings")}</p>;
   const stickyBg = "bg-[#0b0b0b]";
   const headerBg = "bg-[#141414]";
   const opponentBg = "bg-[#2a1f3d]";
@@ -308,7 +313,7 @@ function StandingsTable({
               >
                 <div className="flex items-center gap-1.5">
                   <span className="w-3 inline-block text-white/50">#</span>
-                  <span>Time</span>
+                  <span>{t("competitions.team_col")}</span>
                 </div>
               </th>
               <th className={`${numCol} ${headerBg} border-white/15 font-bold`} style={{ color: primaryColor }}>P</th>
@@ -356,7 +361,7 @@ function StandingsTable({
                       >
                         {r.name}
                         {isOpponent && (
-                          <span className="ml-1 text-[8px] font-mono uppercase text-[#a78bfa]/80">· alvo</span>
+                          <span className="ml-1 text-[8px] font-mono uppercase text-[#a78bfa]/80">· {t("competitions.target")}</span>
                         )}
                       </span>
                     </div>
@@ -390,7 +395,7 @@ function StandingsTable({
                 style={{ backgroundColor: ZONE_META[z].color }}
               />
               <span className="text-[8.5px] font-bold uppercase tracking-wider text-white/55">
-                {ZONE_META[z].label}
+                {t(`competitions.zones.${z}`)}
               </span>
             </div>
           ))}

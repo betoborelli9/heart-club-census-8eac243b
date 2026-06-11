@@ -4,7 +4,10 @@
     "logout": "Cerrar sesión",
     "tagline": "El mayor censo de hinchadas del mundo"
   },
-  "language": { "label": "Idioma", "aria": "Cambiar idioma" },
+  "language": {
+    "label": "Idioma",
+    "aria": "Cambiar idioma"
+  },
   "stats": {
     "census_global": "Censo Global",
     "you_are_fan_number": "Eres el hincha n.º",
@@ -18,7 +21,14 @@
     "title_prefix": "Clubes Más Queridos",
     "title_suffix": "(Simpatía)",
     "subtitle": "Qué clubes elige la hinchada como segundo equipo.",
-    "empty": "Aún no hay votos de simpatía registrados."
+    "empty": "Aún no hay votos de simpatía registrados.",
+    "my_clubs": "Mis Clubes",
+    "sympathy_sharer": "Compartidor de Simpatía",
+    "heart_club": "Club del Corazón",
+    "sympathy_clubs": "Clubes de Simpatía",
+    "no_vote": "Sin voto",
+    "see_news": "Ver Noticias",
+    "votes": "VOTOS"
   },
   "news": {
     "radar_label": "Radar",
@@ -33,7 +43,8 @@
   "identity": {
     "founded_in": "Fundado en {{year}}",
     "feminino_label": "Femenino:",
-    "yes": "Sí", "no": "No",
+    "yes": "Sí",
+    "no": "No",
     "fix_button": "Corregir",
     "fix_tooltip": "¿Algo mal? Corrígelo aquí"
   },
@@ -45,9 +56,18 @@
   "ranking": {
     "eyebrow": "RANKING GLOBAL",
     "default_brand": "Heart Club",
-    "search": { "tooltip": "Consultar otro club", "placeholder": "Buscar club..." },
+    "search": {
+      "tooltip": "Consultar otro club",
+      "placeholder": "Buscar club..."
+    },
     "back": "Volver",
-    "scope": { "global": "Global", "country": "País", "state": "Estado", "city": "Ciudad", "neighborhood": "Barrio" },
+    "scope": {
+      "global": "Global",
+      "country": "País",
+      "state": "Estado",
+      "city": "Ciudad",
+      "neighborhood": "Barrio"
+    },
     "hype": {
       "no_votes": "Tu club aún no ha recibido votos en este recorte.",
       "explosive": "🔥 ¡Crecimiento explosivo en las últimas 24h!",
@@ -56,8 +76,15 @@
       "growing": "📈 Momento creciente. Hora de convocar a la hinchada.",
       "default": "🎯 Cada voto cuenta. Invita a la hinchada y sube en el ranking."
     },
-    "position": { "current": "Posición actual:", "votes": "votos", "growth_24h": "+{{value}} (24h)", "growth_7d": "+{{value}} (7d)" },
-    "cta": { "rally": "Convocar a la Tropa" },
+    "position": {
+      "current": "Posición actual:",
+      "votes": "votos",
+      "growth_24h": "+{{value}} (24h)",
+      "growth_7d": "+{{value}} (7d)"
+    },
+    "cta": {
+      "rally": "Convocar a la Tropa"
+    },
     "goals": {
       "title": "Metas Dinámicas",
       "overtake": "Faltan {{votes}} votos para superar a {{club}}.",
@@ -65,17 +92,37 @@
       "check_neighborhood": "Revisa el ranking en tu barrio ({{neighborhood}}).",
       "leader": "Liderazgo consolidado — defiende la cima."
     },
-    "next_target": { "title": "Próximo Objetivo", "missing": "Faltan {{votes}}" },
-    "census": { "title": "Censo por Barrio · {{club}} en {{city}}", "empty": "Sin votos registrados por barrio en este recorte." },
-    "table": { "title": "Ranking {{scope}}", "votes_label": "votos" },
+    "next_target": {
+      "title": "Próximo Objetivo",
+      "missing": "Faltan {{votes}}"
+    },
+    "census": {
+      "title": "Censo por Barrio · {{club}} en {{city}}",
+      "empty": "Sin votos registrados por barrio en este recorte."
+    },
+    "table": {
+      "title": "Ranking {{scope}}",
+      "votes_label": "votos"
+    },
     "empty_state": "Sin datos para este recorte.",
-    "invite": { "copied_title": "¡Enlace copiado!", "copied_desc": "Comparte con la hinchada 🔥" }
+    "invite": {
+      "copied_title": "¡Enlace copiado!",
+      "copied_desc": "Comparte con la hinchada 🔥"
+    }
   },
   "common": {
-    "copy": "Copiar", "back": "Volver", "cancel": "Cancelar", "confirm": "Confirmar",
-    "loading": "Cargando...", "loading_short": "Cargando...",
-    "continue": "Continuar", "send": "Enviar", "save": "Guardar",
-    "error": "Error", "try_again": "Inténtalo de nuevo.", "dashboard": "Panel"
+    "copy": "Copiar",
+    "back": "Volver",
+    "cancel": "Cancelar",
+    "confirm": "Confirmar",
+    "loading": "Cargando...",
+    "loading_short": "Cargando...",
+    "continue": "Continuar",
+    "send": "Enviar",
+    "save": "Guardar",
+    "error": "Error",
+    "try_again": "Inténtalo de nuevo.",
+    "dashboard": "Panel"
   },
   "components": {
     "rivals_combobox": {
@@ -202,17 +249,32 @@
     "display_name": "Nombre Visible",
     "display_name_placeholder": "Tu apodo o nombre",
     "birth_date": "Fecha de Nacimiento",
-    "day": "Día", "month": "Mes", "year": "Año",
-    "gender": "Género", "select": "Selecciona",
-    "male": "Masculino", "female": "Femenino", "other": "Otros", "prefer_not_say": "Prefiero no decirlo",
+    "day": "Día",
+    "month": "Mes",
+    "year": "Año",
+    "gender": "Género",
+    "select": "Selecciona",
+    "male": "Masculino",
+    "female": "Femenino",
+    "other": "Otros",
+    "prefer_not_say": "Prefiero no decirlo",
     "continue": "Continuar a la Votación",
     "required_missing": "Faltan campos obligatorios.",
     "saved": "¡Perfil guardado! ✅",
     "save_error": "Error al actualizar el perfil en Supabase.",
     "months": {
-      "1": "Enero", "2": "Febrero", "3": "Marzo", "4": "Abril",
-      "5": "Mayo", "6": "Junio", "7": "Julio", "8": "Agosto",
-      "9": "Septiembre", "10": "Octubre", "11": "Noviembre", "12": "Diciembre"
+      "1": "Enero",
+      "2": "Febrero",
+      "3": "Marzo",
+      "4": "Abril",
+      "5": "Mayo",
+      "6": "Junio",
+      "7": "Julio",
+      "8": "Agosto",
+      "9": "Septiembre",
+      "10": "Octubre",
+      "11": "Noviembre",
+      "12": "Diciembre"
     }
   },
   "voting": {
@@ -227,8 +289,11 @@
     "identity_title": "Tu identidad",
     "identity_name_label": "¿Cómo quieres que te llamen?",
     "nickname_placeholder": "Tu apodo",
-    "sex_label": "Sexo", "sex_placeholder": "Sexo",
-    "male": "Masculino", "female": "Femenino", "other": "Otro",
+    "sex_label": "Sexo",
+    "sex_placeholder": "Sexo",
+    "male": "Masculino",
+    "female": "Femenino",
+    "other": "Otro",
     "birth_year_label": "Año nac.",
     "year_placeholder": "Año",
     "continue": "CONTINUAR",
@@ -267,16 +332,25 @@
     "colors_hint_mid": ") o nombre (",
     "colors_examples": "negro, blanco, rojo, azul marino, verde bandera...",
     "colors_hint_suffix": ").",
-    "color_primary": "Primario", "color_secondary": "Secundario", "color_tertiary": "Terciario", "color_quarta": "Cuarto",
+    "color_primary": "Primario",
+    "color_secondary": "Secundario",
+    "color_tertiary": "Terciario",
+    "color_quarta": "Cuarto",
     "current_short": "actual:",
     "color_placeholder": "#RRGGBB o \"negro\"",
     "color_invalid": "Color \"{{val}}\" no reconocido. Usa HEX (#RRGGBB) o un nombre (ej.: negro, azul, rojo).",
-    "mascot": "Mascota", "mascot_ph": "Ej.: Zorro",
-    "founded": "Año de fundación", "founded_ph": "Ej.: 1903",
-    "home_city": "Ciudad sede", "country": "País",
-    "stadium_name": "Nombre del estadio", "stadium_city": "Ciudad del estadio", "stadium_capacity": "Capacidad del estadio",
+    "mascot": "Mascota",
+    "mascot_ph": "Ej.: Zorro",
+    "founded": "Año de fundación",
+    "founded_ph": "Ej.: 1903",
+    "home_city": "Ciudad sede",
+    "country": "País",
+    "stadium_name": "Nombre del estadio",
+    "stadium_city": "Ciudad del estadio",
+    "stadium_capacity": "Capacidad del estadio",
     "short_name": "Nombre corto",
-    "division": "División actual", "division_ph": "Ej.: Primera",
+    "division": "División actual",
+    "division_ph": "Ej.: Primera",
     "rivals_label": "Rivales históricos",
     "rivals_note": "— tu palabra anula a la IA",
     "rivals_placeholder": "Busca club rival en el banco (escudo garantizado)...",
@@ -299,9 +373,16 @@
     "send_fail": "Error al enviar"
   },
   "navbar": {
-    "home": "Inicio", "ranking": "Ranking", "map": "Mapa", "map_long": "Mapa de Calor",
-    "ambassadors": "Embajador", "ambassadors_long": "Embajadores", "ambassadors_short": "Embaj.",
-    "panel": "Panel", "voting": "Votación", "admin": "Admin",
+    "home": "Inicio",
+    "ranking": "Ranking",
+    "map": "Mapa",
+    "map_long": "Mapa de Calor",
+    "ambassadors": "Embajador",
+    "ambassadors_long": "Embajadores",
+    "ambassadors_short": "Embaj.",
+    "panel": "Panel",
+    "voting": "Votación",
+    "admin": "Admin",
     "back_to_heart": "Volver al Corazón",
     "aria": "Navegación principal"
   },
@@ -321,17 +402,26 @@
     "code_label": "Código:",
     "invite_fan": "Invitar hincha",
     "share_link": "Compartir enlace",
-    "whatsapp": "WhatsApp", "telegram": "Telegram", "email": "Email", "copy_link": "Copiar enlace",
+    "whatsapp": "WhatsApp",
+    "telegram": "Telegram",
+    "email": "Email",
+    "copy_link": "Copiar enlace",
     "more_options": "Más opciones…",
     "feed_title": "Feed de Actividad",
     "feed_empty": "Sin actividad nueva en tu región.",
     "feed_voted": "acaba de votar por",
     "feed_joined": "se unió a Heart Club",
     "ranking_title": "Ranking de Dominancia",
-    "tab_world": "Mundial", "tab_continental": "Continental", "tab_national": "Nacional",
-    "tab_state": "Estatal", "tab_municipal": "Municipal",
+    "tab_world": "Mundial",
+    "tab_continental": "Continental",
+    "tab_national": "Nacional",
+    "tab_state": "Estatal",
+    "tab_municipal": "Municipal",
     "ranking_empty": "Aún sin datos de ranking. ¡Invita amigos con tu código!",
-    "col_name": "Nombre", "col_club": "Club", "col_city": "Ciudad", "col_points": "Puntos",
+    "col_name": "Nombre",
+    "col_club": "Club",
+    "col_city": "Ciudad",
+    "col_points": "Puntos",
     "anon": "Anónimo",
     "footer_note": "Muro de publicaciones sujeto a auditoría. Disponible para nivel Plata o superior.",
     "census_title": "Completa tu Censo",
@@ -372,7 +462,10 @@
     "kpi_audited": "Votos Auditados Generados",
     "kpi_conversions": "Conversión de Afinidades",
     "share_title": "Compartir Inteligente",
-    "wa": "WhatsApp", "tg": "Telegram", "ig": "Instagram", "more": "Más",
+    "wa": "WhatsApp",
+    "tg": "Telegram",
+    "ig": "Instagram",
+    "more": "Más",
     "link_copied": "¡Enlace copiado!",
     "ig_copied": "Texto copiado — pégalo en Instagram",
     "share_text": "¡Ayuda a {{club}} a dominar {{neighborhood}} en Heart Club! Vota aquí: {{link}}",
@@ -402,11 +495,52 @@
     "loading_votes": "Cargando votos...",
     "loading_territory": "Cargando territorio...",
     "density": "Densidad de votos",
-    "low": "Baja", "high": "Alta",
+    "low": "Baja",
+    "high": "Alta",
     "scope_world": "🌍 Mundial",
     "confirm_territory": "Confirma tu territorio",
     "blocked_until_confirm": "El Mapa de Calor está bloqueado hasta que confirmes dónde vives.",
     "open_confirmation": "Abrir confirmación",
     "votes_word": "VOTOS"
+  },
+  "club_banner": {
+    "heart_label": "Club del Corazón",
+    "loading": "CARGANDO...",
+    "ambassador": "EMBAJADOR {{level}}",
+    "enriching": "¡El manto está llegando! {{club}} es una nueva fuerza en el Censo Global y estamos procesando sus colores y escudo oficial. Sigue navegando: en breve tu Panel tendrá la cara de tu pasión.",
+    "nav": {
+      "heatmap": "Mapa de Calor",
+      "ranking": "Ranking",
+      "ambassadors": "Embajadores",
+      "voting": "Votación",
+      "test_club": "Probar Club",
+      "master_panel": "Panel Master"
+    }
+  },
+  "rivals": {
+    "title": "Monitoreo de Rivales",
+    "validating": "Validando clásicos reales...",
+    "empty": "Ninguna rivalidad histórica confirmada.",
+    "historic": "Rival Histórico",
+    "votes": "Votos"
+  },
+  "competitions": {
+    "title": "Competiciones Activas",
+    "tournaments": "{{count}} torneo(s)",
+    "empty": "Ninguna competición activa encontrada.",
+    "select_club": "Selecciona un club.",
+    "no_match": "Sin partido agendado en esta competición.",
+    "no_standings": "Sin clasificación disponible.",
+    "live": "EN VIVO",
+    "team_col": "Equipo",
+    "target": "objetivo",
+    "zones": {
+      "lib_g": "Libertadores (Fase de Grupos)",
+      "lib_p": "Pre-Libertadores",
+      "sul": "Sudamericana",
+      "reb": "Descenso",
+      "acesso": "Ascenso a Serie A",
+      "reb_c": "Descenso a Serie C"
+    }
   }
 }
