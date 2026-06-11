@@ -99,12 +99,12 @@ export default function AmbassadorCenter() {
           <div className="flex items-center gap-3">
             <img src={logo} alt="Heart Club" className="h-9 w-9 object-contain" />
             <div>
-              <h1 className="text-base font-black italic leading-none">PAINEL DE COMANDO</h1>
-              <p className="text-[10px] text-primary italic">DO EMBAIXADOR</p>
+              <h1 className="text-base font-black italic leading-none">{t("ambassador_center.title")}</h1>
+              <p className="text-[10px] text-primary italic">{t("ambassador_center.subtitle")}</p>
             </div>
           </div>
           <Button variant="ghost" size="sm" onClick={() => navigate("/dashboard")}>
-            <ArrowLeft className="w-4 h-4 mr-1" /> Voltar
+            <ArrowLeft className="w-4 h-4 mr-1" /> {t("ambassador_center.back")}
           </Button>
         </div>
       </header>
