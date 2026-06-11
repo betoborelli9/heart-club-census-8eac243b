@@ -21,7 +21,14 @@
     "title_prefix": "Clubes Mais Queridos",
     "title_suffix": "(Simpatia)",
     "subtitle": "Quais clubes os torcedores mais escolhem como seu segundo time.",
-    "empty": "Ainda não há votos de simpatia registrados."
+    "empty": "Ainda não há votos de simpatia registrados.",
+    "my_clubs": "Meus Clubes",
+    "sympathy_sharer": "Compartilhador de Simpatia",
+    "heart_club": "Clube do Coração",
+    "sympathy_clubs": "Clubes de Simpatia",
+    "no_vote": "Sem voto",
+    "see_news": "Ver Notícias",
+    "votes": "VOTOS"
   },
   "news": {
     "radar_label": "Radar",
@@ -49,9 +56,18 @@
   "ranking": {
     "eyebrow": "RANKING GLOBAL",
     "default_brand": "Heart Club",
-    "search": { "tooltip": "Consultar outro clube", "placeholder": "Buscar clube..." },
+    "search": {
+      "tooltip": "Consultar outro clube",
+      "placeholder": "Buscar clube..."
+    },
     "back": "Voltar",
-    "scope": { "global": "Global", "country": "País", "state": "Estado", "city": "Cidade", "neighborhood": "Bairro" },
+    "scope": {
+      "global": "Global",
+      "country": "País",
+      "state": "Estado",
+      "city": "Cidade",
+      "neighborhood": "Bairro"
+    },
     "hype": {
       "no_votes": "Seu clube ainda não recebeu votos neste recorte.",
       "explosive": "🔥 Crescimento explosivo nas últimas 24h!",
@@ -60,8 +76,15 @@
       "growing": "📈 Movimento crescente. Hora de convocar a torcida.",
       "default": "🎯 Cada voto conta. Convide a torcida e suba no ranking."
     },
-    "position": { "current": "Posição atual:", "votes": "votos", "growth_24h": "+{{value}} (24h)", "growth_7d": "+{{value}} (7d)" },
-    "cta": { "rally": "Convocar a Tropa" },
+    "position": {
+      "current": "Posição atual:",
+      "votes": "votos",
+      "growth_24h": "+{{value}} (24h)",
+      "growth_7d": "+{{value}} (7d)"
+    },
+    "cta": {
+      "rally": "Convocar a Tropa"
+    },
     "goals": {
       "title": "Metas Dinâmicas",
       "overtake": "Faltam {{votes}} votos para ultrapassar o {{club}}.",
@@ -69,11 +92,23 @@
       "check_neighborhood": "Confira o ranking no seu bairro ({{neighborhood}}).",
       "leader": "Liderança consolidada — defenda o topo."
     },
-    "next_target": { "title": "Próximo Alvo", "missing": "Faltam {{votes}}" },
-    "census": { "title": "Censo por Bairro · {{club}} em {{city}}", "empty": "Sem votos registrados por bairro neste recorte." },
-    "table": { "title": "Ranking {{scope}}", "votes_label": "votos" },
+    "next_target": {
+      "title": "Próximo Alvo",
+      "missing": "Faltam {{votes}}"
+    },
+    "census": {
+      "title": "Censo por Bairro · {{club}} em {{city}}",
+      "empty": "Sem votos registrados por bairro neste recorte."
+    },
+    "table": {
+      "title": "Ranking {{scope}}",
+      "votes_label": "votos"
+    },
     "empty_state": "Sem dados para este recorte.",
-    "invite": { "copied_title": "Link copiado!", "copied_desc": "Compartilhe com a torcida 🔥" }
+    "invite": {
+      "copied_title": "Link copiado!",
+      "copied_desc": "Compartilhe com a torcida 🔥"
+    }
   },
   "common": {
     "copy": "Copiar",
@@ -228,9 +263,18 @@
     "saved": "Perfil salvo! ✅",
     "save_error": "Erro ao atualizar perfil no Supabase.",
     "months": {
-      "1": "Janeiro", "2": "Fevereiro", "3": "Março", "4": "Abril",
-      "5": "Maio", "6": "Junho", "7": "Julho", "8": "Agosto",
-      "9": "Setembro", "10": "Outubro", "11": "Novembro", "12": "Dezembro"
+      "1": "Janeiro",
+      "2": "Fevereiro",
+      "3": "Março",
+      "4": "Abril",
+      "5": "Maio",
+      "6": "Junho",
+      "7": "Julho",
+      "8": "Agosto",
+      "9": "Setembro",
+      "10": "Outubro",
+      "11": "Novembro",
+      "12": "Dezembro"
     }
   },
   "voting": {
@@ -458,5 +502,45 @@
     "blocked_until_confirm": "O Mapa de Calor está bloqueado até você confirmar onde mora.",
     "open_confirmation": "Abrir confirmação",
     "votes_word": "VOTOS"
+  },
+  "club_banner": {
+    "heart_label": "Clube do Coração",
+    "loading": "CARREGANDO...",
+    "ambassador": "EMBAIXADOR {{level}}",
+    "enriching": "O manto está chegando! O {{club}} é uma nova força no Censo Global e estamos processando as cores e o escudo oficial. Continue navegando, daqui a pouco seu Dashboard estará com a cara da sua paixão!",
+    "nav": {
+      "heatmap": "Mapa de Calor",
+      "ranking": "Ranking",
+      "ambassadors": "Embaixadores",
+      "voting": "Votação",
+      "test_club": "Testar Clube",
+      "master_panel": "Painel Master"
+    }
+  },
+  "rivals": {
+    "title": "Monitoramento de Rivais",
+    "validating": "Validando clássicos reais...",
+    "empty": "Nenhuma rivalidade histórica confirmada.",
+    "historic": "Rival Histórico",
+    "votes": "Votos"
+  },
+  "competitions": {
+    "title": "Competições Ativas",
+    "tournaments": "{{count}} torneio(s)",
+    "empty": "Nenhuma competição ativa encontrada.",
+    "select_club": "Selecione um clube.",
+    "no_match": "Sem jogo agendado nesta competição.",
+    "no_standings": "Sem classificação disponível.",
+    "live": "AO VIVO",
+    "team_col": "Time",
+    "target": "alvo",
+    "zones": {
+      "lib_g": "Libertadores (Fase de Grupos)",
+      "lib_p": "Pré-Libertadores",
+      "sul": "Sul-Americana",
+      "reb": "Rebaixamento",
+      "acesso": "Acesso à Série A",
+      "reb_c": "Rebaixamento à Série C"
+    }
   }
 }
