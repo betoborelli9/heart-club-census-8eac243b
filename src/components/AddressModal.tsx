@@ -15,6 +15,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { captureIpAudit } from "@/lib/address";
 import { fetchOfficialGoianiaNeighborhoodGeoJson } from "@/lib/official-neighborhoods";
+import { useTranslationApp } from "@/hooks/useTranslationApp";
 
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_PUBLIC_TOKEN;
 
@@ -199,6 +200,7 @@ function useTerritoryEngine() {
 
 export default function AddressModal({ open, onOpenChange, clubName, onSuccess }: any) {
   const { toast } = useToast();
+  const { t } = useTranslationApp();
   const { searchCities, searchNeighborhoods } = useTerritoryEngine();
   const [step, setStep] = useState<"detecting" | "welcome" | "location_error" | "searching_city" | "searching_bairro">("detecting");
   const [loading, setLoading] = useState(false);
@@ -361,14 +363,17 @@ export default function AddressModal({ open, onOpenChange, clubName, onSuccess }
         .eq("user_id", user.id)
         .eq("is_original_vote", true);
 
-      toast({ title: "Território Confirmado!", description: "Bem-vindo ao mapa global!" });
+      toast({
+        title: t("feedback.success.territory_confirmed_title"),
+        description: t("feedback.success.territory_confirmed_desc"),
+      });
       onOpenChange(false);
       onSuccess?.();
 
       // REFRESH PARA O SISTEMA LER O BANCO NOVO E LIBERAR O DASHBOARD
       window.location.reload();
     } catch (e) {
-      toast({ variant: "destructive", title: "Erro ao salvar território" });
+      toast({ variant: "destructive", title: t("feedback.error.territory_save_error") });
     } finally {
       setLoading(false);
     }
@@ -382,9 +387,9 @@ export default function AddressModal({ open, onOpenChange, clubName, onSuccess }
             <div className="w-16 h-16 bg-[#ff6200]/10 border border-[#ff6200]/30 rounded-2xl flex items-center justify-center">
               <Heart className="text-[#ff6200] w-8 h-8 fill-[#ff6200]/20" />
             </div>
-            <h2 className="text-2xl font-black italic uppercase">Onde pulsa seu coração?</h2>
+            <h2 className="text-2xl font-black italic uppercase">{t("components.address_modal.title")}</h2>
             <p className="text-zinc-500 text-sm italic">
-              Seu território alimenta o mapa global do{" "}
+              {t("components.address_modal.subtitle_prefix")}{" "}
               <span className="text-[#ff6200] font-bold uppercase">{clubName}</span>
             </p>
           </header>
@@ -392,9 +397,9 @@ export default function AddressModal({ open, onOpenChange, clubName, onSuccess }
           {step === "welcome" && (
             <div className="space-y-6 animate-in fade-in zoom-in-95 duration-300 text-center">
               <div className="bg-zinc-900/50 border border-[#ff6200]/20 p-6 rounded-2xl">
-                <p className="text-zinc-400 text-sm italic mb-1">Detectamos sua cidade:</p>
+                <p className="text-zinc-400 text-sm italic mb-1">{t("components.address_modal.detected")}</p>
                 <p className="text-xl font-black uppercase italic text-white">{detectedLocation?.name}</p>
-                <p className="text-[#ff6200] text-xs font-bold mt-4 italic text-center w-full block">Você mora aqui?</p>
+                <p className="text-[#ff6200] text-xs font-bold mt-4 italic text-center w-full block">{t("components.address_modal.live_here")}</p>
               </div>
               <div className="flex flex-col gap-3">
                 <Button
@@ -406,7 +411,7 @@ export default function AddressModal({ open, onOpenChange, clubName, onSuccess }
                   }}
                   className="bg-[#ff6200] hover:bg-[#ff8230] text-white font-black italic uppercase h-14 rounded-2xl"
                 >
-                  Sim, moro aqui!
+                  {t("components.address_modal.yes_live")}
                 </Button>
                 <Button
                   variant="outline"
@@ -418,7 +423,7 @@ export default function AddressModal({ open, onOpenChange, clubName, onSuccess }
                   }}
                   className="bg-transparent border-white/10 text-white hover:bg-white/5 font-black italic uppercase h-12 rounded-2xl"
                 >
-                  Não, moro em outra cidade
+                  {t("components.address_modal.no_other_city")}
                 </Button>
                 <Button
                   variant="ghost"
@@ -430,7 +435,7 @@ export default function AddressModal({ open, onOpenChange, clubName, onSuccess }
                   }}
                   className="text-zinc-500 hover:text-white uppercase font-bold text-xs h-12"
                 >
-                  Detectar novamente
+                  {t("components.address_modal.detect_again")}
                 </Button>
               </div>
             </div>
@@ -442,7 +447,7 @@ export default function AddressModal({ open, onOpenChange, clubName, onSuccess }
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-500" />
                 <Input
                   autoFocus
-                  placeholder="Digite sua cidade..."
+                  placeholder={t("components.address_modal.city_placeholder")}
                   className="h-16 bg-zinc-900 border-white/10 pl-12 rounded-2xl focus:border-[#ff6200] text-lg font-bold italic"
                   value={searchQuery}
                   onChange={(e) => onTypeSearch(e.target.value)}
@@ -452,7 +457,7 @@ export default function AddressModal({ open, onOpenChange, clubName, onSuccess }
                 {searchingCities && (
                   <div className="flex items-center justify-center gap-3 p-6 text-zinc-400">
                     <Loader2 className="w-4 h-4 animate-spin text-[#ff6200]" />
-                    <span className="text-xs italic uppercase tracking-widest">Buscando cidades...</span>
+                    <span className="text-xs italic uppercase tracking-widest">{t("components.address_modal.searching_cities")}</span>
                   </div>
                 )}
                 {suggestions.map((item: any) => (
@@ -482,7 +487,7 @@ export default function AddressModal({ open, onOpenChange, clubName, onSuccess }
                 onClick={() => setStep("welcome")}
                 className="text-zinc-500 hover:text-white uppercase font-bold text-xs h-10 w-full"
               >
-                Voltar
+                {t("common.back")}
               </Button>
             </div>
           )}
@@ -490,7 +495,7 @@ export default function AddressModal({ open, onOpenChange, clubName, onSuccess }
           {step === "location_error" && (
             <div className="space-y-4 animate-in fade-in duration-300 text-center">
               <p className="text-sm text-zinc-400 italic leading-relaxed">
-                Não consegui detectar sua cidade automaticamente. Ative a localização do navegador e tente de novo.
+                {t("components.address_modal.location_error")}
               </p>
               <Button
                 onClick={() => {
@@ -499,7 +504,7 @@ export default function AddressModal({ open, onOpenChange, clubName, onSuccess }
                 }}
                 className="bg-[#ff6200] hover:bg-[#ff8230] text-white font-black italic uppercase h-12 rounded-2xl w-full"
               >
-                Detectar localização
+                {t("components.address_modal.detect_location")}
               </Button>
             </div>
           )}
@@ -510,7 +515,7 @@ export default function AddressModal({ open, onOpenChange, clubName, onSuccess }
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-500" />
                 <Input
                   autoFocus
-                  placeholder={`Qual o seu bairro em ${selectedCity?.name}?`}
+                  placeholder={t("components.address_modal.neighborhood_placeholder", { city: selectedCity?.name })}
                   className="h-16 bg-zinc-900 border-white/10 pl-12 rounded-2xl focus:border-[#ff6200] text-lg font-bold italic"
                   value={searchQuery}
                   onChange={(e) => onTypeSearch(e.target.value)}
@@ -538,7 +543,7 @@ export default function AddressModal({ open, onOpenChange, clubName, onSuccess }
                 {step === "searching_bairro" && loadingBairros && (
                   <div className="flex items-center justify-center gap-3 p-6 text-zinc-400">
                     <Loader2 className="w-4 h-4 animate-spin text-[#ff6200]" />
-                    <span className="text-xs italic uppercase tracking-widest text-center">Carregando bairros...</span>
+                    <span className="text-xs italic uppercase tracking-widest text-center">{t("components.address_modal.loading_neighborhoods")}</span>
                   </div>
                 )}
               </div>
@@ -548,7 +553,7 @@ export default function AddressModal({ open, onOpenChange, clubName, onSuccess }
           <footer className="flex items-start gap-3 bg-[#ff6200]/5 p-4 rounded-2xl border border-[#ff6200]/10">
             <Navigation className="w-4 h-4 text-[#ff6200] shrink-0 mt-0.5" />
             <p className="text-[10px] text-zinc-400 italic leading-tight">
-              Privacidade total: sua rua nunca aparece publicamente. Apenas o território alimenta o censo global.
+              {t("components.address_modal.privacy")}
             </p>
           </footer>
         </div>
