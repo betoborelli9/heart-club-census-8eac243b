@@ -22,6 +22,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { getFingerprint, getFastIP, runSilentAudit } from "@/lib/vote-auditor";
 import { detectDeviceModel } from "@/lib/device-detect";
 import { captureIpAudit } from "@/lib/address";
+import { useTranslationApp } from "@/hooks/useTranslationApp";
 
 type ClubResult = ClubSearchResult;
 const MAX_SYMPATHY_CLUBS = 4;
@@ -35,6 +36,7 @@ const Voting = () => {
   const [searchParams] = useSearchParams();
   const { user, profile, hasVoted, isLoading, isAuthReady, isAuthenticated, refreshProfile, updateProfile } = useUser();
   const { toast } = useToast();
+  const { t } = useTranslationApp();
 
   const IS_MASTER_ADMIN = user?.email === "betoborelli9@gmail.com";
   const TEST_MODE = IS_MASTER_ADMIN && searchParams.get("test") === "1";
@@ -104,8 +106,8 @@ const Voting = () => {
     if (!nickname.trim() || !genero || !anoNasc) {
       toast({
         variant: "destructive",
-        title: "Complete seu cadastro",
-        description: "Nome, sexo e ano de nascimento são obrigatórios.",
+        title: t("voting.toast_complete_title"),
+        description: t("voting.toast_complete_desc"),
       });
       return;
     }
@@ -169,7 +171,7 @@ const Voting = () => {
     if (!heartClub || !user) return;
 
     if (!isValidClubName(heartClub.name)) {
-      toast({ variant: "destructive", title: "Clube inválido", description: "Selecione um clube real da lista." });
+      toast({ variant: "destructive", title: t("voting.toast_invalid_club"), description: t("voting.toast_invalid_club_desc") });
       return;
     }
 
@@ -177,8 +179,8 @@ const Voting = () => {
       if (!nickname.trim() || !genero || !anoNasc) {
         toast({
           variant: "destructive",
-          title: "Complete sua identidade",
-          description: "Nome, sexo e ano de nascimento são obrigatórios.",
+          title: t("voting.toast_complete_identity"),
+          description: t("voting.toast_complete_desc"),
         });
         return;
       }
@@ -276,11 +278,11 @@ const Voting = () => {
       await refreshProfile().catch(() => {});
 
       // [TRAVA DEFINITIVA] hasVoted=true → Dashboard
-      toast({ title: "Lealdade registrada com sucesso! 🏟️" });
+      toast({ title: t("voting.toast_success") });
       navigate("/dashboard", { replace: true });
     } catch (err) {
       console.error("[VOTING] erro:", err);
-      toast({ variant: "destructive", title: "Erro ao processar votos" });
+      toast({ variant: "destructive", title: t("voting.toast_error") });
     } finally {
       setSubmitting(false);
       setShowConfirm(false);
@@ -339,15 +341,15 @@ const Voting = () => {
       <div className="w-full max-w-lg space-y-6">
         <div className="text-center space-y-3">
           <img src={logo} alt="Logo" className="mx-auto w-20 h-20" />
-          <h1 className="text-2xl font-black italic uppercase tracking-tighter text-white">Voto Sagrado</h1>
+          <h1 className="text-2xl font-black italic uppercase tracking-tighter text-white">{t("voting.title")}</h1>
           {IS_MASTER_ADMIN && (
             <div className="flex flex-col gap-1 items-center">
               <p className="text-[10px] text-primary font-black uppercase flex items-center gap-1">
-                <ShieldCheck size={12} /> Master Mode Ativo
+                <ShieldCheck size={12} /> {t("voting.master_mode")}
               </p>
               {TEST_MODE && (
                 <span className="text-[8px] bg-red-500 text-white px-2 py-0.5 rounded-full font-bold animate-pulse">
-                  LINK DE VOTAÇÃO (TESTE) ATIVO
+                  {t("voting.test_link")}
                 </span>
               )}
             </div>
@@ -357,7 +359,7 @@ const Voting = () => {
         {/* CLUBE DO CORAÇÃO */}
         <div className="space-y-2 relative">
           <label className="text-xs font-black uppercase opacity-60 italic flex items-center gap-2">
-            <Heart size={14} className="text-primary" /> Clube do Coração
+            <Heart size={14} className="text-primary" /> {t("voting.heart_club")}
           </label>
           {heartClub ? (
             <div className="flex items-center gap-3 glass-card rounded-xl p-4 border-2 border-primary animate-in zoom-in duration-300">
@@ -378,7 +380,7 @@ const Voting = () => {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-primary opacity-50" />
               <Input
                 className="pl-10 h-14 rounded-xl bg-card border-white/5"
-                placeholder="Pesquisar seu clube..."
+                placeholder={t("voting.search_placeholder")}
                 value={heartSearch}
                 onChange={(e) => setHeartSearch(e.target.value)}
                 onFocus={() => setHeartOpen(true)}
@@ -392,7 +394,7 @@ const Voting = () => {
         {/* SIMPATIAS */}
         <div className="space-y-3">
           <label className="text-xs font-black uppercase italic flex items-center gap-2 opacity-60">
-            <Sparkles size={14} className="text-primary" /> Simpatias ({sympathyClubs.length}/{MAX_SYMPATHY_CLUBS})
+            <Sparkles size={14} className="text-primary" /> {t("voting.sympathies")} ({sympathyClubs.length}/{MAX_SYMPATHY_CLUBS})
           </label>
           <div className="grid grid-cols-1 gap-2">
             {sympathyClubs.map((club, idx) => (
@@ -408,7 +410,7 @@ const Voting = () => {
               <div className="relative">
                 <Input
                   className="pl-4 h-12 rounded-xl bg-card border-white/5"
-                  placeholder="Adicionar simpatia..."
+                  placeholder={t("voting.add_sympathy")}
                   value={sympathySearch}
                   onChange={(e) => setSympathySearch(e.target.value)}
                   onFocus={() => setSympathyOpen(true)}
@@ -433,7 +435,7 @@ const Voting = () => {
           disabled={!heartClub || submitting}
           onClick={handleJuroLealdade}
         >
-          {submitting ? <Loader2 className="animate-spin" /> : "JURO LEALDADE"}
+          {submitting ? <Loader2 className="animate-spin" /> : t("voting.swear")}
         </Button>
       </div>
 
@@ -442,42 +444,42 @@ const Voting = () => {
         <DialogContent className="max-w-sm glass-card border-primary/30">
           <DialogHeader>
             <DialogTitle className="italic text-xl font-black uppercase tracking-tighter text-center flex items-center justify-center gap-2">
-              <UserIcon size={18} className="text-primary" /> Sua identidade
+              <UserIcon size={18} className="text-primary" /> {t("voting.identity_title")}
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
             <div className="space-y-2">
               <Label className="text-[11px] font-bold uppercase opacity-60">
-                Como você quer ser chamado
+                {t("voting.identity_name_label")}
               </Label>
               <Input
                 value={nickname}
                 onChange={(e) => setNickname(e.target.value)}
-                placeholder="Seu apelido"
+                placeholder={t("voting.nickname_placeholder")}
                 className="h-12 rounded-xl bg-card border-white/5"
               />
             </div>
             <div className="grid grid-cols-2 gap-2">
               <div className="space-y-2">
-                <Label className="text-[11px] font-bold uppercase opacity-60">Sexo</Label>
+                <Label className="text-[11px] font-bold uppercase opacity-60">{t("voting.sex_label")}</Label>
                 <Select value={genero} onValueChange={setGenero}>
                   <SelectTrigger className="h-12 rounded-xl bg-card border-white/5">
-                    <SelectValue placeholder="Sexo" />
+                    <SelectValue placeholder={t("voting.sex_placeholder")} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="masculino">Masculino</SelectItem>
-                    <SelectItem value="feminino">Feminino</SelectItem>
-                    <SelectItem value="outros">Outro</SelectItem>
+                    <SelectItem value="masculino">{t("voting.male")}</SelectItem>
+                    <SelectItem value="feminino">{t("voting.female")}</SelectItem>
+                    <SelectItem value="outros">{t("voting.other")}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
                 <Label className="text-[11px] font-bold uppercase opacity-60 flex items-center gap-1">
-                  <Cake size={11} /> Ano nasc.
+                  <Cake size={11} /> {t("voting.birth_year_label")}
                 </Label>
                 <Select value={anoNasc} onValueChange={setAnoNasc}>
                   <SelectTrigger className="h-12 rounded-xl bg-card border-white/5">
-                    <SelectValue placeholder="Ano" />
+                    <SelectValue placeholder={t("voting.year_placeholder")} />
                   </SelectTrigger>
                   <SelectContent className="max-h-72">
                     {ANOS.map((y) => (
@@ -495,7 +497,7 @@ const Voting = () => {
               className="w-full btn-orange-gradient h-14 font-black italic text-lg uppercase"
               onClick={handleIdentityContinue}
             >
-              CONTINUAR
+              {t("voting.continue")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -507,11 +509,11 @@ const Voting = () => {
         <DialogContent className="max-w-sm glass-card border-white/10">
           <DialogHeader>
             <DialogTitle className="italic text-2xl font-black uppercase tracking-tighter text-center">
-              CONFIRMAR VOTO?
+              {t("voting.confirm_title")}
             </DialogTitle>
           </DialogHeader>
           <p className="text-base italic opacity-80 text-center px-2">
-            Você jura lealdade ao <strong className="text-primary not-italic uppercase">{heartClub?.name}</strong>?
+            {t("voting.swear_question")} <strong className="text-primary not-italic uppercase">{heartClub?.name}</strong>?
           </p>
           <DialogFooter className="flex-col gap-2 mt-2">
             <Button
@@ -519,7 +521,7 @@ const Voting = () => {
               onClick={handleConfirmVote}
               disabled={submitting}
             >
-              {submitting ? <Loader2 className="animate-spin" /> : "SIM, EU JURO!"}
+              {submitting ? <Loader2 className="animate-spin" /> : t("voting.yes_swear")}
             </Button>
             <Button
               variant="ghost"
@@ -527,7 +529,7 @@ const Voting = () => {
               onClick={() => setShowConfirm(false)}
               disabled={submitting}
             >
-              VOLTAR
+              {t("voting.back")}
             </Button>
           </DialogFooter>
         </DialogContent>
