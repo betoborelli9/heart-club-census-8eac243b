@@ -2,5 +2,62 @@
   "header": {
     "brand": "Heart Club",
     "logout": "Sair"
+  },
+  "ranking": {
+    "eyebrow": "RANKING GLOBAL",
+    "default_brand": "Heart Club",
+    "search": {
+      "tooltip": "Consultar outro clube",
+      "placeholder": "Buscar clube..."
+    },
+    "back": "Voltar",
+    "scope": {
+      "global": "Global",
+      "country": "País",
+      "state": "Estado",
+      "city": "Cidade",
+      "neighborhood": "Bairro"
+    },
+    "hype": {
+      "no_votes": "Seu clube ainda não recebeu votos neste recorte.",
+      "explosive": "🔥 Crescimento explosivo nas últimas 24h!",
+      "domination": "👑 Domínio absoluto nesta região.",
+      "podium": "🚀 Seu clube está no pódio — empurre mais um pouco!",
+      "growing": "📈 Movimento crescente. Hora de convocar a torcida.",
+      "default": "🎯 Cada voto conta. Convide a torcida e suba no ranking."
+    },
+    "position": {
+      "current": "Posição atual:",
+      "votes": "votos",
+      "growth_24h": "+{{value}} (24h)",
+      "growth_7d": "+{{value}} (7d)"
+    },
+    "cta": {
+      "rally": "Convocar a Tropa"
+    },
+    "goals": {
+      "title": "Metas Dinâmicas",
+      "overtake": "Faltam {{votes}} votos para ultrapassar o {{club}}.",
+      "top10": "A {{votes}} votos do Top 10 {{scope}}.",
+      "check_neighborhood": "Confira o ranking no seu bairro ({{neighborhood}}).",
+      "leader": "Liderança consolidada — defenda o topo."
+    },
+    "next_target": {
+      "title": "Próximo Alvo",
+      "missing": "Faltam {{votes}}"
+    },
+    "census": {
+      "title": "Censo por Bairro · {{club}} em {{city}}",
+      "empty": "Sem votos registrados por bairro neste recorte."
+    },
+    "table": {
+      "title": "Ranking {{scope}}",
+      "votes_label": "votos"
+    },
+    "empty_state": "Sem dados para este recorte.",
+    "invite": {
+      "copied_title": "Link copiado!",
+      "copied_desc": "Compartilhe com a torcida 🔥"
+    }
   }
 }
