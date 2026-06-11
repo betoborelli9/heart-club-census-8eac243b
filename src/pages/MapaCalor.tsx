@@ -1400,7 +1400,7 @@ const MapaCalor = () => {
       const { name, votes, heartVotes, invaderVotes } = lookupVotesForFeature(feature?.properties);
       const breakdown = compareClubName
         ? `<div style="color:#ff6200;font-weight:900;font-size:10px;margin-top:2px">❤️ ${fmt(heartVotes)}</div><div style="color:#b066ff;font-weight:900;font-size:10px">⚔️ ${fmt(invaderVotes)}</div>`
-        : `<div style="color:#ff6200;font-weight:900;font-size:11px;margin-top:2px">${fmt(votes)} VOTOS</div>`;
+        : `<div style="color:#ff6200;font-weight:900;font-size:11px;margin-top:2px">${fmt(votes)} ${t("heatmap.votes_word")}</div>`;
       layer.bindTooltip(
         `<div style="font-family:Verdana,sans-serif"><div style="font-weight:900;font-style:italic;text-transform:uppercase;font-size:11px;color:#fff">${name}</div>${breakdown}</div>`,
         { sticky: true, direction: "top", opacity: 0.95, className: "war-tooltip" },
