@@ -388,9 +388,9 @@ const Stats = () => {
               <ClubBadge club={clubName} cacheUrl={logoFor(clubName)} size={40} />
             )}
             <div className="min-w-0">
-              <p className="text-[10px] tracking-widest text-primary font-black">RANKING GLOBAL</p>
+              <p className="text-[10px] tracking-widest text-primary font-black">{t("ranking.eyebrow")}</p>
               <h1 className="font-black italic text-lg leading-tight truncate">
-                {clubName || "Heart Club"}
+                {clubName || t("ranking.default_brand")}
               </h1>
             </div>
           </div>
@@ -399,7 +399,7 @@ const Stats = () => {
             {/* Discrete header search */}
             <div className="relative">
               {!searchOpen ? (
-                <Button size="sm" variant="ghost" onClick={() => setSearchOpen(true)} title="Consultar outro clube">
+                <Button size="sm" variant="ghost" onClick={() => setSearchOpen(true)} title={t("ranking.search.tooltip")}>
                   <Search className="h-4 w-4" />
                 </Button>
               ) : (
@@ -410,7 +410,7 @@ const Stats = () => {
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                     onBlur={() => setTimeout(() => { if (!search) setSearchOpen(false); }, 200)}
-                    placeholder="Buscar clube..."
+                    placeholder={t("ranking.search.placeholder")}
                     className="bg-transparent outline-none text-xs flex-1 placeholder:text-white/40"
                   />
                   {isSearching && <Loader2 className="h-3 w-3 animate-spin text-primary" />}
@@ -437,7 +437,7 @@ const Stats = () => {
                 </div>
               )}
             </div>
-            <Button size="sm" variant="ghost" onClick={() => navigate("/dashboard")} title="Voltar">
+            <Button size="sm" variant="ghost" onClick={() => navigate("/dashboard")} title={t("ranking.back")}>
               <LogOut className="h-4 w-4" />
             </Button>
           </div>
@@ -445,8 +445,8 @@ const Stats = () => {
 
         {/* LEVEL TABS */}
         <div className="max-w-6xl mx-auto mt-3 flex gap-1 overflow-x-auto scrollbar-none">
-          {(Object.keys(LEVEL_META) as Level[]).map((lv) => {
-            const Icon = LEVEL_META[lv].icon;
+          {(Object.keys(LEVEL_ICONS) as Level[]).map((lv) => {
+            const Icon = LEVEL_ICONS[lv];
             const active = level === lv;
             return (
               <button
@@ -457,7 +457,7 @@ const Stats = () => {
                 }`}
               >
                 <Icon className="h-3.5 w-3.5" />
-                {LEVEL_META[lv].label}
+                {levelLabel(lv)}
               </button>
             );
           })}
