@@ -285,7 +285,8 @@ function StandingsTable({
   leagueId?: number;
   leagueName?: string;
 }) {
-  if (!rows.length) return <p className="text-[11px] italic text-white/40">Sem classificação disponível.</p>;
+  const { t } = useTranslationApp();
+  if (!rows.length) return <p className="text-[11px] italic text-white/40">{t("competitions.no_standings")}</p>;
   const stickyBg = "bg-[#0b0b0b]";
   const headerBg = "bg-[#141414]";
   const opponentBg = "bg-[#2a1f3d]";
