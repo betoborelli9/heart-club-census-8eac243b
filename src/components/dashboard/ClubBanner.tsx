@@ -209,7 +209,7 @@ const ClubBanner = ({
               {showProfileInfo && (
                 <div className="hidden md:flex flex-col text-white ml-8 h-full justify-center">
                   <h2 className="text-3xl font-black italic uppercase tracking-tighter leading-none mb-2" style={textOutlineStyle}>
-                    {profileName || "CARREGANDO..."}
+                    {profileName || t("club_banner.loading")}
                   </h2>
                   <div className="flex items-center gap-2 text-xs font-bold uppercase opacity-90 italic" style={textOutlineStyle}>
                     <MapPin size={12} className="text-white/70" />
@@ -218,7 +218,7 @@ const ClubBanner = ({
                   {canSeeAmbassador && (
                     <div className="flex items-center gap-2 mt-2 text-xs font-black italic uppercase tracking-widest" style={textOutlineStyle}>
                       <Trophy size={14} className={IS_MASTER ? "text-cyan-400 animate-pulse" : "text-orange-500"} />
-                      <span className={IS_MASTER ? "text-cyan-200" : "text-white"}>EMBAIXADOR {displayLevel}</span>
+                      <span className={IS_MASTER ? "text-cyan-200" : "text-white"}>{t("club_banner.ambassador", { level: displayLevel })}</span>
                     </div>
                   )}
                 </div>
@@ -229,7 +229,7 @@ const ClubBanner = ({
               {showProfileInfo && (
                 <div className="flex-1 md:hidden flex flex-col justify-center items-end text-white">
                   <h2 className="text-xl font-black italic uppercase tracking-tighter leading-none mb-1" style={textOutlineStyle}>
-                    {profileName || "CARREGANDO..."}
+                    {profileName || t("club_banner.loading")}
                   </h2>
                   <div className="flex items-center gap-1.5 text-[9px] font-bold uppercase opacity-90 italic" style={textOutlineStyle}>
                     <MapPin size={12} className="text-white/70" />
@@ -238,7 +238,7 @@ const ClubBanner = ({
                   {canSeeAmbassador && (
                     <div className="flex items-center gap-1.5 mt-1 text-[9px] font-black text-white italic uppercase tracking-widest" style={textOutlineStyle}>
                       <Trophy size={12} className={IS_MASTER ? "text-cyan-400 animate-pulse" : "text-orange-500"} />
-                      <span>EMBAIXADOR {ambassadorLevel || "BRONZE"}</span>
+                      <span>{t("club_banner.ambassador", { level: ambassadorLevel || "BRONZE" })}</span>
                     </div>
                   )}
                 </div>
@@ -246,7 +246,7 @@ const ClubBanner = ({
 
               <div className="flex flex-col items-end justify-end text-white mt-auto">
                 <span className="text-[8px] md:text-[9px] font-black uppercase italic opacity-70 tracking-[0.3em] mb-[-4px]" style={textOutlineStyle}>
-                  Clube do Coração
+                  {t("club_banner.heart_label")}
                 </span>
                 <h1 className="text-xl md:text-4xl font-black italic uppercase tracking-tighter leading-none" style={textOutlineStyle}>
                   {clubName}
