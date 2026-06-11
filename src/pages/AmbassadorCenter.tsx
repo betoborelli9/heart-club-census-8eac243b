@@ -146,9 +146,9 @@ export default function AmbassadorCenter() {
 
         {/* KPIs */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          <KPI icon={<Users className="w-5 h-5" />} label="Indicações" value={referrals} />
-          <KPI icon={<Trophy className="w-5 h-5" />} label="Votos Auditados Gerados" value={audited} highlight />
-          <KPI icon={<Share2 className="w-5 h-5" />} label="Conversão de Afinidades" value={conversions} suffix={referrals ? `(${Math.round((conversions / Math.max(referrals,1)) * 100)}%)` : ""} />
+          <KPI icon={<Users className="w-5 h-5" />} label={t("ambassador_center.kpi_indications")} value={referrals} />
+          <KPI icon={<Trophy className="w-5 h-5" />} label={t("ambassador_center.kpi_audited")} value={audited} highlight />
+          <KPI icon={<Share2 className="w-5 h-5" />} label={t("ambassador_center.kpi_conversions")} value={conversions} suffix={referrals ? `(${Math.round((conversions / Math.max(referrals,1)) * 100)}%)` : ""} />
         </div>
 
         {/* Compartilhar */}
