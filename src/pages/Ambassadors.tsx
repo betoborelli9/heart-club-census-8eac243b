@@ -716,7 +716,7 @@ const Ambassadors = () => {
               <TabsContent key={tab} value={tab}>
                 {ranking.length === 0 ? (
                   <p className="text-sm text-white/30 text-center py-8">
-                    Sem dados de ranking disponíveis ainda. Convide amigos com seu código!
+                    {t("ambassadors.ranking_empty")}
                   </p>
                 ) : (
                   <div className="overflow-x-auto">
@@ -724,10 +724,10 @@ const Ambassadors = () => {
                       <thead>
                         <tr className="text-[10px] font-black uppercase tracking-[0.2em] text-white/30 border-b border-white/5">
                           <th className="py-3 px-2 w-12">#</th>
-                          <th className="py-3 px-2">Nome</th>
-                          <th className="py-3 px-2">Clube</th>
-                          <th className="py-3 px-2 hidden sm:table-cell">Cidade</th>
-                          <th className="py-3 px-2 text-right">Pontos</th>
+                          <th className="py-3 px-2">{t("ambassadors.col_name")}</th>
+                          <th className="py-3 px-2">{t("ambassadors.col_club")}</th>
+                          <th className="py-3 px-2 hidden sm:table-cell">{t("ambassadors.col_city")}</th>
+                          <th className="py-3 px-2 text-right">{t("ambassadors.col_points")}</th>
                         </tr>
                       </thead>
                       <tbody>
