@@ -42,36 +42,35 @@ void i18n
       caches: ["localStorage"],
       lookupLocalStorage: "i18nextLng",
     },
-    interpolation: {
-      escapeValue: false,
-      // Formatação regional nativa via Intl. Uso nas chaves:
-      //   {{value, number}}                → 1.000 (pt) / 1,000 (en)
-      //   {{value, number(minimumFractionDigits: 2)}}
-      //   {{value, date}}                  → 11/06/2026 (pt) / 6/11/2026 (en)
-      //   {{value, date(dateStyle: long)}} → 11 de junho de 2026
-      format: (value, format, lng) => {
-        if (value == null || !format) return String(value ?? "");
-        const locale = lng || "pt";
-        try {
-          if (format.startsWith("number")) {
-            const opts = parseOpts(format);
-            return new Intl.NumberFormat(locale, opts).format(Number(value));
-          }
-          if (format.startsWith("date")) {
-            const opts = parseOpts(format) as Intl.DateTimeFormatOptions;
-            return new Intl.DateTimeFormat(locale, opts).format(
-              value instanceof Date ? value : new Date(value),
-            );
-          }
-        } catch {
-          /* fallback abaixo */
-        }
-        return String(value);
-      },
-    },
+    interpolation: { escapeValue: false },
     react: { useSuspense: false },
     returnEmptyString: false,
   });
+
+// ───────────────────────────────────────────────────────────────────
+// Formatadores regionais (i18next v23+: services.formatter.add).
+// Uso nas chaves de tradução:
+//   {{value, number}}                → 1.000 (pt) / 1,000 (en)
+//   {{value, number(minimumFractionDigits: 2)}}
+//   {{value, date}}                  → 11/06/2026 (pt) / 6/11/2026 (en)
+//   {{value, date(dateStyle: long)}} → 11 de junho de 2026
+// ───────────────────────────────────────────────────────────────────
+i18n.services.formatter?.add("number", (value, lng, opts) => {
+  try {
+    return new Intl.NumberFormat(lng || "pt", opts as Intl.NumberFormatOptions).format(Number(value));
+  } catch {
+    return String(value);
+  }
+});
+
+i18n.services.formatter?.add("date", (value, lng, opts) => {
+  try {
+    const d = value instanceof Date ? value : new Date(value);
+    return new Intl.DateTimeFormat(lng || "pt", opts as Intl.DateTimeFormatOptions).format(d);
+  } catch {
+    return String(value);
+  }
+});
 
 // Parse "number(minimumFractionDigits: 2, style: 'currency')" → object
 function parseOpts(format: string): Record<string, unknown> {
