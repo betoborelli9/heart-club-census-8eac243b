@@ -114,7 +114,7 @@ export default function SympathyCarousel({ sympathies, heartClubName, viewedClub
           {name}
         </p>
         <p className="text-[9px] font-bold text-[#ff6200] mt-1 tracking-widest">
-          {Number(votes[name] || 0).toLocaleString()} <span className="text-[7px] text-white/20">VOTOS</span>
+          {Number(votes[name] || 0).toLocaleString()} <span className="text-[7px] text-white/20">{t("sympathy.votes")}</span>
         </p>
         <div
           className={`mt-3 w-full py-1.5 rounded-lg flex items-center justify-center gap-1.5 transition-all ${
@@ -122,7 +122,7 @@ export default function SympathyCarousel({ sympathies, heartClubName, viewedClub
           }`}
         >
           <Newspaper className="w-3 h-3" />
-          <span className="text-[8px] font-black uppercase italic">Ver Notícias</span>
+          <span className="text-[8px] font-black uppercase italic">{t("sympathy.see_news")}</span>
         </div>
       </article>
     );
