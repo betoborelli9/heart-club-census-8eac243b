@@ -34,7 +34,7 @@ const LanguageSwitcher = () => {
           size="icon"
           aria-label={t("language.aria")}
           title={t("language.label")}
-          className="text-white/30 hover:text-white"
+          className="text-white/80 hover:text-[#ff6200]"
         >
           <Languages className="w-5 h-5" />
         </Button>
