@@ -407,6 +407,7 @@
     "scope_world": "🌍 Worldwide",
     "confirm_territory": "Confirm your territory",
     "blocked_until_confirm": "The Heatmap is locked until you confirm where you live.",
-    "open_confirmation": "Open confirmation"
+    "open_confirmation": "Open confirmation",
+    "votes_word": "VOTES"
   }
 }
