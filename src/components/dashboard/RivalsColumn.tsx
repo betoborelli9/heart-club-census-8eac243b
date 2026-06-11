@@ -20,6 +20,7 @@ type RivalItem = {
 };
 
 export default function RivalsColumn({ clubName, refCode, primaryColor = "#ff6200" }: any) {
+  const { t } = useTranslationApp();
   const [rivals, setRivals] = useState<RivalItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
