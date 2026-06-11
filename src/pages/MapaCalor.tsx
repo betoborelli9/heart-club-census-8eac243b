@@ -35,6 +35,7 @@ import { CLUBS_DATA } from "@/clubes-data";
 import { fetchOfficialGoianiaNeighborhoodGeoJson, hasPreciseOverride } from "@/lib/official-neighborhoods";
 import AddressModal from "@/components/AddressModal";
 import logo from "@/assets/logo.png";
+import { useTranslationApp } from "@/hooks/useTranslationApp";
 
 /* ---------- Helpers ---------- */
 
