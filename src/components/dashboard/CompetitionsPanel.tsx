@@ -57,6 +57,7 @@ interface Competition {
 const LIVE_STATUSES = new Set(["1H", "2H", "HT", "ET", "BT", "P", "LIVE"]);
 
 export default function CompetitionsPanel({ clubName, primaryColor = "#ff6200" }: Props) {
+  const { t, language } = useTranslationApp();
   const [loading, setLoading] = useState(true);
   const [team, setTeam] = useState<{ id: number; name: string; logo: string } | null>(null);
   const [competitions, setCompetitions] = useState<Competition[]>([]);
