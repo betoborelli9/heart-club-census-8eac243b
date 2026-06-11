@@ -877,7 +877,7 @@ const Ambassadors = () => {
               className="w-full bg-[#ff6200] hover:bg-[#e55800] font-black uppercase tracking-wider text-sm py-5"
             >
               {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-              Liberar Painel
+              {t("ambassadors.unlock_panel")}
             </Button>
           </div>
         </DialogContent>
