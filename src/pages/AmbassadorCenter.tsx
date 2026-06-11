@@ -82,7 +82,7 @@ export default function AmbassadorCenter() {
     if (target === "tg") return window.open(`https://t.me/share/url?url=${encodeURIComponent(inviteUrl)}&text=${encodeURIComponent(text)}`, "_blank");
     if (target === "ig") {
       navigator.clipboard.writeText(text);
-      return toast.success("Texto copiado — cole no Instagram");
+      return toast.success(t("ambassador_center.ig_copied"));
     }
     if (navigator.share) navigator.share({ text, url: inviteUrl }).catch(() => {});
   };
