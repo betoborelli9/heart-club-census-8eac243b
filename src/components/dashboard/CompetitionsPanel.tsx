@@ -395,7 +395,7 @@ function StandingsTable({
                 style={{ backgroundColor: ZONE_META[z].color }}
               />
               <span className="text-[8.5px] font-bold uppercase tracking-wider text-white/55">
-                {ZONE_META[z].label}
+                {t(`competitions.zones.${z}`)}
               </span>
             </div>
           ))}
