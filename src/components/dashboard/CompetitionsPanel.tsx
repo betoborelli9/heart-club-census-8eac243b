@@ -361,7 +361,7 @@ function StandingsTable({
                       >
                         {r.name}
                         {isOpponent && (
-                          <span className="ml-1 text-[8px] font-mono uppercase text-[#a78bfa]/80">· alvo</span>
+                          <span className="ml-1 text-[8px] font-mono uppercase text-[#a78bfa]/80">· {t("competitions.target")}</span>
                         )}
                       </span>
                     </div>
