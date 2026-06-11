@@ -8,6 +8,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import ShareTropaModal from "@/components/dashboard/ShareTropaModal";
 import { ClubLogo } from "@/components/ClubLogo";
+import { useTranslationApp } from "@/hooks/useTranslationApp";
 
 type RivalItem = {
   name: string;
