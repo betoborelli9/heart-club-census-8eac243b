@@ -64,9 +64,9 @@ export default function AmbassadorCenter() {
   const badge = getBadge(referrals);
 
   const shareText = (clubName?: string, bairro?: string) => {
-    const c = clubName ?? "seu clube";
-    const b = bairro ?? topBairro?.bairro ?? "sua região";
-    return `Ajude o ${c} a dominar o bairro ${b} no Heart Club! Vote aqui: ${inviteUrl}`;
+    const c = clubName ?? t("ambassador_center.default_club");
+    const b = bairro ?? topBairro?.bairro ?? t("ambassador_center.default_neighborhood");
+    return t("ambassador_center.share_text", { club: c, neighborhood: b, link: inviteUrl });
   };
 
   const copyLink = async () => {
