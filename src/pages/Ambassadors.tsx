@@ -689,17 +689,17 @@ const Ambassadors = () => {
         >
           <div className="flex items-center gap-3 mb-5">
             <Trophy className="w-5 h-5 text-[#ff6200]" />
-            <h3 className="text-sm font-black uppercase tracking-[0.2em] italic">Ranking de Dominância</h3>
+            <h3 className="text-sm font-black uppercase tracking-[0.2em] italic">{t("ambassadors.ranking_title")}</h3>
           </div>
 
           <Tabs value={rankingTab} onValueChange={setRankingTab}>
             <TabsList className="bg-white/5 border border-white/10 mb-5 flex-wrap h-auto gap-1">
               {[
-                { value: "mundial", label: "Mundial", icon: Globe },
-                { value: "continental", label: "Continental", icon: Map },
-                { value: "nacional", label: "Nacional", icon: Landmark },
-                { value: "estadual", label: "Estadual", icon: Building2 },
-                { value: "municipal", label: "Municipal", icon: Building2 },
+                { value: "mundial", label: t("ambassadors.tab_world"), icon: Globe },
+                { value: "continental", label: t("ambassadors.tab_continental"), icon: Map },
+                { value: "nacional", label: t("ambassadors.tab_national"), icon: Landmark },
+                { value: "estadual", label: t("ambassadors.tab_state"), icon: Building2 },
+                { value: "municipal", label: t("ambassadors.tab_municipal"), icon: Building2 },
               ].map((tab) => (
                 <TabsTrigger
                   key={tab.value}
