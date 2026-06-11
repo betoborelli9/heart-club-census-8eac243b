@@ -852,14 +852,14 @@ const Ambassadors = () => {
 
             {/* Profissão — Autocomplete com entrada livre */}
             <div className="space-y-2">
-              <Label className="text-xs font-bold uppercase tracking-wider text-white/60">Profissão</Label>
+              <Label className="text-xs font-bold uppercase tracking-wider text-white/60">{t("ambassadors.profession_label")}</Label>
               <p className="text-[10px] text-white/40 italic">
-                Digite sua profissão — sugerimos enquanto você escreve. Pode escolher da lista ou digitar livremente.
+                {t("ambassadors.profession_hint")}
               </p>
               <Input
                 value={professionInput}
                 onChange={(e) => setProfessionInput(e.target.value)}
-                placeholder="Ex.: Engenheiro, Professor, Médico..."
+                placeholder={t("ambassadors.profession_placeholder")}
                 className="bg-white/5 border-white/10 text-white placeholder:text-white/20"
                 list="professions-list"
                 autoComplete="off"
