@@ -1716,7 +1716,7 @@ const MapaCalor = () => {
                   <Flame className="w-3 h-3" /> {t("heatmap.top_clubs_in", { city: activeCity })}
                 </h3>
                 {cityClubs.length === 0 ? (
-                  <p className="text-[11px] italic text-muted-foreground text-center py-3">Carregando...</p>
+                  <p className="text-[11px] italic text-muted-foreground text-center py-3">{t("heatmap.loading")}</p>
                 ) : (
                   <div className="space-y-2 max-h-[320px] overflow-y-auto pr-1">
                     {cityClubs.map((c, i) => {
