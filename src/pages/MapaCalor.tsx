@@ -1587,7 +1587,7 @@ const MapaCalor = () => {
                           <ClubLogo src={compareData.info?.logoUrl} alt={compareData.name} size="sm" />
                         </div>
                         <div className="min-w-0">
-                          <p className="text-[7px] text-muted-foreground font-black uppercase tracking-widest">⚔️ vs</p>
+                          <p className="text-[7px] text-muted-foreground font-black uppercase tracking-widest">{t("heatmap.vs_label")}</p>
                           <h3 className="text-[10px] font-black italic uppercase truncate leading-tight">
                             {compareData.name}
                           </h3>
