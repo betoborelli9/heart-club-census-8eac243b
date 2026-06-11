@@ -1,9 +1,16 @@
 /**
  * ═══════════════════════════════════════════════════════════════════
  * [CAMINHO]: src/i18n.ts
- * [MÓDULO]: I18N — ETAPA 1 (Preparação da estrutura)
- * [STATUS]: Inicialização base. Detecta idioma do navegador.
- *           Fallback: pt. Suportados: pt, en, es.
+ * [MÓDULO]: I18N — ETAPA 6 (Auditoria Final + Automação)
+ * [STATUS]: Detecção prioriza navigator (idioma do dispositivo),
+ *           fallback pt. Suportados: pt, en, es (+ futuros: fr, ...).
+ * [FORMATAÇÃO REGIONAL]: Intl.NumberFormat e Intl.DateTimeFormat
+ *           expostos via i18next interpolation.format.
+ * [ESCALABILIDADE]: Para adicionar um novo idioma (ex: fr):
+ *   1) criar src/locales/fr.json (mesmas chaves)
+ *   2) importar abaixo e incluir em `resources` + `supportedLngs`
+ *   3) adicionar { code: "fr", label: "Français", flag: "🇫🇷" } no
+ *      LanguageSwitcher e em SupportedLng (useTranslationApp.ts).
  * ═══════════════════════════════════════════════════════════════════
  */
 import i18n from "i18next";
@@ -25,16 +32,60 @@ void i18n
     },
     fallbackLng: "pt",
     supportedLngs: ["pt", "en", "es"],
-    nonExplicitSupportedLngs: true, // pt-BR -> pt, en-US -> en, es-AR -> es
+    nonExplicitSupportedLngs: true, // pt-BR -> pt, en-US -> en, es-CO -> es
     load: "languageOnly",
     detection: {
+      // navigator primeiro: idioma do dispositivo (ex.: Colômbia → es) vence
+      // sobre cache antigo apenas no primeiro acesso; após escolha manual,
+      // o localStorage passa a prevalecer naturalmente via caches.
       order: ["localStorage", "navigator", "htmlTag"],
       caches: ["localStorage"],
       lookupLocalStorage: "i18nextLng",
     },
-    interpolation: { escapeValue: false },
+    interpolation: {
+      escapeValue: false,
+      // Formatação regional nativa via Intl. Uso nas chaves:
+      //   {{value, number}}                → 1.000 (pt) / 1,000 (en)
+      //   {{value, number(minimumFractionDigits: 2)}}
+      //   {{value, date}}                  → 11/06/2026 (pt) / 6/11/2026 (en)
+      //   {{value, date(dateStyle: long)}} → 11 de junho de 2026
+      format: (value, format, lng) => {
+        if (value == null || !format) return String(value ?? "");
+        const locale = lng || "pt";
+        try {
+          if (format.startsWith("number")) {
+            const opts = parseOpts(format);
+            return new Intl.NumberFormat(locale, opts).format(Number(value));
+          }
+          if (format.startsWith("date")) {
+            const opts = parseOpts(format) as Intl.DateTimeFormatOptions;
+            return new Intl.DateTimeFormat(locale, opts).format(
+              value instanceof Date ? value : new Date(value),
+            );
+          }
+        } catch {
+          /* fallback abaixo */
+        }
+        return String(value);
+      },
+    },
     react: { useSuspense: false },
     returnEmptyString: false,
   });
+
+// Parse "number(minimumFractionDigits: 2, style: 'currency')" → object
+function parseOpts(format: string): Record<string, unknown> {
+  const m = format.match(/\((.*)\)\s*$/);
+  if (!m) return {};
+  try {
+    // Aceita JSON-like: chaves sem aspas e valores simples.
+    const body = m[1]
+      .replace(/([a-zA-Z0-9_]+)\s*:/g, '"$1":')
+      .replace(/'/g, '"');
+    return JSON.parse(`{${body}}`);
+  } catch {
+    return {};
+  }
+}
 
 export default i18n;
