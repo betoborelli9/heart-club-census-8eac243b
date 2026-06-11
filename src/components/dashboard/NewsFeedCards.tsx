@@ -10,6 +10,7 @@
 import { useEffect, useState } from "react";
 import { Zap, Loader2, ExternalLink, Clock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { useTranslationApp } from "@/hooks/useTranslationApp";
 
 interface NewsItem {
   title: string;
