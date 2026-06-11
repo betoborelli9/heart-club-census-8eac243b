@@ -25,6 +25,7 @@ const norm = (s: string) =>
     .trim();
 
 export default function SympathyCarousel({ sympathies, heartClubName, viewedClubName, onPick }: Props) {
+  const { t } = useTranslationApp();
   const [logos, setLogos] = useState<Record<string, string | null>>({});
   const [votes, setVotes] = useState<Record<string, number>>({});
 
