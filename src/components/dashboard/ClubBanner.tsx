@@ -60,6 +60,7 @@ const ClubBanner = ({
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useUser();
+  const { t } = useTranslationApp();
 
   const CHUMBO_PRIMARY = "#111111";
   const CHUMBO_SECONDARY = "#2a2a2a";
