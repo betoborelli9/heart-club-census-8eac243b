@@ -16,6 +16,7 @@ import { Flame, BarChart3, Crown, Users, MapPin, Trophy, ShieldAlert, Vote, Flas
 import { ClubLogo } from "@/components/ClubLogo";
 import { useUser } from "@/contexts/UserContext";
 import { supabase } from "@/integrations/supabase/client";
+import { useTranslationApp } from "@/hooks/useTranslationApp";
 
 /* ═══════════════════════════════════════════════════════════
     MÓDULO: INTERFACE DE PROPS
