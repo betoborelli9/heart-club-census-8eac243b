@@ -19,6 +19,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { resolveColorToHex } from "@/lib/color-names";
 import RivalsCombobox from "@/components/correcao/RivalsCombobox";
 import logo from "@/assets/logo.png";
+import { useTranslationApp } from "@/hooks/useTranslationApp";
 
 const COLOR_FIELDS = ["cor_primaria", "cor_secundaria", "cor_terciaria", "cor_quarta"] as const;
 
@@ -46,6 +47,7 @@ export default function Correcao() {
   const navigate = useNavigate();
   const { user, isLoading } = useUser();
   const { toast } = useToast();
+  const { t } = useTranslationApp();
 
   const [clubName, setClubName] = useState<string | null>(null);
   const [cache, setCache] = useState<CacheRow | null>(null);
@@ -72,7 +74,7 @@ export default function Correcao() {
         .maybeSingle();
 
       if (!vote?.clube_nome) {
-        toast({ title: "Você ainda não votou", description: "Vote no seu clube do coração primeiro." });
+        toast({ title: t("correction.no_vote_title"), description: t("correction.no_vote_desc") });
         navigate("/voting");
         return;
       }
@@ -106,7 +108,7 @@ export default function Correcao() {
       if ((COLOR_FIELDS as readonly string[]).includes(k)) {
         const hex = resolveColorToHex(val);
         if (!hex) {
-          newColorErrors[k] = `Cor "${val}" não reconhecida. Use HEX (#RRGGBB) ou nome (ex.: preto, azul, vermelho).`;
+          newColorErrors[k] = t("correction.color_invalid", { val });
           continue;
         }
         corrections.push({ field: k, value: hex });
@@ -119,8 +121,8 @@ export default function Correcao() {
     setColorErrors(newColorErrors);
     if (Object.keys(newColorErrors).length > 0) {
       toast({
-        title: "Cor inválida",
-        description: "Confira os campos de cor destacados.",
+        title: t("correction.color_invalid_title"),
+        description: t("correction.color_invalid_desc"),
         variant: "destructive",
       });
       return;
