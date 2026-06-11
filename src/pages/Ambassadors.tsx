@@ -279,7 +279,7 @@ const Ambassadors = () => {
         const p = profiles?.find((pr) => pr.id === id);
         return {
           user_id: id,
-          nome: p?.nome_exibicao ?? "Anônimo",
+          nome: p?.nome_exibicao ?? t("ambassadors.anon"),
           clube_nome: votosMap[id] ?? null,
           cidade: p?.cidade ?? null,
           points: pointsMap[id] || 0,
