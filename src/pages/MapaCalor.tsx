@@ -1862,15 +1862,15 @@ const MapaCalor = () => {
         <div className="fixed inset-0 z-40 bg-black/85 backdrop-blur-md flex items-center justify-center">
           <div className="text-center space-y-4 px-6">
             <MapPin className="w-12 h-12 text-[#ff6200] mx-auto" />
-            <h2 className="text-xl font-black italic uppercase text-white">Confirme seu território</h2>
+            <h2 className="text-xl font-black italic uppercase text-white">{t("heatmap.confirm_territory")}</h2>
             <p className="text-zinc-400 text-sm italic max-w-sm mx-auto">
-              O Mapa de Calor está bloqueado até você confirmar onde mora.
+              {t("heatmap.blocked_until_confirm")}
             </p>
             <Button
               onClick={() => setAddressOpen(true)}
               className="bg-[#ff6200] hover:bg-[#ff8230] text-white font-black italic uppercase h-12 px-6 rounded-2xl"
             >
-              Abrir confirmação
+              {t("heatmap.open_confirmation")}
             </Button>
           </div>
         </div>
