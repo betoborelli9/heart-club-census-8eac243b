@@ -257,9 +257,9 @@ const ClubBanner = ({
         </section>
 
         <nav className="flex items-center justify-center gap-1.5 bg-[#1a1a1a] px-4 py-3.5 overflow-x-auto no-scrollbar">
-          <NavItem icon={Flame} label="MAPA DE CALOR" path="/mapa-calor" active={isActive("/mapa-calor")} />
-          <NavItem icon={BarChart3} label="RANKING" path="/ranking" active={isActive("/ranking")} />
-          <NavItem icon={Users} label="EMBAIXADORES" path="/embaixadores" active={isActive("/embaixadores")} />
+          <NavItem icon={Flame} label={t("club_banner.nav.heatmap")} path="/mapa-calor" active={isActive("/mapa-calor")} />
+          <NavItem icon={BarChart3} label={t("club_banner.nav.ranking")} path="/ranking" active={isActive("/ranking")} />
+          <NavItem icon={Users} label={t("club_banner.nav.ambassadors")} path="/embaixadores" active={isActive("/embaixadores")} />
           <div className="w-[1px] h-6 bg-white/10 mx-2 hidden md:block" />
           
           {/* ═══════════════════════════════════════════════════════════
@@ -267,9 +267,9 @@ const ClubBanner = ({
              ═══════════════════════════════════════════════════════════ */}
           {IS_MASTER && (
             <>
-              <NavItem icon={Vote} label="VOTAÇÃO" path="/voting" variant="orange" />
-              <NavItem icon={FlaskConical} label="TESTAR CLUBE" path="/admin/votos-ficticios" variant="orange" />
-              <NavItem icon={ShieldAlert} label="PAINEL MASTER" path="/admin" variant="danger" />
+              <NavItem icon={Vote} label={t("club_banner.nav.voting")} path="/voting" variant="orange" />
+              <NavItem icon={FlaskConical} label={t("club_banner.nav.test_club")} path="/admin/votos-ficticios" variant="orange" />
+              <NavItem icon={ShieldAlert} label={t("club_banner.nav.master_panel")} path="/admin" variant="danger" />
             </>
           )}
         </nav>
@@ -281,7 +281,7 @@ const ClubBanner = ({
                 <Sparkles size={16} className="text-[#ff6200] animate-pulse" />
               </div>
               <p className="text-[12px] md:text-[13px] italic font-semibold text-white/85 leading-snug" style={{ fontFamily: "Verdana, sans-serif" }}>
-                O manto está chegando! O <span className="text-[#ff6200] not-italic font-black uppercase">{clubName}</span> é uma nova força no Censo Global e estamos processando as cores e o escudo oficial. Continue navegando, daqui a pouco seu Dashboard estará com a cara da sua paixão!
+                {t("club_banner.enriching", { club: clubName })}
               </p>
             </div>
           </div>
