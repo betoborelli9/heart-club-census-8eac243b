@@ -53,12 +53,12 @@ export default function FanaticCities({ limit = 15 }: { limit?: number }) {
     <Card style={{ fontFamily: "Verdana, sans-serif" }}>
       <CardHeader>
         <CardTitle className="flex items-center gap-2 italic">
-          <Flame className="w-5 h-5 text-primary" /> Cidades Mais Fanáticas
+          <Flame className="w-5 h-5 text-primary" /> {t("fanatic_cities.title")}
         </CardTitle>
-        <p className="text-xs text-muted-foreground italic">Densidade = torcedores cadastrados por 100 mil habitantes</p>
+        <p className="text-xs text-muted-foreground italic">{t("fanatic_cities.subtitle")}</p>
       </CardHeader>
       <CardContent className="space-y-2">
-        {data.length === 0 && <p className="text-sm text-muted-foreground italic">Sem dados suficientes ainda.</p>}
+        {data.length === 0 && <p className="text-sm text-muted-foreground italic">{t("fanatic_cities.empty")}</p>}
         {data.map((row, i) => {
           const pct = (row.density / max) * 100;
           const medal = i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : `${i + 1}.`;
@@ -72,7 +72,9 @@ export default function FanaticCities({ limit = 15 }: { limit?: number }) {
                   <span className="text-[10px] font-black text-black">{row.density.toFixed(1)}</span>
                 </div>
               </div>
-              <span className="text-xs text-muted-foreground w-20 text-right">{row.votes} votos</span>
+              <span className="text-xs text-muted-foreground w-20 text-right">
+                {t("stats.votes_count", { count: row.votes })}
+              </span>
             </div>
           );
         })}
