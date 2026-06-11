@@ -333,9 +333,9 @@ const Ambassadors = () => {
       });
       await refreshProfile();
       setShowCensusModal(false);
-      toast({ title: "Painel liberado!", description: "Seus dados foram salvos com sucesso." });
+      toast({ title: t("ambassadors.saved_title"), description: t("ambassadors.saved_desc") });
     } catch {
-      toast({ title: "Erro ao salvar", description: "Tente novamente.", variant: "destructive" });
+      toast({ title: t("ambassadors.save_error_title"), description: t("ambassadors.save_error_desc"), variant: "destructive" });
     } finally {
       setIsSubmitting(false);
     }
