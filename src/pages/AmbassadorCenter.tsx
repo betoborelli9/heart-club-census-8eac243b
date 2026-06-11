@@ -133,12 +133,12 @@ export default function AmbassadorCenter() {
             <div className="text-center">
               {badge.next ? (
                 <>
-                  <p className="text-[11px] uppercase text-muted-foreground">Faltam para {BADGES[badge.next].label}</p>
+                  <p className="text-[11px] uppercase text-muted-foreground">{t("ambassador_center.missing_for", { label: BADGES[badge.next].label })}</p>
                   <p className="text-3xl font-black text-primary italic">{badge.toNext}</p>
-                  <p className="text-[10px] text-muted-foreground italic">indicações</p>
+                  <p className="text-[10px] text-muted-foreground italic">{t("ambassador_center.indications")}</p>
                 </>
               ) : (
-                <p className="text-sm italic text-yellow-500">🏆 Nível máximo atingido!</p>
+                <p className="text-sm italic text-yellow-500">{t("ambassador_center.max_level")}</p>
               )}
             </div>
           </CardContent>
