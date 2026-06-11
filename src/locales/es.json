@@ -7,6 +7,44 @@
     "label": "Idioma",
     "aria": "Cambiar idioma"
   },
+  "stats": {
+    "census_global": "Censo Global",
+    "you_are_fan_number": "Eres el hincha n.º",
+    "registered_of": "de {{total}} registrados",
+    "global_votes_ranking": "Ranking Global de Votos",
+    "votes_count_one": "{{count}} voto",
+    "votes_count_other": "{{count}} votos",
+    "sympathies_label": "simpatías"
+  },
+  "sympathy": {
+    "title_prefix": "Clubes Más Queridos",
+    "title_suffix": "(Simpatía)",
+    "subtitle": "Qué clubes eligen los hinchas como su segundo equipo.",
+    "empty": "Aún no hay votos de simpatía registrados."
+  },
+  "news": {
+    "radar_label": "Radar",
+    "official_links": "Solo Enlaces Oficiales — Monitoreo IA",
+    "empty_48h": "No hay noticias publicadas en las últimas 48 horas.",
+    "data_sources": "Cruce de datos: Google · Gemini · Wikipedia",
+    "time_now": "ahora",
+    "time_minutes_short": "{{count}}m",
+    "time_hours_short": "{{count}}h",
+    "time_days_short": "{{count}}d"
+  },
+  "identity": {
+    "founded_in": "Fundado en {{year}}",
+    "feminino_label": "Femenino:",
+    "yes": "Sí",
+    "no": "No",
+    "fix_button": "Corregir",
+    "fix_tooltip": "¿Algo mal? Corrígelo aquí"
+  },
+  "fanatic_cities": {
+    "title": "Ciudades Más Fanáticas",
+    "subtitle": "Densidad = hinchas registrados por 100 mil habitantes",
+    "empty": "Sin datos suficientes todavía."
+  },
   "ranking": {
     "eyebrow": "RANKING GLOBAL",
     "default_brand": "Heart Club",
