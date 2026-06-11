@@ -836,7 +836,7 @@ const Ambassadors = () => {
                   </SelectContent>
                 </Select>
                 <Input
-                  placeholder={phoneCountry.code === "BR" ? "(99) 99999-9999" : "Número"}
+                  placeholder={phoneCountry.code === "BR" ? "(99) 99999-9999" : t("ambassadors.phone_generic")}
                   value={phoneInput}
                   onChange={(e) => setPhoneInput(formatPhoneByCountry(e.target.value, phoneCountry))}
                   className="flex-1 bg-white/5 border-white/10 text-white placeholder:text-white/20"
