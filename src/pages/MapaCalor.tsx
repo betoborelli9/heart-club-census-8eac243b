@@ -1428,7 +1428,7 @@ const MapaCalor = () => {
         },
       });
     },
-    [lookupVotesForFeature, viewMode, activeState, goCountry, goState, goCity, compareClubName],
+    [lookupVotesForFeature, viewMode, activeState, goCountry, goState, goCity, compareClubName, t],
   );
 
   const geoKey = useMemo(
