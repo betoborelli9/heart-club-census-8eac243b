@@ -1454,7 +1454,7 @@ const MapaCalor = () => {
           <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate("/dashboard")}>
             <ArrowLeft className="w-4 h-4 text-muted-foreground" />
             <img src={logo} alt="Heart Club" className="h-8 w-auto" />
-            <span className="font-black italic text-sm tracking-tighter hidden sm:block">MAPA DE CALOR</span>
+            <span className="font-black italic text-sm tracking-tighter hidden sm:block">{t("heatmap.title")}</span>
           </div>
           <Button variant="ghost" size="icon" onClick={() => signOut()}>
             <LogOut className="w-4 h-4" />
