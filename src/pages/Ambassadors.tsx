@@ -845,7 +845,7 @@ const Ambassadors = () => {
               </div>
               {phoneInput && !isValidPhoneByCountry(phoneInput, phoneCountry) && (
                 <p className="text-[10px] text-red-400">
-                  Informe {phoneCountry.digits[0] === phoneCountry.digits[1] ? phoneCountry.digits[0] : `${phoneCountry.digits[0]}-${phoneCountry.digits[1]}`} dígitos para {phoneCountry.name}
+                  {t("ambassadors.phone_digits_error", { digits: phoneCountry.digits[0] === phoneCountry.digits[1] ? phoneCountry.digits[0] : `${phoneCountry.digits[0]}-${phoneCountry.digits[1]}`, country: phoneCountry.name })}
                 </p>
               )}
             </div>
