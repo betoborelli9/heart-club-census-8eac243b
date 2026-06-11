@@ -1609,10 +1609,10 @@ const MapaCalor = () => {
                       ) : (
                         <div className="mt-1 px-2 py-2 rounded-lg bg-primary/5 border border-primary/20">
                           <p className="text-[9px] font-black italic uppercase tracking-wide text-primary leading-tight">
-                            ✨ Ainda sem votos
+                            {t("heatmap.no_votes_yet")}
                           </p>
                           <p className="text-[8px] text-muted-foreground mt-0.5 leading-snug">
-                            Este clube ainda não recebeu Votos Sagrados nesta região.
+                            {t("heatmap.no_votes_yet_desc")}
                           </p>
                         </div>
                       )}
