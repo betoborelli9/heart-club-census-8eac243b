@@ -99,6 +99,37 @@ export default function RivalsColumn({ clubName, refCode, primaryColor = "#ff620
             if (hits && hits.length) {
               const best = [...hits].sort((a: any, b: any) => a.nome.length - b.nome.length)[0];
               resolved.set(fullName, best);
+              return;
+            }
+            // FALLBACK AUTOMÁTICO: consulta search-clubs (cache + API-Football)
+            // para puxar o escudo de clubes ainda não persistidos no cache.
+            try {
+              const { data: apiHits } = await supabase.functions.invoke("search-clubs", {
+                body: { query: fullName },
+              });
+              const list = Array.isArray(apiHits) ? apiHits : [];
+              if (list.length) {
+                const wantNorm = fullName.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+                const best = list
+                  .filter((c: any) => c?.logo)
+                  .sort((a: any, b: any) => {
+                    const an = (a.name || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+                    const bn = (b.name || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+                    const sa = an.includes(wantNorm) || wantNorm.includes(an) ? 0 : 1;
+                    const sb = bn.includes(wantNorm) || wantNorm.includes(bn) ? 0 : 1;
+                    return sa - sb || an.length - bn.length;
+                  })[0];
+                if (best) {
+                  resolved.set(fullName, {
+                    nome: best.name,
+                    escudo_url: best.logo,
+                    cidade: best.city,
+                    pais: best.country,
+                  });
+                }
+              }
+            } catch (e) {
+              console.warn("[RivalsColumn] fallback search-clubs falhou:", fullName, e);
             }
           }),
         );
