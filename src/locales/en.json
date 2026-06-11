@@ -3,6 +3,10 @@
     "brand": "Heart Club",
     "logout": "Log out"
   },
+  "language": {
+    "label": "Language",
+    "aria": "Change language"
+  },
   "ranking": {
     "eyebrow": "GLOBAL RANKING",
     "default_brand": "Heart Club",

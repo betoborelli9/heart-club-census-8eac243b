@@ -13,6 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { CLUBS_DATA } from "@/clubes-data";
 import { isMasterEmail } from "@/lib/master";
 import MasterTestPanel from "@/components/MasterTestPanel";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
 import { useTranslation } from "react-i18next";
 
 /* ═══════════════════════════════════════════════════════════
@@ -169,7 +170,8 @@ const Dashboard = () => {
           <div className="hidden md:block flex-1 max-w-xl">
             <ClubSearch onSelect={(club) => handlePickClub(club.name)} />
           </div>
-          <div className="flex items-center gap-4 shrink-0">
+          <div className="flex items-center gap-2 shrink-0">
+            <LanguageSwitcher />
             <Button variant="ghost" size="icon" onClick={() => signOut()} aria-label={t("header.logout")} title={t("header.logout")} className="text-white/30 hover:text-white">
               <LogOut className="w-5 h-5" />
             </Button>
