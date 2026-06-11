@@ -1847,7 +1847,7 @@ const MapaCalor = () => {
               </div>
               <div className="absolute bottom-3 left-3 px-3 py-1.5 rounded-xl bg-black/80 backdrop-blur-md border border-white/10 z-[500]">
                 <p className="text-[9px] font-black italic uppercase tracking-widest text-primary">
-                  {viewMode === "world" && "🌍 Mundial"}
+                  {viewMode === "world" && t("heatmap.scope_world")}
                   {viewMode === "country" && `🏳️ ${activeCountry}`}
                   {viewMode === "state" && `📍 ${activeState}`}
                   {viewMode === "city" && `🎯 ${activeCity}`}
