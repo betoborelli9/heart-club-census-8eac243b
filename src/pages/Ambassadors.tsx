@@ -630,12 +630,12 @@ const Ambassadors = () => {
           <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-5 shadow-xl">
             <div className="flex items-center gap-2 mb-4">
               <Activity className="w-4 h-4 text-[#ff6200]" />
-              <h3 className="text-xs font-black uppercase tracking-[0.2em]">Feed de Atividade</h3>
+              <h3 className="text-xs font-black uppercase tracking-[0.2em]">{t("ambassadors.feed_title")}</h3>
             </div>
 
             {activityFeed.length === 0 ? (
               <p className="text-xs text-white/40 text-center py-6 italic">
-                Nenhuma atividade nova na sua região.
+                {t("ambassadors.feed_empty")}
               </p>
             ) : (
               <div
