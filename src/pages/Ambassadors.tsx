@@ -484,7 +484,7 @@ const Ambassadors = () => {
           clubName={clubName}
           clubData={clubData}
           theme={theme}
-          pageLabel="EMBAIXADORES"
+          pageLabel={t("ambassadors.page_label")}
           ambassadorLevel={profile?.nivel_embaixador || "Bronze"}
         />
 
