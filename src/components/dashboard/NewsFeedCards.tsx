@@ -33,22 +33,23 @@ interface Props {
   clubMeta?: ClubMeta | null;
 }
 
-const timeAgo = (d?: string) => {
-  if (!d) return "";
-  const t = new Date(d).getTime();
-  if (isNaN(t)) return "";
-  const diff = Date.now() - t;
-  const mins = Math.floor(diff / 60000);
-  if (mins < 1) return "agora";
-  if (mins < 60) return `${mins}m`;
-  const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h`;
-  return `${Math.floor(hrs / 24)}d`;
-};
-
 export default function NewsFeedCards({ teamName, primaryColor = "#ff6200", clubMeta }: Props) {
+  const { t } = useTranslationApp();
   const [news, setNews] = useState<NewsItem[]>([]);
   const [loading, setLoading] = useState(false);
+
+  const timeAgo = (d?: string) => {
+    if (!d) return "";
+    const tt = new Date(d).getTime();
+    if (isNaN(tt)) return "";
+    const diff = Date.now() - tt;
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1) return t("news.time_now");
+    if (mins < 60) return t("news.time_minutes_short", { count: mins });
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return t("news.time_hours_short", { count: hrs });
+    return t("news.time_days_short", { count: Math.floor(hrs / 24) });
+  };
 
   useEffect(() => {
     let cancelled = false;
