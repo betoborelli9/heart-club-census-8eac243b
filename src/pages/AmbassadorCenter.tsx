@@ -13,9 +13,11 @@ import { toast } from "sonner";
 import logo from "@/assets/logo.png";
 import { getBadge, BADGES, type BadgeTier } from "@/lib/badges";
 import FanaticCities from "@/components/ambassador/FanaticCities";
+import { useTranslationApp } from "@/hooks/useTranslationApp";
 
 export default function AmbassadorCenter() {
   const navigate = useNavigate();
+  const { t } = useTranslationApp();
   const { user, profile, isLoading } = useUser();
   const [loading, setLoading] = useState(true);
   const [referrals, setReferrals] = useState(0);
@@ -62,15 +64,15 @@ export default function AmbassadorCenter() {
   const badge = getBadge(referrals);
 
   const shareText = (clubName?: string, bairro?: string) => {
-    const c = clubName ?? "seu clube";
-    const b = bairro ?? topBairro?.bairro ?? "sua região";
-    return `Ajude o ${c} a dominar o bairro ${b} no Heart Club! Vote aqui: ${inviteUrl}`;
+    const c = clubName ?? t("ambassador_center.default_club");
+    const b = bairro ?? topBairro?.bairro ?? t("ambassador_center.default_neighborhood");
+    return t("ambassador_center.share_text", { club: c, neighborhood: b, link: inviteUrl });
   };
 
   const copyLink = async () => {
     await navigator.clipboard.writeText(inviteUrl);
     setCopied(true);
-    toast.success("Link copiado!");
+    toast.success(t("ambassador_center.link_copied"));
     setTimeout(() => setCopied(false), 1800);
   };
 
@@ -80,7 +82,7 @@ export default function AmbassadorCenter() {
     if (target === "tg") return window.open(`https://t.me/share/url?url=${encodeURIComponent(inviteUrl)}&text=${encodeURIComponent(text)}`, "_blank");
     if (target === "ig") {
       navigator.clipboard.writeText(text);
-      return toast.success("Texto copiado — cole no Instagram");
+      return toast.success(t("ambassador_center.ig_copied"));
     }
     if (navigator.share) navigator.share({ text, url: inviteUrl }).catch(() => {});
   };
@@ -97,12 +99,12 @@ export default function AmbassadorCenter() {
           <div className="flex items-center gap-3">
             <img src={logo} alt="Heart Club" className="h-9 w-9 object-contain" />
             <div>
-              <h1 className="text-base font-black italic leading-none">PAINEL DE COMANDO</h1>
-              <p className="text-[10px] text-primary italic">DO EMBAIXADOR</p>
+              <h1 className="text-base font-black italic leading-none">{t("ambassador_center.title")}</h1>
+              <p className="text-[10px] text-primary italic">{t("ambassador_center.subtitle")}</p>
             </div>
           </div>
           <Button variant="ghost" size="sm" onClick={() => navigate("/dashboard")}>
-            <ArrowLeft className="w-4 h-4 mr-1" /> Voltar
+            <ArrowLeft className="w-4 h-4 mr-1" /> {t("ambassador_center.back")}
           </Button>
         </div>
       </header>
@@ -117,13 +119,13 @@ export default function AmbassadorCenter() {
                 {badge.data?.emoji ?? "🎖️"}
               </div>
               <div>
-                <p className="text-[11px] uppercase tracking-wider text-muted-foreground">Seu Nível</p>
+                <p className="text-[11px] uppercase tracking-wider text-muted-foreground">{t("ambassador_center.your_level")}</p>
                 <p className="text-2xl font-black italic" style={{ color: badge.data?.color ?? "#fff" }}>
-                  {badge.data?.label ?? "Recruta"}
+                  {badge.data?.label ?? t("ambassador_center.rookie")}
                 </p>
                 {topBairro && (
                   <p className="text-xs italic mt-1 flex items-center gap-1 text-yellow-500">
-                    <Crown className="w-3 h-3" /> Dono do Bairro {topBairro.bairro}
+                    <Crown className="w-3 h-3" /> {t("ambassador_center.owner_of", { name: topBairro.bairro })}
                   </p>
                 )}
               </div>
@@ -131,12 +133,12 @@ export default function AmbassadorCenter() {
             <div className="text-center">
               {badge.next ? (
                 <>
-                  <p className="text-[11px] uppercase text-muted-foreground">Faltam para {BADGES[badge.next].label}</p>
+                  <p className="text-[11px] uppercase text-muted-foreground">{t("ambassador_center.missing_for", { label: BADGES[badge.next].label })}</p>
                   <p className="text-3xl font-black text-primary italic">{badge.toNext}</p>
-                  <p className="text-[10px] text-muted-foreground italic">indicações</p>
+                  <p className="text-[10px] text-muted-foreground italic">{t("ambassador_center.indications")}</p>
                 </>
               ) : (
-                <p className="text-sm italic text-yellow-500">🏆 Nível máximo atingido!</p>
+                <p className="text-sm italic text-yellow-500">{t("ambassador_center.max_level")}</p>
               )}
             </div>
           </CardContent>
@@ -144,16 +146,16 @@ export default function AmbassadorCenter() {
 
         {/* KPIs */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          <KPI icon={<Users className="w-5 h-5" />} label="Indicações" value={referrals} />
-          <KPI icon={<Trophy className="w-5 h-5" />} label="Votos Auditados Gerados" value={audited} highlight />
-          <KPI icon={<Share2 className="w-5 h-5" />} label="Conversão de Afinidades" value={conversions} suffix={referrals ? `(${Math.round((conversions / Math.max(referrals,1)) * 100)}%)` : ""} />
+          <KPI icon={<Users className="w-5 h-5" />} label={t("ambassador_center.kpi_indications")} value={referrals} />
+          <KPI icon={<Trophy className="w-5 h-5" />} label={t("ambassador_center.kpi_audited")} value={audited} highlight />
+          <KPI icon={<Share2 className="w-5 h-5" />} label={t("ambassador_center.kpi_conversions")} value={conversions} suffix={referrals ? `(${Math.round((conversions / Math.max(referrals,1)) * 100)}%)` : ""} />
         </div>
 
         {/* Compartilhar */}
         <Card>
           <CardHeader>
             <CardTitle className="text-base italic flex items-center gap-2">
-              <Share2 className="w-4 h-4 text-primary" /> Compartilhamento Inteligente
+              <Share2 className="w-4 h-4 text-primary" /> {t("ambassador_center.share_title")}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
@@ -169,16 +171,16 @@ export default function AmbassadorCenter() {
             </p>
             <div className="flex flex-wrap gap-2">
               <Button onClick={() => shareTo("wa")} className="bg-green-600 hover:bg-green-700 text-white">
-                <MessageCircle className="w-4 h-4 mr-1" /> WhatsApp
+                <MessageCircle className="w-4 h-4 mr-1" /> {t("ambassador_center.wa")}
               </Button>
               <Button onClick={() => shareTo("tg")} className="bg-sky-500 hover:bg-sky-600 text-white">
-                <Send className="w-4 h-4 mr-1" /> Telegram
+                <Send className="w-4 h-4 mr-1" /> {t("ambassador_center.tg")}
               </Button>
               <Button onClick={() => shareTo("ig")} variant="outline">
-                <Instagram className="w-4 h-4 mr-1" /> Instagram
+                <Instagram className="w-4 h-4 mr-1" /> {t("ambassador_center.ig")}
               </Button>
               <Button onClick={() => shareTo("native")} variant="ghost">
-                <Share2 className="w-4 h-4 mr-1" /> Mais
+                <Share2 className="w-4 h-4 mr-1" /> {t("ambassador_center.more")}
               </Button>
             </div>
           </CardContent>

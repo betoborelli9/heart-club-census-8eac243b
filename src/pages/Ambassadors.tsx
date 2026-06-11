@@ -54,6 +54,7 @@ import { useClubTheme } from "@/hooks/useClubTheme";
 import { toast } from "@/hooks/use-toast";
 import { useClubLogos, normalizeClubName } from "@/lib/club-logo-resolver";
 import logo from "@/assets/logo.png";
+import { useTranslationApp } from "@/hooks/useTranslationApp";
 
 /* [MÓDULO: HELPERS] */
 const normalize = (v: string) =>
@@ -157,6 +158,7 @@ const BUILD_SYNC_TAG = "2026-03-23-ambassadors-sync-01";
 /* ============================================== */
 const Ambassadors = () => {
   const navigate = useNavigate();
+  const { t } = useTranslationApp();
   const { user, profile, isLoading, signOut, updateProfile, refreshProfile } = useUser();
 
   /* [MÓDULO: ESTADO LOCAL] */
@@ -277,7 +279,7 @@ const Ambassadors = () => {
         const p = profiles?.find((pr) => pr.id === id);
         return {
           user_id: id,
-          nome: p?.nome_exibicao ?? "Anônimo",
+          nome: p?.nome_exibicao ?? t("ambassadors.anon"),
           clube_nome: votosMap[id] ?? null,
           cidade: p?.cidade ?? null,
           points: pointsMap[id] || 0,
@@ -315,11 +317,11 @@ const Ambassadors = () => {
   /* [MÓDULO: AÇÃO DO CENSO] */
   const handleCensusSubmit = async () => {
     if (!isValidPhoneByCountry(phoneInput, phoneCountry)) {
-      toast({ title: "WhatsApp inválido", description: `Informe um número válido para ${phoneCountry.name}.`, variant: "destructive" });
+      toast({ title: t("ambassadors.whatsapp_invalid_title"), description: t("ambassadors.whatsapp_invalid_desc", { country: phoneCountry.name }), variant: "destructive" });
       return;
     }
     if (!professionInput.trim()) {
-      toast({ title: "Profissão obrigatória", description: "Digite sua profissão.", variant: "destructive" });
+      toast({ title: t("ambassadors.profession_required_title"), description: t("ambassadors.profession_required_desc"), variant: "destructive" });
       return;
     }
 
@@ -331,9 +333,9 @@ const Ambassadors = () => {
       });
       await refreshProfile();
       setShowCensusModal(false);
-      toast({ title: "Painel liberado!", description: "Seus dados foram salvos com sucesso." });
+      toast({ title: t("ambassadors.saved_title"), description: t("ambassadors.saved_desc") });
     } catch {
-      toast({ title: "Erro ao salvar", description: "Tente novamente.", variant: "destructive" });
+      toast({ title: t("ambassadors.save_error_title"), description: t("ambassadors.save_error_desc"), variant: "destructive" });
     } finally {
       setIsSubmitting(false);
     }
@@ -356,22 +358,23 @@ const Ambassadors = () => {
 
   const referralMessage = useMemo(() => {
     const nome = profile?.nome_exibicao ? ` ${profile.nome_exibicao}` : "";
-    return `🧡 Fala, torcedor! Registre seu coração no Heart Club pelo meu link e vamos dominar o mapa:${nome ? ` (convite de${nome})` : ""} ${referralLink}`;
-  }, [referralLink, profile?.nome_exibicao]);
+    const fromPart = nome ? t("ambassadors.from_who", { name: nome.trim() }) : "";
+    return t("ambassadors.referral_msg", { from: fromPart, link: referralLink });
+  }, [referralLink, profile?.nome_exibicao, t]);
 
   /* [MÓDULO: COMPARTILHAR MULTICANAL] */
   const shareWhatsApp = () => window.open(`https://wa.me/?text=${encodeURIComponent(referralMessage)}`, "_blank");
   const shareTelegram = () => window.open(`https://t.me/share/url?url=${encodeURIComponent(referralLink)}&text=${encodeURIComponent(referralMessage)}`, "_blank");
   const shareEmail = () => {
-    const subject = encodeURIComponent("Te convido para o Heart Club Census 🧡");
+    const subject = encodeURIComponent(t("ambassadors.share_subject"));
     window.location.href = `mailto:?subject=${subject}&body=${encodeURIComponent(referralMessage)}`;
   };
   const shareCopyLink = async () => {
     try {
       await navigator.clipboard.writeText(referralLink);
-      toast({ title: "Link copiado!", description: "Cole onde quiser compartilhar." });
+      toast({ title: t("ambassadors.link_copied"), description: t("ambassadors.link_copied_desc") });
     } catch {
-      toast({ title: "Não foi possível copiar", variant: "destructive" });
+      toast({ title: t("ambassadors.copy_fail"), variant: "destructive" });
     }
   };
   const shareNative = async () => {
@@ -419,10 +422,10 @@ const Ambassadors = () => {
     return (
       <div className="min-h-screen bg-[#0a0a0a] text-white flex items-center justify-center px-4">
         <div className="w-full max-w-md rounded-3xl border border-white/10 bg-white/5 p-8 text-center">
-          <h1 className="text-2xl font-black italic uppercase">Embaixadores</h1>
-          <p className="mt-3 text-sm text-white/50">Faça login para acessar o painel de embaixadores.</p>
+          <h1 className="text-2xl font-black italic uppercase">{t("ambassadors.login_title")}</h1>
+          <p className="mt-3 text-sm text-white/50">{t("ambassadors.login_required")}</p>
           <Button className="mt-6 w-full bg-[#ff6200] hover:bg-[#e55800]" onClick={() => navigate("/login")}>
-            Entrar agora
+            {t("ambassadors.login_now")}
           </Button>
         </div>
       </div>
@@ -462,17 +465,17 @@ const Ambassadors = () => {
         >
           <div className="flex items-center gap-3 min-w-0">
             <span className="text-[9px] font-black uppercase tracking-[0.3em] text-[#ff6200] shrink-0">
-              Parceiro Oficial
+              {t("ambassadors.sponsor_label")}
             </span>
             <span className="text-xs text-white/70 italic truncate">
-              Seu negócio aqui — fale com o time Heart Club.
+              {t("ambassadors.sponsor_text")}
             </span>
           </div>
           <a
             href="mailto:admin@heartclubapp.com?subject=Quero%20ser%20Parceiro%20Heart%20Club"
             className="text-[10px] font-black uppercase tracking-wider text-[#ff6200] hover:underline shrink-0"
           >
-            Anunciar
+            {t("ambassadors.sponsor_cta")}
           </a>
         </div>
 
@@ -481,7 +484,7 @@ const Ambassadors = () => {
           clubName={clubName}
           clubData={clubData}
           theme={theme}
-          pageLabel="EMBAIXADORES"
+          pageLabel={t("ambassadors.page_label")}
           ambassadorLevel={profile?.nivel_embaixador || "Bronze"}
         />
 
@@ -516,10 +519,10 @@ const Ambassadors = () => {
               <div className="flex-1 space-y-3 w-full">
                 <div>
                   <p className="text-[10px] font-black uppercase tracking-[0.3em] text-[#ff6200]">
-                    Embaixador {levelInfo.tier}
+                    {t("ambassadors.level_prefix")} {levelInfo.tier}
                   </p>
                   <h2 className="text-2xl sm:text-3xl font-black italic uppercase leading-none mt-1">
-                    {profile?.nome_exibicao || "Torcedor"}
+                    {profile?.nome_exibicao || t("ambassadors.fan_default")}
                   </h2>
                   <p className="text-xs text-white/40 mt-1 uppercase tracking-wider">
                     {profile?.cidade}{profile?.estado ? ` · ${profile.estado}` : ""}
@@ -529,10 +532,10 @@ const Ambassadors = () => {
                 {/* [CRYSTAL GLOW BAR — cores dinâmicas do clube] */}
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider">
-                    <span className="text-white/60">{levelInfo.tier} → {levelInfo.next}</span>
+                    <span className="text-white/60">{t("ambassadors.tier_to", { a: levelInfo.tier, b: levelInfo.next })}</span>
                     <span style={{ color: theme.primaryHex }}>
-                      {levelInfo.indicacoesCount} indicados
-                      {levelInfo.faltam > 0 ? ` · faltam ${levelInfo.faltam}` : ""}
+                      {t("ambassadors.referred_count", { count: levelInfo.indicacoesCount })}
+                      {levelInfo.faltam > 0 ? ` ${t("ambassadors.missing_count", { count: levelInfo.faltam })}` : ""}
                     </span>
                   </div>
                   <div
@@ -566,7 +569,7 @@ const Ambassadors = () => {
                 {/* Código + compartilhamento multicanal */}
                 <div className="flex items-center gap-2 flex-wrap">
                   <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-xl px-4 py-2.5">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-white/40">Código:</span>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-white/40">{t("ambassadors.code_label")}</span>
                     <span className="text-lg font-black tracking-[0.2em]" style={{ color: theme.primaryHex }}>
                       {profile?.codigo_indicacao || "—"}
                     </span>
@@ -584,7 +587,7 @@ const Ambassadors = () => {
                           boxShadow: `0 0 18px ${theme.primaryHex}80`,
                         }}
                       >
-                        <Share2 className="w-4 h-4" /> Convidar torcedor
+                        <Share2 className="w-4 h-4" /> {t("ambassadors.invite_fan")}
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent
@@ -592,24 +595,24 @@ const Ambassadors = () => {
                       className="bg-[#0d0d0d] border border-white/10 text-white w-60"
                     >
                       <DropdownMenuLabel className="text-[10px] uppercase tracking-[0.2em] text-white/40">
-                        Compartilhar link
+                        {t("ambassadors.share_link")}
                       </DropdownMenuLabel>
                       <DropdownMenuSeparator className="bg-white/5" />
                       <DropdownMenuItem onClick={shareWhatsApp} className="gap-2 focus:bg-white/10 cursor-pointer">
-                        <MessageCircle className="w-4 h-4 text-[#25D366]" /> WhatsApp
+                        <MessageCircle className="w-4 h-4 text-[#25D366]" /> {t("ambassadors.whatsapp")}
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={shareTelegram} className="gap-2 focus:bg-white/10 cursor-pointer">
-                        <Send className="w-4 h-4 text-[#229ED9]" /> Telegram
+                        <Send className="w-4 h-4 text-[#229ED9]" /> {t("ambassadors.telegram")}
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={shareEmail} className="gap-2 focus:bg-white/10 cursor-pointer">
-                        <Mail className="w-4 h-4 text-[#ff6200]" /> E-mail
+                        <Mail className="w-4 h-4 text-[#ff6200]" /> {t("ambassadors.email")}
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={shareCopyLink} className="gap-2 focus:bg-white/10 cursor-pointer">
-                        <Link2 className="w-4 h-4 text-white/70" /> Copiar link
+                        <Link2 className="w-4 h-4 text-white/70" /> {t("ambassadors.copy_link")}
                       </DropdownMenuItem>
                       <DropdownMenuSeparator className="bg-white/5" />
                       <DropdownMenuItem onClick={shareNative} className="gap-2 focus:bg-white/10 cursor-pointer">
-                        <Sparkles className="w-4 h-4" style={{ color: theme.primaryHex }} /> Mais opções…
+                        <Sparkles className="w-4 h-4" style={{ color: theme.primaryHex }} /> {t("ambassadors.more_options")}
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -627,12 +630,12 @@ const Ambassadors = () => {
           <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-5 shadow-xl">
             <div className="flex items-center gap-2 mb-4">
               <Activity className="w-4 h-4 text-[#ff6200]" />
-              <h3 className="text-xs font-black uppercase tracking-[0.2em]">Feed de Atividade</h3>
+              <h3 className="text-xs font-black uppercase tracking-[0.2em]">{t("ambassadors.feed_title")}</h3>
             </div>
 
             {activityFeed.length === 0 ? (
               <p className="text-xs text-white/40 text-center py-6 italic">
-                Nenhuma atividade nova na sua região.
+                {t("ambassadors.feed_empty")}
               </p>
             ) : (
               <div
@@ -643,8 +646,8 @@ const Ambassadors = () => {
                   const dateRef = entry.voto_created_at || entry.created_at;
                   const localizacao = [entry.cidade, entry.estado].filter(Boolean).join(" · ");
                   const acao = entry.clube_nome
-                    ? <>acaba de votar no <span className="text-[#ff6200]">{entry.clube_nome}</span></>
-                    : <span className="text-white/50">entrou no Heart Club</span>;
+                    ? <>{t("ambassadors.feed_voted")} <span className="text-[#ff6200]">{entry.clube_nome}</span></>
+                    : <span className="text-white/50">{t("ambassadors.feed_joined")}</span>;
                   return (
                     <motion.div
                       key={entry.id}
@@ -686,17 +689,17 @@ const Ambassadors = () => {
         >
           <div className="flex items-center gap-3 mb-5">
             <Trophy className="w-5 h-5 text-[#ff6200]" />
-            <h3 className="text-sm font-black uppercase tracking-[0.2em] italic">Ranking de Dominância</h3>
+            <h3 className="text-sm font-black uppercase tracking-[0.2em] italic">{t("ambassadors.ranking_title")}</h3>
           </div>
 
           <Tabs value={rankingTab} onValueChange={setRankingTab}>
             <TabsList className="bg-white/5 border border-white/10 mb-5 flex-wrap h-auto gap-1">
               {[
-                { value: "mundial", label: "Mundial", icon: Globe },
-                { value: "continental", label: "Continental", icon: Map },
-                { value: "nacional", label: "Nacional", icon: Landmark },
-                { value: "estadual", label: "Estadual", icon: Building2 },
-                { value: "municipal", label: "Municipal", icon: Building2 },
+                { value: "mundial", label: t("ambassadors.tab_world"), icon: Globe },
+                { value: "continental", label: t("ambassadors.tab_continental"), icon: Map },
+                { value: "nacional", label: t("ambassadors.tab_national"), icon: Landmark },
+                { value: "estadual", label: t("ambassadors.tab_state"), icon: Building2 },
+                { value: "municipal", label: t("ambassadors.tab_municipal"), icon: Building2 },
               ].map((tab) => (
                 <TabsTrigger
                   key={tab.value}
@@ -713,7 +716,7 @@ const Ambassadors = () => {
               <TabsContent key={tab} value={tab}>
                 {ranking.length === 0 ? (
                   <p className="text-sm text-white/30 text-center py-8">
-                    Sem dados de ranking disponíveis ainda. Convide amigos com seu código!
+                    {t("ambassadors.ranking_empty")}
                   </p>
                 ) : (
                   <div className="overflow-x-auto">
@@ -721,10 +724,10 @@ const Ambassadors = () => {
                       <thead>
                         <tr className="text-[10px] font-black uppercase tracking-[0.2em] text-white/30 border-b border-white/5">
                           <th className="py-3 px-2 w-12">#</th>
-                          <th className="py-3 px-2">Nome</th>
-                          <th className="py-3 px-2">Clube</th>
-                          <th className="py-3 px-2 hidden sm:table-cell">Cidade</th>
-                          <th className="py-3 px-2 text-right">Pontos</th>
+                          <th className="py-3 px-2">{t("ambassadors.col_name")}</th>
+                          <th className="py-3 px-2">{t("ambassadors.col_club")}</th>
+                          <th className="py-3 px-2 hidden sm:table-cell">{t("ambassadors.col_city")}</th>
+                          <th className="py-3 px-2 text-right">{t("ambassadors.col_points")}</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -773,7 +776,7 @@ const Ambassadors = () => {
         {/* [MÓDULO: RODAPÉ] */}
         <div className="text-center py-6">
           <p className="text-[10px] text-white/20 uppercase tracking-[0.2em]">
-            Mural de postagens sujeito a auditoria. Disponível para níveis Prata ou superior.
+            {t("ambassadors.footer_note")}
           </p>
         </div>
       </main>
@@ -792,17 +795,17 @@ const Ambassadors = () => {
         <DialogContent className="bg-[#0a0a0a] border-white/10 text-white sm:max-w-md [&>button]:hidden">
           <DialogHeader>
             <DialogTitle className="text-xl font-black italic uppercase text-center">
-              Complete seu Censo
+              {t("ambassadors.census_title")}
             </DialogTitle>
             <DialogDescription className="text-white/50 text-center text-sm">
-              Precisamos de mais alguns dados para liberar o painel de Embaixador.
+              {t("ambassadors.census_desc")}
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-5 pt-2">
             {/* WhatsApp */}
             <div className="space-y-2">
-              <Label className="text-xs font-bold uppercase tracking-wider text-white/60">WhatsApp</Label>
+              <Label className="text-xs font-bold uppercase tracking-wider text-white/60">{t("ambassadors.whatsapp_label")}</Label>
               <div className="flex gap-2">
                 <Select
                   value={phoneCountry.code}
@@ -833,7 +836,7 @@ const Ambassadors = () => {
                   </SelectContent>
                 </Select>
                 <Input
-                  placeholder={phoneCountry.code === "BR" ? "(99) 99999-9999" : "Número"}
+                  placeholder={phoneCountry.code === "BR" ? "(99) 99999-9999" : t("ambassadors.phone_generic")}
                   value={phoneInput}
                   onChange={(e) => setPhoneInput(formatPhoneByCountry(e.target.value, phoneCountry))}
                   className="flex-1 bg-white/5 border-white/10 text-white placeholder:text-white/20"
@@ -842,21 +845,21 @@ const Ambassadors = () => {
               </div>
               {phoneInput && !isValidPhoneByCountry(phoneInput, phoneCountry) && (
                 <p className="text-[10px] text-red-400">
-                  Informe {phoneCountry.digits[0] === phoneCountry.digits[1] ? phoneCountry.digits[0] : `${phoneCountry.digits[0]}-${phoneCountry.digits[1]}`} dígitos para {phoneCountry.name}
+                  {t("ambassadors.phone_digits_error", { digits: phoneCountry.digits[0] === phoneCountry.digits[1] ? phoneCountry.digits[0] : `${phoneCountry.digits[0]}-${phoneCountry.digits[1]}`, country: phoneCountry.name })}
                 </p>
               )}
             </div>
 
             {/* Profissão — Autocomplete com entrada livre */}
             <div className="space-y-2">
-              <Label className="text-xs font-bold uppercase tracking-wider text-white/60">Profissão</Label>
+              <Label className="text-xs font-bold uppercase tracking-wider text-white/60">{t("ambassadors.profession_label")}</Label>
               <p className="text-[10px] text-white/40 italic">
-                Digite sua profissão — sugerimos enquanto você escreve. Pode escolher da lista ou digitar livremente.
+                {t("ambassadors.profession_hint")}
               </p>
               <Input
                 value={professionInput}
                 onChange={(e) => setProfessionInput(e.target.value)}
-                placeholder="Ex.: Engenheiro, Professor, Médico..."
+                placeholder={t("ambassadors.profession_placeholder")}
                 className="bg-white/5 border-white/10 text-white placeholder:text-white/20"
                 list="professions-list"
                 autoComplete="off"
@@ -874,7 +877,7 @@ const Ambassadors = () => {
               className="w-full bg-[#ff6200] hover:bg-[#e55800] font-black uppercase tracking-wider text-sm py-5"
             >
               {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-              Liberar Painel
+              {t("ambassadors.unlock_panel")}
             </Button>
           </div>
         </DialogContent>
