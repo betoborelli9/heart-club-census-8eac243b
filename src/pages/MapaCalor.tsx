@@ -1469,7 +1469,7 @@ const MapaCalor = () => {
               onClick={goWorld}
               className="flex items-center gap-1 text-[10px] font-black italic uppercase tracking-widest text-muted-foreground hover:text-primary transition-colors"
             >
-              <Home className="w-3 h-3" /> Mundo
+              <Home className="w-3 h-3" /> {t("heatmap.world")}
             </button>
             {breadcrumbs.slice(1).map((bc, i) => (
               <span key={i} className="flex items-center gap-1">
