@@ -776,7 +776,7 @@ const Ambassadors = () => {
         {/* [MÓDULO: RODAPÉ] */}
         <div className="text-center py-6">
           <p className="text-[10px] text-white/20 uppercase tracking-[0.2em]">
-            Mural de postagens sujeito a auditoria. Disponível para níveis Prata ou superior.
+            {t("ambassadors.footer_note")}
           </p>
         </div>
       </main>
