@@ -1833,7 +1833,7 @@ const MapaCalor = () => {
               </MapContainer>
               <div className="absolute bottom-3 right-3 p-2.5 rounded-xl bg-black/80 backdrop-blur-md border border-white/10 z-[500]">
                 <p className="text-[8px] font-black italic uppercase tracking-widest text-muted-foreground mb-1.5">
-                  Densidade de votos
+                  {t("heatmap.density")}
                 </p>
                 <div className="flex items-center gap-0.5">
                   {HEAT_PALETTE.slice(1).map((c, i) => (
@@ -1841,8 +1841,8 @@ const MapaCalor = () => {
                   ))}
                 </div>
                 <div className="flex justify-between text-[7px] text-muted-foreground mt-1">
-                  <span>Baixa</span>
-                  <span>Alta</span>
+                  <span>{t("heatmap.low")}</span>
+                  <span>{t("heatmap.high")}</span>
                 </div>
               </div>
               <div className="absolute bottom-3 left-3 px-3 py-1.5 rounded-xl bg-black/80 backdrop-blur-md border border-white/10 z-[500]">
