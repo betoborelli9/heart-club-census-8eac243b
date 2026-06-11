@@ -143,7 +143,7 @@ export default function Correcao() {
     }
 
     if (corrections.length === 0) {
-      toast({ title: "Nada a corrigir", description: "Preencha pelo menos um campo." });
+      toast({ title: t("correction.nothing_title"), description: t("correction.nothing_desc") });
       return;
     }
 
@@ -156,8 +156,8 @@ export default function Correcao() {
       if (error) throw error;
       setResults(data?.results || []);
       toast({
-        title: "Correções analisadas",
-        description: `${(data?.results || []).length} campos avaliados pela IA.`,
+        title: t("correction.analyzed_title"),
+        description: t("correction.analyzed_desc", { count: (data?.results || []).length }),
       });
       // recarrega cache atualizado
       const { data: fresh } = await supabase
@@ -169,7 +169,7 @@ export default function Correcao() {
       setRivais(Array.isArray(fresh?.rivais) ? (fresh!.rivais as string[]) : []);
       setForm({});
     } catch (e: any) {
-      toast({ title: "Falha ao enviar", description: e?.message || "Tente novamente.", variant: "destructive" });
+      toast({ title: t("correction.send_fail"), description: e?.message || t("common.try_again"), variant: "destructive" });
     } finally {
       setSubmitting(false);
     }
