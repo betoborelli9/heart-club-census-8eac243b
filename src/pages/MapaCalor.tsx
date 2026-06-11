@@ -1595,7 +1595,7 @@ const MapaCalor = () => {
                       </div>
                       {compareData.totalVotes > 0 ? (
                         <>
-                          <p className="text-[9px] text-muted-foreground font-black uppercase">Total visível</p>
+                          <p className="text-[9px] text-muted-foreground font-black uppercase">{t("heatmap.total_visible")}</p>
                           <p className="text-base font-black italic" style={{ color: HEAT_PALETTE[3] }}>
                             {fmt(compareData.totalVotes)}
                           </p>
