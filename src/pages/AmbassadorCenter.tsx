@@ -13,6 +13,7 @@ import { toast } from "sonner";
 import logo from "@/assets/logo.png";
 import { getBadge, BADGES, type BadgeTier } from "@/lib/badges";
 import FanaticCities from "@/components/ambassador/FanaticCities";
+import { useTranslationApp } from "@/hooks/useTranslationApp";
 
 export default function AmbassadorCenter() {
   const navigate = useNavigate();
