@@ -23,6 +23,7 @@ type Row = { name: string; votes: number };
 type Ranked = Row & { population: number; density: number };
 
 export default function FanaticCities({ limit = 15 }: { limit?: number }) {
+  const { t } = useTranslationApp();
   const [data, setData] = useState<Ranked[]>([]);
   const [loading, setLoading] = useState(true);
 
