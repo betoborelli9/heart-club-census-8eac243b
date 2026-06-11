@@ -795,10 +795,10 @@ const Ambassadors = () => {
         <DialogContent className="bg-[#0a0a0a] border-white/10 text-white sm:max-w-md [&>button]:hidden">
           <DialogHeader>
             <DialogTitle className="text-xl font-black italic uppercase text-center">
-              Complete seu Censo
+              {t("ambassadors.census_title")}
             </DialogTitle>
             <DialogDescription className="text-white/50 text-center text-sm">
-              Precisamos de mais alguns dados para liberar o painel de Embaixador.
+              {t("ambassadors.census_desc")}
             </DialogDescription>
           </DialogHeader>
 
