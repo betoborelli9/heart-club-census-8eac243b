@@ -4,7 +4,10 @@
     "logout": "Log out",
     "tagline": "The largest fan census in the world"
   },
-  "language": { "label": "Language", "aria": "Change language" },
+  "language": {
+    "label": "Language",
+    "aria": "Change language"
+  },
   "stats": {
     "census_global": "Global Census",
     "you_are_fan_number": "You are fan #",
@@ -18,7 +21,14 @@
     "title_prefix": "Most Loved Clubs",
     "title_suffix": "(Sympathy)",
     "subtitle": "Which clubs fans most often pick as their second team.",
-    "empty": "No sympathy votes registered yet."
+    "empty": "No sympathy votes registered yet.",
+    "my_clubs": "My Clubs",
+    "sympathy_sharer": "Sympathy Sharer",
+    "heart_club": "Heart Club",
+    "sympathy_clubs": "Sympathy Clubs",
+    "no_vote": "No vote",
+    "see_news": "See News",
+    "votes": "VOTES"
   },
   "news": {
     "radar_label": "Radar",
@@ -46,9 +56,18 @@
   "ranking": {
     "eyebrow": "GLOBAL RANKING",
     "default_brand": "Heart Club",
-    "search": { "tooltip": "Look up another club", "placeholder": "Search club..." },
+    "search": {
+      "tooltip": "Look up another club",
+      "placeholder": "Search club..."
+    },
     "back": "Back",
-    "scope": { "global": "Global", "country": "Country", "state": "State", "city": "City", "neighborhood": "Neighborhood" },
+    "scope": {
+      "global": "Global",
+      "country": "Country",
+      "state": "State",
+      "city": "City",
+      "neighborhood": "Neighborhood"
+    },
     "hype": {
       "no_votes": "Your club hasn't received votes in this slice yet.",
       "explosive": "🔥 Explosive growth in the last 24h!",
@@ -57,8 +76,15 @@
       "growing": "📈 Rising momentum. Time to rally the fans.",
       "default": "🎯 Every vote counts. Invite the fans and climb the ranking."
     },
-    "position": { "current": "Current position:", "votes": "votes", "growth_24h": "+{{value}} (24h)", "growth_7d": "+{{value}} (7d)" },
-    "cta": { "rally": "Rally the Troops" },
+    "position": {
+      "current": "Current position:",
+      "votes": "votes",
+      "growth_24h": "+{{value}} (24h)",
+      "growth_7d": "+{{value}} (7d)"
+    },
+    "cta": {
+      "rally": "Rally the Troops"
+    },
     "goals": {
       "title": "Dynamic Goals",
       "overtake": "{{votes}} votes to overtake {{club}}.",
@@ -66,17 +92,37 @@
       "check_neighborhood": "Check the ranking in your neighborhood ({{neighborhood}}).",
       "leader": "Leadership consolidated — defend the top."
     },
-    "next_target": { "title": "Next Target", "missing": "{{votes}} to go" },
-    "census": { "title": "Neighborhood Census · {{club}} in {{city}}", "empty": "No neighborhood votes recorded in this slice." },
-    "table": { "title": "{{scope}} Ranking", "votes_label": "votes" },
+    "next_target": {
+      "title": "Next Target",
+      "missing": "{{votes}} to go"
+    },
+    "census": {
+      "title": "Neighborhood Census · {{club}} in {{city}}",
+      "empty": "No neighborhood votes recorded in this slice."
+    },
+    "table": {
+      "title": "{{scope}} Ranking",
+      "votes_label": "votes"
+    },
     "empty_state": "No data for this slice.",
-    "invite": { "copied_title": "Link copied!", "copied_desc": "Share it with the fans 🔥" }
+    "invite": {
+      "copied_title": "Link copied!",
+      "copied_desc": "Share it with the fans 🔥"
+    }
   },
   "common": {
-    "copy": "Copy", "back": "Back", "cancel": "Cancel", "confirm": "Confirm",
-    "loading": "Loading...", "loading_short": "Loading...",
-    "continue": "Continue", "send": "Send", "save": "Save",
-    "error": "Error", "try_again": "Try again.", "dashboard": "Dashboard"
+    "copy": "Copy",
+    "back": "Back",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "loading": "Loading...",
+    "loading_short": "Loading...",
+    "continue": "Continue",
+    "send": "Send",
+    "save": "Save",
+    "error": "Error",
+    "try_again": "Try again.",
+    "dashboard": "Dashboard"
   },
   "components": {
     "rivals_combobox": {
@@ -203,17 +249,32 @@
     "display_name": "Display Name",
     "display_name_placeholder": "Your nickname or name",
     "birth_date": "Birth Date",
-    "day": "Day", "month": "Month", "year": "Year",
-    "gender": "Gender", "select": "Select",
-    "male": "Male", "female": "Female", "other": "Other", "prefer_not_say": "Prefer not to say",
+    "day": "Day",
+    "month": "Month",
+    "year": "Year",
+    "gender": "Gender",
+    "select": "Select",
+    "male": "Male",
+    "female": "Female",
+    "other": "Other",
+    "prefer_not_say": "Prefer not to say",
     "continue": "Continue to Voting",
     "required_missing": "Required fields missing.",
     "saved": "Profile saved! ✅",
     "save_error": "Error updating profile on Supabase.",
     "months": {
-      "1": "January", "2": "February", "3": "March", "4": "April",
-      "5": "May", "6": "June", "7": "July", "8": "August",
-      "9": "September", "10": "October", "11": "November", "12": "December"
+      "1": "January",
+      "2": "February",
+      "3": "March",
+      "4": "April",
+      "5": "May",
+      "6": "June",
+      "7": "July",
+      "8": "August",
+      "9": "September",
+      "10": "October",
+      "11": "November",
+      "12": "December"
     }
   },
   "voting": {
@@ -228,8 +289,11 @@
     "identity_title": "Your identity",
     "identity_name_label": "How would you like to be called",
     "nickname_placeholder": "Your nickname",
-    "sex_label": "Sex", "sex_placeholder": "Sex",
-    "male": "Male", "female": "Female", "other": "Other",
+    "sex_label": "Sex",
+    "sex_placeholder": "Sex",
+    "male": "Male",
+    "female": "Female",
+    "other": "Other",
     "birth_year_label": "Birth year",
     "year_placeholder": "Year",
     "continue": "CONTINUE",
@@ -268,16 +332,25 @@
     "colors_hint_mid": ") or a color name (",
     "colors_examples": "black, white, red, navy blue, flag green...",
     "colors_hint_suffix": ").",
-    "color_primary": "Primary", "color_secondary": "Secondary", "color_tertiary": "Tertiary", "color_quarta": "Fourth",
+    "color_primary": "Primary",
+    "color_secondary": "Secondary",
+    "color_tertiary": "Tertiary",
+    "color_quarta": "Fourth",
     "current_short": "current:",
     "color_placeholder": "#RRGGBB or \"black\"",
     "color_invalid": "Color \"{{val}}\" not recognized. Use HEX (#RRGGBB) or a name (e.g., black, blue, red).",
-    "mascot": "Mascot", "mascot_ph": "E.g., Fox",
-    "founded": "Founding year", "founded_ph": "E.g., 1903",
-    "home_city": "Home city", "country": "Country",
-    "stadium_name": "Stadium name", "stadium_city": "Stadium city", "stadium_capacity": "Stadium capacity",
+    "mascot": "Mascot",
+    "mascot_ph": "E.g., Fox",
+    "founded": "Founding year",
+    "founded_ph": "E.g., 1903",
+    "home_city": "Home city",
+    "country": "Country",
+    "stadium_name": "Stadium name",
+    "stadium_city": "Stadium city",
+    "stadium_capacity": "Stadium capacity",
     "short_name": "Short name",
-    "division": "Current division", "division_ph": "E.g., Serie A",
+    "division": "Current division",
+    "division_ph": "E.g., Serie A",
     "rivals_label": "Historic rivals",
     "rivals_note": "— your word overrides the AI",
     "rivals_placeholder": "Search rival club in the database (crest guaranteed)...",
@@ -300,9 +373,16 @@
     "send_fail": "Failed to send"
   },
   "navbar": {
-    "home": "Home", "ranking": "Ranking", "map": "Map", "map_long": "Heatmap",
-    "ambassadors": "Ambassador", "ambassadors_long": "Ambassadors", "ambassadors_short": "Ambass.",
-    "panel": "Panel", "voting": "Voting", "admin": "Admin",
+    "home": "Home",
+    "ranking": "Ranking",
+    "map": "Map",
+    "map_long": "Heatmap",
+    "ambassadors": "Ambassador",
+    "ambassadors_long": "Ambassadors",
+    "ambassadors_short": "Ambass.",
+    "panel": "Panel",
+    "voting": "Voting",
+    "admin": "Admin",
     "back_to_heart": "Back to Heart",
     "aria": "Main navigation"
   },
@@ -322,17 +402,26 @@
     "code_label": "Code:",
     "invite_fan": "Invite a fan",
     "share_link": "Share link",
-    "whatsapp": "WhatsApp", "telegram": "Telegram", "email": "Email", "copy_link": "Copy link",
+    "whatsapp": "WhatsApp",
+    "telegram": "Telegram",
+    "email": "Email",
+    "copy_link": "Copy link",
     "more_options": "More options…",
     "feed_title": "Activity Feed",
     "feed_empty": "No new activity in your area.",
     "feed_voted": "just voted for",
     "feed_joined": "joined Heart Club",
     "ranking_title": "Dominance Ranking",
-    "tab_world": "World", "tab_continental": "Continental", "tab_national": "National",
-    "tab_state": "State", "tab_municipal": "Municipal",
+    "tab_world": "World",
+    "tab_continental": "Continental",
+    "tab_national": "National",
+    "tab_state": "State",
+    "tab_municipal": "Municipal",
     "ranking_empty": "No ranking data available yet. Invite friends with your code!",
-    "col_name": "Name", "col_club": "Club", "col_city": "City", "col_points": "Points",
+    "col_name": "Name",
+    "col_club": "Club",
+    "col_city": "City",
+    "col_points": "Points",
     "anon": "Anonymous",
     "footer_note": "Posting wall subject to audit. Available for Silver tier or higher.",
     "census_title": "Complete your Census",
@@ -373,7 +462,10 @@
     "kpi_audited": "Audited Votes Generated",
     "kpi_conversions": "Affinity Conversion",
     "share_title": "Smart Sharing",
-    "wa": "WhatsApp", "tg": "Telegram", "ig": "Instagram", "more": "More",
+    "wa": "WhatsApp",
+    "tg": "Telegram",
+    "ig": "Instagram",
+    "more": "More",
     "link_copied": "Link copied!",
     "ig_copied": "Text copied — paste on Instagram",
     "share_text": "Help {{club}} dominate {{neighborhood}} on Heart Club! Vote here: {{link}}",
@@ -403,11 +495,52 @@
     "loading_votes": "Loading votes...",
     "loading_territory": "Loading territory...",
     "density": "Vote density",
-    "low": "Low", "high": "High",
+    "low": "Low",
+    "high": "High",
     "scope_world": "🌍 Worldwide",
     "confirm_territory": "Confirm your territory",
     "blocked_until_confirm": "The Heatmap is locked until you confirm where you live.",
     "open_confirmation": "Open confirmation",
     "votes_word": "VOTES"
+  },
+  "club_banner": {
+    "heart_label": "Heart Club",
+    "loading": "LOADING...",
+    "ambassador": "{{level}} AMBASSADOR",
+    "enriching": "The crest is on its way! {{club}} is a new force in the Global Census and we are processing its official colors and badge. Keep browsing — your Dashboard will soon match your passion!",
+    "nav": {
+      "heatmap": "Heatmap",
+      "ranking": "Ranking",
+      "ambassadors": "Ambassadors",
+      "voting": "Voting",
+      "test_club": "Test Club",
+      "master_panel": "Master Panel"
+    }
+  },
+  "rivals": {
+    "title": "Rivals Monitoring",
+    "validating": "Validating real classics...",
+    "empty": "No historic rivalry confirmed.",
+    "historic": "Historic Rival",
+    "votes": "Votes"
+  },
+  "competitions": {
+    "title": "Active Competitions",
+    "tournaments": "{{count}} tournament(s)",
+    "empty": "No active competition found.",
+    "select_club": "Select a club.",
+    "no_match": "No match scheduled for this competition.",
+    "no_standings": "No standings available.",
+    "live": "LIVE",
+    "team_col": "Team",
+    "target": "target",
+    "zones": {
+      "lib_g": "Libertadores (Group Stage)",
+      "lib_p": "Pre-Libertadores",
+      "sul": "Sudamericana",
+      "reb": "Relegation",
+      "acesso": "Promotion to Série A",
+      "reb_c": "Relegation to Série C"
+    }
   }
 }
