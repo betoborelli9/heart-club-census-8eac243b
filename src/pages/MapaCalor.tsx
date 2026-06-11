@@ -1626,7 +1626,7 @@ const MapaCalor = () => {
                     <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                     <Input
                       value={citySearchQuery}
-                      placeholder={`Votos de ${activeClubName} em uma cidade...`}
+                      placeholder={t("heatmap.votes_of_in_city", { club: activeClubName })}
                       className="pl-10 bg-secondary/50 border-white/5 text-xs"
                       onChange={(e) => handleCitySearch(e.target.value)}
                     />
