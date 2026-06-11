@@ -89,7 +89,7 @@ const SympathyRanking = () => {
                   <span className={`text-lg font-black ${isTop ? "text-primary" : "text-white"}`}>
                     {row.votes.toLocaleString("pt-BR")}
                   </span>
-                  <span className="text-[10px] text-white/50 italic">simpatias</span>
+                  <span className="text-[10px] text-white/50 italic">{t("stats.sympathies_label")}</span>
                 </div>
               </article>
             );
