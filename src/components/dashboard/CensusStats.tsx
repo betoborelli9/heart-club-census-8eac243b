@@ -4,8 +4,10 @@ import { BarChart3 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Cell } from "recharts";
 import { mockCensusRanking, totalVotes } from "@/data/mockDashboard";
+import { useTranslationApp } from "@/hooks/useTranslationApp";
 
 const CensusStats = () => {
+  const { t } = useTranslationApp();
   const [count, setCount] = useState(0);
   const ref = useRef<HTMLDivElement>(null);
   const targetNumber = 1450231;
@@ -36,12 +38,12 @@ const CensusStats = () => {
       <Card className="glass-card border-border/30">
         <CardHeader className="pb-3">
           <CardTitle className="text-sm font-semibold flex items-center gap-2 font-display">
-            <BarChart3 className="w-4 h-4 text-primary" /> Censo Global
+            <BarChart3 className="w-4 h-4 text-primary" /> {t("stats.census_global")}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-5">
           <div ref={ref} className="text-center py-3 rounded-xl glass-card border-primary/20">
-            <p className="text-xs text-muted-foreground mb-1">Você é o torcedor nº</p>
+            <p className="text-xs text-muted-foreground mb-1">{t("stats.you_are_fan_number")}</p>
             <motion.p
               className="text-3xl font-black text-gradient-orange tabular-nums font-display"
               initial={{ scale: 0.5, opacity: 0 }}
@@ -51,13 +53,13 @@ const CensusStats = () => {
               {count.toLocaleString("pt-BR")}
             </motion.p>
             <p className="text-[10px] text-muted-foreground mt-1">
-              de {totalVotes.toLocaleString("pt-BR")} registrados
+              {t("stats.registered_of", { total: totalVotes.toLocaleString("pt-BR") })}
             </p>
           </div>
 
           <div>
             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
-              Ranking Global de Votos
+              {t("stats.global_votes_ranking")}
             </p>
             <ResponsiveContainer width="100%" height={180}>
               <BarChart data={chartData} layout="vertical" margin={{ left: 0, right: 10 }}>

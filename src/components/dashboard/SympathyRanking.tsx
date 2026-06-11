@@ -10,12 +10,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { CLUBS_DATA } from "@/clubes-data";
 import { ClubLogo } from "@/components/ClubLogo";
 import { useClubLogos, normalizeClubName } from "@/lib/club-logo-resolver";
+import { useTranslationApp } from "@/hooks/useTranslationApp";
 
 const normalize = normalizeClubName;
 
 type RankRow = { club: string; votes: number };
 
 const SympathyRanking = () => {
+  const { t } = useTranslationApp();
   const [rows, setRows] = useState<RankRow[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -35,11 +37,11 @@ const SympathyRanking = () => {
       <header className="flex items-center gap-2">
         <Heart className="w-5 h-5 text-primary" fill="currentColor" />
         <h2 className="text-xl md:text-2xl font-black italic uppercase tracking-tight">
-          Clubes Mais Queridos <span className="text-primary">(Simpatia)</span>
+          {t("sympathy.title_prefix")} <span className="text-primary">{t("sympathy.title_suffix")}</span>
         </h2>
       </header>
       <p className="text-xs md:text-sm text-white/60 italic">
-        Quais clubes os torcedores mais escolhem como seu segundo time.
+        {t("sympathy.subtitle")}
       </p>
 
       {loading ? (
@@ -48,7 +50,7 @@ const SympathyRanking = () => {
         </div>
       ) : rows.length === 0 ? (
         <p className="text-sm text-white/50 italic py-6 text-center">
-          Ainda não há votos de simpatia registrados.
+          {t("sympathy.empty")}
         </p>
       ) : (
         <div className="flex gap-3 overflow-x-auto pb-3 -mx-2 px-2 snap-x snap-mandatory">
@@ -87,7 +89,7 @@ const SympathyRanking = () => {
                   <span className={`text-lg font-black ${isTop ? "text-primary" : "text-white"}`}>
                     {row.votes.toLocaleString("pt-BR")}
                   </span>
-                  <span className="text-[10px] text-white/50 italic">simpatias</span>
+                  <span className="text-[10px] text-white/50 italic">{t("stats.sympathies_label")}</span>
                 </div>
               </article>
             );

@@ -10,6 +10,7 @@
 import { useEffect, useState } from "react";
 import { Zap, Loader2, ExternalLink, Clock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { useTranslationApp } from "@/hooks/useTranslationApp";
 
 interface NewsItem {
   title: string;
@@ -32,22 +33,23 @@ interface Props {
   clubMeta?: ClubMeta | null;
 }
 
-const timeAgo = (d?: string) => {
-  if (!d) return "";
-  const t = new Date(d).getTime();
-  if (isNaN(t)) return "";
-  const diff = Date.now() - t;
-  const mins = Math.floor(diff / 60000);
-  if (mins < 1) return "agora";
-  if (mins < 60) return `${mins}m`;
-  const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h`;
-  return `${Math.floor(hrs / 24)}d`;
-};
-
 export default function NewsFeedCards({ teamName, primaryColor = "#ff6200", clubMeta }: Props) {
+  const { t } = useTranslationApp();
   const [news, setNews] = useState<NewsItem[]>([]);
   const [loading, setLoading] = useState(false);
+
+  const timeAgo = (d?: string) => {
+    if (!d) return "";
+    const tt = new Date(d).getTime();
+    if (isNaN(tt)) return "";
+    const diff = Date.now() - tt;
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1) return t("news.time_now");
+    if (mins < 60) return t("news.time_minutes_short", { count: mins });
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return t("news.time_hours_short", { count: hrs });
+    return t("news.time_days_short", { count: Math.floor(hrs / 24) });
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -127,11 +129,11 @@ export default function NewsFeedCards({ teamName, primaryColor = "#ff6200", club
         <div className="flex items-center gap-2">
           <Zap className="w-4 h-4" style={{ color: primaryColor }} />
           <h2 className="text-[11px] font-black uppercase italic tracking-widest text-white/70">
-            Radar {teamName}
+            {t("news.radar_label")} {teamName}
           </h2>
         </div>
         <span className="text-[9px] font-black text-white/30 uppercase tracking-tighter italic">
-          Somente Links Oficiais — Monitoramento IA
+          {t("news.official_links")}
         </span>
       </header>
 
@@ -141,7 +143,7 @@ export default function NewsFeedCards({ teamName, primaryColor = "#ff6200", club
         </div>
       ) : news.length === 0 ? (
         <p className="text-[10px] text-white/40 italic py-6 text-center uppercase font-black">
-          No momento não há notícias publicadas nas últimas 48 horas.
+          {t("news.empty_48h")}
         </p>
       ) : (
         <ul className="flex flex-col">
@@ -182,7 +184,7 @@ export default function NewsFeedCards({ teamName, primaryColor = "#ff6200", club
       )}
 
       <p className="text-[8px] text-center text-white/15 uppercase font-black italic pt-1">
-        Cruzamento de dados: Google · Gemini · Wikipédia
+        {t("news.data_sources")}
       </p>
     </section>
   );

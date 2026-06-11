@@ -7,6 +7,44 @@
     "label": "Language",
     "aria": "Change language"
   },
+  "stats": {
+    "census_global": "Global Census",
+    "you_are_fan_number": "You are fan #",
+    "registered_of": "of {{total}} registered",
+    "global_votes_ranking": "Global Vote Ranking",
+    "votes_count_one": "{{count}} vote",
+    "votes_count_other": "{{count}} votes",
+    "sympathies_label": "sympathies"
+  },
+  "sympathy": {
+    "title_prefix": "Most Loved Clubs",
+    "title_suffix": "(Sympathy)",
+    "subtitle": "Which clubs fans most often pick as their second team.",
+    "empty": "No sympathy votes registered yet."
+  },
+  "news": {
+    "radar_label": "Radar",
+    "official_links": "Official Links Only — AI Monitoring",
+    "empty_48h": "No news published in the last 48 hours.",
+    "data_sources": "Data crossover: Google · Gemini · Wikipedia",
+    "time_now": "now",
+    "time_minutes_short": "{{count}}m",
+    "time_hours_short": "{{count}}h",
+    "time_days_short": "{{count}}d"
+  },
+  "identity": {
+    "founded_in": "Founded in {{year}}",
+    "feminino_label": "Women's team:",
+    "yes": "Yes",
+    "no": "No",
+    "fix_button": "Fix",
+    "fix_tooltip": "Something wrong? Fix it here"
+  },
+  "fanatic_cities": {
+    "title": "Most Fanatical Cities",
+    "subtitle": "Density = registered fans per 100k inhabitants",
+    "empty": "Not enough data yet."
+  },
   "ranking": {
     "eyebrow": "GLOBAL RANKING",
     "default_brand": "Heart Club",

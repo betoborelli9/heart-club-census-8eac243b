@@ -7,6 +7,44 @@
     "label": "Idioma",
     "aria": "Alterar idioma"
   },
+  "stats": {
+    "census_global": "Censo Global",
+    "you_are_fan_number": "Você é o torcedor nº",
+    "registered_of": "de {{total}} registrados",
+    "global_votes_ranking": "Ranking Global de Votos",
+    "votes_count_one": "{{count}} voto",
+    "votes_count_other": "{{count}} votos",
+    "sympathies_label": "simpatias"
+  },
+  "sympathy": {
+    "title_prefix": "Clubes Mais Queridos",
+    "title_suffix": "(Simpatia)",
+    "subtitle": "Quais clubes os torcedores mais escolhem como seu segundo time.",
+    "empty": "Ainda não há votos de simpatia registrados."
+  },
+  "news": {
+    "radar_label": "Radar",
+    "official_links": "Somente Links Oficiais — Monitoramento IA",
+    "empty_48h": "No momento não há notícias publicadas nas últimas 48 horas.",
+    "data_sources": "Cruzamento de dados: Google · Gemini · Wikipédia",
+    "time_now": "agora",
+    "time_minutes_short": "{{count}}m",
+    "time_hours_short": "{{count}}h",
+    "time_days_short": "{{count}}d"
+  },
+  "identity": {
+    "founded_in": "Fundado em {{year}}",
+    "feminino_label": "Feminino:",
+    "yes": "Sim",
+    "no": "Não",
+    "fix_button": "Corrigir",
+    "fix_tooltip": "Algo errado? Corrija aqui"
+  },
+  "fanatic_cities": {
+    "title": "Cidades Mais Fanáticas",
+    "subtitle": "Densidade = torcedores cadastrados por 100 mil habitantes",
+    "empty": "Sem dados suficientes ainda."
+  },
   "ranking": {
     "eyebrow": "RANKING GLOBAL",
     "default_brand": "Heart Club",

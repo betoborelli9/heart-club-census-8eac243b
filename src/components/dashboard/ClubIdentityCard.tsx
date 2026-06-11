@@ -12,6 +12,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Calendar, MapPin, Trophy, Heart, Building2, Pencil, PawPrint } from "lucide-react";
+import { useTranslationApp } from "@/hooks/useTranslationApp";
 
 interface Props {
   clubName: string;
@@ -59,6 +60,7 @@ const Pill = ({ icon: Icon, children }: { icon: any; children: React.ReactNode }
 );
 
 export default function ClubIdentityCard({ clubName }: Props) {
+  const { t } = useTranslationApp();
   const [data, setData] = useState<CacheRow | null>(null);
   const [comps, setComps] = useState<ActiveComp[]>([]);
   const [loading, setLoading] = useState(true);
@@ -129,7 +131,7 @@ export default function ClubIdentityCard({ clubName }: Props) {
         {/* LINHA 2 — DADOS (centralizados, separados por bullet) */}
         <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1.5">
           {data.mascote && <Pill icon={PawPrint}>{data.mascote}</Pill>}
-          {data.fundado && <Pill icon={Calendar}>Fundado em {data.fundado}</Pill>}
+          {data.fundado && <Pill icon={Calendar}>{t("identity.founded_in", { year: data.fundado })}</Pill>}
           {(data.cidade || data.pais) && (
             <Pill icon={MapPin}>{[data.cidade, data.pais].filter(Boolean).join(", ")}</Pill>
           )}
@@ -142,17 +144,17 @@ export default function ClubIdentityCard({ clubName }: Props) {
           {comps.map((c) => (
             <Pill key={c.l_id} icon={Trophy}>{c.l_name}</Pill>
           ))}
-          <Pill icon={Heart}>Feminino: {data.tem_feminino ? "Sim" : "Não"}</Pill>
+          <Pill icon={Heart}>{t("identity.feminino_label")} {data.tem_feminino ? t("identity.yes") : t("identity.no")}</Pill>
         </div>
 
         {/* BOTÃO DE DESTAQUE — Corrigir dados */}
         <Link
           to="/correcao"
-          title="Algo errado? Corrija aqui"
+          title={t("identity.fix_tooltip")}
           className="absolute top-2 right-3 inline-flex items-center gap-1.5 text-[11px] font-black uppercase italic tracking-wider text-white bg-[#ff6200] hover:bg-[#ff7a1f] px-3 py-1.5 rounded-full shadow-[0_0_18px_rgba(255,98,0,0.55)] hover:shadow-[0_0_24px_rgba(255,98,0,0.85)] transition-all"
         >
           <Pencil className="w-3.5 h-3.5" />
-          Corrigir
+          {t("identity.fix_button")}
         </Link>
       </div>
     </div>
