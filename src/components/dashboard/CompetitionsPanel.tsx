@@ -119,11 +119,11 @@ export default function CompetitionsPanel({ clubName, primaryColor = "#ff6200" }
         <header className="flex items-center gap-2 pb-2">
           <Trophy className="w-4 h-4" style={{ color: primaryColor }} />
           <h3 className="text-[11px] font-black italic uppercase tracking-widest text-white">
-            Competições Ativas
+            {t("competitions.title")}
           </h3>
         </header>
         <p className="text-[11px] italic text-white/40 py-3">
-          {clubName ? "Nenhuma competição ativa encontrada." : "Selecione um clube."}
+          {clubName ? t("competitions.empty") : t("competitions.select_club")}
         </p>
       </section>
     );
@@ -134,9 +134,9 @@ export default function CompetitionsPanel({ clubName, primaryColor = "#ff6200" }
       <header className="flex items-center gap-2 pb-2 border-b border-white/5">
         <Trophy className="w-4 h-4" style={{ color: primaryColor }} />
         <h3 className="text-[11px] font-black italic uppercase tracking-widest text-white flex-1">
-          Competições Ativas
+          {t("competitions.title")}
         </h3>
-        <span className="text-[9px] font-mono text-white/30">{competitions.length} torneio(s)</span>
+        <span className="text-[9px] font-mono text-white/30">{t("competitions.tournaments", { count: competitions.length })}</span>
       </header>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
