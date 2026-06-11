@@ -72,19 +72,5 @@ i18n.services.formatter?.add("date", (value, lng, opts) => {
   }
 });
 
-// Parse "number(minimumFractionDigits: 2, style: 'currency')" → object
-function parseOpts(format: string): Record<string, unknown> {
-  const m = format.match(/\((.*)\)\s*$/);
-  if (!m) return {};
-  try {
-    // Aceita JSON-like: chaves sem aspas e valores simples.
-    const body = m[1]
-      .replace(/([a-zA-Z0-9_]+)\s*:/g, '"$1":')
-      .replace(/'/g, '"');
-    return JSON.parse(`{${body}}`);
-  } catch {
-    return {};
-  }
-}
 
 export default i18n;
