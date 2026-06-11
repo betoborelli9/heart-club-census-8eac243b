@@ -54,6 +54,7 @@ import { useClubTheme } from "@/hooks/useClubTheme";
 import { toast } from "@/hooks/use-toast";
 import { useClubLogos, normalizeClubName } from "@/lib/club-logo-resolver";
 import logo from "@/assets/logo.png";
+import { useTranslationApp } from "@/hooks/useTranslationApp";
 
 /* [MÓDULO: HELPERS] */
 const normalize = (v: string) =>
