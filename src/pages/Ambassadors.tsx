@@ -465,17 +465,17 @@ const Ambassadors = () => {
         >
           <div className="flex items-center gap-3 min-w-0">
             <span className="text-[9px] font-black uppercase tracking-[0.3em] text-[#ff6200] shrink-0">
-              Parceiro Oficial
+              {t("ambassadors.sponsor_label")}
             </span>
             <span className="text-xs text-white/70 italic truncate">
-              Seu negócio aqui — fale com o time Heart Club.
+              {t("ambassadors.sponsor_text")}
             </span>
           </div>
           <a
             href="mailto:admin@heartclubapp.com?subject=Quero%20ser%20Parceiro%20Heart%20Club"
             className="text-[10px] font-black uppercase tracking-wider text-[#ff6200] hover:underline shrink-0"
           >
-            Anunciar
+            {t("ambassadors.sponsor_cta")}
           </a>
         </div>
 
