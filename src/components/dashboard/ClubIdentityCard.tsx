@@ -60,6 +60,7 @@ const Pill = ({ icon: Icon, children }: { icon: any; children: React.ReactNode }
 );
 
 export default function ClubIdentityCard({ clubName }: Props) {
+  const { t } = useTranslationApp();
   const [data, setData] = useState<CacheRow | null>(null);
   const [comps, setComps] = useState<ActiveComp[]>([]);
   const [loading, setLoading] = useState(true);
