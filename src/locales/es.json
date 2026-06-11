@@ -1,12 +1,10 @@
 {
   "header": {
     "brand": "Heart Club",
-    "logout": "Salir"
+    "logout": "Cerrar sesión",
+    "tagline": "El mayor censo de hinchadas del mundo"
   },
-  "language": {
-    "label": "Idioma",
-    "aria": "Cambiar idioma"
-  },
+  "language": { "label": "Idioma", "aria": "Cambiar idioma" },
   "stats": {
     "census_global": "Censo Global",
     "you_are_fan_number": "Eres el hincha n.º",
@@ -19,7 +17,7 @@
   "sympathy": {
     "title_prefix": "Clubes Más Queridos",
     "title_suffix": "(Simpatía)",
-    "subtitle": "Qué clubes eligen los hinchas como su segundo equipo.",
+    "subtitle": "Qué clubes elige la hinchada como segundo equipo.",
     "empty": "Aún no hay votos de simpatía registrados."
   },
   "news": {
@@ -35,87 +33,57 @@
   "identity": {
     "founded_in": "Fundado en {{year}}",
     "feminino_label": "Femenino:",
-    "yes": "Sí",
-    "no": "No",
+    "yes": "Sí", "no": "No",
     "fix_button": "Corregir",
     "fix_tooltip": "¿Algo mal? Corrígelo aquí"
   },
   "fanatic_cities": {
     "title": "Ciudades Más Fanáticas",
     "subtitle": "Densidad = hinchas registrados por 100 mil habitantes",
-    "empty": "Sin datos suficientes todavía."
+    "empty": "Aún sin datos suficientes."
   },
   "ranking": {
     "eyebrow": "RANKING GLOBAL",
     "default_brand": "Heart Club",
-    "search": {
-      "tooltip": "Consultar otro club",
-      "placeholder": "Buscar club..."
-    },
+    "search": { "tooltip": "Consultar otro club", "placeholder": "Buscar club..." },
     "back": "Volver",
-    "scope": {
-      "global": "Global",
-      "country": "País",
-      "state": "Estado",
-      "city": "Ciudad",
-      "neighborhood": "Barrio"
-    },
+    "scope": { "global": "Global", "country": "País", "state": "Estado", "city": "Ciudad", "neighborhood": "Barrio" },
     "hype": {
       "no_votes": "Tu club aún no ha recibido votos en este recorte.",
       "explosive": "🔥 ¡Crecimiento explosivo en las últimas 24h!",
       "domination": "👑 Dominio absoluto en esta región.",
       "podium": "🚀 Tu club está en el podio — ¡empuja un poco más!",
-      "growing": "📈 Movimiento creciente. Hora de convocar a la hinchada.",
+      "growing": "📈 Momento creciente. Hora de convocar a la hinchada.",
       "default": "🎯 Cada voto cuenta. Invita a la hinchada y sube en el ranking."
     },
-    "position": {
-      "current": "Posición actual:",
-      "votes": "votos",
-      "growth_24h": "+{{value}} (24h)",
-      "growth_7d": "+{{value}} (7d)"
-    },
-    "cta": {
-      "rally": "Convocar a la Tropa"
-    },
+    "position": { "current": "Posición actual:", "votes": "votos", "growth_24h": "+{{value}} (24h)", "growth_7d": "+{{value}} (7d)" },
+    "cta": { "rally": "Convocar a la Tropa" },
     "goals": {
       "title": "Metas Dinámicas",
       "overtake": "Faltan {{votes}} votos para superar a {{club}}.",
       "top10": "A {{votes}} votos del Top 10 {{scope}}.",
-      "check_neighborhood": "Mira el ranking en tu barrio ({{neighborhood}}).",
+      "check_neighborhood": "Revisa el ranking en tu barrio ({{neighborhood}}).",
       "leader": "Liderazgo consolidado — defiende la cima."
     },
-    "next_target": {
-      "title": "Próximo Objetivo",
-      "missing": "Faltan {{votes}}"
-    },
-    "census": {
-      "title": "Censo por Barrio · {{club}} en {{city}}",
-      "empty": "Sin votos registrados por barrio en este recorte."
-    },
-    "table": {
-      "title": "Ranking {{scope}}",
-      "votes_label": "votos"
-    },
+    "next_target": { "title": "Próximo Objetivo", "missing": "Faltan {{votes}}" },
+    "census": { "title": "Censo por Barrio · {{club}} en {{city}}", "empty": "Sin votos registrados por barrio en este recorte." },
+    "table": { "title": "Ranking {{scope}}", "votes_label": "votos" },
     "empty_state": "Sin datos para este recorte.",
-    "invite": {
-      "copied_title": "¡Enlace copiado!",
-      "copied_desc": "Compártelo con la hinchada 🔥"
-    }
+    "invite": { "copied_title": "¡Enlace copiado!", "copied_desc": "Comparte con la hinchada 🔥" }
   },
   "common": {
-    "copy": "Copiar",
-    "back": "Volver",
-    "cancel": "Cancelar",
-    "confirm": "Confirmar",
-    "loading": "Cargando..."
+    "copy": "Copiar", "back": "Volver", "cancel": "Cancelar", "confirm": "Confirmar",
+    "loading": "Cargando...", "loading_short": "Cargando...",
+    "continue": "Continuar", "send": "Enviar", "save": "Guardar",
+    "error": "Error", "try_again": "Inténtalo de nuevo.", "dashboard": "Panel"
   },
   "components": {
     "rivals_combobox": {
       "placeholder": "Escribe el nombre del rival...",
       "remove_aria": "Quitar {{name}}",
-      "add_manual_prefix": "Añadir",
+      "add_manual_prefix": "Agregar",
       "add_manual_suffix": "de todos modos",
-      "hint": "Selecciona del banco para asegurar el escudo correcto. Máx. 6 rivales."
+      "hint": "Selecciona del banco para garantizar el escudo correcto. Máx. 6 rivales."
     },
     "ambassador_card": {
       "share_title": "Heart Club — Censo Global del Hincha",
@@ -137,7 +105,7 @@
       "detect_again": "Detectar de nuevo",
       "city_placeholder": "Escribe tu ciudad...",
       "searching_cities": "Buscando ciudades...",
-      "location_error": "No pude detectar tu ciudad automáticamente. Activa la ubicación del navegador e intenta de nuevo.",
+      "location_error": "No pude detectar tu ciudad automáticamente. Activa la ubicación del navegador e inténtalo de nuevo.",
       "detect_location": "Detectar ubicación",
       "neighborhood_placeholder": "¿Cuál es tu barrio en {{city}}?",
       "loading_neighborhoods": "Cargando barrios...",
@@ -146,22 +114,22 @@
     "share_tropa": {
       "title": "Convocar a la Tropa",
       "subtitle": "Heart Club · Censo Global del Fútbol",
-      "banner_alt": "Camino del Embajador — Bronce, Plata, Oro, Diamante",
+      "banner_alt": "Trayecto del Embajador — Bronce, Plata, Oro, Diamante",
       "share_more": "Compartir (más opciones)",
-      "invite_text": "⚽ ¡HAS SIDO CONVOCADO A HEART CLUB! 🧡\n\n¡Acabo de votar por nuestro equipo! Heart Club es el mayor censo de hinchadas del mundo.\n\nCÓMO FUNCIONA:\n1️⃣ Haz clic en el enlace de abajo y vota.\n2️⃣ Vota por tu Club del Corazón ❤️ Y hasta 4 Clubes de Simpatía 🧡\n3️⃣ Después de votar, ganas un Código de Invitación único.\n4️⃣ Haz clic en 'Convoca a la Tropa' y llama a tus amigos.\n\nCuanta más gente vote con tu invitación, más puntos ganas para subir de nivel: Bronce ➔ Plata ➔ Oro ➔ ¡DIAMANTE! 💎\n\nLos Embajadores Diamante tendrán premios exclusivos en el futuro. ¡Vamos a dominar el ranking!\n\n👇 VOTA AHORA Y CONVOCA:"
+      "invite_text": "⚽ ¡FUISTE CONVOCADO AL HEART CLUB! 🧡\n\nAcabo de votar por nuestro equipo. Heart Club es el mayor censo de hinchadas del mundo.\n\nCÓMO FUNCIONA:\n1️⃣ Toca el enlace y vota.\n2️⃣ Vota por tu Club del Corazón ❤️ Y hasta 4 Clubes Simpatía 🧡\n3️⃣ Después recibes una Clave de Invitación única.\n4️⃣ Toca 'Convocar a la Tropa' y llama a tus amigos.\n\nMientras más gente vote con tu invitación, más puntos ganas para subir de nivel: Bronce ➔ Plata ➔ Oro ➔ ¡DIAMANTE! 💎\n\nLos Embajadores Diamante tendrán premios exclusivos en el futuro. ¡Dominemos el ranking!\n\n👇 VOTA AHORA Y CONVOCA:"
     },
     "reset_my_vote": {
-      "confirm": "¿Resetear TU propio voto para rehacer pruebas? (No afecta a otros usuarios)",
-      "success": "Tu voto fue reseteado ({{count}}). Listo para una nueva prueba.",
-      "error": "Fallo al resetear voto",
-      "loading": "Reseteando...",
-      "label": "Resetear Mi Voto"
+      "confirm": "¿Reiniciar TU propio voto para repetir pruebas? (Otros usuarios no se ven afectados)",
+      "success": "Tu voto fue reiniciado ({{count}}). Listo para nueva prueba.",
+      "error": "Error al reiniciar el voto",
+      "loading": "Reiniciando...",
+      "label": "Reiniciar Mi Voto"
     },
     "social_lock": {
       "unlocked_title": "¡Contenido desbloqueado! 🎉",
       "unlocked_desc": "Tienes acceso a la Tarjeta de Embajador y al Duelo de Censo.",
       "save_error": "Error al guardar",
-      "premium_title": "¡Contenido Premium Desbloqueado!",
+      "premium_title": "¡Contenido Premium Liberado!",
       "premium_desc": "Tarjeta de Embajador y Duelo de Censo disponibles.",
       "title": "Social Lock",
       "subtitle": "Sigue a Heart Club para desbloquear funciones exclusivas",
@@ -184,7 +152,7 @@
   "feedback": {
     "success": {
       "link_copied_title": "¡Enlace copiado!",
-      "link_copied_paste": "Pégalo en tu app de mensajes favorita.",
+      "link_copied_paste": "Pégalo en tu app de mensajes preferida.",
       "link_copied_share": "Compártelo con la hinchada.",
       "link_copied_troop": "Pégalo donde quieras para convocar a la tropa.",
       "feedback_received_title": "¡Recibido! 💬",
@@ -196,9 +164,248 @@
       "copy_failed": "No se pudo copiar.",
       "message_too_short_title": "Mensaje muy corto",
       "message_too_short_desc": "Cuéntanos un poco más (mín. 5 caracteres).",
-      "send_failed_title": "Fallo al enviar",
-      "send_failed_desc": "Intenta de nuevo en un momento.",
+      "send_failed_title": "Error al enviar",
+      "send_failed_desc": "Inténtalo de nuevo en un momento.",
       "territory_save_error": "Error al guardar territorio"
     }
+  },
+  "auth": {
+    "login": {
+      "google": "Entrar con Google",
+      "divider": "Acceso Rápido por Email (Sin Contraseña)",
+      "email_label": "Email",
+      "email_placeholder": "tu@email.com",
+      "send_link": "Enviar Enlace de Acceso",
+      "terms": "Al entrar, aceptas los Términos de Uso y la Política de Privacidad.",
+      "link_sent_title": "¡Enlace enviado! ✉️",
+      "link_sent_desc": "Revisa tu correo para acceder a tu cuenta.",
+      "error_title": "Tenemos un problema",
+      "error_desc": "No pudimos enviar el enlace. Inténtalo de nuevo o entra con Google."
+    },
+    "verify": {
+      "validating": "Validando tu acceso...",
+      "checking": "Heart Club está verificando tus credenciales.",
+      "missing_token": "Falta el token de acceso.",
+      "already_used": "Este enlace ya fue utilizado.",
+      "expired": "Enlace expirado. Solicita uno nuevo.",
+      "invalid": "Enlace inválido o expirado.",
+      "session_failed": "Error al iniciar sesión. Inténtalo de nuevo.",
+      "session_missing": "No se pudo crear la sesión.",
+      "success": "¡Acceso autorizado! Bienvenido a Heart Club.",
+      "unstable": "Conexión inestable. Solicita un nuevo acceso.",
+      "timeout": "Tiempo de conexión agotado"
+    }
+  },
+  "profile": {
+    "title": "Completa tu perfil",
+    "subtitle": "Identidad básica para la comunidad.",
+    "display_name": "Nombre Visible",
+    "display_name_placeholder": "Tu apodo o nombre",
+    "birth_date": "Fecha de Nacimiento",
+    "day": "Día", "month": "Mes", "year": "Año",
+    "gender": "Género", "select": "Selecciona",
+    "male": "Masculino", "female": "Femenino", "other": "Otros", "prefer_not_say": "Prefiero no decirlo",
+    "continue": "Continuar a la Votación",
+    "required_missing": "Faltan campos obligatorios.",
+    "saved": "¡Perfil guardado! ✅",
+    "save_error": "Error al actualizar el perfil en Supabase.",
+    "months": {
+      "1": "Enero", "2": "Febrero", "3": "Marzo", "4": "Abril",
+      "5": "Mayo", "6": "Junio", "7": "Julio", "8": "Agosto",
+      "9": "Septiembre", "10": "Octubre", "11": "Noviembre", "12": "Diciembre"
+    }
+  },
+  "voting": {
+    "title": "Voto Sagrado",
+    "master_mode": "Modo Master Activo",
+    "test_link": "ENLACE DE VOTACIÓN (PRUEBA) ACTIVO",
+    "heart_club": "Club del Corazón",
+    "search_placeholder": "Busca tu club...",
+    "sympathies": "Simpatías",
+    "add_sympathy": "Agregar simpatía...",
+    "swear": "JURO LEALTAD",
+    "identity_title": "Tu identidad",
+    "identity_name_label": "¿Cómo quieres que te llamen?",
+    "nickname_placeholder": "Tu apodo",
+    "sex_label": "Sexo", "sex_placeholder": "Sexo",
+    "male": "Masculino", "female": "Femenino", "other": "Otro",
+    "birth_year_label": "Año nac.",
+    "year_placeholder": "Año",
+    "continue": "CONTINUAR",
+    "confirm_title": "¿CONFIRMAR VOTO?",
+    "swear_question": "¿Juras lealtad a",
+    "yes_swear": "¡SÍ, LO JURO!",
+    "back": "VOLVER",
+    "toast_complete_title": "Completa tu registro",
+    "toast_complete_desc": "Nombre, sexo y año de nacimiento son obligatorios.",
+    "toast_invalid_club": "Club inválido",
+    "toast_invalid_club_desc": "Selecciona un club real de la lista.",
+    "toast_complete_identity": "Completa tu identidad",
+    "toast_success": "¡Lealtad registrada con éxito! 🏟️",
+    "toast_error": "Error al procesar los votos"
+  },
+  "testar": {
+    "title": "Probar Club • Heart Club",
+    "title_with_club": "Probar: {{club}} • Heart Club",
+    "loading": "Cargando…",
+    "none_selected": "Ningún club seleccionado. Usa el enlace",
+    "test_link_label": "PROBAR CLUB",
+    "to_open": "para abrir el modo prueba.",
+    "start_test": "Iniciar prueba",
+    "mode": "MODO PRUEBA — {{club}}",
+    "disclaimer": "Voto no contabilizado. Tu Club del Corazón permanece intacto.",
+    "test_another": "probar otro",
+    "preview_label": "VISTA PREVIA"
+  },
+  "correction": {
+    "header": "Corrección",
+    "dashboard": "Panel",
+    "title_prefix": "Corregir datos —",
+    "intro": "Sugiere correcciones a los datos oficiales de tu club. Nuestro sistema (IA + Google) revisará cada campo antes de guardar. Si te equivocas, la IA corrige; si la sugerencia es absurda, será rechazada. Deja en blanco lo que no quieras cambiar.",
+    "colors_title": "Colores oficiales",
+    "colors_hint_prefix": "Acepta HEX (",
+    "colors_hint_mid": ") o nombre (",
+    "colors_examples": "negro, blanco, rojo, azul marino, verde bandera...",
+    "colors_hint_suffix": ").",
+    "color_primary": "Primario", "color_secondary": "Secundario", "color_tertiary": "Terciario", "color_quarta": "Cuarto",
+    "current_short": "actual:",
+    "color_placeholder": "#RRGGBB o \"negro\"",
+    "color_invalid": "Color \"{{val}}\" no reconocido. Usa HEX (#RRGGBB) o un nombre (ej.: negro, azul, rojo).",
+    "mascot": "Mascota", "mascot_ph": "Ej.: Zorro",
+    "founded": "Año de fundación", "founded_ph": "Ej.: 1903",
+    "home_city": "Ciudad sede", "country": "País",
+    "stadium_name": "Nombre del estadio", "stadium_city": "Ciudad del estadio", "stadium_capacity": "Capacidad del estadio",
+    "short_name": "Nombre corto",
+    "division": "División actual", "division_ph": "Ej.: Primera",
+    "rivals_label": "Rivales históricos",
+    "rivals_note": "— tu palabra anula a la IA",
+    "rivals_placeholder": "Busca club rival en el banco (escudo garantizado)...",
+    "rivals_disclaimer": "La corrección del hincha se aplica directo, sin validación de IA, y queda señalada en el panel admin.",
+    "has_women": "¿Tiene equipo femenino?",
+    "validating": "Validando con IA...",
+    "send": "Enviar correcciones",
+    "ai_verdict": "Veredicto de la IA",
+    "you_suggested": "Sugeriste",
+    "rejected": "rechazado",
+    "current_prefix": "Actual:",
+    "no_vote_title": "Aún no has votado",
+    "no_vote_desc": "Vota por tu club del corazón primero.",
+    "color_invalid_title": "Color inválido",
+    "color_invalid_desc": "Revisa los campos de color destacados.",
+    "nothing_title": "Nada que corregir",
+    "nothing_desc": "Completa al menos un campo.",
+    "analyzed_title": "Correcciones analizadas",
+    "analyzed_desc": "{{count}} campos evaluados por la IA.",
+    "send_fail": "Error al enviar"
+  },
+  "navbar": {
+    "home": "Inicio", "ranking": "Ranking", "map": "Mapa", "map_long": "Mapa de Calor",
+    "ambassadors": "Embajador", "ambassadors_long": "Embajadores", "ambassadors_short": "Embaj.",
+    "panel": "Panel", "voting": "Votación", "admin": "Admin",
+    "back_to_heart": "Volver al Corazón",
+    "aria": "Navegación principal"
+  },
+  "ambassadors": {
+    "login_title": "Embajadores",
+    "login_required": "Inicia sesión para acceder al panel de embajadores.",
+    "login_now": "Entrar ahora",
+    "page_label": "EMBAJADORES",
+    "sponsor_label": "Socio Oficial",
+    "sponsor_text": "Tu negocio aquí — habla con el equipo Heart Club.",
+    "sponsor_cta": "Anunciar",
+    "level_prefix": "Embajador",
+    "fan_default": "Hincha",
+    "tier_to": "{{a}} → {{b}}",
+    "referred_count": "{{count}} referidos",
+    "missing_count": "· faltan {{count}}",
+    "code_label": "Código:",
+    "invite_fan": "Invitar hincha",
+    "share_link": "Compartir enlace",
+    "whatsapp": "WhatsApp", "telegram": "Telegram", "email": "Email", "copy_link": "Copiar enlace",
+    "more_options": "Más opciones…",
+    "feed_title": "Feed de Actividad",
+    "feed_empty": "Sin actividad nueva en tu región.",
+    "feed_voted": "acaba de votar por",
+    "feed_joined": "se unió a Heart Club",
+    "ranking_title": "Ranking de Dominancia",
+    "tab_world": "Mundial", "tab_continental": "Continental", "tab_national": "Nacional",
+    "tab_state": "Estatal", "tab_municipal": "Municipal",
+    "ranking_empty": "Aún sin datos de ranking. ¡Invita amigos con tu código!",
+    "col_name": "Nombre", "col_club": "Club", "col_city": "Ciudad", "col_points": "Puntos",
+    "anon": "Anónimo",
+    "footer_note": "Muro de publicaciones sujeto a auditoría. Disponible para nivel Plata o superior.",
+    "census_title": "Completa tu Censo",
+    "census_desc": "Necesitamos algunos datos más para liberar el panel de Embajador.",
+    "whatsapp_label": "WhatsApp",
+    "phone_generic": "Número",
+    "phone_digits_error": "Ingresa {{digits}} dígitos para {{country}}",
+    "profession_label": "Profesión",
+    "profession_hint": "Escribe tu profesión — sugerimos mientras escribes. Puedes elegir de la lista o escribir libremente.",
+    "profession_placeholder": "Ej.: Ingeniero, Profesor, Médico...",
+    "unlock_panel": "Liberar Panel",
+    "whatsapp_invalid_title": "WhatsApp inválido",
+    "whatsapp_invalid_desc": "Ingresa un número válido para {{country}}.",
+    "profession_required_title": "Profesión obligatoria",
+    "profession_required_desc": "Escribe tu profesión.",
+    "saved_title": "¡Panel liberado!",
+    "saved_desc": "Tus datos se guardaron con éxito.",
+    "save_error_title": "Error al guardar",
+    "save_error_desc": "Inténtalo de nuevo.",
+    "link_copied": "¡Enlace copiado!",
+    "link_copied_desc": "Pégalo donde quieras compartir.",
+    "copy_fail": "No se pudo copiar",
+    "share_subject": "Te invito a Heart Club Census 🧡",
+    "referral_msg": "🧡 ¡Hola, hincha! Registra tu corazón en Heart Club por mi enlace y dominemos el mapa:{{from}} {{link}}",
+    "from_who": " (invitación de {{name}})"
+  },
+  "ambassador_center": {
+    "title": "PANEL DE COMANDO",
+    "subtitle": "DEL EMBAJADOR",
+    "back": "Volver",
+    "your_level": "Tu Nivel",
+    "rookie": "Recluta",
+    "missing_for": "Faltan para {{label}}",
+    "indications": "referidos",
+    "max_level": "🏆 ¡Nivel máximo alcanzado!",
+    "owner_of": "Dueño del barrio {{name}}",
+    "kpi_indications": "Referidos",
+    "kpi_audited": "Votos Auditados Generados",
+    "kpi_conversions": "Conversión de Afinidades",
+    "share_title": "Compartir Inteligente",
+    "wa": "WhatsApp", "tg": "Telegram", "ig": "Instagram", "more": "Más",
+    "link_copied": "¡Enlace copiado!",
+    "ig_copied": "Texto copiado — pégalo en Instagram",
+    "share_text": "¡Ayuda a {{club}} a dominar {{neighborhood}} en Heart Club! Vota aquí: {{link}}",
+    "default_club": "tu club",
+    "default_neighborhood": "tu zona"
+  },
+  "heatmap": {
+    "title": "MAPA DE CALOR",
+    "world": "Mundo",
+    "back_to_dashboard": "Volver al Panel",
+    "search_club": "Buscar club...",
+    "general_map": "🌎 Mapa General",
+    "heart_label": "❤️ Corazón",
+    "vs_label": "⚔️ vs",
+    "total_visible": "Total visible",
+    "top": "Top:",
+    "no_votes_yet": "✨ Aún sin votos",
+    "no_votes_yet_desc": "Este club aún no ha recibido Votos Sagrados en esta región.",
+    "votes_of_in_city": "Votos de {{club}} en una ciudad...",
+    "world_countries": "Países del Mundo",
+    "states_of": "Estados de {{name}}",
+    "cities_of": "Ciudades de {{name}}",
+    "neighborhoods_of": "Barrios de {{name}}",
+    "no_votes_registered": "Aún sin votos registrados.",
+    "loading": "Cargando...",
+    "top_clubs_in": "Clubes más votados en {{city}}",
+    "loading_votes": "Cargando votos...",
+    "loading_territory": "Cargando territorio...",
+    "density": "Densidad de votos",
+    "low": "Baja", "high": "Alta",
+    "scope_world": "🌍 Mundial",
+    "confirm_territory": "Confirma tu territorio",
+    "blocked_until_confirm": "El Mapa de Calor está bloqueado hasta que confirmes dónde vives.",
+    "open_confirmation": "Abrir confirmación"
   }
 }
