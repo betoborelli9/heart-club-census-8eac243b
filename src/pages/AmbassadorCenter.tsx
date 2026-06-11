@@ -72,7 +72,7 @@ export default function AmbassadorCenter() {
   const copyLink = async () => {
     await navigator.clipboard.writeText(inviteUrl);
     setCopied(true);
-    toast.success("Link copiado!");
+    toast.success(t("ambassador_center.link_copied"));
     setTimeout(() => setCopied(false), 1800);
   };
 
