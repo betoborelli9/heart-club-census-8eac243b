@@ -129,11 +129,11 @@ export default function NewsFeedCards({ teamName, primaryColor = "#ff6200", club
         <div className="flex items-center gap-2">
           <Zap className="w-4 h-4" style={{ color: primaryColor }} />
           <h2 className="text-[11px] font-black uppercase italic tracking-widest text-white/70">
-            Radar {teamName}
+            {t("news.radar_label")} {teamName}
           </h2>
         </div>
         <span className="text-[9px] font-black text-white/30 uppercase tracking-tighter italic">
-          Somente Links Oficiais — Monitoramento IA
+          {t("news.official_links")}
         </span>
       </header>
 
