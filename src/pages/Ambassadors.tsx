@@ -569,7 +569,7 @@ const Ambassadors = () => {
                 {/* Código + compartilhamento multicanal */}
                 <div className="flex items-center gap-2 flex-wrap">
                   <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-xl px-4 py-2.5">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-white/40">Código:</span>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-white/40">{t("ambassadors.code_label")}</span>
                     <span className="text-lg font-black tracking-[0.2em]" style={{ color: theme.primaryHex }}>
                       {profile?.codigo_indicacao || "—"}
                     </span>
