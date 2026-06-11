@@ -1569,7 +1569,7 @@ const MapaCalor = () => {
                     </p>
                     {heartCompareData?.topRegion && (
                       <p className="text-[8px] text-muted-foreground mt-1 truncate">
-                        Top: <span className="font-black uppercase">{heartCompareData.topRegion.region}</span> (
+                        {t("heatmap.top")} <span className="font-black uppercase">{heartCompareData.topRegion.region}</span> (
                         {fmt(heartCompareData.topRegion.votes)})
                       </p>
                     )}
