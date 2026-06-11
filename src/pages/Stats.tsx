@@ -325,29 +325,32 @@ const Stats = () => {
   };
 
   const hypeMessage = useMemo(() => {
-    if (!myRow) return "Seu clube ainda não recebeu votos neste recorte.";
-    if (myRow.growth_24h >= 50) return "🔥 Crescimento explosivo nas últimas 24h!";
-    if (myIdx === 0) return "👑 Domínio absoluto nesta região.";
-    if (myIdx < 3) return "🚀 Seu clube está no pódio — empurre mais um pouco!";
-    if (myRow.growth_7d > 0) return "📈 Movimento crescente. Hora de convocar a torcida.";
-    return "🎯 Cada voto conta. Convide a torcida e suba no ranking.";
-  }, [myRow, myIdx]);
+    if (!myRow) return t("ranking.hype.no_votes");
+    if (myRow.growth_24h >= 50) return t("ranking.hype.explosive");
+    if (myIdx === 0) return t("ranking.hype.domination");
+    if (myIdx < 3) return t("ranking.hype.podium");
+    if (myRow.growth_7d > 0) return t("ranking.hype.growing");
+    return t("ranking.hype.default");
+  }, [myRow, myIdx, t]);
 
   const goals = useMemo(() => {
     const list: string[] = [];
     if (myRow && aboveRow) {
       const diff = aboveRow.votes - myRow.votes + 1;
-      list.push(`Faltam ${fmt(diff)} votos para ultrapassar o ${aboveRow.club}.`);
+      list.push(t("ranking.goals.overtake", { votes: fmt(diff), club: aboveRow.club }));
     }
     if (myRow && top10Row && myIdx > 9) {
-      list.push(`A ${fmt(top10Row.votes - myRow.votes + 1)} votos do Top 10 ${LEVEL_META[level].label.toLowerCase()}.`);
+      list.push(t("ranking.goals.top10", {
+        votes: fmt(top10Row.votes - myRow.votes + 1),
+        scope: levelLabel(level).toLowerCase(),
+      }));
     }
     if (level !== "neighborhood" && userVote.bairro) {
-      list.push(`Confira o ranking no seu bairro (${userVote.bairro}).`);
+      list.push(t("ranking.goals.check_neighborhood", { neighborhood: userVote.bairro }));
     }
-    if (myIdx === 0 && myRow) list.push("Liderança consolidada — defenda o topo.");
+    if (myIdx === 0 && myRow) list.push(t("ranking.goals.leader"));
     return list.slice(0, 3);
-  }, [myRow, aboveRow, top10Row, myIdx, level, userVote]);
+  }, [myRow, aboveRow, top10Row, myIdx, level, userVote, t]);
 
   // ─── Search (debounced) ───
   useEffect(() => {
@@ -368,7 +371,7 @@ const Stats = () => {
 
   const copyInvite = () => {
     navigator.clipboard.writeText(inviteLink);
-    toast({ title: "Link copiado!", description: "Compartilhe com a torcida 🔥" });
+    toast({ title: t("ranking.invite.copied_title"), description: t("ranking.invite.copied_desc") });
   };
 
   // ─────────────────────────────────────────────────────────
