@@ -183,16 +183,18 @@ export default function CompetitionsPanel({ clubName, primaryColor = "#ff6200" }
 }
 
 function MatchCard({ match, live, primaryColor }: { match: Match | null; live: boolean; primaryColor: string }) {
+  const { t, language } = useTranslationApp();
   if (!match) {
     return (
       <div className="rounded-xl bg-white/[0.02] border border-white/5 p-3 text-[11px] italic text-white/40">
-        Sem jogo agendado nesta competição.
+        {t("competitions.no_match")}
       </div>
     );
   }
   const dt = new Date(match.date);
-  const dateStr = dt.toLocaleDateString("pt-BR", { day: "2-digit", month: "short", weekday: "short" }).replace(/\./g, "");
-  const timeStr = dt.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+  const locale = language === "en" ? "en-US" : language === "es" ? "es-ES" : "pt-BR";
+  const dateStr = dt.toLocaleDateString(locale, { day: "2-digit", month: "short", weekday: "short" }).replace(/\./g, "");
+  const timeStr = dt.toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" });
   const isLive = live || LIVE_STATUSES.has(match.status || "");
 
   return (
@@ -200,7 +202,7 @@ function MatchCard({ match, live, primaryColor }: { match: Match | null; live: b
       <div className="flex items-center justify-between text-[9px] font-mono uppercase tracking-widest">
         {isLive ? (
           <span className="flex items-center gap-1.5 text-red-500">
-            <Radio className="w-3 h-3 animate-pulse" /> AO VIVO {match.elapsed ? `· ${match.elapsed}'` : ""}
+            <Radio className="w-3 h-3 animate-pulse" /> {t("competitions.live")} {match.elapsed ? `· ${match.elapsed}'` : ""}
           </span>
         ) : (
           <span className="flex items-center gap-1.5 text-white/40">
