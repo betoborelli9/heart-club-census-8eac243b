@@ -11,13 +11,15 @@ import { useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client"; // CAMINHO CORRETO LOVABLE
 import { toast } from "sonner";
+import { useTranslationApp } from "@/hooks/useTranslationApp";
+import i18n from "@/i18n";
 
 const VERIFY_TIMEOUT_MS = 8000;
 
 const withTimeout = async <T,>(promise: Promise<T>, timeoutMs: number): Promise<T> => {
   let timeoutId: number | undefined;
   const timeout = new Promise<never>((_, reject) => {
-    timeoutId = window.setTimeout(() => reject(new Error("Tempo de conexão excedido")), timeoutMs);
+    timeoutId = window.setTimeout(() => reject(new Error(i18n.t("auth.verify.timeout") as string)), timeoutMs);
   });
 
   try {
@@ -33,6 +35,7 @@ const withTimeout = async <T,>(promise: Promise<T>, timeoutMs: number): Promise<
 const Verify = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const { t } = useTranslationApp();
 
   useEffect(() => {
     const validateToken = async () => {
@@ -41,7 +44,7 @@ const Verify = () => {
         const redirect = searchParams.get("redirect") || "/voting";
 
         if (!token) {
-          toast.error("Token de acesso ausente.");
+          toast.error(t("auth.verify.missing_token"));
           navigate("/login");
           return;
         }
@@ -54,9 +57,9 @@ const Verify = () => {
 
       if (error || !data?.valid) {
         const reason = data?.error;
-        if (reason === "already_used") toast.error("Este link já foi utilizado.");
-        else if (reason === "expired") toast.error("Link expirado. Solicite um novo.");
-        else toast.error("Link inválido ou expirado.");
+        if (reason === "already_used") toast.error(t("auth.verify.already_used"));
+        else if (reason === "expired") toast.error(t("auth.verify.expired"));
+        else toast.error(t("auth.verify.invalid"));
         navigate("/login");
         return;
       }
@@ -72,34 +75,34 @@ const Verify = () => {
         );
         if (otpErr) {
           console.error("[VERIFY] verifyOtp falhou", otpErr);
-          toast.error("Falha ao iniciar sessão. Tente novamente.");
+          toast.error(t("auth.verify.session_failed"));
           navigate("/login");
           return;
         }
       } else {
-        toast.error("Sessão não pôde ser criada.");
+        toast.error(t("auth.verify.session_missing"));
         navigate("/login");
         return;
       }
 
-        toast.success("Acesso autorizado! Bem-vindo ao Heart Club.");
+        toast.success(t("auth.verify.success"));
         navigate(redirect);
       } catch (error) {
         console.error("[VERIFY] conexão instável", error);
-        toast.error("Conexão instável. Solicite um novo acesso.");
+        toast.error(t("auth.verify.unstable"));
         navigate("/login");
       }
     };
 
     validateToken();
-  }, [searchParams, navigate]);
+  }, [searchParams, navigate, t]);
 
   return (
     <div className="flex h-screen items-center justify-center bg-background">
       <div className="text-center">
-        <h2 className="text-2xl font-bold mb-4">Validando seu acesso...</h2>
+        <h2 className="text-2xl font-bold mb-4">{t("auth.verify.validating")}</h2>
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-        <p className="mt-4 text-muted-foreground">O Heart Club está verificando suas credenciais.</p>
+        <p className="mt-4 text-muted-foreground">{t("auth.verify.checking")}</p>
       </div>
     </div>
   );
