@@ -155,7 +155,7 @@ export default function AmbassadorCenter() {
         <Card>
           <CardHeader>
             <CardTitle className="text-base italic flex items-center gap-2">
-              <Share2 className="w-4 h-4 text-primary" /> Compartilhamento Inteligente
+              <Share2 className="w-4 h-4 text-primary" /> {t("ambassador_center.share_title")}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
