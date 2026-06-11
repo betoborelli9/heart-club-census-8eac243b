@@ -595,24 +595,24 @@ const Ambassadors = () => {
                       className="bg-[#0d0d0d] border border-white/10 text-white w-60"
                     >
                       <DropdownMenuLabel className="text-[10px] uppercase tracking-[0.2em] text-white/40">
-                        Compartilhar link
+                        {t("ambassadors.share_link")}
                       </DropdownMenuLabel>
                       <DropdownMenuSeparator className="bg-white/5" />
                       <DropdownMenuItem onClick={shareWhatsApp} className="gap-2 focus:bg-white/10 cursor-pointer">
-                        <MessageCircle className="w-4 h-4 text-[#25D366]" /> WhatsApp
+                        <MessageCircle className="w-4 h-4 text-[#25D366]" /> {t("ambassadors.whatsapp")}
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={shareTelegram} className="gap-2 focus:bg-white/10 cursor-pointer">
-                        <Send className="w-4 h-4 text-[#229ED9]" /> Telegram
+                        <Send className="w-4 h-4 text-[#229ED9]" /> {t("ambassadors.telegram")}
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={shareEmail} className="gap-2 focus:bg-white/10 cursor-pointer">
-                        <Mail className="w-4 h-4 text-[#ff6200]" /> E-mail
+                        <Mail className="w-4 h-4 text-[#ff6200]" /> {t("ambassadors.email")}
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={shareCopyLink} className="gap-2 focus:bg-white/10 cursor-pointer">
-                        <Link2 className="w-4 h-4 text-white/70" /> Copiar link
+                        <Link2 className="w-4 h-4 text-white/70" /> {t("ambassadors.copy_link")}
                       </DropdownMenuItem>
                       <DropdownMenuSeparator className="bg-white/5" />
                       <DropdownMenuItem onClick={shareNative} className="gap-2 focus:bg-white/10 cursor-pointer">
-                        <Sparkles className="w-4 h-4" style={{ color: theme.primaryHex }} /> Mais opções…
+                        <Sparkles className="w-4 h-4" style={{ color: theme.primaryHex }} /> {t("ambassadors.more_options")}
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
