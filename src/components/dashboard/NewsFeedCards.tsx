@@ -184,7 +184,7 @@ export default function NewsFeedCards({ teamName, primaryColor = "#ff6200", club
       )}
 
       <p className="text-[8px] text-center text-white/15 uppercase font-black italic pt-1">
-        Cruzamento de dados: Google · Gemini · Wikipédia
+        {t("news.data_sources")}
       </p>
     </section>
   );
