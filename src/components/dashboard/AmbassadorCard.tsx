@@ -14,11 +14,13 @@ import { mockAmbassadors } from "@/data/mockDashboard";
 import { useToast } from "@/hooks/use-toast";
 import { useUser } from "@/contexts/UserContext";
 import { useClubTheme } from "@/hooks/useClubTheme";
+import { useTranslationApp } from "@/hooks/useTranslationApp";
 
 const medals = ["🥇", "🥈", "🥉"];
 
 const AmbassadorSection = () => {
   const { toast } = useToast();
+  const { t } = useTranslationApp();
   const { profile } = useUser();
   const clubName = (profile as any)?.clube_coracao ?? null;
   const theme = useClubTheme(clubName);
@@ -28,13 +30,16 @@ const AmbassadorSection = () => {
   const link = refCode
     ? `https://heartclubapp.com/convite?ref=${refCode}`
     : "https://heartclubapp.com/convite";
-  const message = `Fala, torcedor! Registre seu coração no Heart Club pelo meu link e vamos dominar o mapa pelo ${clubName || "nosso clube"}: ${link}`;
+  const message = t("components.ambassador_card.message", {
+    club: clubName || t("components.ambassador_card.default_club"),
+    link,
+  });
 
   const nativeShare = async () => {
     if (typeof navigator !== "undefined" && (navigator as any).share) {
       try {
         await (navigator as any).share({
-          title: "Heart Club — Censo Global do Torcedor",
+          title: t("components.ambassador_card.share_title"),
           text: message,
           url: link,
         });
@@ -44,7 +49,10 @@ const AmbassadorSection = () => {
     } else {
       // Desktop fallback: copia link
       navigator.clipboard.writeText(message);
-      toast({ title: "Link copiado!", description: "Cole no app de mensagens preferido." });
+      toast({
+        title: t("feedback.success.link_copied_title"),
+        description: t("feedback.success.link_copied_paste"),
+      });
     }
   };
 
@@ -59,7 +67,10 @@ const AmbassadorSection = () => {
   };
   const copyLink = () => {
     navigator.clipboard.writeText(link);
-    toast({ title: "Link copiado!", description: "Compartilhe com a torcida." });
+    toast({
+      title: t("feedback.success.link_copied_title"),
+      description: t("feedback.success.link_copied_share"),
+    });
   };
 
   return (
@@ -83,10 +94,10 @@ const AmbassadorSection = () => {
               </div>
               <div>
                 <h3 className="font-bold text-white text-sm italic" style={{ fontFamily: "Verdana, sans-serif" }}>
-                  Programa de Embaixadores
+                  {t("components.ambassador_card.title")}
                 </h3>
                 <p className="text-xs text-white/60 italic">
-                  Convide torcedores e domine o mapa pelo seu clube
+                  {t("components.ambassador_card.subtitle")}
                 </p>
               </div>
             </div>
@@ -96,11 +107,11 @@ const AmbassadorSection = () => {
               style={{ border: `1px solid ${glow}40` }}
             >
               <div className="flex-1 min-w-0">
-                <p className="text-[10px] text-white/50 italic">Seu link único</p>
+                <p className="text-[10px] text-white/50 italic">{t("components.ambassador_card.your_link")}</p>
                 <p className="font-mono font-bold text-white text-xs truncate">{link.replace("https://", "")}</p>
               </div>
               <Button size="sm" variant="outline" onClick={copyLink} className="shrink-0 bg-black border-white/20 text-white hover:bg-white/10">
-                <Copy className="w-3 h-3 mr-1" /> Copiar
+                <Copy className="w-3 h-3 mr-1" /> {t("common.copy")}
               </Button>
             </div>
 
@@ -114,7 +125,7 @@ const AmbassadorSection = () => {
                 boxShadow: `0 0 14px ${glow}80`,
               }}
             >
-              <Share2 className="w-4 h-4 mr-2" /> Compartilhar Convite
+              <Share2 className="w-4 h-4 mr-2" /> {t("components.ambassador_card.share_cta")}
             </Button>
 
             {/* Fallback Desktop */}
@@ -145,7 +156,7 @@ const AmbassadorSection = () => {
         <Card className="glass-card border-border/30">
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-semibold flex items-center gap-2 font-display italic">
-              <Trophy className="w-4 h-4 text-primary" /> Ranking de Embaixadores
+              <Trophy className="w-4 h-4 text-primary" /> {t("components.ambassador_card.ranking_title")}
             </CardTitle>
           </CardHeader>
           <CardContent>

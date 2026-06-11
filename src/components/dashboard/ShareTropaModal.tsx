@@ -7,6 +7,7 @@ import { useMemo } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { MessageCircle, Send, Copy, Share2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useTranslationApp } from "@/hooks/useTranslationApp";
 import logo from "@/assets/logo.png";
 
 interface Props {
@@ -16,24 +17,11 @@ interface Props {
 }
 
 const BASE_URL = "https://heartclubapp.com/convite";
-const TEXT = `⚽ VOCÊ FOI CONVOCADO PARA O HEART CLUB! 🧡
-
-Acabei de votar no nosso time! O Heart Club é o maior censo de torcidas do mundo.
-
-COMO FUNCIONA:
-1️⃣ Clique no link abaixo e dê seu voto.
-2️⃣ Você vota no seu Clube do Coração ❤️ E AINDA em até 4 Clubes Simpatia 🧡
-3️⃣ Após votar, você ganha uma Senha de Convite única.
-4️⃣ Clique em 'Convoca a Tropa' e chame seus amigos.
-
-Quanto mais gente votar com seu convite, mais pontos você ganha para subir de nível: Bronze ➔ Prata ➔ Ouro ➔ DIAMANTE! 💎
-
-Embaixadores Diamante terão prêmios exclusivos no futuro. Vamos dominar o ranking!
-
-👇 VOTE AGORA E CONVOQUE:`;
 
 export default function ShareTropaModal({ open, onOpenChange, refCode }: Props) {
   const { toast } = useToast();
+  const { t } = useTranslationApp();
+  const TEXT = t("components.share_tropa.invite_text");
   const link = useMemo(
     () => (refCode ? `${BASE_URL}?ref=${encodeURIComponent(refCode)}` : BASE_URL),
     [refCode],
@@ -77,9 +65,12 @@ export default function ShareTropaModal({ open, onOpenChange, refCode }: Props) 
   const handleCopy = async () => {
     try {
       await navigator.clipboard.writeText(fullText);
-      toast({ title: "Link copiado!", description: "Cole onde quiser para convocar a tropa." });
+      toast({
+        title: t("feedback.success.link_copied_title"),
+        description: t("feedback.success.link_copied_troop"),
+      });
     } catch {
-      toast({ variant: "destructive", title: "Não foi possível copiar." });
+      toast({ variant: "destructive", title: t("feedback.error.copy_failed") });
     }
   };
 
@@ -118,10 +109,10 @@ export default function ShareTropaModal({ open, onOpenChange, refCode }: Props) 
             </div>
             <div className="flex-1 min-w-0">
               <DialogTitle className="text-white font-black italic uppercase tracking-tight text-lg">
-                Convocar a Tropa
+                {t("components.share_tropa.title")}
               </DialogTitle>
               <DialogDescription className="text-white/60 text-xs italic">
-                Heart Club · Censo Global do Futebol
+                {t("components.share_tropa.subtitle")}
               </DialogDescription>
             </div>
           </div>
@@ -135,7 +126,7 @@ export default function ShareTropaModal({ open, onOpenChange, refCode }: Props) 
         >
           <img
             src="/heart-club-og.png"
-            alt="Jornada do Embaixador — Bronze, Prata, Ouro, Diamante"
+            alt={t("components.share_tropa.banner_alt")}
             className="w-full h-auto block"
             loading="lazy"
           />
@@ -153,7 +144,7 @@ export default function ShareTropaModal({ open, onOpenChange, refCode }: Props) 
               onClick={handleCopy}
               className="text-[10px] font-black uppercase italic text-[#ff6200] hover:underline flex items-center gap-1 shrink-0"
             >
-              <Copy className="w-3 h-3" /> Copiar
+              <Copy className="w-3 h-3" /> {t("common.copy")}
             </button>
           </div>
 
@@ -161,7 +152,7 @@ export default function ShareTropaModal({ open, onOpenChange, refCode }: Props) 
             onClick={handleNative}
             className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg bg-[#ff6200] text-black font-black italic uppercase text-xs hover:scale-[1.02] transition-transform"
           >
-            <Share2 className="w-4 h-4" /> Compartilhar (mais opções)
+            <Share2 className="w-4 h-4" /> {t("components.share_tropa.share_more")}
           </button>
         </div>
       </DialogContent>
