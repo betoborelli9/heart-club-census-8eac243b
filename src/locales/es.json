@@ -406,6 +406,7 @@
     "scope_world": "🌍 Mundial",
     "confirm_territory": "Confirma tu territorio",
     "blocked_until_confirm": "El Mapa de Calor está bloqueado hasta que confirmes dónde vives.",
-    "open_confirmation": "Abrir confirmación"
+    "open_confirmation": "Abrir confirmación",
+    "votes_word": "VOTOS"
   }
 }

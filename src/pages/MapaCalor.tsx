@@ -35,6 +35,7 @@ import { CLUBS_DATA } from "@/clubes-data";
 import { fetchOfficialGoianiaNeighborhoodGeoJson, hasPreciseOverride } from "@/lib/official-neighborhoods";
 import AddressModal from "@/components/AddressModal";
 import logo from "@/assets/logo.png";
+import { useTranslationApp } from "@/hooks/useTranslationApp";
 
 /* ---------- Helpers ---------- */
 
@@ -734,6 +735,7 @@ function FitToGeoJson({ data, deps }: { data: any | null; deps: any[] }) {
 
 const MapaCalor = () => {
   const navigate = useNavigate();
+  const { t } = useTranslationApp();
   const { user, signOut } = useUser();
   const [heartClubName, setHeartClubName] = useState("");
   const [activeClubName, setActiveClubName] = useState("");
@@ -1398,7 +1400,7 @@ const MapaCalor = () => {
       const { name, votes, heartVotes, invaderVotes } = lookupVotesForFeature(feature?.properties);
       const breakdown = compareClubName
         ? `<div style="color:#ff6200;font-weight:900;font-size:10px;margin-top:2px">❤️ ${fmt(heartVotes)}</div><div style="color:#b066ff;font-weight:900;font-size:10px">⚔️ ${fmt(invaderVotes)}</div>`
-        : `<div style="color:#ff6200;font-weight:900;font-size:11px;margin-top:2px">${fmt(votes)} VOTOS</div>`;
+        : `<div style="color:#ff6200;font-weight:900;font-size:11px;margin-top:2px">${fmt(votes)} ${t("heatmap.votes_word")}</div>`;
       layer.bindTooltip(
         `<div style="font-family:Verdana,sans-serif"><div style="font-weight:900;font-style:italic;text-transform:uppercase;font-size:11px;color:#fff">${name}</div>${breakdown}</div>`,
         { sticky: true, direction: "top", opacity: 0.95, className: "war-tooltip" },
@@ -1426,7 +1428,7 @@ const MapaCalor = () => {
         },
       });
     },
-    [lookupVotesForFeature, viewMode, activeState, goCountry, goState, goCity, compareClubName],
+    [lookupVotesForFeature, viewMode, activeState, goCountry, goState, goCity, compareClubName, t],
   );
 
   const geoKey = useMemo(
@@ -1452,7 +1454,7 @@ const MapaCalor = () => {
           <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate("/dashboard")}>
             <ArrowLeft className="w-4 h-4 text-muted-foreground" />
             <img src={logo} alt="Heart Club" className="h-8 w-auto" />
-            <span className="font-black italic text-sm tracking-tighter hidden sm:block">MAPA DE CALOR</span>
+            <span className="font-black italic text-sm tracking-tighter hidden sm:block">{t("heatmap.title")}</span>
           </div>
           <Button variant="ghost" size="icon" onClick={() => signOut()}>
             <LogOut className="w-4 h-4" />
@@ -1467,7 +1469,7 @@ const MapaCalor = () => {
               onClick={goWorld}
               className="flex items-center gap-1 text-[10px] font-black italic uppercase tracking-widest text-muted-foreground hover:text-primary transition-colors"
             >
-              <Home className="w-3 h-3" /> Mundo
+              <Home className="w-3 h-3" /> {t("heatmap.world")}
             </button>
             {breadcrumbs.slice(1).map((bc, i) => (
               <span key={i} className="flex items-center gap-1">
@@ -1485,7 +1487,7 @@ const MapaCalor = () => {
             onClick={() => navigate("/dashboard")}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-primary/10 border border-primary/30 hover:bg-primary/20 transition-colors text-[10px] font-black italic uppercase tracking-widest text-primary"
           >
-            <ArrowLeft className="w-3 h-3" /> Voltar ao Dashboard
+            <ArrowLeft className="w-3 h-3" /> {t("heatmap.back_to_dashboard")}
           </button>
         </div>
 
@@ -1496,7 +1498,7 @@ const MapaCalor = () => {
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
                   value={searchQuery}
-                  placeholder="Pesquisar clube..."
+                  placeholder={t("heatmap.search_club")}
                   className="pl-10 bg-secondary/50 border-white/5"
                   onChange={(e) => handleSearch(e.target.value)}
                 />
@@ -1533,7 +1535,7 @@ const MapaCalor = () => {
                   }}
                   className={`px-3 py-1.5 rounded-xl text-[10px] font-black italic uppercase tracking-widest transition-colors ${!activeClubName ? "bg-primary text-primary-foreground" : "bg-white/5 border border-white/10 text-muted-foreground hover:text-primary"}`}
                 >
-                  🌎 Mapa Geral
+                  {t("heatmap.general_map")}
                 </button>
                 {heartClubName && (
                   <button
@@ -1555,19 +1557,19 @@ const MapaCalor = () => {
                         <ClubLogo src={activeClubLogo} alt={activeClubName} size="sm" />
                       </div>
                       <div className="min-w-0">
-                        <p className="text-[7px] text-primary font-black uppercase tracking-widest">❤️ Coração</p>
+                        <p className="text-[7px] text-primary font-black uppercase tracking-widest">{t("heatmap.heart_label")}</p>
                         <h3 className="text-[10px] font-black italic uppercase truncate leading-tight">
                           {activeClubName}
                         </h3>
                       </div>
                     </div>
-                    <p className="text-[9px] text-muted-foreground font-black uppercase">Total visível</p>
+                    <p className="text-[9px] text-muted-foreground font-black uppercase">{t("heatmap.total_visible")}</p>
                     <p className="text-base text-primary font-black italic">
                       {fmt(heartCompareData?.totalVotes ?? totalVotes)}
                     </p>
                     {heartCompareData?.topRegion && (
                       <p className="text-[8px] text-muted-foreground mt-1 truncate">
-                        Top: <span className="font-black uppercase">{heartCompareData.topRegion.region}</span> (
+                        {t("heatmap.top")} <span className="font-black uppercase">{heartCompareData.topRegion.region}</span> (
                         {fmt(heartCompareData.topRegion.votes)})
                       </p>
                     )}
@@ -1585,7 +1587,7 @@ const MapaCalor = () => {
                           <ClubLogo src={compareData.info?.logoUrl} alt={compareData.name} size="sm" />
                         </div>
                         <div className="min-w-0">
-                          <p className="text-[7px] text-muted-foreground font-black uppercase tracking-widest">⚔️ vs</p>
+                          <p className="text-[7px] text-muted-foreground font-black uppercase tracking-widest">{t("heatmap.vs_label")}</p>
                           <h3 className="text-[10px] font-black italic uppercase truncate leading-tight">
                             {compareData.name}
                           </h3>
@@ -1593,13 +1595,13 @@ const MapaCalor = () => {
                       </div>
                       {compareData.totalVotes > 0 ? (
                         <>
-                          <p className="text-[9px] text-muted-foreground font-black uppercase">Total visível</p>
+                          <p className="text-[9px] text-muted-foreground font-black uppercase">{t("heatmap.total_visible")}</p>
                           <p className="text-base font-black italic" style={{ color: HEAT_PALETTE[3] }}>
                             {fmt(compareData.totalVotes)}
                           </p>
                           {compareData.topRegion && (
                             <p className="text-[8px] text-muted-foreground mt-1 truncate">
-                              Top: <span className="font-black uppercase">{compareData.topRegion.region}</span> (
+                              {t("heatmap.top")} <span className="font-black uppercase">{compareData.topRegion.region}</span> (
                               {fmt(compareData.topRegion.votes)})
                             </p>
                           )}
@@ -1607,10 +1609,10 @@ const MapaCalor = () => {
                       ) : (
                         <div className="mt-1 px-2 py-2 rounded-lg bg-primary/5 border border-primary/20">
                           <p className="text-[9px] font-black italic uppercase tracking-wide text-primary leading-tight">
-                            ✨ Ainda sem votos
+                            {t("heatmap.no_votes_yet")}
                           </p>
                           <p className="text-[8px] text-muted-foreground mt-0.5 leading-snug">
-                            Este clube ainda não recebeu Votos Sagrados nesta região.
+                            {t("heatmap.no_votes_yet_desc")}
                           </p>
                         </div>
                       )}
@@ -1624,7 +1626,7 @@ const MapaCalor = () => {
                     <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                     <Input
                       value={citySearchQuery}
-                      placeholder={`Votos de ${activeClubName} em uma cidade...`}
+                      placeholder={t("heatmap.votes_of_in_city", { club: activeClubName })}
                       className="pl-10 bg-secondary/50 border-white/5 text-xs"
                       onChange={(e) => handleCitySearch(e.target.value)}
                     />
@@ -1655,14 +1657,14 @@ const MapaCalor = () => {
             <div className="rounded-[24px] bg-black/40 backdrop-blur-xl border border-white/5 p-4">
               <h3 className="text-[10px] font-black italic uppercase tracking-widest text-muted-foreground mb-3 flex items-center gap-2">
                 <Trophy className="w-3 h-3" />
-                {viewMode === "world" && "Países do Mundo"}
-                {viewMode === "country" && `Estados de ${activeCountry}`}
-                {viewMode === "state" && `Cidades de ${activeState}`}
-                {viewMode === "city" && `Bairros de ${activeCity}`}
+                {viewMode === "world" && t("heatmap.world_countries")}
+                {viewMode === "country" && t("heatmap.states_of", { name: activeCountry })}
+                {viewMode === "state" && t("heatmap.cities_of", { name: activeState })}
+                {viewMode === "city" && t("heatmap.neighborhoods_of", { name: activeCity })}
               </h3>
               {ranking.length === 0 ? (
                 <p className="text-[11px] italic text-muted-foreground text-center py-4">
-                  Nenhum voto registrado ainda.
+                  {t("heatmap.no_votes_registered")}
                 </p>
               ) : (
                 <div className="space-y-2 max-h-[280px] overflow-y-auto pr-1">
@@ -1711,10 +1713,10 @@ const MapaCalor = () => {
             {viewMode === "city" && activeCity && (
               <div className="rounded-[24px] bg-black/40 backdrop-blur-xl border border-primary/20 p-4">
                 <h3 className="text-[10px] font-black italic uppercase tracking-widest text-primary mb-3 flex items-center gap-2">
-                  <Flame className="w-3 h-3" /> Clubes mais votados em {activeCity}
+                  <Flame className="w-3 h-3" /> {t("heatmap.top_clubs_in", { city: activeCity })}
                 </h3>
                 {cityClubs.length === 0 ? (
-                  <p className="text-[11px] italic text-muted-foreground text-center py-3">Carregando...</p>
+                  <p className="text-[11px] italic text-muted-foreground text-center py-3">{t("heatmap.loading")}</p>
                 ) : (
                   <div className="space-y-2 max-h-[320px] overflow-y-auto pr-1">
                     {cityClubs.map((c, i) => {
@@ -1749,7 +1751,7 @@ const MapaCalor = () => {
                 <div className="absolute top-3 right-3 z-[500] px-3 py-1.5 rounded-xl bg-black/70 border border-primary/30 flex items-center gap-2">
                   <Loader2 className="w-3 h-3 animate-spin text-primary" />
                   <span className="text-[9px] font-black italic uppercase text-primary">
-                    {loading ? "Carregando votos..." : "Carregando território..."}
+                    {loading ? t("heatmap.loading_votes") : t("heatmap.loading_territory")}
                   </span>
                 </div>
               )}
@@ -1761,7 +1763,7 @@ const MapaCalor = () => {
                     </div>
                     <div>
                       <p className="text-[7px] text-primary font-black uppercase tracking-widest leading-none">
-                        ❤️ Coração
+                        {t("heatmap.heart_label")}
                       </p>
                       <p className="text-[10px] font-black italic uppercase text-white leading-tight max-w-[100px] truncate">
                         {activeClubName}
@@ -1775,7 +1777,7 @@ const MapaCalor = () => {
                       </div>
                       <div>
                         <p className="text-[7px] font-black uppercase tracking-widest leading-none text-white/80">
-                          ⚔️ vs
+                          {t("heatmap.vs_label")}
                         </p>
                         <p className="text-[10px] font-black italic uppercase text-white leading-tight max-w-[100px] truncate">
                           {compareData.name}
@@ -1831,7 +1833,7 @@ const MapaCalor = () => {
               </MapContainer>
               <div className="absolute bottom-3 right-3 p-2.5 rounded-xl bg-black/80 backdrop-blur-md border border-white/10 z-[500]">
                 <p className="text-[8px] font-black italic uppercase tracking-widest text-muted-foreground mb-1.5">
-                  Densidade de votos
+                  {t("heatmap.density")}
                 </p>
                 <div className="flex items-center gap-0.5">
                   {HEAT_PALETTE.slice(1).map((c, i) => (
@@ -1839,13 +1841,13 @@ const MapaCalor = () => {
                   ))}
                 </div>
                 <div className="flex justify-between text-[7px] text-muted-foreground mt-1">
-                  <span>Baixa</span>
-                  <span>Alta</span>
+                  <span>{t("heatmap.low")}</span>
+                  <span>{t("heatmap.high")}</span>
                 </div>
               </div>
               <div className="absolute bottom-3 left-3 px-3 py-1.5 rounded-xl bg-black/80 backdrop-blur-md border border-white/10 z-[500]">
                 <p className="text-[9px] font-black italic uppercase tracking-widest text-primary">
-                  {viewMode === "world" && "🌍 Mundial"}
+                  {viewMode === "world" && t("heatmap.scope_world")}
                   {viewMode === "country" && `🏳️ ${activeCountry}`}
                   {viewMode === "state" && `📍 ${activeState}`}
                   {viewMode === "city" && `🎯 ${activeCity}`}
@@ -1860,15 +1862,15 @@ const MapaCalor = () => {
         <div className="fixed inset-0 z-40 bg-black/85 backdrop-blur-md flex items-center justify-center">
           <div className="text-center space-y-4 px-6">
             <MapPin className="w-12 h-12 text-[#ff6200] mx-auto" />
-            <h2 className="text-xl font-black italic uppercase text-white">Confirme seu território</h2>
+            <h2 className="text-xl font-black italic uppercase text-white">{t("heatmap.confirm_territory")}</h2>
             <p className="text-zinc-400 text-sm italic max-w-sm mx-auto">
-              O Mapa de Calor está bloqueado até você confirmar onde mora.
+              {t("heatmap.blocked_until_confirm")}
             </p>
             <Button
               onClick={() => setAddressOpen(true)}
               className="bg-[#ff6200] hover:bg-[#ff8230] text-white font-black italic uppercase h-12 px-6 rounded-2xl"
             >
-              Abrir confirmação
+              {t("heatmap.open_confirmation")}
             </Button>
           </div>
         </div>
