@@ -1713,7 +1713,7 @@ const MapaCalor = () => {
             {viewMode === "city" && activeCity && (
               <div className="rounded-[24px] bg-black/40 backdrop-blur-xl border border-primary/20 p-4">
                 <h3 className="text-[10px] font-black italic uppercase tracking-widest text-primary mb-3 flex items-center gap-2">
-                  <Flame className="w-3 h-3" /> Clubes mais votados em {activeCity}
+                  <Flame className="w-3 h-3" /> {t("heatmap.top_clubs_in", { city: activeCity })}
                 </h3>
                 {cityClubs.length === 0 ? (
                   <p className="text-[11px] italic text-muted-foreground text-center py-3">Carregando...</p>
