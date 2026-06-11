@@ -10,12 +10,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { CLUBS_DATA } from "@/clubes-data";
 import { ClubLogo } from "@/components/ClubLogo";
 import { useClubLogos, normalizeClubName } from "@/lib/club-logo-resolver";
+import { useTranslationApp } from "@/hooks/useTranslationApp";
 
 const normalize = normalizeClubName;
 
 type RankRow = { club: string; votes: number };
 
 const SympathyRanking = () => {
+  const { t } = useTranslationApp();
   const [rows, setRows] = useState<RankRow[]>([]);
   const [loading, setLoading] = useState(true);
 
