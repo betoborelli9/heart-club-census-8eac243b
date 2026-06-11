@@ -1535,7 +1535,7 @@ const MapaCalor = () => {
                   }}
                   className={`px-3 py-1.5 rounded-xl text-[10px] font-black italic uppercase tracking-widest transition-colors ${!activeClubName ? "bg-primary text-primary-foreground" : "bg-white/5 border border-white/10 text-muted-foreground hover:text-primary"}`}
                 >
-                  🌎 {t("heatmap.general_map").replace(/^🌎\s*/, "")}
+                  {t("heatmap.general_map")}
                 </button>
                 {heartClubName && (
                   <button
