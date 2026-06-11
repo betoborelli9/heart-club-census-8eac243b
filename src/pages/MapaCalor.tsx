@@ -1487,7 +1487,7 @@ const MapaCalor = () => {
             onClick={() => navigate("/dashboard")}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-primary/10 border border-primary/30 hover:bg-primary/20 transition-colors text-[10px] font-black italic uppercase tracking-widest text-primary"
           >
-            <ArrowLeft className="w-3 h-3" /> Voltar ao Dashboard
+            <ArrowLeft className="w-3 h-3" /> {t("heatmap.back_to_dashboard")}
           </button>
         </div>
 
