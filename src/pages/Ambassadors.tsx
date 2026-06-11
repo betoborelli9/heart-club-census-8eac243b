@@ -532,10 +532,10 @@ const Ambassadors = () => {
                 {/* [CRYSTAL GLOW BAR — cores dinâmicas do clube] */}
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider">
-                    <span className="text-white/60">{levelInfo.tier} → {levelInfo.next}</span>
+                    <span className="text-white/60">{t("ambassadors.tier_to", { a: levelInfo.tier, b: levelInfo.next })}</span>
                     <span style={{ color: theme.primaryHex }}>
-                      {levelInfo.indicacoesCount} indicados
-                      {levelInfo.faltam > 0 ? ` · faltam ${levelInfo.faltam}` : ""}
+                      {t("ambassadors.referred_count", { count: levelInfo.indicacoesCount })}
+                      {levelInfo.faltam > 0 ? ` ${t("ambassadors.missing_count", { count: levelInfo.faltam })}` : ""}
                     </span>
                   </div>
                   <div
