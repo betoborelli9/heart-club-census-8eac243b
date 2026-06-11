@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Trophy, Loader2, Flame } from "lucide-react";
+import { useTranslationApp } from "@/hooks/useTranslationApp";
 
 // População estimada (IBGE 2022) para principais cidades — base para densidade
 const POPULATION: Record<string, number> = {
