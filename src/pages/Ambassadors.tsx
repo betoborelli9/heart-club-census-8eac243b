@@ -519,10 +519,10 @@ const Ambassadors = () => {
               <div className="flex-1 space-y-3 w-full">
                 <div>
                   <p className="text-[10px] font-black uppercase tracking-[0.3em] text-[#ff6200]">
-                    Embaixador {levelInfo.tier}
+                    {t("ambassadors.level_prefix")} {levelInfo.tier}
                   </p>
                   <h2 className="text-2xl sm:text-3xl font-black italic uppercase leading-none mt-1">
-                    {profile?.nome_exibicao || "Torcedor"}
+                    {profile?.nome_exibicao || t("ambassadors.fan_default")}
                   </h2>
                   <p className="text-xs text-white/40 mt-1 uppercase tracking-wider">
                     {profile?.cidade}{profile?.estado ? ` · ${profile.estado}` : ""}
