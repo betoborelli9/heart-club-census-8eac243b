@@ -9,10 +9,12 @@ import { useUser } from "@/contexts/UserContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { isMasterEmail } from "@/lib/master";
+import { useTranslationApp } from "@/hooks/useTranslationApp";
 import logo from "@/assets/logo.png";
 
 const Login = () => {
   const navigate = useNavigate();
+  const { t } = useTranslationApp();
   const { user, isAuthenticated, isProfileComplete, hasVoted, isLoading } = useUser();
   const { toast } = useToast();
   const [email, setEmail] = useState("");
@@ -38,7 +40,7 @@ const Login = () => {
       options: { redirectTo: `${window.location.origin}/` },
     });
     if (error) {
-      toast({ variant: "destructive", title: "Erro", description: error.message });
+      toast({ variant: "destructive", title: t("common.error"), description: error.message });
       setLoadingProvider(null);
     }
   };
@@ -54,13 +56,13 @@ const Login = () => {
       if (error || (data && (data as any).error)) {
         throw new Error(((data as any)?.error as string) || error?.message || "auth_failed");
       }
-      toast({ title: "Link enviado! ✉️", description: "Verifique seu email para acessar sua conta." });
+      toast({ title: t("auth.login.link_sent_title"), description: t("auth.login.link_sent_desc") });
     } catch (err) {
       console.error("[LOGIN] magic link falhou", err);
       toast({
         variant: "destructive",
-        title: "Estamos com problema",
-        description: "Não foi possível enviar o link. Tente novamente ou entre com o Google.",
+        title: t("auth.login.error_title"),
+        description: t("auth.login.error_desc"),
       });
     }
     setLoadingProvider(null);
@@ -91,7 +93,7 @@ const Login = () => {
             transition={{ type: "spring", bounce: 0.5, delay: 0.2 }}
             className="mx-auto w-28 h-28 object-contain"
           />
-          <p className="text-sm text-muted-foreground">O maior censo de torcidas do mundo</p>
+          <p className="text-sm text-muted-foreground">{t("header.tagline")}</p>
         </div>
 
         <div className="space-y-3">
@@ -123,7 +125,7 @@ const Login = () => {
                 />
               </svg>
             )}
-            Entrar com Google
+            {t("auth.login.google")}
           </Button>
         </div>
 
@@ -133,7 +135,7 @@ const Login = () => {
           </div>
           <div className="relative flex justify-center text-xs uppercase">
             <span className="bg-background px-3 text-muted-foreground font-medium">
-              Acesso Rápido por E-mail (Sem Senha)
+              {t("auth.login.divider")}
             </span>
           </div>
         </div>
@@ -141,12 +143,12 @@ const Login = () => {
         <form onSubmit={handleMagicLink} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="email" className="text-sm text-muted-foreground">
-              Email
+              {t("auth.login.email_label")}
             </Label>
             <Input
               id="email"
               type="email"
-              placeholder="seu@email.com"
+              placeholder={t("auth.login.email_placeholder")}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
@@ -163,12 +165,12 @@ const Login = () => {
             ) : (
               <Mail className="w-5 h-5 mr-2" />
             )}
-            Enviar Link de Acesso
+            {t("auth.login.send_link")}
           </Button>
         </form>
 
         <p className="text-center text-xs text-muted-foreground">
-          Ao entrar, você concorda com os Termos de Uso e Política de Privacidade.
+          {t("auth.login.terms")}
         </p>
       </motion.div>
     </div>

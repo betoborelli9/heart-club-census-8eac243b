@@ -1,12 +1,10 @@
 {
   "header": {
     "brand": "Heart Club",
-    "logout": "Log out"
+    "logout": "Log out",
+    "tagline": "The largest fan census in the world"
   },
-  "language": {
-    "label": "Language",
-    "aria": "Change language"
-  },
+  "language": { "label": "Language", "aria": "Change language" },
   "stats": {
     "census_global": "Global Census",
     "you_are_fan_number": "You are fan #",
@@ -48,18 +46,9 @@
   "ranking": {
     "eyebrow": "GLOBAL RANKING",
     "default_brand": "Heart Club",
-    "search": {
-      "tooltip": "Look up another club",
-      "placeholder": "Search club..."
-    },
+    "search": { "tooltip": "Look up another club", "placeholder": "Search club..." },
     "back": "Back",
-    "scope": {
-      "global": "Global",
-      "country": "Country",
-      "state": "State",
-      "city": "City",
-      "neighborhood": "Neighborhood"
-    },
+    "scope": { "global": "Global", "country": "Country", "state": "State", "city": "City", "neighborhood": "Neighborhood" },
     "hype": {
       "no_votes": "Your club hasn't received votes in this slice yet.",
       "explosive": "🔥 Explosive growth in the last 24h!",
@@ -68,15 +57,8 @@
       "growing": "📈 Rising momentum. Time to rally the fans.",
       "default": "🎯 Every vote counts. Invite the fans and climb the ranking."
     },
-    "position": {
-      "current": "Current position:",
-      "votes": "votes",
-      "growth_24h": "+{{value}} (24h)",
-      "growth_7d": "+{{value}} (7d)"
-    },
-    "cta": {
-      "rally": "Rally the Troops"
-    },
+    "position": { "current": "Current position:", "votes": "votes", "growth_24h": "+{{value}} (24h)", "growth_7d": "+{{value}} (7d)" },
+    "cta": { "rally": "Rally the Troops" },
     "goals": {
       "title": "Dynamic Goals",
       "overtake": "{{votes}} votes to overtake {{club}}.",
@@ -84,30 +66,17 @@
       "check_neighborhood": "Check the ranking in your neighborhood ({{neighborhood}}).",
       "leader": "Leadership consolidated — defend the top."
     },
-    "next_target": {
-      "title": "Next Target",
-      "missing": "{{votes}} to go"
-    },
-    "census": {
-      "title": "Neighborhood Census · {{club}} in {{city}}",
-      "empty": "No neighborhood votes recorded in this slice."
-    },
-    "table": {
-      "title": "{{scope}} Ranking",
-      "votes_label": "votes"
-    },
+    "next_target": { "title": "Next Target", "missing": "{{votes}} to go" },
+    "census": { "title": "Neighborhood Census · {{club}} in {{city}}", "empty": "No neighborhood votes recorded in this slice." },
+    "table": { "title": "{{scope}} Ranking", "votes_label": "votes" },
     "empty_state": "No data for this slice.",
-    "invite": {
-      "copied_title": "Link copied!",
-      "copied_desc": "Share it with the fans 🔥"
-    }
+    "invite": { "copied_title": "Link copied!", "copied_desc": "Share it with the fans 🔥" }
   },
   "common": {
-    "copy": "Copy",
-    "back": "Back",
-    "cancel": "Cancel",
-    "confirm": "Confirm",
-    "loading": "Loading..."
+    "copy": "Copy", "back": "Back", "cancel": "Cancel", "confirm": "Confirm",
+    "loading": "Loading...", "loading_short": "Loading...",
+    "continue": "Continue", "send": "Send", "save": "Save",
+    "error": "Error", "try_again": "Try again.", "dashboard": "Dashboard"
   },
   "components": {
     "rivals_combobox": {
@@ -200,5 +169,244 @@
       "send_failed_desc": "Try again in a moment.",
       "territory_save_error": "Error saving territory"
     }
+  },
+  "auth": {
+    "login": {
+      "google": "Sign in with Google",
+      "divider": "Quick Email Access (Passwordless)",
+      "email_label": "Email",
+      "email_placeholder": "your@email.com",
+      "send_link": "Send Access Link",
+      "terms": "By signing in, you agree to the Terms of Use and Privacy Policy.",
+      "link_sent_title": "Link sent! ✉️",
+      "link_sent_desc": "Check your email to access your account.",
+      "error_title": "We're having a problem",
+      "error_desc": "Couldn't send the link. Try again or sign in with Google."
+    },
+    "verify": {
+      "validating": "Validating your access...",
+      "checking": "Heart Club is verifying your credentials.",
+      "missing_token": "Access token missing.",
+      "already_used": "This link has already been used.",
+      "expired": "Link expired. Request a new one.",
+      "invalid": "Invalid or expired link.",
+      "session_failed": "Failed to start session. Try again.",
+      "session_missing": "Session could not be created.",
+      "success": "Access granted! Welcome to Heart Club.",
+      "unstable": "Unstable connection. Request a new access.",
+      "timeout": "Connection timed out"
+    }
+  },
+  "profile": {
+    "title": "Complete your profile",
+    "subtitle": "Basic identity for the community.",
+    "display_name": "Display Name",
+    "display_name_placeholder": "Your nickname or name",
+    "birth_date": "Birth Date",
+    "day": "Day", "month": "Month", "year": "Year",
+    "gender": "Gender", "select": "Select",
+    "male": "Male", "female": "Female", "other": "Other", "prefer_not_say": "Prefer not to say",
+    "continue": "Continue to Voting",
+    "required_missing": "Required fields missing.",
+    "saved": "Profile saved! ✅",
+    "save_error": "Error updating profile on Supabase.",
+    "months": {
+      "1": "January", "2": "February", "3": "March", "4": "April",
+      "5": "May", "6": "June", "7": "July", "8": "August",
+      "9": "September", "10": "October", "11": "November", "12": "December"
+    }
+  },
+  "voting": {
+    "title": "Sacred Vote",
+    "master_mode": "Master Mode Active",
+    "test_link": "VOTING LINK (TEST) ACTIVE",
+    "heart_club": "Heart Club",
+    "search_placeholder": "Search your club...",
+    "sympathies": "Sympathies",
+    "add_sympathy": "Add sympathy...",
+    "swear": "I SWEAR LOYALTY",
+    "identity_title": "Your identity",
+    "identity_name_label": "How would you like to be called",
+    "nickname_placeholder": "Your nickname",
+    "sex_label": "Sex", "sex_placeholder": "Sex",
+    "male": "Male", "female": "Female", "other": "Other",
+    "birth_year_label": "Birth year",
+    "year_placeholder": "Year",
+    "continue": "CONTINUE",
+    "confirm_title": "CONFIRM VOTE?",
+    "swear_question": "Do you swear loyalty to",
+    "yes_swear": "YES, I SWEAR!",
+    "back": "BACK",
+    "toast_complete_title": "Complete your sign-up",
+    "toast_complete_desc": "Name, sex and birth year are required.",
+    "toast_invalid_club": "Invalid club",
+    "toast_invalid_club_desc": "Select a real club from the list.",
+    "toast_complete_identity": "Complete your identity",
+    "toast_success": "Loyalty successfully registered! 🏟️",
+    "toast_error": "Error processing votes"
+  },
+  "testar": {
+    "title": "Test Club • Heart Club",
+    "title_with_club": "Test: {{club}} • Heart Club",
+    "loading": "Loading…",
+    "none_selected": "No club selected. Use the",
+    "test_link_label": "TEST CLUB",
+    "to_open": "link to open test mode.",
+    "start_test": "Start test",
+    "mode": "TEST MODE — {{club}}",
+    "disclaimer": "Vote not counted. Your Heart Club remains intact.",
+    "test_another": "test another",
+    "preview_label": "PREVIEW"
+  },
+  "correction": {
+    "header": "Correction",
+    "dashboard": "Dashboard",
+    "title_prefix": "Fix data —",
+    "intro": "Suggest corrections to your club's official data. Our system (AI + Google) will check each field before saving. If you make a mistake, AI fixes it; absurd suggestions are rejected. Leave blank what you don't want to change.",
+    "colors_title": "Official colors",
+    "colors_hint_prefix": "Accepts HEX (",
+    "colors_hint_mid": ") or a color name (",
+    "colors_examples": "black, white, red, navy blue, flag green...",
+    "colors_hint_suffix": ").",
+    "color_primary": "Primary", "color_secondary": "Secondary", "color_tertiary": "Tertiary", "color_quarta": "Fourth",
+    "current_short": "current:",
+    "color_placeholder": "#RRGGBB or \"black\"",
+    "color_invalid": "Color \"{{val}}\" not recognized. Use HEX (#RRGGBB) or a name (e.g., black, blue, red).",
+    "mascot": "Mascot", "mascot_ph": "E.g., Fox",
+    "founded": "Founding year", "founded_ph": "E.g., 1903",
+    "home_city": "Home city", "country": "Country",
+    "stadium_name": "Stadium name", "stadium_city": "Stadium city", "stadium_capacity": "Stadium capacity",
+    "short_name": "Short name",
+    "division": "Current division", "division_ph": "E.g., Serie A",
+    "rivals_label": "Historic rivals",
+    "rivals_note": "— your word overrides the AI",
+    "rivals_placeholder": "Search rival club in the database (crest guaranteed)...",
+    "rivals_disclaimer": "Fan corrections are applied directly, without AI validation, and flagged in the admin panel.",
+    "has_women": "Has women's team?",
+    "validating": "Validating with AI...",
+    "send": "Send corrections",
+    "ai_verdict": "AI verdict",
+    "you_suggested": "You suggested",
+    "rejected": "rejected",
+    "current_prefix": "Current:",
+    "no_vote_title": "You haven't voted yet",
+    "no_vote_desc": "Vote for your heart club first.",
+    "color_invalid_title": "Invalid color",
+    "color_invalid_desc": "Check the highlighted color fields.",
+    "nothing_title": "Nothing to fix",
+    "nothing_desc": "Fill in at least one field.",
+    "analyzed_title": "Corrections analyzed",
+    "analyzed_desc": "{{count}} fields evaluated by AI.",
+    "send_fail": "Failed to send"
+  },
+  "navbar": {
+    "home": "Home", "ranking": "Ranking", "map": "Map", "map_long": "Heatmap",
+    "ambassadors": "Ambassador", "ambassadors_long": "Ambassadors", "ambassadors_short": "Ambass.",
+    "panel": "Panel", "voting": "Voting", "admin": "Admin",
+    "back_to_heart": "Back to Heart",
+    "aria": "Main navigation"
+  },
+  "ambassadors": {
+    "login_title": "Ambassadors",
+    "login_required": "Sign in to access the ambassador panel.",
+    "login_now": "Sign in now",
+    "page_label": "AMBASSADORS",
+    "sponsor_label": "Official Partner",
+    "sponsor_text": "Your business here — talk to the Heart Club team.",
+    "sponsor_cta": "Advertise",
+    "level_prefix": "Ambassador",
+    "fan_default": "Fan",
+    "tier_to": "{{a}} → {{b}}",
+    "referred_count": "{{count}} referred",
+    "missing_count": "· {{count}} to go",
+    "code_label": "Code:",
+    "invite_fan": "Invite a fan",
+    "share_link": "Share link",
+    "whatsapp": "WhatsApp", "telegram": "Telegram", "email": "Email", "copy_link": "Copy link",
+    "more_options": "More options…",
+    "feed_title": "Activity Feed",
+    "feed_empty": "No new activity in your area.",
+    "feed_voted": "just voted for",
+    "feed_joined": "joined Heart Club",
+    "ranking_title": "Dominance Ranking",
+    "tab_world": "World", "tab_continental": "Continental", "tab_national": "National",
+    "tab_state": "State", "tab_municipal": "Municipal",
+    "ranking_empty": "No ranking data available yet. Invite friends with your code!",
+    "col_name": "Name", "col_club": "Club", "col_city": "City", "col_points": "Points",
+    "anon": "Anonymous",
+    "footer_note": "Posting wall subject to audit. Available for Silver tier or higher.",
+    "census_title": "Complete your Census",
+    "census_desc": "We need a few more details to unlock the Ambassador panel.",
+    "whatsapp_label": "WhatsApp",
+    "phone_generic": "Number",
+    "phone_digits_error": "Enter {{digits}} digits for {{country}}",
+    "profession_label": "Profession",
+    "profession_hint": "Type your profession — we'll suggest as you write. Pick from the list or type freely.",
+    "profession_placeholder": "E.g., Engineer, Teacher, Doctor...",
+    "unlock_panel": "Unlock Panel",
+    "whatsapp_invalid_title": "Invalid WhatsApp",
+    "whatsapp_invalid_desc": "Enter a valid number for {{country}}.",
+    "profession_required_title": "Profession required",
+    "profession_required_desc": "Type your profession.",
+    "saved_title": "Panel unlocked!",
+    "saved_desc": "Your data was saved successfully.",
+    "save_error_title": "Error saving",
+    "save_error_desc": "Try again.",
+    "link_copied": "Link copied!",
+    "link_copied_desc": "Paste it wherever you want.",
+    "copy_fail": "Couldn't copy",
+    "share_subject": "I'm inviting you to Heart Club Census 🧡",
+    "referral_msg": "🧡 Hey fan! Register your heart on Heart Club through my link and let's dominate the map:{{from}} {{link}}",
+    "from_who": " (invite from {{name}})"
+  },
+  "ambassador_center": {
+    "title": "COMMAND PANEL",
+    "subtitle": "OF THE AMBASSADOR",
+    "back": "Back",
+    "your_level": "Your Level",
+    "rookie": "Rookie",
+    "missing_for": "Missing for {{label}}",
+    "indications": "referrals",
+    "max_level": "🏆 Max level reached!",
+    "owner_of": "Owner of {{name}} neighborhood",
+    "kpi_indications": "Referrals",
+    "kpi_audited": "Audited Votes Generated",
+    "kpi_conversions": "Affinity Conversion",
+    "share_title": "Smart Sharing",
+    "wa": "WhatsApp", "tg": "Telegram", "ig": "Instagram", "more": "More",
+    "link_copied": "Link copied!",
+    "ig_copied": "Text copied — paste on Instagram",
+    "share_text": "Help {{club}} dominate {{neighborhood}} on Heart Club! Vote here: {{link}}",
+    "default_club": "your club",
+    "default_neighborhood": "your area"
+  },
+  "heatmap": {
+    "title": "HEATMAP",
+    "world": "World",
+    "back_to_dashboard": "Back to Dashboard",
+    "search_club": "Search club...",
+    "general_map": "🌎 General Map",
+    "heart_label": "❤️ Heart",
+    "vs_label": "⚔️ vs",
+    "total_visible": "Visible total",
+    "top": "Top:",
+    "no_votes_yet": "✨ No votes yet",
+    "no_votes_yet_desc": "This club hasn't received Sacred Votes in this region yet.",
+    "votes_of_in_city": "{{club}} votes in a city...",
+    "world_countries": "World Countries",
+    "states_of": "States of {{name}}",
+    "cities_of": "Cities of {{name}}",
+    "neighborhoods_of": "Neighborhoods of {{name}}",
+    "no_votes_registered": "No votes registered yet.",
+    "loading": "Loading...",
+    "top_clubs_in": "Top voted clubs in {{city}}",
+    "loading_votes": "Loading votes...",
+    "loading_territory": "Loading territory...",
+    "density": "Vote density",
+    "low": "Low", "high": "High",
+    "scope_world": "🌍 Worldwide",
+    "confirm_territory": "Confirm your territory",
+    "blocked_until_confirm": "The Heatmap is locked until you confirm where you live.",
+    "open_confirmation": "Open confirmation"
   }
 }
