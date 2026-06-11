@@ -12,6 +12,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Calendar, MapPin, Trophy, Heart, Building2, Pencil, PawPrint } from "lucide-react";
+import { useTranslationApp } from "@/hooks/useTranslationApp";
 
 interface Props {
   clubName: string;
