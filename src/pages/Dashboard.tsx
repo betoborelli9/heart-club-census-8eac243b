@@ -13,6 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { CLUBS_DATA } from "@/clubes-data";
 import { isMasterEmail } from "@/lib/master";
 import MasterTestPanel from "@/components/MasterTestPanel";
+import { useTranslation } from "react-i18next";
 
 /* ═══════════════════════════════════════════════════════════
     MÓDULO 1: COMPONENTES DO DASHBOARD
@@ -34,6 +35,7 @@ import logo from "@/assets/logo.png";
 
 const Dashboard = () => {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const { user, profile, isLoading, isAuthReady, isAuthenticated, signOut } = useUser();
 
   const [heartClubName, setHeartClubName] = useState<string | null>(null);
@@ -161,14 +163,14 @@ const Dashboard = () => {
         <div className="max-w-[1440px] mx-auto px-4 md:px-6 h-full flex items-center justify-between gap-4">
           <div className="flex items-center gap-3 cursor-pointer group min-w-0" onClick={() => navigate("/dashboard")}>
             <img src={logo} alt="Logo" className="h-7 w-auto shrink-0" />
-            <span className="font-black italic text-xl tracking-tighter uppercase truncate">Heart Club</span>
+            <span className="font-black italic text-xl tracking-tighter uppercase truncate">{t("header.brand")}</span>
           </div>
           {/* Desktop: pesquisa inline no header */}
           <div className="hidden md:block flex-1 max-w-xl">
             <ClubSearch onSelect={(club) => handlePickClub(club.name)} />
           </div>
           <div className="flex items-center gap-4 shrink-0">
-            <Button variant="ghost" size="icon" onClick={() => signOut()} className="text-white/30 hover:text-white">
+            <Button variant="ghost" size="icon" onClick={() => signOut()} aria-label={t("header.logout")} title={t("header.logout")} className="text-white/30 hover:text-white">
               <LogOut className="w-5 h-5" />
             </Button>
           </div>
