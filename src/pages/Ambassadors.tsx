@@ -358,8 +358,9 @@ const Ambassadors = () => {
 
   const referralMessage = useMemo(() => {
     const nome = profile?.nome_exibicao ? ` ${profile.nome_exibicao}` : "";
-    return `🧡 Fala, torcedor! Registre seu coração no Heart Club pelo meu link e vamos dominar o mapa:${nome ? ` (convite de${nome})` : ""} ${referralLink}`;
-  }, [referralLink, profile?.nome_exibicao]);
+    const fromPart = nome ? t("ambassadors.from_who", { name: nome.trim() }) : "";
+    return t("ambassadors.referral_msg", { from: fromPart, link: referralLink });
+  }, [referralLink, profile?.nome_exibicao, t]);
 
   /* [MÓDULO: COMPARTILHAR MULTICANAL] */
   const shareWhatsApp = () => window.open(`https://wa.me/?text=${encodeURIComponent(referralMessage)}`, "_blank");
