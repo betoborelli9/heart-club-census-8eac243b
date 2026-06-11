@@ -27,6 +27,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { CLUBS_DATA } from "@/clubes-data";
 import { searchClubsWithFallback } from "@/lib/search-clubs";
 import { getHistoricalRivals } from "@/lib/rivalries";
+import { useTranslationApp } from "@/hooks/useTranslationApp";
 
 // ─────────────────────────────────────────────────────────
 // Helpers
@@ -93,12 +94,12 @@ interface RankRow { club: string; votes: number; growth_24h: number; growth_7d: 
 interface RegionOpt { name: string; votes: number; }
 interface NeighborhoodRow { neighborhood: string; votes: number; }
 
-const LEVEL_META: Record<Level, { label: string; icon: any }> = {
-  global: { label: "Global", icon: Globe },
-  country: { label: "País", icon: Flag },
-  state: { label: "Estado", icon: MapPin },
-  city: { label: "Cidade", icon: Building2 },
-  neighborhood: { label: "Bairro", icon: Home },
+const LEVEL_ICONS: Record<Level, any> = {
+  global: Globe,
+  country: Flag,
+  state: MapPin,
+  city: Building2,
+  neighborhood: Home,
 };
 
 // ─────────────────────────────────────────────────────────
@@ -109,6 +110,8 @@ const Stats = () => {
   const navigate = useNavigate();
   const { user } = useUser();
   const { toast } = useToast();
+  const { t } = useTranslationApp();
+  const levelLabel = (lv: Level) => t(`ranking.scope.${lv}`);
 
   // ROI tracking — counts /stats page views for the Revenue Terminal
   useEffect(() => {
@@ -322,29 +325,32 @@ const Stats = () => {
   };
 
   const hypeMessage = useMemo(() => {
-    if (!myRow) return "Seu clube ainda não recebeu votos neste recorte.";
-    if (myRow.growth_24h >= 50) return "🔥 Crescimento explosivo nas últimas 24h!";
-    if (myIdx === 0) return "👑 Domínio absoluto nesta região.";
-    if (myIdx < 3) return "🚀 Seu clube está no pódio — empurre mais um pouco!";
-    if (myRow.growth_7d > 0) return "📈 Movimento crescente. Hora de convocar a torcida.";
-    return "🎯 Cada voto conta. Convide a torcida e suba no ranking.";
-  }, [myRow, myIdx]);
+    if (!myRow) return t("ranking.hype.no_votes");
+    if (myRow.growth_24h >= 50) return t("ranking.hype.explosive");
+    if (myIdx === 0) return t("ranking.hype.domination");
+    if (myIdx < 3) return t("ranking.hype.podium");
+    if (myRow.growth_7d > 0) return t("ranking.hype.growing");
+    return t("ranking.hype.default");
+  }, [myRow, myIdx, t]);
 
   const goals = useMemo(() => {
     const list: string[] = [];
     if (myRow && aboveRow) {
       const diff = aboveRow.votes - myRow.votes + 1;
-      list.push(`Faltam ${fmt(diff)} votos para ultrapassar o ${aboveRow.club}.`);
+      list.push(t("ranking.goals.overtake", { votes: fmt(diff), club: aboveRow.club }));
     }
     if (myRow && top10Row && myIdx > 9) {
-      list.push(`A ${fmt(top10Row.votes - myRow.votes + 1)} votos do Top 10 ${LEVEL_META[level].label.toLowerCase()}.`);
+      list.push(t("ranking.goals.top10", {
+        votes: fmt(top10Row.votes - myRow.votes + 1),
+        scope: levelLabel(level).toLowerCase(),
+      }));
     }
     if (level !== "neighborhood" && userVote.bairro) {
-      list.push(`Confira o ranking no seu bairro (${userVote.bairro}).`);
+      list.push(t("ranking.goals.check_neighborhood", { neighborhood: userVote.bairro }));
     }
-    if (myIdx === 0 && myRow) list.push("Liderança consolidada — defenda o topo.");
+    if (myIdx === 0 && myRow) list.push(t("ranking.goals.leader"));
     return list.slice(0, 3);
-  }, [myRow, aboveRow, top10Row, myIdx, level, userVote]);
+  }, [myRow, aboveRow, top10Row, myIdx, level, userVote, t]);
 
   // ─── Search (debounced) ───
   useEffect(() => {
@@ -365,7 +371,7 @@ const Stats = () => {
 
   const copyInvite = () => {
     navigator.clipboard.writeText(inviteLink);
-    toast({ title: "Link copiado!", description: "Compartilhe com a torcida 🔥" });
+    toast({ title: t("ranking.invite.copied_title"), description: t("ranking.invite.copied_desc") });
   };
 
   // ─────────────────────────────────────────────────────────
@@ -382,9 +388,9 @@ const Stats = () => {
               <ClubBadge club={clubName} cacheUrl={logoFor(clubName)} size={40} />
             )}
             <div className="min-w-0">
-              <p className="text-[10px] tracking-widest text-primary font-black">RANKING GLOBAL</p>
+              <p className="text-[10px] tracking-widest text-primary font-black">{t("ranking.eyebrow")}</p>
               <h1 className="font-black italic text-lg leading-tight truncate">
-                {clubName || "Heart Club"}
+                {clubName || t("ranking.default_brand")}
               </h1>
             </div>
           </div>
@@ -393,7 +399,7 @@ const Stats = () => {
             {/* Discrete header search */}
             <div className="relative">
               {!searchOpen ? (
-                <Button size="sm" variant="ghost" onClick={() => setSearchOpen(true)} title="Consultar outro clube">
+                <Button size="sm" variant="ghost" onClick={() => setSearchOpen(true)} title={t("ranking.search.tooltip")}>
                   <Search className="h-4 w-4" />
                 </Button>
               ) : (
@@ -404,7 +410,7 @@ const Stats = () => {
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                     onBlur={() => setTimeout(() => { if (!search) setSearchOpen(false); }, 200)}
-                    placeholder="Buscar clube..."
+                    placeholder={t("ranking.search.placeholder")}
                     className="bg-transparent outline-none text-xs flex-1 placeholder:text-white/40"
                   />
                   {isSearching && <Loader2 className="h-3 w-3 animate-spin text-primary" />}
@@ -431,7 +437,7 @@ const Stats = () => {
                 </div>
               )}
             </div>
-            <Button size="sm" variant="ghost" onClick={() => navigate("/dashboard")} title="Voltar">
+            <Button size="sm" variant="ghost" onClick={() => navigate("/dashboard")} title={t("ranking.back")}>
               <LogOut className="h-4 w-4" />
             </Button>
           </div>
@@ -439,8 +445,8 @@ const Stats = () => {
 
         {/* LEVEL TABS */}
         <div className="max-w-6xl mx-auto mt-3 flex gap-1 overflow-x-auto scrollbar-none">
-          {(Object.keys(LEVEL_META) as Level[]).map((lv) => {
-            const Icon = LEVEL_META[lv].icon;
+          {(Object.keys(LEVEL_ICONS) as Level[]).map((lv) => {
+            const Icon = LEVEL_ICONS[lv];
             const active = level === lv;
             return (
               <button
@@ -451,7 +457,7 @@ const Stats = () => {
                 }`}
               >
                 <Icon className="h-3.5 w-3.5" />
-                {LEVEL_META[lv].label}
+                {levelLabel(lv)}
               </button>
             );
           })}
@@ -492,9 +498,9 @@ const Stats = () => {
               </p>
               {myRow && (
                 <p className="text-xs text-white/60 mt-1">
-                  Posição atual: <span className="text-white font-black">#{myIdx + 1}</span> · {fmt(myRow.votes)} votos
+                  {t("ranking.position.current")} <span className="text-white font-black">#{myIdx + 1}</span> · {fmt(myRow.votes)} {t("ranking.position.votes")}
                   {myRow.growth_24h > 0 && (
-                    <span className="ml-2 text-green-400">+{fmt(myRow.growth_24h)} (24h)</span>
+                    <span className="ml-2 text-green-400">{t("ranking.position.growth_24h", { value: fmt(myRow.growth_24h) })}</span>
                   )}
                 </p>
               )}
@@ -504,7 +510,7 @@ const Stats = () => {
               className="w-full sm:w-auto shrink-0 flex items-center justify-center gap-2 px-5 py-3 rounded-2xl font-black italic uppercase text-[11px] text-black transition-all hover:brightness-110 active:scale-95"
               style={{ background: "linear-gradient(135deg, #f5c252 0%, #ff6200 100%)" }}
             >
-              <Megaphone className="w-4 h-4" /> Convocar a Tropa
+              <Megaphone className="w-4 h-4" /> {t("ranking.cta.rally")}
             </button>
           </div>
         </motion.div>
@@ -520,16 +526,16 @@ const Stats = () => {
         {aboveRow && myRow && (
           <section className="bg-zinc-950 border border-primary/20 rounded-2xl p-4">
             <p className="text-[10px] uppercase tracking-widest text-primary font-black flex items-center gap-1.5">
-              <Target className="h-3.5 w-3.5" /> Próximo Alvo
+              <Target className="h-3.5 w-3.5" /> {t("ranking.next_target.title")}
             </p>
             <div className="flex items-center gap-3 mt-2">
               <ClubBadge club={aboveRow.club} cacheUrl={logoFor(aboveRow.club)} size={48} />
               <div className="flex-1 min-w-0">
                 <p className="font-black italic truncate">{aboveRow.club}</p>
-                <p className="text-xs text-white/60">#{myIdx} · {fmt(aboveRow.votes)} votos</p>
+                <p className="text-xs text-white/60">#{myIdx} · {fmt(aboveRow.votes)} {t("ranking.position.votes")}</p>
               </div>
               <p className="text-sm font-black text-primary whitespace-nowrap">
-                Faltam {fmt(aboveRow.votes - myRow.votes + 1)}
+                {t("ranking.next_target.missing", { votes: fmt(aboveRow.votes - myRow.votes + 1) })}
               </p>
             </div>
           </section>
@@ -539,7 +545,7 @@ const Stats = () => {
         {goals.length > 0 && (
           <section className="bg-zinc-950 border border-white/10 rounded-2xl p-4">
             <p className="text-[10px] uppercase tracking-widest text-primary font-black mb-2 flex items-center gap-1.5">
-              <Zap className="h-3.5 w-3.5" /> Metas Dinâmicas
+              <Zap className="h-3.5 w-3.5" /> {t("ranking.goals.title")}
             </p>
             <ul className="space-y-1.5">
               {goals.map((g, i) => (
@@ -557,13 +563,13 @@ const Stats = () => {
             <div className="p-4 border-b border-white/10 flex items-center justify-between">
               <p className="font-black italic flex items-center gap-2">
                 <Home className="h-4 w-4 text-primary" />
-                Censo por Bairro · {clubName} em {scopeValue}
+                {t("ranking.census.title", { club: clubName, city: scopeValue })}
               </p>
               {loadingNeighborhoods && <Loader2 className="h-4 w-4 animate-spin text-primary" />}
             </div>
             {neighborhoods.length === 0 && !loadingNeighborhoods ? (
               <p className="p-6 text-center text-white/40 italic text-sm">
-                Sem votos registrados por bairro neste recorte.
+                {t("ranking.census.empty")}
               </p>
             ) : (
               <div className="divide-y divide-white/5 max-h-[420px] overflow-y-auto">
@@ -581,7 +587,7 @@ const Stats = () => {
                         {n.neighborhood}
                       </p>
                       <p className="text-sm font-black text-white tabular-nums">
-                        {fmt(n.votes)} <span className="text-white/40 text-[10px] font-bold">votos</span>
+                        {fmt(n.votes)} <span className="text-white/40 text-[10px] font-bold">{t("ranking.table.votes_label")}</span>
                       </p>
                     </div>
                   );
@@ -596,7 +602,7 @@ const Stats = () => {
           <div className="p-4 border-b border-white/10 flex items-center justify-between">
             <p className="font-black italic flex items-center gap-2">
               <Trophy className="h-4 w-4 text-primary" />
-              Ranking {LEVEL_META[level].label}
+              {t("ranking.table.title", { scope: levelLabel(level) })}
               {scopeValue && <span className="text-white/50 text-sm">· {scopeValue}</span>}
             </p>
             {loadingRanking && <Loader2 className="h-4 w-4 animate-spin text-primary" />}
@@ -604,7 +610,7 @@ const Stats = () => {
           <div className="divide-y divide-white/5">
             {ranking.length === 0 && !loadingRanking && (
               <p className="p-6 text-center text-white/40 italic text-sm">
-                Sem dados para este recorte.
+                {t("ranking.empty_state")}
               </p>
             )}
             {ranking.map((r, i) => {
@@ -631,12 +637,12 @@ const Stats = () => {
                       {r.club}
                     </p>
                     <p className="text-[10px] text-white/50">
-                      {fmt(r.votes)} votos
+                      {fmt(r.votes)} {t("ranking.table.votes_label")}
                       {r.growth_24h > 0 && (
-                        <span className="text-green-400 ml-2">+{fmt(r.growth_24h)} (24h)</span>
+                        <span className="text-green-400 ml-2">{t("ranking.position.growth_24h", { value: fmt(r.growth_24h) })}</span>
                       )}
                       {r.growth_7d > 0 && (
-                        <span className="text-white/40 ml-2">+{fmt(r.growth_7d)} (7d)</span>
+                        <span className="text-white/40 ml-2">{t("ranking.position.growth_7d", { value: fmt(r.growth_7d) })}</span>
                       )}
                     </p>
                   </div>

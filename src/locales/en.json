@@ -1,6 +1,63 @@
 {
   "header": {
     "brand": "Heart Club",
-    "logout": "Sign out"
+    "logout": "Log out"
+  },
+  "ranking": {
+    "eyebrow": "GLOBAL RANKING",
+    "default_brand": "Heart Club",
+    "search": {
+      "tooltip": "Look up another club",
+      "placeholder": "Search club..."
+    },
+    "back": "Back",
+    "scope": {
+      "global": "Global",
+      "country": "Country",
+      "state": "State",
+      "city": "City",
+      "neighborhood": "Neighborhood"
+    },
+    "hype": {
+      "no_votes": "Your club hasn't received votes in this slice yet.",
+      "explosive": "🔥 Explosive growth in the last 24h!",
+      "domination": "👑 Absolute dominance in this region.",
+      "podium": "🚀 Your club is on the podium — push a bit more!",
+      "growing": "📈 Rising momentum. Time to rally the fans.",
+      "default": "🎯 Every vote counts. Invite the fans and climb the ranking."
+    },
+    "position": {
+      "current": "Current position:",
+      "votes": "votes",
+      "growth_24h": "+{{value}} (24h)",
+      "growth_7d": "+{{value}} (7d)"
+    },
+    "cta": {
+      "rally": "Rally the Troops"
+    },
+    "goals": {
+      "title": "Dynamic Goals",
+      "overtake": "{{votes}} votes to overtake {{club}}.",
+      "top10": "{{votes}} votes from the {{scope}} Top 10.",
+      "check_neighborhood": "Check the ranking in your neighborhood ({{neighborhood}}).",
+      "leader": "Leadership consolidated — defend the top."
+    },
+    "next_target": {
+      "title": "Next Target",
+      "missing": "{{votes}} to go"
+    },
+    "census": {
+      "title": "Neighborhood Census · {{club}} in {{city}}",
+      "empty": "No neighborhood votes recorded in this slice."
+    },
+    "table": {
+      "title": "{{scope}} Ranking",
+      "votes_label": "votes"
+    },
+    "empty_state": "No data for this slice.",
+    "invite": {
+      "copied_title": "Link copied!",
+      "copied_desc": "Share it with the fans 🔥"
+    }
   }
 }
