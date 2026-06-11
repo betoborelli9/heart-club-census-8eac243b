@@ -59,5 +59,104 @@
       "copied_title": "Link copied!",
       "copied_desc": "Share it with the fans 🔥"
     }
+  },
+  "common": {
+    "copy": "Copy",
+    "back": "Back",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "loading": "Loading..."
+  },
+  "components": {
+    "rivals_combobox": {
+      "placeholder": "Type the rival's name...",
+      "remove_aria": "Remove {{name}}",
+      "add_manual_prefix": "Add",
+      "add_manual_suffix": "anyway",
+      "hint": "Pick from the database to guarantee the right crest. Max 6 rivals."
+    },
+    "ambassador_card": {
+      "share_title": "Heart Club — Global Fan Census",
+      "title": "Ambassador Program",
+      "subtitle": "Invite fans and dominate the map for your club",
+      "your_link": "Your unique link",
+      "share_cta": "Share Invite",
+      "message": "Hey fan! Register your heart on Heart Club through my link and let's dominate the map for {{club}}: {{link}}",
+      "default_club": "our club",
+      "ranking_title": "Ambassador Ranking"
+    },
+    "address_modal": {
+      "title": "Where does your heart beat?",
+      "subtitle_prefix": "Your territory powers the global map of",
+      "detected": "We detected your city:",
+      "live_here": "Do you live here?",
+      "yes_live": "Yes, I live here!",
+      "no_other_city": "No, I live in another city",
+      "detect_again": "Detect again",
+      "city_placeholder": "Type your city...",
+      "searching_cities": "Searching cities...",
+      "location_error": "Couldn't detect your city automatically. Enable browser location and try again.",
+      "detect_location": "Detect location",
+      "neighborhood_placeholder": "What's your neighborhood in {{city}}?",
+      "loading_neighborhoods": "Loading neighborhoods...",
+      "privacy": "Full privacy: your street never appears publicly. Only the territory powers the global census."
+    },
+    "share_tropa": {
+      "title": "Rally the Troops",
+      "subtitle": "Heart Club · Global Football Census",
+      "banner_alt": "Ambassador Journey — Bronze, Silver, Gold, Diamond",
+      "share_more": "Share (more options)",
+      "invite_text": "⚽ YOU'VE BEEN DRAFTED TO HEART CLUB! 🧡\n\nI just voted for our team! Heart Club is the biggest fan census in the world.\n\nHOW IT WORKS:\n1️⃣ Click the link below and cast your vote.\n2️⃣ Vote for your Heart Club ❤️ AND up to 4 Sympathy Clubs 🧡\n3️⃣ After voting, you get a unique Invite Code.\n4️⃣ Click 'Rally the Troops' and call your friends.\n\nThe more people vote with your invite, the more points you earn to level up: Bronze ➔ Silver ➔ Gold ➔ DIAMOND! 💎\n\nDiamond Ambassadors will get exclusive rewards in the future. Let's dominate the ranking!\n\n👇 VOTE NOW AND RALLY:"
+    },
+    "reset_my_vote": {
+      "confirm": "Reset YOUR own vote to run new tests? (Other users are not affected)",
+      "success": "Your vote was reset ({{count}}). Ready for a new test.",
+      "error": "Failed to reset vote",
+      "loading": "Resetting...",
+      "label": "Reset My Vote"
+    },
+    "social_lock": {
+      "unlocked_title": "Content unlocked! 🎉",
+      "unlocked_desc": "You have access to the Ambassador Card and Census Duel.",
+      "save_error": "Error saving",
+      "premium_title": "Premium Content Unlocked!",
+      "premium_desc": "Ambassador Card and Census Duel available.",
+      "title": "Social Lock",
+      "subtitle": "Follow Heart Club to unlock exclusive features",
+      "follow_n_one": "Follow {{count}} network to unlock",
+      "follow_n_other": "Follow {{count}} networks to unlock",
+      "already_follow": "I follow! Unlock",
+      "unlocks_hint": "🔓 Unlocks: Personalized Ambassador Card + Census Duel"
+    },
+    "feedback_widget": {
+      "fab_aria": "Send feedback",
+      "modal_title": "Talk to Heart Club",
+      "suggestion": "Improvement Suggestion",
+      "bug_report": "Report Error",
+      "placeholder_suggestion": "Your idea to make Heart Club even more epic...",
+      "placeholder_bug": "Describe the error: what happened, on which screen, what you expected...",
+      "send": "Send Feedback",
+      "url_disclaimer": "Your current URL will be included automatically to help us investigate."
+    }
+  },
+  "feedback": {
+    "success": {
+      "link_copied_title": "Link copied!",
+      "link_copied_paste": "Paste it in your favorite messaging app.",
+      "link_copied_share": "Share it with the fans.",
+      "link_copied_troop": "Paste it anywhere to rally the troops.",
+      "feedback_received_title": "Received! 💬",
+      "feedback_received_desc": "Thanks for helping evolve Heart Club.",
+      "territory_confirmed_title": "Territory Confirmed!",
+      "territory_confirmed_desc": "Welcome to the global map!"
+    },
+    "error": {
+      "copy_failed": "Couldn't copy.",
+      "message_too_short_title": "Message too short",
+      "message_too_short_desc": "Tell us a bit more (min. 5 characters).",
+      "send_failed_title": "Failed to send",
+      "send_failed_desc": "Try again in a moment.",
+      "territory_save_error": "Error saving territory"
+    }
   }
 }

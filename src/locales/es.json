@@ -59,5 +59,104 @@
       "copied_title": "¡Enlace copiado!",
       "copied_desc": "Compártelo con la hinchada 🔥"
     }
+  },
+  "common": {
+    "copy": "Copiar",
+    "back": "Volver",
+    "cancel": "Cancelar",
+    "confirm": "Confirmar",
+    "loading": "Cargando..."
+  },
+  "components": {
+    "rivals_combobox": {
+      "placeholder": "Escribe el nombre del rival...",
+      "remove_aria": "Quitar {{name}}",
+      "add_manual_prefix": "Añadir",
+      "add_manual_suffix": "de todos modos",
+      "hint": "Selecciona del banco para asegurar el escudo correcto. Máx. 6 rivales."
+    },
+    "ambassador_card": {
+      "share_title": "Heart Club — Censo Global del Hincha",
+      "title": "Programa de Embajadores",
+      "subtitle": "Invita hinchas y domina el mapa por tu club",
+      "your_link": "Tu enlace único",
+      "share_cta": "Compartir Invitación",
+      "message": "¡Hola, hincha! Registra tu corazón en Heart Club por mi enlace y dominemos el mapa por {{club}}: {{link}}",
+      "default_club": "nuestro club",
+      "ranking_title": "Ranking de Embajadores"
+    },
+    "address_modal": {
+      "title": "¿Dónde late tu corazón?",
+      "subtitle_prefix": "Tu territorio alimenta el mapa global de",
+      "detected": "Detectamos tu ciudad:",
+      "live_here": "¿Vives aquí?",
+      "yes_live": "¡Sí, vivo aquí!",
+      "no_other_city": "No, vivo en otra ciudad",
+      "detect_again": "Detectar de nuevo",
+      "city_placeholder": "Escribe tu ciudad...",
+      "searching_cities": "Buscando ciudades...",
+      "location_error": "No pude detectar tu ciudad automáticamente. Activa la ubicación del navegador e intenta de nuevo.",
+      "detect_location": "Detectar ubicación",
+      "neighborhood_placeholder": "¿Cuál es tu barrio en {{city}}?",
+      "loading_neighborhoods": "Cargando barrios...",
+      "privacy": "Privacidad total: tu calle nunca aparece públicamente. Solo el territorio alimenta el censo global."
+    },
+    "share_tropa": {
+      "title": "Convocar a la Tropa",
+      "subtitle": "Heart Club · Censo Global del Fútbol",
+      "banner_alt": "Camino del Embajador — Bronce, Plata, Oro, Diamante",
+      "share_more": "Compartir (más opciones)",
+      "invite_text": "⚽ ¡HAS SIDO CONVOCADO A HEART CLUB! 🧡\n\n¡Acabo de votar por nuestro equipo! Heart Club es el mayor censo de hinchadas del mundo.\n\nCÓMO FUNCIONA:\n1️⃣ Haz clic en el enlace de abajo y vota.\n2️⃣ Vota por tu Club del Corazón ❤️ Y hasta 4 Clubes de Simpatía 🧡\n3️⃣ Después de votar, ganas un Código de Invitación único.\n4️⃣ Haz clic en 'Convoca a la Tropa' y llama a tus amigos.\n\nCuanta más gente vote con tu invitación, más puntos ganas para subir de nivel: Bronce ➔ Plata ➔ Oro ➔ ¡DIAMANTE! 💎\n\nLos Embajadores Diamante tendrán premios exclusivos en el futuro. ¡Vamos a dominar el ranking!\n\n👇 VOTA AHORA Y CONVOCA:"
+    },
+    "reset_my_vote": {
+      "confirm": "¿Resetear TU propio voto para rehacer pruebas? (No afecta a otros usuarios)",
+      "success": "Tu voto fue reseteado ({{count}}). Listo para una nueva prueba.",
+      "error": "Fallo al resetear voto",
+      "loading": "Reseteando...",
+      "label": "Resetear Mi Voto"
+    },
+    "social_lock": {
+      "unlocked_title": "¡Contenido desbloqueado! 🎉",
+      "unlocked_desc": "Tienes acceso a la Tarjeta de Embajador y al Duelo de Censo.",
+      "save_error": "Error al guardar",
+      "premium_title": "¡Contenido Premium Desbloqueado!",
+      "premium_desc": "Tarjeta de Embajador y Duelo de Censo disponibles.",
+      "title": "Social Lock",
+      "subtitle": "Sigue a Heart Club para desbloquear funciones exclusivas",
+      "follow_n_one": "Sigue {{count}} red para desbloquear",
+      "follow_n_other": "Sigue {{count}} redes para desbloquear",
+      "already_follow": "¡Ya sigo! Desbloquear",
+      "unlocks_hint": "🔓 Desbloquea: Tarjeta de Embajador personalizada + Duelo de Censo"
+    },
+    "feedback_widget": {
+      "fab_aria": "Enviar feedback",
+      "modal_title": "Habla con Heart Club",
+      "suggestion": "Sugerencia de Mejora",
+      "bug_report": "Reportar Error",
+      "placeholder_suggestion": "Tu idea para hacer Heart Club aún más épico...",
+      "placeholder_bug": "Describe el error: qué pasó, en qué pantalla, qué esperabas...",
+      "send": "Enviar Feedback",
+      "url_disclaimer": "Tu URL actual se incluirá automáticamente para ayudarnos a investigar."
+    }
+  },
+  "feedback": {
+    "success": {
+      "link_copied_title": "¡Enlace copiado!",
+      "link_copied_paste": "Pégalo en tu app de mensajes favorita.",
+      "link_copied_share": "Compártelo con la hinchada.",
+      "link_copied_troop": "Pégalo donde quieras para convocar a la tropa.",
+      "feedback_received_title": "¡Recibido! 💬",
+      "feedback_received_desc": "Gracias por ayudar a evolucionar Heart Club.",
+      "territory_confirmed_title": "¡Territorio Confirmado!",
+      "territory_confirmed_desc": "¡Bienvenido al mapa global!"
+    },
+    "error": {
+      "copy_failed": "No se pudo copiar.",
+      "message_too_short_title": "Mensaje muy corto",
+      "message_too_short_desc": "Cuéntanos un poco más (mín. 5 caracteres).",
+      "send_failed_title": "Fallo al enviar",
+      "send_failed_desc": "Intenta de nuevo en un momento.",
+      "territory_save_error": "Error al guardar territorio"
+    }
   }
 }
