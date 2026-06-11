@@ -587,7 +587,7 @@ const Ambassadors = () => {
                           boxShadow: `0 0 18px ${theme.primaryHex}80`,
                         }}
                       >
-                        <Share2 className="w-4 h-4" /> Convidar torcedor
+                        <Share2 className="w-4 h-4" /> {t("ambassadors.invite_fan")}
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent
