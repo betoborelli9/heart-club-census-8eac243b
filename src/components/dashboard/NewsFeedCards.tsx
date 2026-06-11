@@ -140,8 +140,8 @@ export default function NewsFeedCards({ teamName, primaryColor = "#ff6200", club
           <Loader2 className="w-5 h-5 animate-spin" style={{ color: primaryColor }} />
         </div>
       ) : news.length === 0 ? (
-        <p className="text-[10px] text-white/30 italic py-6 text-center uppercase font-black">
-          Aguardando novas atualizações...
+        <p className="text-[10px] text-white/40 italic py-6 text-center uppercase font-black">
+          No momento não há notícias publicadas nas últimas 48 horas.
         </p>
       ) : (
         <ul className="flex flex-col">
