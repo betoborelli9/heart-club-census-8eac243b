@@ -158,6 +158,7 @@ const BUILD_SYNC_TAG = "2026-03-23-ambassadors-sync-01";
 /* ============================================== */
 const Ambassadors = () => {
   const navigate = useNavigate();
+  const { t } = useTranslationApp();
   const { user, profile, isLoading, signOut, updateProfile, refreshProfile } = useUser();
 
   /* [MÓDULO: ESTADO LOCAL] */
