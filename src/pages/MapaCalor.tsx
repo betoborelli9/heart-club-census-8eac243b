@@ -1664,7 +1664,7 @@ const MapaCalor = () => {
               </h3>
               {ranking.length === 0 ? (
                 <p className="text-[11px] italic text-muted-foreground text-center py-4">
-                  Nenhum voto registrado ainda.
+                  {t("heatmap.no_votes_registered")}
                 </p>
               ) : (
                 <div className="space-y-2 max-h-[280px] overflow-y-auto pr-1">
