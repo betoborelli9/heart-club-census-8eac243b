@@ -1657,10 +1657,10 @@ const MapaCalor = () => {
             <div className="rounded-[24px] bg-black/40 backdrop-blur-xl border border-white/5 p-4">
               <h3 className="text-[10px] font-black italic uppercase tracking-widest text-muted-foreground mb-3 flex items-center gap-2">
                 <Trophy className="w-3 h-3" />
-                {viewMode === "world" && "Países do Mundo"}
-                {viewMode === "country" && `Estados de ${activeCountry}`}
-                {viewMode === "state" && `Cidades de ${activeState}`}
-                {viewMode === "city" && `Bairros de ${activeCity}`}
+                {viewMode === "world" && t("heatmap.world_countries")}
+                {viewMode === "country" && t("heatmap.states_of", { name: activeCountry })}
+                {viewMode === "state" && t("heatmap.cities_of", { name: activeState })}
+                {viewMode === "city" && t("heatmap.neighborhoods_of", { name: activeCity })}
               </h3>
               {ranking.length === 0 ? (
                 <p className="text-[11px] italic text-muted-foreground text-center py-4">
