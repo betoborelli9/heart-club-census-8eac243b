@@ -1563,7 +1563,7 @@ const MapaCalor = () => {
                         </h3>
                       </div>
                     </div>
-                    <p className="text-[9px] text-muted-foreground font-black uppercase">Total visível</p>
+                    <p className="text-[9px] text-muted-foreground font-black uppercase">{t("heatmap.total_visible")}</p>
                     <p className="text-base text-primary font-black italic">
                       {fmt(heartCompareData?.totalVotes ?? totalVotes)}
                     </p>
