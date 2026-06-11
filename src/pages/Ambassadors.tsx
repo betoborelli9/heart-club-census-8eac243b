@@ -805,7 +805,7 @@ const Ambassadors = () => {
           <div className="space-y-5 pt-2">
             {/* WhatsApp */}
             <div className="space-y-2">
-              <Label className="text-xs font-bold uppercase tracking-wider text-white/60">WhatsApp</Label>
+              <Label className="text-xs font-bold uppercase tracking-wider text-white/60">{t("ambassadors.whatsapp_label")}</Label>
               <div className="flex gap-2">
                 <Select
                   value={phoneCountry.code}
