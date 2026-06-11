@@ -4,8 +4,10 @@ import { BarChart3 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Cell } from "recharts";
 import { mockCensusRanking, totalVotes } from "@/data/mockDashboard";
+import { useTranslationApp } from "@/hooks/useTranslationApp";
 
 const CensusStats = () => {
+  const { t } = useTranslationApp();
   const [count, setCount] = useState(0);
   const ref = useRef<HTMLDivElement>(null);
   const targetNumber = 1450231;
