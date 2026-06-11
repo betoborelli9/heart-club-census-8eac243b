@@ -1557,7 +1557,7 @@ const MapaCalor = () => {
                         <ClubLogo src={activeClubLogo} alt={activeClubName} size="sm" />
                       </div>
                       <div className="min-w-0">
-                        <p className="text-[7px] text-primary font-black uppercase tracking-widest">❤️ Coração</p>
+                        <p className="text-[7px] text-primary font-black uppercase tracking-widest">{t("heatmap.heart_label")}</p>
                         <h3 className="text-[10px] font-black italic uppercase truncate leading-tight">
                           {activeClubName}
                         </h3>
