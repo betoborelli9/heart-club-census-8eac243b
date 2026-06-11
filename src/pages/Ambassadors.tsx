@@ -422,10 +422,10 @@ const Ambassadors = () => {
     return (
       <div className="min-h-screen bg-[#0a0a0a] text-white flex items-center justify-center px-4">
         <div className="w-full max-w-md rounded-3xl border border-white/10 bg-white/5 p-8 text-center">
-          <h1 className="text-2xl font-black italic uppercase">Embaixadores</h1>
-          <p className="mt-3 text-sm text-white/50">Faça login para acessar o painel de embaixadores.</p>
+          <h1 className="text-2xl font-black italic uppercase">{t("ambassadors.login_title")}</h1>
+          <p className="mt-3 text-sm text-white/50">{t("ambassadors.login_required")}</p>
           <Button className="mt-6 w-full bg-[#ff6200] hover:bg-[#e55800]" onClick={() => navigate("/login")}>
-            Entrar agora
+            {t("ambassadors.login_now")}
           </Button>
         </div>
       </div>
