@@ -17,6 +17,7 @@ import { useTranslationApp } from "@/hooks/useTranslationApp";
 
 export default function AmbassadorCenter() {
   const navigate = useNavigate();
+  const { t } = useTranslationApp();
   const { user, profile, isLoading } = useUser();
   const [loading, setLoading] = useState(true);
   const [referrals, setReferrals] = useState(0);
