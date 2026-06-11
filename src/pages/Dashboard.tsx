@@ -13,6 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { CLUBS_DATA } from "@/clubes-data";
 import { isMasterEmail } from "@/lib/master";
 import MasterTestPanel from "@/components/MasterTestPanel";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
 import { useTranslation } from "react-i18next";
 
 /* ═══════════════════════════════════════════════════════════
