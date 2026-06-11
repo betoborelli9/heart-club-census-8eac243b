@@ -1777,7 +1777,7 @@ const MapaCalor = () => {
                       </div>
                       <div>
                         <p className="text-[7px] font-black uppercase tracking-widest leading-none text-white/80">
-                          ⚔️ vs
+                          {t("heatmap.vs_label")}
                         </p>
                         <p className="text-[10px] font-black italic uppercase text-white leading-tight max-w-[100px] truncate">
                           {compareData.name}
