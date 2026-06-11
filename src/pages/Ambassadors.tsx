@@ -317,11 +317,11 @@ const Ambassadors = () => {
   /* [MÓDULO: AÇÃO DO CENSO] */
   const handleCensusSubmit = async () => {
     if (!isValidPhoneByCountry(phoneInput, phoneCountry)) {
-      toast({ title: "WhatsApp inválido", description: `Informe um número válido para ${phoneCountry.name}.`, variant: "destructive" });
+      toast({ title: t("ambassadors.whatsapp_invalid_title"), description: t("ambassadors.whatsapp_invalid_desc", { country: phoneCountry.name }), variant: "destructive" });
       return;
     }
     if (!professionInput.trim()) {
-      toast({ title: "Profissão obrigatória", description: "Digite sua profissão.", variant: "destructive" });
+      toast({ title: t("ambassadors.profession_required_title"), description: t("ambassadors.profession_required_desc"), variant: "destructive" });
       return;
     }
 
