@@ -1,76 +1,60 @@
-# Plano — Etapa 1: Preparação da Estrutura de i18n
+## i18n — Etapa 2: Hook customizado + Página Ranking
 
-Objetivo: instalar e configurar i18n no projeto **sem alterar nenhuma lógica de negócio**, sem mudar estilos, sem afetar Supabase, votação, escudos ou notícias. Apenas infraestrutura + um único componente piloto refatorado.
+### Objetivo
+Criar um wrapper reutilizável para `useTranslation` e refatorar a página de Ranking (`/ranking`, arquivo `src/pages/Stats.tsx`) trocando textos estáticos por chaves de tradução. Sem mudar lógica, busca, dados, estilos ou comportamento.
 
-## 1. Dependências
-Instalar via `bun add`:
-- `i18next`
-- `react-i18next`
-- `i18next-browser-languagedetector` (para detectar idioma do navegador)
+---
 
-Nenhuma outra dependência será tocada.
+### 1. Novo hook: `src/hooks/useTranslationApp.ts`
+Wrapper fino sobre `react-i18next`:
+- Reexpõe `t`, `i18n`, idioma atual (`language`) e helper `changeLanguage(lng)`.
+- Namespace padrão `translation` (o que já usamos).
+- Assinatura `useTranslationApp()` — uso idêntico ao atual: `const { t } = useTranslationApp();`.
+- Centraliza para facilitar trocas futuras (ex.: logging, fallback custom, namespaces).
 
-## 2. Estrutura de pastas
-Criar os arquivos de tradução em `src/locales/`:
+### 2. Estrutura de chaves nos JSONs
+Adicionar bloco `ranking.*` em `pt.json`, `en.json`, `es.json` mantendo o que já existe (`header.*`). Hierarquia proposta:
 
 ```text
-src/
-└── locales/
-    ├── pt.json   ← idioma base (fonte da verdade)
-    ├── en.json
-    └── es.json
+ranking.title
+ranking.subtitle
+ranking.search.placeholder
+ranking.scope.global
+ranking.scope.country
+ranking.scope.state
+ranking.scope.city
+ranking.scope.neighborhood
+ranking.table.position
+ranking.table.club
+ranking.table.votes
+ranking.table.share
+ranking.table.trend
+ranking.empty_state
+ranking.loading
+ranking.rivals.title
+ranking.rivals.empty
+ranking.census.title
+ranking.share.button
+ranking.share.copied
+ranking.invite.title
+ranking.invite.cta
 ```
+(Chaves finais serão derivadas 1:1 dos textos visíveis encontrados no arquivo; a lista acima é a espinha dorsal.)
 
-Conteúdo inicial: apenas as chaves usadas pelo componente piloto (header do Dashboard). Os 3 arquivos terão o mesmo formato/estrutura — `en.json` e `es.json` traduzidos; `pt.json` mantendo exatamente os textos atuais.
+### 3. Refatoração de `src/pages/Stats.tsx`
+- Importar `useTranslationApp`.
+- Substituir **apenas literais visíveis** (títulos, labels, placeholders, mensagens vazias, tooltips, aria-labels, textos de toast voltados ao usuário) por `t("ranking.<chave>")`.
+- Strings interpoladas usam `t("ranking.x", { valor })` com `{{valor}}` nos JSONs.
+- **NÃO alterar**: queries Supabase, lógica de cascade de emblemas (`ClubBadge`), cálculos, ordenação, hooks de dados, classes Tailwind, estrutura JSX, IDs, rotas, ícones.
+- Nomes de clubes, números formatados via `fmt()` e dados do banco permanecem como estão (não traduzidos).
 
-Exemplo de chaves iniciais (somente o necessário para o piloto):
-```json
-{
-  "header": {
-    "brand": "Heart Club",
-    "logout": "Sair"
-  }
-}
-```
+### 4. Garantias
+- Idioma padrão continua `pt` (fallback). Visual idêntico em PT.
+- Demais páginas intactas — só Header (etapa 1) e Ranking (etapa 2) usam i18n.
+- Nenhum arquivo de backend/edge function alterado.
 
-## 3. Inicialização do i18next
-Criar `src/i18n.ts` com:
-- Import dos 3 JSONs.
-- `LanguageDetector` (ordem: `localStorage` → `navigator` → fallback `pt`).
-- `fallbackLng: "pt"`.
-- `supportedLngs: ["pt", "en", "es"]`.
-- `interpolation.escapeValue: false`.
-- `react.useSuspense: false` (evita qualquer flash/loader novo na UI).
+### Arquivos a criar/editar
+- **criar**: `src/hooks/useTranslationApp.ts`
+- **editar**: `src/locales/pt.json`, `src/locales/en.json`, `src/locales/es.json`, `src/pages/Stats.tsx`
 
-Importar `./i18n` **uma única vez** no topo de `src/main.tsx`. Nenhum Provider extra é necessário (react-i18next funciona via hook).
-
-## 4. Componente piloto
-Refatorar **apenas o header do Dashboard** (`src/pages/Dashboard.tsx`, dentro do `<header>`):
-- Substituir o texto literal `"Heart Club"` por `t("header.brand")`.
-- Substituir o `aria/title` implícito do botão de logout (sem texto visível hoje — adicionar apenas `aria-label={t("header.logout")}`, mantendo o ícone exatamente igual).
-
-Nenhum outro arquivo da aplicação é alterado nesta etapa. Banner, busca, news, rivais, footer, votação, login, etc. permanecem intactos.
-
-## 5. Regra de ouro (garantias)
-- Visual idêntico: nenhuma classe Tailwind alterada, nenhum layout movido.
-- Sem mudança de lógica: sem novos efeitos, sem novas chamadas Supabase, sem mexer em rotas.
-- Sem seletor de idioma na UI ainda (fica para a Etapa 2). Detecção é 100% automática pelo navegador, com `pt` como fallback.
-- Se o idioma do navegador não for `pt`/`en`/`es`, cai em `pt` (estado atual).
-
-## 6. Arquivos que serão criados/editados
-Criados:
-- `src/locales/pt.json`
-- `src/locales/en.json`
-- `src/locales/es.json`
-- `src/i18n.ts`
-
-Editados (mínimo absoluto):
-- `package.json` (via `bun add`)
-- `src/main.tsx` (1 linha: `import "./i18n";`)
-- `src/pages/Dashboard.tsx` (apenas o `<header>`: hook `useTranslation` + 2 chaves)
-
-## 7. Próximas etapas (fora do escopo agora)
-- Etapa 2: seletor de idioma na UI + expansão para mais componentes.
-- Etapa 3: tratamento de conteúdo vindo do Supabase (nomes de clubes, notícias) — exige decisão separada.
-
-Confirma que posso aplicar exatamente este plano?
+Aprovando, executo a refatoração mantendo PT como referência e EN/ES como traduções iniciais (revisáveis depois).
