@@ -132,10 +132,10 @@ export default function SympathyCarousel({ sympathies, heartClubName, viewedClub
     <section className="w-full mx-auto select-none">
       <header className="flex items-center justify-between mb-4 px-1">
         <h2 className="text-[10px] font-black italic uppercase tracking-[0.3em] text-white/30">
-          Meus Clubes
+          {t("sympathy.my_clubs")}
         </h2>
         <span className="text-[8px] font-bold text-white/10 uppercase tracking-tighter italic">
-          Compartilhador de simpatia
+          {t("sympathy.sympathy_sharer")}
         </span>
       </header>
 
@@ -143,13 +143,13 @@ export default function SympathyCarousel({ sympathies, heartClubName, viewedClub
         {/* CLUBE DO CORAÇÃO */}
         <div className="space-y-2">
           <div className="text-[9px] font-black italic uppercase tracking-[0.25em] text-[#ff6200]/80 px-1 flex items-center gap-1.5">
-            <Heart className="w-3 h-3 fill-current" /> Clube do Coração
+            <Heart className="w-3 h-3 fill-current" /> {t("sympathy.heart_club")}
           </div>
           {heartItem ? (
             <div className="grid grid-cols-1">{renderCard(heartItem, true)}</div>
           ) : (
             <div className="h-[120px] rounded-[24px] border border-dashed border-white/10 flex items-center justify-center text-[9px] uppercase italic text-white/20">
-              Sem voto
+              {t("sympathy.no_vote")}
             </div>
           )}
         </div>
@@ -159,7 +159,7 @@ export default function SympathyCarousel({ sympathies, heartClubName, viewedClub
         {/* SIMPATIAS */}
         <div className="space-y-2">
           <div className="text-[9px] font-black italic uppercase tracking-[0.25em] text-white/40 px-1">
-            Clubes de Simpatia
+            {t("sympathy.sympathy_clubs")}
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {sympathyItems.map((name) => renderCard(name, false))}
