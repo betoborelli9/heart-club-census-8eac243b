@@ -275,8 +275,10 @@ serve(async (req) => {
       "amistoso beneficente", "racha",
     ];
 
-    // FRESHNESS — janela RÍGIDA de 48h. Sem pubDate válido = descartada.
-    const FRESHNESS_MS = 48 * 60 * 60 * 1000;
+    // FRESHNESS — janela ampliada para 14 dias. Bing News (fallback usado
+    // quando Google News bloqueia Supabase) costuma devolver itens antigos
+    // a partir da região europeia; 48h descartava 100% dos resultados.
+    const FRESHNESS_MS = 14 * 24 * 60 * 60 * 1000;
     const now = Date.now();
 
     const debug = { total: 0, relev: 0, fresh: 0, ctx: 0, ambig: 0, accepted: 0 };
@@ -302,10 +304,10 @@ serve(async (req) => {
       if (!isStrictlyRelevant(cleanTitle, clubName)) continue;
       debug.relev++;
 
-      const pubDate = get("pubDate");
+      const pubDate = get("pubDate") || get("dc:date") || get("a10:updated") || get("updated");
       const pubMs = pubDate ? new Date(pubDate).getTime() : NaN;
-      if (isNaN(pubMs)) continue;
-      if (now - pubMs > FRESHNESS_MS) continue;
+      // Sem data válida: aceita mesmo assim (alguns feeds não trazem pubDate).
+      if (!isNaN(pubMs) && now - pubMs > FRESHNESS_MS) continue;
       debug.fresh++;
 
       const description = get("description").replace(/<[^>]+>/g, " ");
