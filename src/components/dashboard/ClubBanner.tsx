@@ -307,7 +307,13 @@ const ClubBanner = ({
             <>
               <NavItem icon={Vote} label={t("club_banner.nav.voting")} path="/voting" variant="orange" />
               <NavItem icon={FlaskConical} label={t("club_banner.nav.test_club")} path="/admin/votos-ficticios" variant="orange" />
-              <NavItem icon={ShieldAlert} label={t("club_banner.nav.master_panel")} path="/admin" variant="danger" />
+              <NavItem
+                icon={ShieldAlert}
+                label={t("club_banner.nav.master_panel")}
+                path="/admin"
+                variant={hasNewVotes ? "success" : "danger"}
+                onClick={handleOpenMasterPanel}
+              />
             </>
           )}
         </nav>
