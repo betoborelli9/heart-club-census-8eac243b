@@ -190,17 +190,19 @@ const ClubBanner = ({
 
   const isActive = (path: string) => location.pathname === path || location.pathname + location.hash === path;
 
-  const NavItem = ({ icon: Icon, label, path, active, variant }: any) => (
+  const NavItem = ({ icon: Icon, label, path, active, variant, onClick }: any) => (
     <button
-      onClick={() => navigate(path)}
+      onClick={onClick ?? (() => navigate(path))}
       className={`flex items-center gap-2 px-4 py-2.5 rounded-xl transition-all duration-300 text-[10px] font-black uppercase italic ${
-        variant === "danger"
-          ? "bg-red-600 text-white animate-pulse"
-          : variant === "orange"
-            ? "text-[#ff6200] border border-[#ff6200]/20 hover:bg-[#ff6200]/10"
-            : active
-              ? "bg-[#ff6200] text-white shadow-[0_0_15px_rgba(255,98,0,0.3)]"
-              : "text-white/40 hover:text-white hover:bg-white/5"
+        variant === "success"
+          ? "bg-green-600 text-white animate-pulse shadow-[0_0_15px_rgba(34,197,94,0.6)]"
+          : variant === "danger"
+            ? "bg-red-600 text-white animate-pulse"
+            : variant === "orange"
+              ? "text-[#ff6200] border border-[#ff6200]/20 hover:bg-[#ff6200]/10"
+              : active
+                ? "bg-[#ff6200] text-white shadow-[0_0_15px_rgba(255,98,0,0.3)]"
+                : "text-white/40 hover:text-white hover:bg-white/5"
       }`}
     >
       <Icon size={14} />
