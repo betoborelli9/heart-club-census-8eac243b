@@ -73,11 +73,47 @@ const ClubBanner = ({
     escudo_url: "",
   });
   const [enriching, setEnriching] = useState(true);
+  const [hasNewVotes, setHasNewVotes] = useState(false);
 
   const IS_MASTER = user?.email === "betoborelli9@gmail.com";
   const hasLevel = ambassadorLevel && ambassadorLevel.toUpperCase() !== "NONE";
   const canSeeAmbassador = hasLevel || IS_MASTER;
   const displayLevel = IS_MASTER ? "DIAMANTE" : ambassadorLevel || "BRONZE";
+
+  /* ═══════════════════════════════════════════════════════════
+      MÓDULO: SINAL DE NOVOS VOTOS (PULSO VERDE p/ MASTER ADMIN)
+      - Conta votos criados após o último acesso ao painel /admin.
+      - Marcador persistido em localStorage('master_admin_last_seen').
+      - Limpa ao clicar em "Painel Master" (navegando para /admin).
+     ═══════════════════════════════════════════════════════════ */
+  useEffect(() => {
+    if (!IS_MASTER) return;
+    let cancelled = false;
+
+    const check = async () => {
+      const lastSeen =
+        localStorage.getItem("master_admin_last_seen") ||
+        new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString();
+      const { count } = await supabase
+        .from("votos")
+        .select("id", { count: "exact", head: true })
+        .gt("created_at", lastSeen);
+      if (!cancelled) setHasNewVotes((count ?? 0) > 0);
+    };
+
+    check();
+    const id = setInterval(check, 30000);
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+    };
+  }, [IS_MASTER]);
+
+  const handleOpenMasterPanel = () => {
+    localStorage.setItem("master_admin_last_seen", new Date().toISOString());
+    setHasNewVotes(false);
+    navigate("/admin");
+  };
 
   useEffect(() => {
     if (!clubName) return;
@@ -154,17 +190,19 @@ const ClubBanner = ({
 
   const isActive = (path: string) => location.pathname === path || location.pathname + location.hash === path;
 
-  const NavItem = ({ icon: Icon, label, path, active, variant }: any) => (
+  const NavItem = ({ icon: Icon, label, path, active, variant, onClick }: any) => (
     <button
-      onClick={() => navigate(path)}
+      onClick={onClick ?? (() => navigate(path))}
       className={`flex items-center gap-2 px-4 py-2.5 rounded-xl transition-all duration-300 text-[10px] font-black uppercase italic ${
-        variant === "danger"
-          ? "bg-red-600 text-white animate-pulse"
-          : variant === "orange"
-            ? "text-[#ff6200] border border-[#ff6200]/20 hover:bg-[#ff6200]/10"
-            : active
-              ? "bg-[#ff6200] text-white shadow-[0_0_15px_rgba(255,98,0,0.3)]"
-              : "text-white/40 hover:text-white hover:bg-white/5"
+        variant === "success"
+          ? "bg-green-600 text-white animate-pulse shadow-[0_0_15px_rgba(34,197,94,0.6)]"
+          : variant === "danger"
+            ? "bg-red-600 text-white animate-pulse"
+            : variant === "orange"
+              ? "text-[#ff6200] border border-[#ff6200]/20 hover:bg-[#ff6200]/10"
+              : active
+                ? "bg-[#ff6200] text-white shadow-[0_0_15px_rgba(255,98,0,0.3)]"
+                : "text-white/40 hover:text-white hover:bg-white/5"
       }`}
     >
       <Icon size={14} />
@@ -269,7 +307,13 @@ const ClubBanner = ({
             <>
               <NavItem icon={Vote} label={t("club_banner.nav.voting")} path="/voting" variant="orange" />
               <NavItem icon={FlaskConical} label={t("club_banner.nav.test_club")} path="/admin/votos-ficticios" variant="orange" />
-              <NavItem icon={ShieldAlert} label={t("club_banner.nav.master_panel")} path="/admin" variant="danger" />
+              <NavItem
+                icon={ShieldAlert}
+                label={t("club_banner.nav.master_panel")}
+                path="/admin"
+                variant={hasNewVotes ? "success" : "danger"}
+                onClick={handleOpenMasterPanel}
+              />
             </>
           )}
         </nav>
