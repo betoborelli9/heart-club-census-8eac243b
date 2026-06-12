@@ -304,11 +304,10 @@ serve(async (req) => {
       if (!isStrictlyRelevant(cleanTitle, clubName)) continue;
       debug.relev++;
 
-      const pubDate = get("pubDate");
+      const pubDate = get("pubDate") || get("dc:date") || get("a10:updated") || get("updated");
       const pubMs = pubDate ? new Date(pubDate).getTime() : NaN;
-      if (debug.relev <= 3) console.log(`[club-news][diag] pubDate="${pubDate}" pubMs=${pubMs} now=${now}`);
-      if (isNaN(pubMs)) continue;
-      if (now - pubMs > FRESHNESS_MS) continue;
+      // Sem data válida: aceita mesmo assim (alguns feeds não trazem pubDate).
+      if (!isNaN(pubMs) && now - pubMs > FRESHNESS_MS) continue;
       debug.fresh++;
 
       const description = get("description").replace(/<[^>]+>/g, " ");
