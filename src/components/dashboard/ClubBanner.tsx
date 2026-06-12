@@ -73,11 +73,47 @@ const ClubBanner = ({
     escudo_url: "",
   });
   const [enriching, setEnriching] = useState(true);
+  const [hasNewVotes, setHasNewVotes] = useState(false);
 
   const IS_MASTER = user?.email === "betoborelli9@gmail.com";
   const hasLevel = ambassadorLevel && ambassadorLevel.toUpperCase() !== "NONE";
   const canSeeAmbassador = hasLevel || IS_MASTER;
   const displayLevel = IS_MASTER ? "DIAMANTE" : ambassadorLevel || "BRONZE";
+
+  /* ═══════════════════════════════════════════════════════════
+      MÓDULO: SINAL DE NOVOS VOTOS (PULSO VERDE p/ MASTER ADMIN)
+      - Conta votos criados após o último acesso ao painel /admin.
+      - Marcador persistido em localStorage('master_admin_last_seen').
+      - Limpa ao clicar em "Painel Master" (navegando para /admin).
+     ═══════════════════════════════════════════════════════════ */
+  useEffect(() => {
+    if (!IS_MASTER) return;
+    let cancelled = false;
+
+    const check = async () => {
+      const lastSeen =
+        localStorage.getItem("master_admin_last_seen") ||
+        new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString();
+      const { count } = await supabase
+        .from("votos")
+        .select("id", { count: "exact", head: true })
+        .gt("created_at", lastSeen);
+      if (!cancelled) setHasNewVotes((count ?? 0) > 0);
+    };
+
+    check();
+    const id = setInterval(check, 30000);
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+    };
+  }, [IS_MASTER]);
+
+  const handleOpenMasterPanel = () => {
+    localStorage.setItem("master_admin_last_seen", new Date().toISOString());
+    setHasNewVotes(false);
+    navigate("/admin");
+  };
 
   useEffect(() => {
     if (!clubName) return;
