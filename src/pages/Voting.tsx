@@ -44,11 +44,9 @@ const Voting = () => {
   // [BLOQUEIO] Torcedor comum só vota uma vez. Master nunca trava.
   useEffect(() => {
     if (!isAuthReady || isLoading) return;
-    if (!isAuthenticated) {
-      navigate("/login", { replace: true });
-      return;
-    }
-    if (hasVoted && !IS_MASTER_ADMIN) {
+    // [PORTA DE ENTRADA] Não forçamos /login aqui — torcedor anônimo
+    // pode explorar a tela de votação; auth só é exigida na hora de gravar o voto.
+    if (isAuthenticated && hasVoted && !IS_MASTER_ADMIN) {
       navigate("/dashboard", { replace: true });
     }
   }, [isAuthReady, isLoading, isAuthenticated, hasVoted, IS_MASTER_ADMIN, navigate]);
