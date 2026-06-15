@@ -50,13 +50,18 @@ const Login = () => {
     if (!email.trim()) return;
     setLoadingProvider("magic");
     try {
+      console.log("[LOGIN] → invocando heart-club-auth para", email.trim());
       const { data, error } = await supabase.functions.invoke("heart-club-auth", {
         body: { email: email.trim(), redirectOrigin: window.location.origin },
       });
+      console.log("[LOGIN] ← resposta heart-club-auth", { data, error });
       if (error || (data && (data as any).error)) {
         throw new Error(((data as any)?.error as string) || error?.message || "auth_failed");
       }
-      toast({ title: t("auth.login.link_sent_title"), description: t("auth.login.link_sent_desc") });
+      toast({
+        title: t("auth.login.link_sent_title"),
+        description: t("auth.login.link_sent_desc"),
+      });
     } catch (err) {
       console.error("[LOGIN] magic link falhou", err);
       toast({
@@ -64,8 +69,9 @@ const Login = () => {
         title: t("auth.login.error_title"),
         description: t("auth.login.error_desc"),
       });
+    } finally {
+      setLoadingProvider(null);
     }
-    setLoadingProvider(null);
   };
 
   if (isLoading) {
