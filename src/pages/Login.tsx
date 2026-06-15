@@ -146,7 +146,7 @@ const Login = () => {
           </div>
         </div>
 
-        <form onSubmit={(e) => { e.preventDefault(); navigate("/voting"); }} className="space-y-4">
+        <form onSubmit={handleMagicLink} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="email" className="text-sm text-muted-foreground">
               {t("auth.login.email_label")}
@@ -163,10 +163,13 @@ const Login = () => {
           <Button
             type="submit"
             className="w-full h-12 font-bold btn-orange-gradient rounded-xl"
-            disabled={!!loadingProvider}
-            onClick={(e) => { e.preventDefault(); navigate("/voting"); }}
+            disabled={!!loadingProvider || !email.trim()}
           >
-            <Mail className="w-5 h-5 mr-2" />
+            {loadingProvider === "magic" ? (
+              <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+            ) : (
+              <Mail className="w-5 h-5 mr-2" />
+            )}
             {t("auth.login.send_link")}
           </Button>
         </form>
