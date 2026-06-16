@@ -94,11 +94,14 @@ const ClubBanner = ({
       const lastSeen =
         localStorage.getItem("master_admin_last_seen") ||
         new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString();
-      const { count } = await supabase
-        .from("votos")
-        .select("id", { count: "exact", head: true })
-        .gt("created_at", lastSeen);
-      if (!cancelled) setHasNewVotes((count ?? 0) > 0);
+      // RLS bloqueia SELECT direto na tabela votos para o admin.
+      // Usamos RPC SECURITY DEFINER restrita ao e-mail master.
+      const { data, error } = await supabase.rpc("count_votes_since", { p_since: lastSeen });
+      if (error) {
+        console.warn("[ClubBanner] count_votes_since error:", error.message);
+        return;
+      }
+      if (!cancelled) setHasNewVotes(Number(data ?? 0) > 0);
     };
 
     check();
