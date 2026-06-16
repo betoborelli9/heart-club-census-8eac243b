@@ -1070,6 +1070,7 @@ export type Database = {
       clean_dead_competitions: { Args: never; Returns: undefined }
       clean_fictitious_data: { Args: never; Returns: undefined }
       club_name_tokens: { Args: { t: string }; Returns: string[] }
+      count_votes_since: { Args: { p_since: string }; Returns: number }
       fake_votes_summary: { Args: never; Returns: Json }
       get_active_competitions_v2: {
         Args: { p_team_id: number }
