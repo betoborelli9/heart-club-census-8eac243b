@@ -253,7 +253,9 @@ const HeatmapSection = () => {
   }, [drillLevel, countryEntries, stateEntries, cityEntries]);
 
   const handleWorldClick = useCallback((geo: any) => {
-    const iso = geo.properties.ISO_A3 || geo.properties.ADM0_A3;
+    const geoName = geo.properties.name || geo.properties.NAME || "";
+    const iso =
+      geo.properties.ISO_A3 || geo.properties.ADM0_A3 || countryNameToIso3(geoName);
     if (iso !== "BRA") return;
     setDrillLevel("state");
     setActiveStateName(null);
@@ -324,13 +326,21 @@ const HeatmapSection = () => {
                 <Geographies geography={drillLevel === "country" ? WORLD_GEO_URL : BRAZIL_STATES_GEO_URL}>
                   {({ geographies }) =>
                     geographies.map((geo) => {
-                      const countryIso = geo.properties.ISO_A3 || geo.properties.ADM0_A3;
-                      const stateName = geo.properties.name || geo.properties.NAME || geo.properties.nome || "";
+                      const geoName = geo.properties.name || geo.properties.NAME || geo.properties.nome || "";
+                      // world-atlas (countries-110m) NÃO expõe ISO_A3; resolvemos pelo nome.
+                      const countryIso =
+                        geo.properties.ISO_A3 ||
+                        geo.properties.ADM0_A3 ||
+                        countryNameToIso3(geoName) ||
+                        "";
+                      const stateName = geoName;
                       const stateUF = geo.properties.sigla || "";
 
                       const votes =
                         drillLevel === "country"
-                          ? countryVotesMap[countryIso] || 0
+                          ? countryVotesMap[countryIso] ||
+                            countryVotesMap[normalize(geoName)] ||
+                            0
                           : stateVotesMap[normalize(stateName)] || stateVotesMap[stateUF] || 0;
 
                       const isActiveState = activeStateName && normalize(activeStateName) === normalize(stateName);
