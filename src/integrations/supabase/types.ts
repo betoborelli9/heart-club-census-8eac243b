@@ -557,6 +557,8 @@ export type Database = {
           classe_social: string | null
           codigo_indicacao: string | null
           data_nascimento: string | null
+          deletion_requested_at: string | null
+          deletion_status: string | null
           device_hardware: string | null
           estado: string | null
           faixa_etaria: string | null
@@ -569,9 +571,12 @@ export type Database = {
           nome_exibicao: string | null
           occupation: string | null
           pais: string | null
+          privacy_accepted_at: string | null
           profissao: string | null
           role: string | null
           telefone: string | null
+          terms_accepted_at: string | null
+          terms_version: string | null
           username: string | null
           votos_time: string | null
         }
@@ -583,6 +588,8 @@ export type Database = {
           classe_social?: string | null
           codigo_indicacao?: string | null
           data_nascimento?: string | null
+          deletion_requested_at?: string | null
+          deletion_status?: string | null
           device_hardware?: string | null
           estado?: string | null
           faixa_etaria?: string | null
@@ -595,9 +602,12 @@ export type Database = {
           nome_exibicao?: string | null
           occupation?: string | null
           pais?: string | null
+          privacy_accepted_at?: string | null
           profissao?: string | null
           role?: string | null
           telefone?: string | null
+          terms_accepted_at?: string | null
+          terms_version?: string | null
           username?: string | null
           votos_time?: string | null
         }
@@ -609,6 +619,8 @@ export type Database = {
           classe_social?: string | null
           codigo_indicacao?: string | null
           data_nascimento?: string | null
+          deletion_requested_at?: string | null
+          deletion_status?: string | null
           device_hardware?: string | null
           estado?: string | null
           faixa_etaria?: string | null
@@ -621,9 +633,12 @@ export type Database = {
           nome_exibicao?: string | null
           occupation?: string | null
           pais?: string | null
+          privacy_accepted_at?: string | null
           profissao?: string | null
           role?: string | null
           telefone?: string | null
+          terms_accepted_at?: string | null
+          terms_version?: string | null
           username?: string | null
           votos_time?: string | null
         }
@@ -963,6 +978,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      accept_terms: { Args: { p_version: string }; Returns: undefined }
       admin_approve_vote: { Args: { p_voto_id: string }; Returns: undefined }
       admin_clean_fraud_by_fingerprint: {
         Args: never
@@ -1219,6 +1235,7 @@ export type Database = {
         Args: { p_codigo: string; p_indicado_id?: string }
         Returns: boolean
       }
+      request_account_deletion: { Args: never; Returns: Json }
       search_club_city_votes: {
         Args: { p_city_query: string; p_club_name: string; p_limit?: number }
         Returns: Json
