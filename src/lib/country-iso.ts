@@ -70,7 +70,9 @@ function getIntlCountryMap(): Record<string, string> {
   const locales = ["pt-BR", "pt", "en", "en-US", "es", "fr"];
   for (const locale of locales) {
     try {
-      const displayNames = new Intl.DisplayNames([locale], { type: "region" });
+      const DisplayNames = (Intl as any).DisplayNames;
+      if (!DisplayNames) continue;
+      const displayNames = new DisplayNames([locale], { type: "region" });
       for (const [iso2, iso3] of Object.entries(ISO2_TO_ISO3)) {
         const name = displayNames.of(iso2);
         if (name) map[normalize(name)] = iso3;
