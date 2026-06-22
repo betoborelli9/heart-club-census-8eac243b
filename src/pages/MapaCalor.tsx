@@ -1282,18 +1282,18 @@ const MapaCalor = () => {
   };
 
   const selectClub = (club: ClubSearchResult) => {
+    // [FILTRO POR CLUBE PESQUISADO]
+    // Qualquer clube buscado vira o filtro ativo do mapa (mostra só os votos
+    // daquele clube em todo o mundo). Compare/coração permanecem disponíveis
+    // pelos botões "Mapa Geral" e "❤️ <meu clube>" acima.
     setSearchQuery("");
     setSearchResults([]);
     if (club.name === activeClubName) return;
-    if (heartClubName && club.name !== heartClubName) {
-      setCompareClubName(club.name);
-    } else {
-      setActiveClubName(club.name);
-      setActiveClubInfo(CLUBS_DATA.find((c) => c.nome === club.name) || null);
-      setCompareClubName(null);
-      setCompareData(null);
-      goWorld();
-    }
+    setActiveClubName(club.name);
+    setActiveClubInfo(CLUBS_DATA.find((c) => c.nome === club.name) || null);
+    setCompareClubName(null);
+    setCompareData(null);
+    goWorld();
   };
 
   const handleCitySearch = (val: string) => {
