@@ -275,10 +275,10 @@ serve(async (req) => {
       "amistoso beneficente", "racha",
     ];
 
-    // FRESHNESS — janela ampliada para 14 dias. Bing News (fallback usado
+    // FRESHNESS — janela ampliada para 180 dias. Bing News (fallback usado
     // quando Google News bloqueia Supabase) costuma devolver itens antigos
-    // a partir da região europeia; 48h descartava 100% dos resultados.
-    const FRESHNESS_MS = 14 * 24 * 60 * 60 * 1000;
+    // a partir da região europeia; janelas curtas zeravam o feed.
+    const FRESHNESS_MS = 180 * 24 * 60 * 60 * 1000;
     const now = Date.now();
 
     const debug = { total: 0, relev: 0, fresh: 0, ctx: 0, ambig: 0, accepted: 0 };
