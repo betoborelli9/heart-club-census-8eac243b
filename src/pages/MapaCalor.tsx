@@ -36,6 +36,7 @@ import { fetchOfficialGoianiaNeighborhoodGeoJson, hasPreciseOverride } from "@/l
 import AddressModal from "@/components/AddressModal";
 import logo from "@/assets/logo.png";
 import { useTranslationApp } from "@/hooks/useTranslationApp";
+import { countryNameToIso2, countryNameToIso3 } from "@/lib/country-iso";
 
 /* ---------- Helpers ---------- */
 
@@ -110,10 +111,7 @@ function regionLookupKeys(value: string): string[] {
 }
 
 function countryIso2FromName(country: string): string | null {
-  for (const key of regionLookupKeys(country)) {
-    if (COUNTRY_NAME_TO_ISO2[key]) return COUNTRY_NAME_TO_ISO2[key];
-  }
-  return null;
+  return countryNameToIso2(country);
 }
 
 /* Paleta War Room (laranja imediato → laranja profundo) */
@@ -159,6 +157,21 @@ const COUNTRY_GEO_TO_DB: Record<string, string> = {
   "United States of America": "USA",
   "United Kingdom": "England",
 };
+
+function heatLookupKeys(value: string, level: ViewLevel): string[] {
+  const keys = new Set(regionLookupKeys(value));
+  if (level === "world") {
+    const dbName = COUNTRY_DB_TO_GEO[value] || COUNTRY_GEO_TO_DB[value];
+    if (dbName) regionLookupKeys(dbName).forEach((key) => keys.add(key));
+    const iso3 = countryNameToIso3(value) || (dbName ? countryNameToIso3(dbName) : null);
+    if (iso3) {
+      keys.add(normalize(iso3));
+      const iso2 = countryNameToIso2(iso3);
+      if (iso2) keys.add(normalize(iso2));
+    }
+  }
+  return [...keys];
+}
 
 const UF_TO_NAME: Record<string, string> = {
   AC: "Acre",
@@ -581,8 +594,13 @@ function matchesBrazilStateFeature(props: any, state: string): boolean {
 }
 
 function getFeatureScope(props: any): TerritoryScope {
+  const countryIso2 =
+    props?.["ISO3166-1-Alpha-2"] ||
+    props?.iso_a2 ||
+    props?.ISO_A2 ||
+    countryNameToIso2(props?.["ISO3166-1-Alpha-3"] || props?.iso_a3 || props?.ISO_A3 || props?.ADMIN || props?.name || props?.NAME);
   return {
-    countryIso2: props?.["ISO3166-1-Alpha-2"] || props?.iso_a2 || props?.ISO_A2 || null,
+    countryIso2: countryIso2 || null,
     areaId: props?.area_id || (props?.osm_id ? 3600000000 + Number(props.osm_id) : null),
   };
 }
@@ -601,13 +619,30 @@ function findCountryFeature(world: any, countryNameOrIso: string): any | null {
   if (!world?.features) return null;
   const target = normalize(countryNameOrIso);
   const targetGeo = COUNTRY_DB_TO_GEO[countryNameOrIso] ? normalize(COUNTRY_DB_TO_GEO[countryNameOrIso]) : null;
+  const targetIso3 = countryNameToIso3(countryNameOrIso);
+  const targetIso2 = countryNameToIso2(countryNameOrIso);
   return (
     world.features.find((f: any) => {
       const props = f.properties || {};
-      const names = [props.ADMIN, props.name, props.NAME, props.NAME_LONG, props.SOVEREIGNT]
+      const names = [
+        props.ADMIN,
+        props.name,
+        props.NAME,
+        props.NAME_LONG,
+        props.SOVEREIGNT,
+        props["ISO3166-1-Alpha-3"],
+        props["ISO3166-1-Alpha-2"],
+        props.iso_a3,
+        props.iso_a2,
+      ]
         .filter(Boolean)
         .map(normalize);
-      return (targetGeo && names.includes(targetGeo)) || names.includes(target);
+      return (
+        (targetGeo && names.includes(targetGeo)) ||
+        (targetIso3 && names.includes(normalize(targetIso3))) ||
+        (targetIso2 && names.includes(normalize(targetIso2))) ||
+        names.includes(target)
+      );
     }) || null
   );
 }
@@ -1045,35 +1080,35 @@ const MapaCalor = () => {
   const votesByRegion = useMemo(() => {
     const map = new Map<string, number>();
     for (const e of combinedHeatData) {
-      for (const key of regionLookupKeys(e.region)) map.set(key, Number(e.votes));
+      for (const key of heatLookupKeys(e.region, viewMode)) map.set(key, (map.get(key) || 0) + Number(e.votes));
     }
     return map;
-  }, [combinedHeatData]);
+  }, [combinedHeatData, viewMode]);
 
   // [GUERRA DE CORES]: contadores separados Coração vs Invasor por região
   const heartVotesByRegion = useMemo(() => {
     const map = new Map<string, number>();
     for (const e of heatData) {
-      for (const key of regionLookupKeys(e.region)) map.set(key, Number(e.votes));
+      for (const key of heatLookupKeys(e.region, viewMode)) map.set(key, (map.get(key) || 0) + Number(e.votes));
     }
     return map;
-  }, [heatData]);
+  }, [heatData, viewMode]);
 
   const invaderVotesByRegion = useMemo(() => {
     const map = new Map<string, number>();
     for (const e of compareHeatData) {
-      for (const key of regionLookupKeys(e.region)) map.set(key, Number(e.votes));
+      for (const key of heatLookupKeys(e.region, viewMode)) map.set(key, (map.get(key) || 0) + Number(e.votes));
     }
     return map;
-  }, [compareHeatData]);
+  }, [compareHeatData, viewMode]);
 
   const regionNameByKey = useMemo(() => {
     const map = new Map<string, string>();
     for (const e of combinedHeatData) {
-      for (const key of regionLookupKeys(e.region)) map.set(key, e.region);
+      for (const key of heatLookupKeys(e.region, viewMode)) map.set(key, e.region);
     }
     return map;
-  }, [combinedHeatData]);
+  }, [combinedHeatData, viewMode]);
 
   const maxVotes = useMemo(
     () => combinedHeatData.reduce((m, e) => Math.max(m, Number(e.votes)), 0),
@@ -1105,18 +1140,31 @@ const MapaCalor = () => {
         display = getNeighborhoodFeatureName(props);
         candidates.push(display);
       } else {
-        const propNames = ["ADMIN", "name", "name_en", "name_pt", "official_name", "NAME", "NAME_LONG", "NOME", "NM_MUN", "NM_UF"];
+        const propNames = [
+          "ADMIN",
+          "name",
+          "name_en",
+          "name_pt",
+          "official_name",
+          "NAME",
+          "NAME_LONG",
+          "NOME",
+          "NM_MUN",
+          "NM_UF",
+          "ISO3166-1-Alpha-3",
+          "ISO3166-1-Alpha-2",
+        ];
         propNames.forEach((p) => { if (props[p]) candidates.push(props[p]); });
-        const propUfs = ["sigla", "sigla_uf", "UF", "uf", "ISO_A2", "iso_a2", "ISO3166_2"];
+        const propUfs = ["sigla", "sigla_uf", "UF", "uf", "ISO_A2", "iso_a2", "ISO_A3", "iso_a3", "ISO3166_2"];
         propUfs.forEach((p) => { if (props[p]) candidates.push(props[p]); });
         display = candidates[0] || "—";
       }
 
       // Procura match em qualquer chave normalizada
       for (const c of candidates) {
-        const keys = regionLookupKeys(c);
+        const keys = heatLookupKeys(c, viewMode);
         const dbName = COUNTRY_GEO_TO_DB[c];
-        if (dbName) for (const k of regionLookupKeys(dbName)) keys.push(k);
+        if (dbName) for (const k of heatLookupKeys(dbName, viewMode)) keys.push(k);
         for (const key of keys) {
           if (votesByRegion.has(key) || heartVotesByRegion.has(key) || invaderVotesByRegion.has(key)) {
             const heartVotes = heartVotesByRegion.get(key) || 0;
