@@ -48,6 +48,7 @@ const ProfileSetup = () => {
   const [mes, setMes] = useState("");
   const [ano, setAno] = useState("");
   const [genero, setGenero] = useState("");
+  const [acceptTerms, setAcceptTerms] = useState(false);
   const [saving, setSaving] = useState(false);
 
   // Data concatenada YYYY-MM-DD
@@ -84,7 +85,15 @@ const ProfileSetup = () => {
       toast({ variant: "destructive", title: t("profile.required_missing") });
       return;
     }
-    
+    if (!acceptTerms) {
+      toast({
+        variant: "destructive",
+        title: "É necessário aceitar os Termos",
+        description: "Para continuar, leia e aceite os Termos de Uso e a Política de Privacidade.",
+      });
+      return;
+    }
+
     setSaving(true);
     try {
       await updateProfile({
@@ -92,6 +101,12 @@ const ProfileSetup = () => {
         data_nascimento: dataNascimento,
         genero,
       });
+      // Registra o aceite LGPD (best-effort, não bloqueia o fluxo)
+      try {
+        await supabase.rpc("accept_terms" as any, { p_version: "1.0" });
+      } catch (err) {
+        console.warn("[LGPD] accept_terms falhou (não-crítico):", err);
+      }
       toast({ title: t("profile.saved") });
       navigate("/voting", { replace: true });
     } catch (error) {
@@ -101,7 +116,7 @@ const ProfileSetup = () => {
     }
   };
 
-  const canSubmit = nome.trim() && dataNascimento && genero;
+  const canSubmit = nome.trim() && dataNascimento && genero && acceptTerms;
 
   if (!isAuthReady || isLoading || !isAuthenticated) {
     return (
@@ -191,6 +206,27 @@ const ProfileSetup = () => {
                 </SelectContent>
               </Select>
             </div>
+          </div>
+
+          {/* Consentimento LGPD */}
+          <div className="flex items-start gap-3 px-1">
+            <Checkbox
+              id="accept-terms"
+              checked={acceptTerms}
+              onCheckedChange={(c) => setAcceptTerms(c === true)}
+              className="mt-0.5"
+            />
+            <label htmlFor="accept-terms" className="text-xs text-muted-foreground leading-relaxed cursor-pointer">
+              Li e aceito os{" "}
+              <Link to="/termos" target="_blank" className="text-primary underline">
+                Termos de Uso
+              </Link>{" "}
+              e a{" "}
+              <Link to="/privacidade" target="_blank" className="text-primary underline">
+                Política de Privacidade
+              </Link>{" "}
+              do Heart Club, em conformidade com a LGPD.
+            </label>
           </div>
 
           <Button 

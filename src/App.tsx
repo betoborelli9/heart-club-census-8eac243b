@@ -20,6 +20,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { UserProvider } from "@/contexts/UserContext";
 import FeedbackWidget from "@/components/FeedbackWidget";
 import AppNavBar from "@/components/AppNavBar";
+import GlobalFooter from "@/components/GlobalFooter";
 import { useLocation } from "react-router-dom";
 
 // Inclusão do Verify no HIDE_NAV para não mostrar barra de navegação durante o login
@@ -48,6 +49,9 @@ import AmbassadorCenter from "./pages/AmbassadorCenter";
 import Correcao from "./pages/Correcao";
 import NotFound from "./pages/NotFound";
 import Convite from "./pages/Convite";
+import Privacy from "./pages/Privacy";
+import Terms from "./pages/Terms";
+import PrivacyManagement from "./pages/PrivacyManagement";
 
 /* ═══════════════════════════════════════════════════════════
     MÓDULO: PÁGINAS (ADMIN & BI)
@@ -93,6 +97,11 @@ const App = () => (
             <Route path="/correcao" element={<Correcao />} />
             <Route path="/convite" element={<Convite />} />
 
+            {/* LGPD — Privacidade e Termos (públicos) */}
+            <Route path="/privacidade" element={<Privacy />} />
+            <Route path="/termos" element={<Terms />} />
+            <Route path="/gerenciar-dados" element={<PrivacyManagement />} />
+
             {/* 👑 Gestão Administrativa e BI */}
             <Route path="/admin" element={<Admin />} />
             <Route path="/debug-api" element={<DebugApi />} />
@@ -107,6 +116,7 @@ const App = () => (
           </Routes>
           <FeedbackWidget />
           <GlobalNav />
+          <GlobalFooter />
         </BrowserRouter>
       </UserProvider>
     </TooltipProvider>
