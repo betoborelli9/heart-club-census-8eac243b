@@ -1282,18 +1282,18 @@ const MapaCalor = () => {
   };
 
   const selectClub = (club: ClubSearchResult) => {
+    // [FILTRO POR CLUBE PESQUISADO]
+    // Qualquer clube buscado vira o filtro ativo do mapa (mostra só os votos
+    // daquele clube em todo o mundo). Compare/coração permanecem disponíveis
+    // pelos botões "Mapa Geral" e "❤️ <meu clube>" acima.
     setSearchQuery("");
     setSearchResults([]);
     if (club.name === activeClubName) return;
-    if (heartClubName && club.name !== heartClubName) {
-      setCompareClubName(club.name);
-    } else {
-      setActiveClubName(club.name);
-      setActiveClubInfo(CLUBS_DATA.find((c) => c.nome === club.name) || null);
-      setCompareClubName(null);
-      setCompareData(null);
-      goWorld();
-    }
+    setActiveClubName(club.name);
+    setActiveClubInfo(CLUBS_DATA.find((c) => c.nome === club.name) || null);
+    setCompareClubName(null);
+    setCompareData(null);
+    goWorld();
   };
 
   const handleCitySearch = (val: string) => {
@@ -1493,7 +1493,7 @@ const MapaCalor = () => {
 
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
           <aside className="lg:col-span-2 space-y-4">
-            <div className="rounded-[24px] bg-black/40 backdrop-blur-xl border border-white/5 p-4">
+            <div className="relative z-[5000] rounded-[24px] bg-black/40 backdrop-blur-xl border border-white/5 p-4">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
@@ -1503,7 +1503,7 @@ const MapaCalor = () => {
                   onChange={(e) => handleSearch(e.target.value)}
                 />
                 {searchResults.length > 0 && (
-                  <div className="absolute top-12 left-0 right-0 bg-card border border-white/10 rounded-xl overflow-hidden z-[1000] shadow-2xl max-h-60 overflow-y-auto">
+                  <div className="absolute top-12 left-0 right-0 bg-card border border-white/10 rounded-xl overflow-hidden z-[9999] shadow-2xl max-h-60 overflow-y-auto">
                     {searchResults.map((club) => (
                       <button
                         key={club.id}
