@@ -36,6 +36,7 @@ import { fetchOfficialGoianiaNeighborhoodGeoJson, hasPreciseOverride } from "@/l
 import AddressModal from "@/components/AddressModal";
 import logo from "@/assets/logo.png";
 import { useTranslationApp } from "@/hooks/useTranslationApp";
+import { countryNameToIso2, countryNameToIso3 } from "@/lib/country-iso";
 
 /* ---------- Helpers ---------- */
 
@@ -110,10 +111,7 @@ function regionLookupKeys(value: string): string[] {
 }
 
 function countryIso2FromName(country: string): string | null {
-  for (const key of regionLookupKeys(country)) {
-    if (COUNTRY_NAME_TO_ISO2[key]) return COUNTRY_NAME_TO_ISO2[key];
-  }
-  return null;
+  return countryNameToIso2(country);
 }
 
 /* Paleta War Room (laranja imediato → laranja profundo) */
@@ -159,6 +157,21 @@ const COUNTRY_GEO_TO_DB: Record<string, string> = {
   "United States of America": "USA",
   "United Kingdom": "England",
 };
+
+function heatLookupKeys(value: string, level: ViewLevel): string[] {
+  const keys = new Set(regionLookupKeys(value));
+  if (level === "world") {
+    const dbName = COUNTRY_DB_TO_GEO[value] || COUNTRY_GEO_TO_DB[value];
+    if (dbName) regionLookupKeys(dbName).forEach((key) => keys.add(key));
+    const iso3 = countryNameToIso3(value) || (dbName ? countryNameToIso3(dbName) : null);
+    if (iso3) {
+      keys.add(normalize(iso3));
+      const iso2 = countryNameToIso2(iso3);
+      if (iso2) keys.add(normalize(iso2));
+    }
+  }
+  return [...keys];
+}
 
 const UF_TO_NAME: Record<string, string> = {
   AC: "Acre",
@@ -581,8 +594,13 @@ function matchesBrazilStateFeature(props: any, state: string): boolean {
 }
 
 function getFeatureScope(props: any): TerritoryScope {
+  const countryIso2 =
+    props?.["ISO3166-1-Alpha-2"] ||
+    props?.iso_a2 ||
+    props?.ISO_A2 ||
+    countryNameToIso2(props?.["ISO3166-1-Alpha-3"] || props?.iso_a3 || props?.ISO_A3 || props?.ADMIN || props?.name || props?.NAME);
   return {
-    countryIso2: props?.["ISO3166-1-Alpha-2"] || props?.iso_a2 || props?.ISO_A2 || null,
+    countryIso2: countryIso2 || null,
     areaId: props?.area_id || (props?.osm_id ? 3600000000 + Number(props.osm_id) : null),
   };
 }
@@ -601,13 +619,30 @@ function findCountryFeature(world: any, countryNameOrIso: string): any | null {
   if (!world?.features) return null;
   const target = normalize(countryNameOrIso);
   const targetGeo = COUNTRY_DB_TO_GEO[countryNameOrIso] ? normalize(COUNTRY_DB_TO_GEO[countryNameOrIso]) : null;
+  const targetIso3 = countryNameToIso3(countryNameOrIso);
+  const targetIso2 = countryNameToIso2(countryNameOrIso);
   return (
     world.features.find((f: any) => {
       const props = f.properties || {};
-      const names = [props.ADMIN, props.name, props.NAME, props.NAME_LONG, props.SOVEREIGNT]
+      const names = [
+        props.ADMIN,
+        props.name,
+        props.NAME,
+        props.NAME_LONG,
+        props.SOVEREIGNT,
+        props["ISO3166-1-Alpha-3"],
+        props["ISO3166-1-Alpha-2"],
+        props.iso_a3,
+        props.iso_a2,
+      ]
         .filter(Boolean)
         .map(normalize);
-      return (targetGeo && names.includes(targetGeo)) || names.includes(target);
+      return (
+        (targetGeo && names.includes(targetGeo)) ||
+        (targetIso3 && names.includes(normalize(targetIso3))) ||
+        (targetIso2 && names.includes(normalize(targetIso2))) ||
+        names.includes(target)
+      );
     }) || null
   );
 }
