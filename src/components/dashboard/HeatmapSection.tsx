@@ -253,7 +253,9 @@ const HeatmapSection = () => {
   }, [drillLevel, countryEntries, stateEntries, cityEntries]);
 
   const handleWorldClick = useCallback((geo: any) => {
-    const iso = geo.properties.ISO_A3 || geo.properties.ADM0_A3;
+    const geoName = geo.properties.name || geo.properties.NAME || "";
+    const iso =
+      geo.properties.ISO_A3 || geo.properties.ADM0_A3 || countryNameToIso3(geoName);
     if (iso !== "BRA") return;
     setDrillLevel("state");
     setActiveStateName(null);
