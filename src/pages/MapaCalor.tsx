@@ -1080,35 +1080,35 @@ const MapaCalor = () => {
   const votesByRegion = useMemo(() => {
     const map = new Map<string, number>();
     for (const e of combinedHeatData) {
-      for (const key of regionLookupKeys(e.region)) map.set(key, Number(e.votes));
+      for (const key of heatLookupKeys(e.region, viewMode)) map.set(key, Number(e.votes));
     }
     return map;
-  }, [combinedHeatData]);
+  }, [combinedHeatData, viewMode]);
 
   // [GUERRA DE CORES]: contadores separados Coração vs Invasor por região
   const heartVotesByRegion = useMemo(() => {
     const map = new Map<string, number>();
     for (const e of heatData) {
-      for (const key of regionLookupKeys(e.region)) map.set(key, Number(e.votes));
+      for (const key of heatLookupKeys(e.region, viewMode)) map.set(key, Number(e.votes));
     }
     return map;
-  }, [heatData]);
+  }, [heatData, viewMode]);
 
   const invaderVotesByRegion = useMemo(() => {
     const map = new Map<string, number>();
     for (const e of compareHeatData) {
-      for (const key of regionLookupKeys(e.region)) map.set(key, Number(e.votes));
+      for (const key of heatLookupKeys(e.region, viewMode)) map.set(key, Number(e.votes));
     }
     return map;
-  }, [compareHeatData]);
+  }, [compareHeatData, viewMode]);
 
   const regionNameByKey = useMemo(() => {
     const map = new Map<string, string>();
     for (const e of combinedHeatData) {
-      for (const key of regionLookupKeys(e.region)) map.set(key, e.region);
+      for (const key of heatLookupKeys(e.region, viewMode)) map.set(key, e.region);
     }
     return map;
-  }, [combinedHeatData]);
+  }, [combinedHeatData, viewMode]);
 
   const maxVotes = useMemo(
     () => combinedHeatData.reduce((m, e) => Math.max(m, Number(e.votes)), 0),
