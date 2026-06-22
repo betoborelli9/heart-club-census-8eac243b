@@ -1140,18 +1140,31 @@ const MapaCalor = () => {
         display = getNeighborhoodFeatureName(props);
         candidates.push(display);
       } else {
-        const propNames = ["ADMIN", "name", "name_en", "name_pt", "official_name", "NAME", "NAME_LONG", "NOME", "NM_MUN", "NM_UF"];
+        const propNames = [
+          "ADMIN",
+          "name",
+          "name_en",
+          "name_pt",
+          "official_name",
+          "NAME",
+          "NAME_LONG",
+          "NOME",
+          "NM_MUN",
+          "NM_UF",
+          "ISO3166-1-Alpha-3",
+          "ISO3166-1-Alpha-2",
+        ];
         propNames.forEach((p) => { if (props[p]) candidates.push(props[p]); });
-        const propUfs = ["sigla", "sigla_uf", "UF", "uf", "ISO_A2", "iso_a2", "ISO3166_2"];
+        const propUfs = ["sigla", "sigla_uf", "UF", "uf", "ISO_A2", "iso_a2", "ISO_A3", "iso_a3", "ISO3166_2"];
         propUfs.forEach((p) => { if (props[p]) candidates.push(props[p]); });
         display = candidates[0] || "—";
       }
 
       // Procura match em qualquer chave normalizada
       for (const c of candidates) {
-        const keys = regionLookupKeys(c);
+        const keys = heatLookupKeys(c, viewMode);
         const dbName = COUNTRY_GEO_TO_DB[c];
-        if (dbName) for (const k of regionLookupKeys(dbName)) keys.push(k);
+        if (dbName) for (const k of heatLookupKeys(dbName, viewMode)) keys.push(k);
         for (const key of keys) {
           if (votesByRegion.has(key) || heartVotesByRegion.has(key) || invaderVotesByRegion.has(key)) {
             const heartVotes = heartVotesByRegion.get(key) || 0;
