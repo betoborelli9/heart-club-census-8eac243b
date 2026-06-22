@@ -1080,7 +1080,7 @@ const MapaCalor = () => {
   const votesByRegion = useMemo(() => {
     const map = new Map<string, number>();
     for (const e of combinedHeatData) {
-      for (const key of heatLookupKeys(e.region, viewMode)) map.set(key, Number(e.votes));
+      for (const key of heatLookupKeys(e.region, viewMode)) map.set(key, (map.get(key) || 0) + Number(e.votes));
     }
     return map;
   }, [combinedHeatData, viewMode]);
@@ -1089,7 +1089,7 @@ const MapaCalor = () => {
   const heartVotesByRegion = useMemo(() => {
     const map = new Map<string, number>();
     for (const e of heatData) {
-      for (const key of heatLookupKeys(e.region, viewMode)) map.set(key, Number(e.votes));
+      for (const key of heatLookupKeys(e.region, viewMode)) map.set(key, (map.get(key) || 0) + Number(e.votes));
     }
     return map;
   }, [heatData, viewMode]);
@@ -1097,7 +1097,7 @@ const MapaCalor = () => {
   const invaderVotesByRegion = useMemo(() => {
     const map = new Map<string, number>();
     for (const e of compareHeatData) {
-      for (const key of heatLookupKeys(e.region, viewMode)) map.set(key, Number(e.votes));
+      for (const key of heatLookupKeys(e.region, viewMode)) map.set(key, (map.get(key) || 0) + Number(e.votes));
     }
     return map;
   }, [compareHeatData, viewMode]);
