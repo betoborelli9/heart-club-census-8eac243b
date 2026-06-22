@@ -8,6 +8,8 @@ import { clubMapData } from "@/data/mockDashboard";
 import { CLUBS_DATA } from "@/clubes-data";
 import { useUser } from "@/contexts/UserContext";
 import { supabase } from "@/integrations/supabase/client";
+import { isMasterEmail } from "@/lib/master";
+import { countryNameToIso3 } from "@/lib/country-iso";
 import AddressModal from "@/components/AddressModal";
 
 const WORLD_GEO_URL = "https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json";
@@ -21,6 +23,10 @@ const STATE_UF: Record<string, string> = {
   "para": "PA", "paraiba": "PB", "parana": "PR", "pernambuco": "PE", "piaui": "PI", "rio de janeiro": "RJ", "rio grande do norte": "RN",
   "rio grande do sul": "RS", "rondonia": "RO", "roraima": "RR", "santa catarina": "SC", "sao paulo": "SP", "sergipe": "SE", "tocantins": "TO",
 };
+
+const UF_TO_STATE: Record<string, string> = Object.fromEntries(
+  Object.entries(STATE_UF).map(([k, v]) => [v, k])
+);
 
 function normalize(value: string): string {
   return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
@@ -39,34 +45,64 @@ function formatVotes(n: number): string {
   return n.toLocaleString("pt-BR");
 }
 
+interface RealHeatmapData {
+  countries: Array<{ name: string; votes: number }>;
+  states: Array<{ name: string; votes: number }>;
+  cities: Array<{ state: string; name: string; votes: number }>;
+}
+
 const HeatmapSection = () => {
   const { user, profile } = useUser();
+  const isMaster = isMasterEmail((user as any)?.email);
+
   const [selectedClubId, setSelectedClubId] = useState("palmeiras");
+  const [selectedClubName, setSelectedClubName] = useState<string | null>(null);
   const [drillLevel, setDrillLevel] = useState<DrillLevel>("country");
   const [activeStateName, setActiveStateName] = useState<string | null>(null);
   const [center, setCenter] = useState<[number, number]>([-20, 5]);
   const [zoom, setZoom] = useState(1.15);
   const [tooltip, setTooltip] = useState<{ name: string; votes: number } | null>(null);
 
-  // Bloqueio do mapa: usuário precisa ter bairro registrado para interagir
   const [userClubName, setUserClubName] = useState<string | null>(null);
-  const [hasAddress, setHasAddress] = useState<boolean>(true); // assume true até verificar
+  const [hasAddress, setHasAddress] = useState<boolean>(true);
   const [addressModalOpen, setAddressModalOpen] = useState(false);
+  const [realData, setRealData] = useState<RealHeatmapData | null>(null);
+
+  // Master sempre tem acesso pleno — sem cadeado.
+  const effectiveHasAddress = isMaster ? true : hasAddress;
 
   useEffect(() => {
     const loadUserVote = async () => {
       if (!user) return;
-      const { data } = await supabase
+
+      // Para master: pega o voto MAIS RECENTE (mesmo se não for original) para
+      // garantir que sempre haja um clube selecionado, mesmo em modo de revoto.
+      let q = supabase
         .from("votos")
         .select("clube_nome, bairro")
         .eq("user_id", user.id)
-        .eq("is_original_vote", true)
-        .maybeSingle();
+        .order("created_at", { ascending: false })
+        .limit(1);
+
+      if (!isMaster) {
+        q = supabase
+          .from("votos")
+          .select("clube_nome, bairro")
+          .eq("user_id", user.id)
+          .eq("is_original_vote", true)
+          .order("created_at", { ascending: false })
+          .limit(1);
+      }
+
+      const { data } = await q.maybeSingle();
+
       if (!data?.clube_nome) {
-        setHasAddress(false);
+        if (!isMaster) setHasAddress(false);
         return;
       }
+
       setUserClubName(data.clube_nome);
+      setSelectedClubName(data.clube_nome);
       const club = CLUBS_DATA.find((c) => c.nome === data.clube_nome);
       if (club) {
         const slug = club.nome.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
@@ -78,51 +114,126 @@ const HeatmapSection = () => {
       setHasAddress(addressConfirmed || !!(data.bairro && data.bairro.trim()) || !!profileCep || !!profileBairro);
     };
     loadUserVote();
-  }, [user, profile]);
+  }, [user, profile, isMaster]);
+
+  // Busca os dados REAIS de votos para o clube selecionado.
+  useEffect(() => {
+    const fetchReal = async () => {
+      if (!selectedClubName) {
+        setRealData(null);
+        return;
+      }
+      const { data, error } = await supabase.rpc("get_club_heatmap_data", {
+        p_club_name: selectedClubName,
+      });
+      if (error) {
+        console.error("[Heatmap] get_club_heatmap_data error", error);
+        setRealData(null);
+        return;
+      }
+      setRealData(data as unknown as RealHeatmapData);
+    };
+    fetchReal();
+  }, [selectedClubName]);
 
   const refreshAfterSave = useCallback(() => {
     setHasAddress(true);
   }, []);
 
   const requireAddress = useCallback(() => {
-    if (!hasAddress) {
+    if (!effectiveHasAddress) {
       setAddressModalOpen(true);
       return true;
     }
     return false;
-  }, [hasAddress]);
+  }, [effectiveHasAddress]);
 
-
+  // Mock como fallback estrutural (mantém UI completa quando não há votos reais).
   const mapData = clubMapData[selectedClubId] || clubMapData.palmeiras;
 
-  const countryEntries = useMemo(() => {
-    const entries: Array<{ iso: string; name: string; votes: number }> = [];
+  // ====== AGREGAÇÃO PAÍSES (real + fallback mock) ======
+  const countryVotesMap = useMemo(() => {
+    const map: Record<string, number> = {};
+    // Mock primeiro (fallback)
     Object.values(mapData.continents).forEach((continent) => {
       Object.entries(continent.countries).forEach(([iso, country]) => {
-        entries.push({ iso, name: country.name, votes: country.votes });
+        if (country.votes > 0) {
+          map[iso] = country.votes;
+          map[normalize(country.name)] = country.votes;
+        }
       });
     });
-    return entries.sort((a, b) => b.votes - a.votes);
-  }, [mapData]);
+    // Real por cima
+    realData?.countries.forEach(({ name, votes }) => {
+      const iso = countryNameToIso3(name);
+      if (iso) {
+        map[iso] = (map[iso] || 0) + votes;
+      }
+      map[normalize(name)] = (map[normalize(name)] || 0) + votes;
+    });
+    return map;
+  }, [mapData, realData]);
 
+  const countryEntries = useMemo(() => {
+    const merged: Record<string, { iso: string; name: string; votes: number }> = {};
+    Object.values(mapData.continents).forEach((continent) => {
+      Object.entries(continent.countries).forEach(([iso, country]) => {
+        if (country.votes > 0) {
+          merged[normalize(country.name)] = { iso, name: country.name, votes: country.votes };
+        }
+      });
+    });
+    realData?.countries.forEach(({ name, votes }) => {
+      const key = normalize(name);
+      const iso = countryNameToIso3(name) || merged[key]?.iso || "???";
+      merged[key] = {
+        iso,
+        name,
+        votes: (merged[key]?.votes || 0) + votes,
+      };
+    });
+    return Object.values(merged).sort((a, b) => b.votes - a.votes);
+  }, [mapData, realData]);
+
+  // ====== AGREGAÇÃO ESTADOS (real + fallback mock) ======
   const stateEntries = useMemo(() => {
-    return [...(mapData.continents["south-america"]?.countries.BRA?.states || [])].sort((a, b) => b.votes - a.votes);
-  }, [mapData]);
+    const mockStates = mapData.continents["south-america"]?.countries.BRA?.states || [];
+    const merged: Record<string, { name: string; votes: number; cities: Array<{ name: string; votes: number }> }> = {};
+
+    mockStates.forEach((s: any) => {
+      merged[normalize(s.name)] = { name: s.name, votes: s.votes, cities: [...(s.cities || [])] };
+    });
+
+    realData?.states.forEach(({ name, votes }) => {
+      // Se vier UF (ex: "SP"), converte
+      let stateName = name;
+      const maybeFull = UF_TO_STATE[name.toUpperCase()];
+      if (maybeFull) stateName = maybeFull.replace(/\b\w/g, (c) => c.toUpperCase());
+      const key = normalize(stateName);
+      if (!merged[key]) merged[key] = { name: stateName, votes: 0, cities: [] };
+      merged[key].votes = votes; // Real sobrescreve (mais autoritativo)
+    });
+
+    // Cidades reais por estado
+    realData?.cities.forEach(({ state, name, votes }) => {
+      let stateName = state;
+      const maybeFull = UF_TO_STATE[state.toUpperCase()];
+      if (maybeFull) stateName = maybeFull.replace(/\b\w/g, (c) => c.toUpperCase());
+      const key = normalize(stateName);
+      if (!merged[key]) merged[key] = { name: stateName, votes: 0, cities: [] };
+      // Remove cidade do mock com mesmo nome para evitar duplicata
+      merged[key].cities = merged[key].cities.filter((c) => normalize(c.name) !== normalize(name));
+      merged[key].cities.push({ name, votes });
+    });
+
+    return Object.values(merged).sort((a, b) => b.votes - a.votes);
+  }, [mapData, realData]);
 
   const cityEntries = useMemo(() => {
     if (!activeStateName) return [];
     const state = stateEntries.find((entry) => normalize(entry.name) === normalize(activeStateName));
     return [...(state?.cities || [])].sort((a, b) => b.votes - a.votes);
   }, [activeStateName, stateEntries]);
-
-  const countryVotesMap = useMemo(() => {
-    const map: Record<string, number> = {};
-    countryEntries.forEach((entry) => {
-      map[entry.iso] = entry.votes;
-      map[normalize(entry.name)] = entry.votes;
-    });
-    return map;
-  }, [countryEntries]);
 
   const stateVotesMap = useMemo(() => {
     const map: Record<string, number> = {};
@@ -274,8 +385,7 @@ const HeatmapSection = () => {
               </div>
             </div>
 
-            {/* OVERLAY ELEGANTE — bloqueia o mapa enquanto o usuário não informa endereço */}
-            {!hasAddress && (
+            {!effectiveHasAddress && (
               <button
                 type="button"
                 onClick={() => setAddressModalOpen(true)}
