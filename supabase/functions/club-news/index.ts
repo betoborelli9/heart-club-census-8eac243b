@@ -138,16 +138,28 @@ async function fetchOgImage(url: string): Promise<string | null> {
 // numa dessas raízes, exigimos um discriminador (cidade, mascote, UF, país)
 // no título para aceitar a notícia — bloqueia "intrusos" homônimos.
 const AMBIGUOUS_ROOTS = [
-  "atletico", "america", "nacional", "sport", "internacional", "gremio",
-  "juventude", "santos", "river", "boca", "vitoria", "guarani", "portuguesa",
-  "operario", "uniao", "central", "remo", "paysandu", "botafogo", "fluminense",
-  "palmeiras", "corinthians", "ferroviario", "ferroviaria", "industrial",
-  "vila", "real", "uniao", "comercial", "olimpia", "independente", "metropol",
+  "atletico", "america", "nacional", "sport", "real", "vitoria", "guarani",
+  "portuguesa", "operario", "uniao", "central", "botafogo", "fluminense",
+  "ferroviario", "ferroviaria", "industrial", "comercial", "olimpia",
+  "independente", "metropol", "juventude", "santos", "river", "boca",
 ];
 
 function clubHasAmbiguousRoot(clubName: string): boolean {
   const tokens = normalize(clubName).split(/\s+/);
   return tokens.some((t) => AMBIGUOUS_ROOTS.includes(t));
+}
+
+function clubNeedsGeoDiscriminator(clubName: string): boolean {
+  const tokens = getClubTokens(clubName);
+  if (tokens.length === 0) return false;
+
+  const ambiguousTokens = tokens.filter((token) => AMBIGUOUS_ROOTS.includes(token));
+  if (ambiguousTokens.length === 0) return false;
+
+  // Nome de uma palavra ambígua (América, Nacional, Atlético, Real...) precisa
+  // de cidade/UF/estado para não cair em homônimo. Nome composto exato (Vila
+  // Nova, Corinthians, Palmeiras) não pode ser bloqueado só por não citar cidade.
+  return tokens.length === 1 || ambiguousTokens.length === tokens.length;
 }
 
 // UF brasileira a partir do estado/cidade conhecidos (best-effort)
@@ -186,20 +198,9 @@ serve(async (req) => {
       });
     }
 
-    // QUERY ENRIQUECIDA: nome + cidade + país (quando disponíveis)
-    // Google News pondera tokens extras como contexto, eliminando ruído de
-    // clubes homônimos em outras cidades/países.
-    const queryParts = [`"${clubName}"`, "futebol"];
-    if (cidade) queryParts.push(cidade);
-    if (estado) queryParts.push(estado);
-    if (pais && normalize(pais) !== "brazil" && normalize(pais) !== "brasil") {
-      queryParts.push(pais);
-    } else {
-      queryParts.push("Brasil");
-    }
-    const query = encodeURIComponent(queryParts.join(" "));
-    const rssUrl =
-      `https://news.google.com/rss/search?q=${query}&hl=pt-BR&gl=BR&ceid=BR:pt-419`;
+    const countryContext = pais && normalize(pais) !== "brazil" && normalize(pais) !== "brasil"
+      ? pais
+      : "Brasil";
 
     const BROWSER_UA =
       "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
@@ -225,17 +226,42 @@ serve(async (req) => {
       return null;
     }
 
-    // 🛡️ FALLBACK MULTI-FONTE: Google News bloqueia Deno Deploy via 503.
-    // Tentamos Google primeiro; se falhar, caímos para Bing News RSS.
-    const bingQuery = encodeURIComponent(queryParts.join(" "));
-    const bingUrl = `https://www.bing.com/news/search?q=${bingQuery}&format=rss&cc=br&setlang=pt-BR`;
+    // 🛡️ FALLBACK MULTI-FONTE + MULTI-CONSULTA:
+    // A consulta com cidade/estado evita homônimos, mas às vezes derruba todas
+    // as notícias recentes. Por isso buscamos também uma consulta mais ampla e
+    // deixamos o filtro local validar relevância, 48h e conflitos de UF.
+    const queryVariants: string[][] = [];
+    const addVariant = (parts: string[]) => {
+      const key = parts.map(normalize).join("|");
+      if (!queryVariants.some((v) => v.map(normalize).join("|") === key)) {
+        queryVariants.push(parts);
+      }
+    };
 
-    let xml = await fetchRss(rssUrl);
-    if (!xml) {
-      console.warn("[club-news] Google News falhou, tentando Bing News…");
-      xml = await fetchRss(bingUrl);
+    const quotedClub = `"${clubName}"`;
+    addVariant([quotedClub, "futebol", cidade, estado, countryContext].filter(Boolean) as string[]);
+    addVariant([quotedClub, "futebol", countryContext]);
+    addVariant([quotedClub, "clube", "futebol"]);
+    if (body?.nomeCurto && typeof body.nomeCurto === "string") {
+      addVariant([`"${body.nomeCurto}"`, "futebol", countryContext]);
     }
-    if (!xml) {
+
+    const xmlDocs: string[] = [];
+    for (const parts of queryVariants) {
+      const query = encodeURIComponent(parts.join(" "));
+      const googleUrl = `https://news.google.com/rss/search?q=${query}&hl=pt-BR&gl=BR&ceid=BR:pt-419`;
+      const bingUrl = `https://www.bing.com/news/search?q=${query}&format=rss&cc=br&setlang=pt-BR&qft=interval%3d%227%22`;
+
+      const googleXml = await fetchRss(googleUrl);
+      if (googleXml) xmlDocs.push(googleXml);
+
+      const bingXml = await fetchRss(bingUrl);
+      if (bingXml) xmlDocs.push(bingXml);
+
+      if (xmlDocs.length >= 4) break;
+    }
+
+    if (xmlDocs.length === 0) {
       console.error("[club-news] Nenhuma fonte RSS respondeu");
       return new Response(JSON.stringify([]), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -256,6 +282,7 @@ serve(async (req) => {
     const uf = cidade ? UF_BY_CITY[normalize(cidade)] : null;
     if (uf) discriminators.push(uf); // ex.: "mg", "sp", "go"
     const ambiguous = clubHasAmbiguousRoot(clubName);
+    const needsGeoDiscriminator = clubNeedsGeoDiscriminator(clubName);
 
     // CONTEXTO DE FUTEBOL PROFISSIONAL — toda notícia precisa conter pelo
     // menos um destes termos no título ou descrição, eliminando manchetes
@@ -282,9 +309,11 @@ serve(async (req) => {
 
     const debug = { total: 0, relev: 0, fresh: 0, ctx: 0, ambig: 0, accepted: 0 };
 
-    while ((match = itemRegex.exec(xml)) !== null && items.length < 12) {
-      debug.total++;
-      const block = match[1];
+    for (const xml of xmlDocs) {
+      itemRegex.lastIndex = 0;
+      while ((match = itemRegex.exec(xml)) !== null && items.length < 12) {
+        debug.total++;
+        const block = match[1];
 
       const get = (tag: string) => {
         const m = block.match(
@@ -295,7 +324,7 @@ serve(async (req) => {
         return m ? (m[1] || m[2] || "").trim() : "";
       };
 
-      const rawTitle = get("title");
+      const rawTitle = decodeHtmlEntities(get("title"));
       const { cleanTitle, source: parsedSource } = extractSource(rawTitle);
       const bingSource = (block.match(/<News:Source>([\s\S]*?)<\/News:Source>/) || [])[1];
       const source = (bingSource || parsedSource || "Notícias").trim();
@@ -310,23 +339,20 @@ serve(async (req) => {
       if (now - pubMs > FRESHNESS_MS) continue;
       debug.fresh++;
 
-      const description = get("description").replace(/<[^>]+>/g, " ");
+      const description = decodeHtmlEntities(get("description")).replace(/<[^>]+>/g, " ");
       const haystack = normalize(`${cleanTitle} ${description}`);
 
       // Bloqueio explícito de futebol amador / várzea.
       if (AMATEUR_BLACKLIST.some((b) => haystack.includes(b))) continue;
       debug.ctx++;
 
-      // ANTI-HOMÔNIMO ESTRITO: para clubes com raiz ambígua (ex.: "Atlético",
-      // "América", "Nacional"), exigimos que o título OU a descrição contenha
-      // pelo menos um discriminador geográfico (cidade, estado ou UF). Se um
-      // discriminador conflitante (UF de outro estado) aparecer sem o próprio,
-      // descartamos também.
+      // ANTI-HOMÔNIMO: bloqueia conflito explícito de UF (ex.: Botafogo-PB para
+      // Botafogo-RJ). Só exige cidade/UF em nomes de uma palavra realmente
+      // ambíguos; caso contrário, o nome completo + contexto futebolístico basta.
       if (ambiguous) {
         const titleN = normalize(cleanTitle);
         const hasOwn = discriminators.length > 0 &&
           discriminators.some((d) => d && (haystack.includes(d) || titleN.includes(d)));
-        if (discriminators.length > 0 && !hasOwn) continue;
         const knownUF = discriminators.find((d) => d.length === 2);
         if (knownUF) {
           const ufMatches = titleN.match(/\b([a-z]{2})\b/g) || [];
@@ -336,6 +362,8 @@ serve(async (req) => {
           );
           if (conflictsUF && !hasOwn) continue;
         }
+        const exactFullName = haystack.includes(normalize(clubName));
+        if (needsGeoDiscriminator && discriminators.length > 0 && !hasOwn && !exactFullName) continue;
       }
       debug.ambig++;
 
@@ -360,6 +388,7 @@ serve(async (req) => {
         guid: get("guid") || `${titleNorm}-${items.length}`,
       });
       debug.accepted++;
+      }
     }
 
     console.log(`[club-news] ${clubName} →`, JSON.stringify(debug));
