@@ -362,8 +362,7 @@ serve(async (req) => {
           );
           if (conflictsUF && !hasOwn) continue;
         }
-        const exactFullName = haystack.includes(normalize(clubName));
-        if (needsGeoDiscriminator && discriminators.length > 0 && !hasOwn && !exactFullName) continue;
+        if (needsGeoDiscriminator && discriminators.length > 0 && !hasOwn) continue;
       }
       debug.ambig++;
 
