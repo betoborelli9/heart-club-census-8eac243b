@@ -312,7 +312,7 @@ serve(async (req) => {
     // BLACKLIST — termos que indicam futebol amador, várzea, escolinha etc.
     const AMATEUR_BLACKLIST = [
       "amador", "varzea", "pelada", "society", "escolinha",
-      "amistoso beneficente", "racha",
+      "amistoso beneficente", "racha", "comunidades",
     ];
 
     // FRESHNESS — janela rígida de 48 horas (requisito do produto).
