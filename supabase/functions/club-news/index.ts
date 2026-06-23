@@ -207,6 +207,8 @@ serve(async (req) => {
 
     async function fetchRss(url: string): Promise<string | null> {
       for (let attempt = 0; attempt < 2; attempt++) {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 4500);
         try {
           const r = await fetch(url, {
             headers: {
@@ -214,12 +216,15 @@ serve(async (req) => {
               "Accept": "application/rss+xml, application/xml, text/xml, */*",
               "Accept-Language": "pt-BR,pt;q=0.9,en;q=0.8",
             },
+            signal: controller.signal,
           });
           if (r.ok) return await r.text();
           console.warn(`[club-news] RSS ${r.status} attempt ${attempt + 1} → ${url}`);
           if (r.status !== 503 && r.status !== 429) return null;
         } catch (e) {
           console.warn(`[club-news] RSS fetch error attempt ${attempt + 1}:`, e);
+        } finally {
+          clearTimeout(timeout);
         }
         await new Promise((res) => setTimeout(res, 400 * (attempt + 1)));
       }
@@ -239,9 +244,9 @@ serve(async (req) => {
     };
 
     const quotedClub = `"${clubName}"`;
-    addVariant([quotedClub, "futebol", cidade, estado, countryContext].filter(Boolean) as string[]);
     addVariant([quotedClub, "futebol", countryContext]);
     addVariant([quotedClub, "clube", "futebol"]);
+    addVariant([quotedClub, "futebol", cidade, estado, countryContext].filter(Boolean) as string[]);
     if (body?.nomeCurto && typeof body.nomeCurto === "string") {
       addVariant([`"${body.nomeCurto}"`, "futebol", countryContext]);
     }
@@ -249,16 +254,24 @@ serve(async (req) => {
     const xmlDocs: string[] = [];
     for (const parts of queryVariants) {
       const query = encodeURIComponent(parts.join(" "));
-      const googleUrl = `https://news.google.com/rss/search?q=${query}&hl=pt-BR&gl=BR&ceid=BR:pt-419`;
       const bingUrl = `https://www.bing.com/news/search?q=${query}&format=rss&cc=br&setlang=pt-BR&qft=interval%3d%227%22`;
-
-      const googleXml = await fetchRss(googleUrl);
-      if (googleXml) xmlDocs.push(googleXml);
 
       const bingXml = await fetchRss(bingUrl);
       if (bingXml) xmlDocs.push(bingXml);
 
-      if (xmlDocs.length >= 4) break;
+      if (xmlDocs.length >= 3) break;
+    }
+
+    // Google News costuma retornar 503 no Edge Runtime; fica como último
+    // recurso, para não travar o dashboard quando o Bing já trouxe notícias.
+    if (xmlDocs.length === 0) {
+      for (const parts of queryVariants.slice(0, 2)) {
+        const query = encodeURIComponent(parts.join(" "));
+        const googleUrl = `https://news.google.com/rss/search?q=${query}&hl=pt-BR&gl=BR&ceid=BR:pt-419`;
+        const googleXml = await fetchRss(googleUrl);
+        if (googleXml) xmlDocs.push(googleXml);
+        if (xmlDocs.length > 0) break;
+      }
     }
 
     if (xmlDocs.length === 0) {
@@ -371,12 +384,7 @@ serve(async (req) => {
       seenTitles.add(titleNorm);
 
       const link = get("link");
-      let imageUrl = extractImage(block);
-
-      if (!imageUrl || isPortalLogoImage(imageUrl)) {
-        const scraped = link ? await fetchOgImage(link) : null;
-        imageUrl = scraped && !isPortalLogoImage(scraped) ? scraped : null;
-      }
+      const imageUrl = extractImage(block);
 
       items.push({
         title: decodeHtmlEntities(cleanTitle),
