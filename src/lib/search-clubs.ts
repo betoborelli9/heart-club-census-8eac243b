@@ -5,6 +5,7 @@
  */
 
 import { supabase } from "@/integrations/supabase/client";
+import { canonicalClubKey } from "@/lib/canonical-club";
 
 export interface ClubSearchResult {
   id: string;
@@ -87,15 +88,23 @@ export async function searchClubsWithFallback(query: string, limit = 20): Promis
         source: "api" as const,
       }));
 
-    // Dedupe: api_id existente no cache não duplica; cache vence (já tem cores/mascote).
+    // Dedupe por api_id, nome bruto E chave canônica (ex.: "Sport Club Corinthians Paulista"
+    // colapsa em "Corinthians"). Cache local sempre vence (tem cores/mascote/logo oficial).
     const localApiIds = new Set(localMatches.map((c) => c.api_id).filter(Boolean));
     const localNames = new Set(localMatches.map((c) => stripAccents(c.name)));
-    const merged = [
-      ...localMatches,
-      ...apiMatches.filter(
-        (a) => !(a.api_id && localApiIds.has(a.api_id)) && !localNames.has(stripAccents(a.name)),
-      ),
-    ];
+    const seenCanonical = new Set<string>();
+    const pushUnique = (acc: ClubSearchResult[], c: ClubSearchResult) => {
+      const k = canonicalClubKey(c.name);
+      if (k && seenCanonical.has(k)) return acc;
+      if (k) seenCanonical.add(k);
+      acc.push(c);
+      return acc;
+    };
+    const merged: ClubSearchResult[] = [];
+    localMatches.forEach((c) => pushUnique(merged, c));
+    apiMatches
+      .filter((a) => !(a.api_id && localApiIds.has(a.api_id)) && !localNames.has(stripAccents(a.name)))
+      .forEach((c) => pushUnique(merged, c));
 
     return merged.slice(0, limit);
   } catch (err) {
