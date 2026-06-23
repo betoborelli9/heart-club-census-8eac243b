@@ -1082,6 +1082,7 @@ export type Database = {
         Args: { p_voto_id: string }
         Returns: undefined
       }
+      canonical_clube_key: { Args: { name: string }; Returns: string }
       check_fixture_status: { Args: { p_fixture_json: Json }; Returns: boolean }
       clean_dead_competitions: { Args: never; Returns: undefined }
       clean_fictitious_data: { Args: never; Returns: undefined }
