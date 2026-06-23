@@ -275,10 +275,9 @@ serve(async (req) => {
       "amistoso beneficente", "racha",
     ];
 
-    // FRESHNESS — janela ampliada para 180 dias. Bing News (fallback usado
-    // quando Google News bloqueia Supabase) costuma devolver itens antigos
-    // a partir da região europeia; janelas curtas zeravam o feed.
-    const FRESHNESS_MS = 180 * 24 * 60 * 60 * 1000;
+    // FRESHNESS — janela rígida de 48 horas (requisito do produto).
+    // Itens sem pubDate válida são descartados (não conseguimos garantir frescor).
+    const FRESHNESS_MS = 48 * 60 * 60 * 1000;
     const now = Date.now();
 
     const debug = { total: 0, relev: 0, fresh: 0, ctx: 0, ambig: 0, accepted: 0 };
@@ -306,8 +305,9 @@ serve(async (req) => {
 
       const pubDate = get("pubDate") || get("dc:date") || get("a10:updated") || get("updated");
       const pubMs = pubDate ? new Date(pubDate).getTime() : NaN;
-      // Sem data válida: aceita mesmo assim (alguns feeds não trazem pubDate).
-      if (!isNaN(pubMs) && now - pubMs > FRESHNESS_MS) continue;
+      // 48h rígido: sem data válida OU fora da janela → descarta.
+      if (isNaN(pubMs)) continue;
+      if (now - pubMs > FRESHNESS_MS) continue;
       debug.fresh++;
 
       const description = get("description").replace(/<[^>]+>/g, " ");
@@ -317,18 +317,25 @@ serve(async (req) => {
       if (AMATEUR_BLACKLIST.some((b) => haystack.includes(b))) continue;
       debug.ctx++;
 
-      // ANTI-HOMÔNIMO suave: se o clube tem raiz ambígua E o título contém
-      // marcador de outro estado, descarta. Caso contrário, aceita.
-      if (ambiguous && discriminators.length > 0) {
+      // ANTI-HOMÔNIMO ESTRITO: para clubes com raiz ambígua (ex.: "Atlético",
+      // "América", "Nacional"), exigimos que o título OU a descrição contenha
+      // pelo menos um discriminador geográfico (cidade, estado ou UF). Se um
+      // discriminador conflitante (UF de outro estado) aparecer sem o próprio,
+      // descartamos também.
+      if (ambiguous) {
         const titleN = normalize(cleanTitle);
-        const ufMatches = titleN.match(/\b([a-z]{2})\b/g) || [];
+        const hasOwn = discriminators.length > 0 &&
+          discriminators.some((d) => d && (haystack.includes(d) || titleN.includes(d)));
+        if (discriminators.length > 0 && !hasOwn) continue;
         const knownUF = discriminators.find((d) => d.length === 2);
-        const hasOwn = discriminators.some((d) => d && haystack.includes(d));
-        const conflictsUF = knownUF && ufMatches.some((u) =>
-          /^(mg|sp|rj|rs|pr|sc|ba|ce|pe|rn|pb|al|se|pi|ma|am|pa|ap|rr|ro|ac|to|mt|ms|go|df|es)$/.test(u) &&
-          u !== knownUF
-        );
-        if (conflictsUF && !hasOwn) continue;
+        if (knownUF) {
+          const ufMatches = titleN.match(/\b([a-z]{2})\b/g) || [];
+          const conflictsUF = ufMatches.some((u) =>
+            /^(mg|sp|rj|rs|pr|sc|ba|ce|pe|rn|pb|al|se|pi|ma|am|pa|ap|rr|ro|ac|to|mt|ms|go|df|es)$/.test(u) &&
+            u !== knownUF
+          );
+          if (conflictsUF && !hasOwn) continue;
+        }
       }
       debug.ambig++;
 
