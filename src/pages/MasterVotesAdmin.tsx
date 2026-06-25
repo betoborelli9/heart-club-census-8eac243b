@@ -48,7 +48,7 @@ const SLOTS: Array<{ key: keyof VoteRow; label: string }> = [
 
 export default function MasterVotesAdmin() {
   const navigate = useNavigate();
-  const { user, loading } = useUser();
+  const { user, isLoading: loading } = useUser();
   const [votes, setVotes] = useState<VoteRow[]>([]);
   const [search, setSearch] = useState("");
   const [fetching, setFetching] = useState(false);
@@ -193,9 +193,9 @@ export default function MasterVotesAdmin() {
                         {val ? (
                           <>
                             <ClubLogo
-                              teamName={mm?.suggestion?.nome || val}
-                              size={20}
-                              localUrl={mm?.suggestion?.escudo_url}
+                              src={mm?.suggestion?.escudo_url}
+                              alt={mm?.suggestion?.nome || val}
+                              size="sm"
                             />
                             <span className="text-xs italic text-white truncate">{val}</span>
                           </>
