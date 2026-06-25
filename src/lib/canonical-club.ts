@@ -11,6 +11,10 @@ const GENERIC_TOKENS = new RegExp(
   "g",
 );
 
+// Stopwords PT/EN/ES que ficam após remover tokens genéricos
+// (ex.: "clube de regatas do flamengo" -> "do flamengo" -> "flamengo").
+const STOPWORDS = /\b(do|da|de|dos|das|of|the|el|la|los|las|del)\b/g;
+
 export function canonicalClubKey(name: string | null | undefined): string {
   if (!name) return "";
   let s = name
@@ -20,6 +24,18 @@ export function canonicalClubKey(name: string | null | undefined): string {
   s = s.replace(/[^a-z0-9 ]/g, " ");
   s = s.replace(/\s+/g, " ").trim();
   s = s.replace(GENERIC_TOKENS, " ");
+  s = s.replace(STOPWORDS, " ");
   s = s.replace(/\s+/g, " ").trim();
   return s;
+}
+
+/**
+ * Tokens significativos da query (após canonicalização), úteis para
+ * buscas ilike adicionais no cache. Ex.: "Clube de Regatas do Flamengo"
+ * -> ["flamengo"]; "Atlético Mineiro" -> ["atletico"].
+ */
+export function canonicalTokens(name: string | null | undefined): string[] {
+  const k = canonicalClubKey(name);
+  if (!k) return [];
+  return k.split(" ").filter((t) => t.length >= 3);
 }
