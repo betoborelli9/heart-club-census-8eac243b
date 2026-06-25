@@ -95,7 +95,11 @@ export async function searchClubsWithFallback(query: string, limit = 20): Promis
       .map(mapCacheRow);
 
     const apiMatches: ClubSearchResult[] = (apiResp.data || [])
-      .filter((t: any) => isValidClubName(t.name) && stripAccents(t.name).includes(normalized))
+      .filter(
+        (t: any) =>
+          isValidClubName(t.name) &&
+          (stripAccents(t.name).includes(normalized) || matchesCanon(t.name)),
+      )
       .map((t: any) => ({
         id: `api-${t.api_id}`,
         name: t.name,
