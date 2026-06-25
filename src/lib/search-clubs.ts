@@ -5,7 +5,7 @@
  */
 
 import { supabase } from "@/integrations/supabase/client";
-import { canonicalClubKey } from "@/lib/canonical-club";
+import { canonicalClubKey, canonicalTokens } from "@/lib/canonical-club";
 
 export interface ClubSearchResult {
   id: string;
@@ -60,21 +60,46 @@ export async function searchClubsWithFallback(query: string, limit = 20): Promis
   try {
     // BUSCA HÍBRIDA EM PARALELO: cache local + API-Football juntos.
     // Cache aparece como "LOCAL"; API mostra TODOS os homônimos do mundo (ex: todos os Operário).
+    //
+    // ✦ Canonicalização da query: "Clube de Regatas do Flamengo" → tokens ["flamengo"].
+    //   Assim o cache encontra o Flamengo mesmo quando o torcedor digitou o nome longo.
+    const canonKey = canonicalClubKey(term);
+    const tokens = canonicalTokens(term);
+    const orFilters = [
+      `nome.ilike.%${term}%`,
+      `nome_curto.ilike.%${term}%`,
+      ...tokens.flatMap((tok) => [`nome.ilike.%${tok}%`, `nome_curto.ilike.%${tok}%`]),
+    ].join(",");
+
     const [cacheResp, apiResp] = await Promise.all([
       supabase
         .from("clubes_cache")
         .select("*")
-        .or(`nome.ilike.%${term}%,nome_curto.ilike.%${term}%`)
-        .limit(limit),
+        .or(orFilters)
+        .limit(limit * 2),
       supabase.functions.invoke("search-clubs", { body: { query: term } }),
     ]);
 
+    const matchesCanon = (clubName: string) => {
+      if (!canonKey) return false;
+      const ck = canonicalClubKey(clubName);
+      return ck === canonKey || (!!ck && (ck.includes(canonKey) || canonKey.includes(ck)));
+    };
+
     const localMatches = (cacheResp.data || [])
-      .filter((c: any) => isValidClubName(c.nome) && stripAccents(c.nome).includes(normalized))
+      .filter(
+        (c: any) =>
+          isValidClubName(c.nome) &&
+          (stripAccents(c.nome).includes(normalized) || matchesCanon(c.nome)),
+      )
       .map(mapCacheRow);
 
     const apiMatches: ClubSearchResult[] = (apiResp.data || [])
-      .filter((t: any) => isValidClubName(t.name) && stripAccents(t.name).includes(normalized))
+      .filter(
+        (t: any) =>
+          isValidClubName(t.name) &&
+          (stripAccents(t.name).includes(normalized) || matchesCanon(t.name)),
+      )
       .map((t: any) => ({
         id: `api-${t.api_id}`,
         name: t.name,
