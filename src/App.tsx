@@ -64,6 +64,7 @@ import ClubFeminino from "./pages/Admin/ClubFeminino";
 import GlobalBI from "./pages/Admin/GlobalBI"; 
 import VotosFicticios from "./pages/VotosFicticios"; 
 import MasterProfile from "./pages/MasterProfile";
+import MasterVotesAdmin from "./pages/MasterVotesAdmin";
 
 const queryClient = new QueryClient();
 
@@ -112,6 +113,7 @@ const App = () => (
             <Route path="/admin/global" element={<GlobalBI />} />
             <Route path="/admin/votos-ficticios" element={<VotosFicticios />} />
             <Route path="/master/perfil" element={<MasterProfile />} />
+            <Route path="/master/votos" element={<MasterVotesAdmin />} />
 
             {/* Tratamento de Erros */}
             <Route path="*" element={<NotFound />} />
