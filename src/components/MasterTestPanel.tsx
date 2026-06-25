@@ -9,11 +9,12 @@
 
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { FlaskConical, Vote, Map as MapIcon, Users, BarChart3, X, ChevronUp } from "lucide-react";
+import { FlaskConical, Vote, Map as MapIcon, Users, BarChart3, UserCog, X, ChevronUp } from "lucide-react";
 import { useUser } from "@/contexts/UserContext";
 import { isMasterEmail } from "@/lib/master";
 
 const ITEMS = [
+  { label: "Editar meus dados (cidade, bairro…)", icon: UserCog, to: "/master/perfil" },
   { label: "Testar Votação (1ª vez)", icon: Vote, to: "/voting?test=1" },
   { label: "Testar Mapa de Calor (1ª vez)", icon: MapIcon, to: "/mapa-calor?force_onboarding=1" },
   { label: "Testar Embaixador (1ª vez)", icon: Users, to: "/embaixadores?force_onboarding=1" },
