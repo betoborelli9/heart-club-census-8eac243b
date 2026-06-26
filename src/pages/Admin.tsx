@@ -78,24 +78,43 @@ const Admin = () => {
               Admin
             </span>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap justify-end">
             <ExecutiveReportButton days={30} />
             {user?.email === "betoborelli9@gmail.com" && (
-              <Button
-                size="sm"
-                variant="outline"
-                className="gap-1 border-primary/50 text-primary hover:bg-primary/10"
-                onClick={() => navigate("/admin/votos-ficticios")}
-              >
-                🧪 Votos Fictícios
-              </Button>
+              <>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="gap-1 border-primary/50 text-primary hover:bg-primary/10"
+                  onClick={() => navigate("/master/votos")}
+                >
+                  🛠 Corrigir Votos
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="gap-1 border-primary/50 text-primary hover:bg-primary/10"
+                  onClick={() => navigate("/master/perfil")}
+                >
+                  👤 Meu Perfil (Master)
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="gap-1 border-primary/50 text-primary hover:bg-primary/10"
+                  onClick={() => navigate("/admin/votos-ficticios")}
+                >
+                  🧪 Votos Fictícios
+                </Button>
+                <ResetMyVoteButton />
+                <ResetTestDataButton />
+              </>
             )}
-            {user?.email === "betoborelli9@gmail.com" && <ResetMyVoteButton />}
-            {user?.email === "betoborelli9@gmail.com" && <ResetTestDataButton />}
             <Button variant="ghost" size="sm" onClick={() => navigate("/dashboard")}>
               <ArrowLeft className="w-4 h-4 mr-1" /> Dashboard
             </Button>
           </div>
+
         </div>
       </header>
 
