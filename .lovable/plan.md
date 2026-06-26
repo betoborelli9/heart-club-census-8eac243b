@@ -1,60 +1,75 @@
-## i18n — Etapa 2: Hook customizado + Página Ranking
+# Plano — Central de Notificações em Tempo Real (Time do Coração)
 
-### Objetivo
-Criar um wrapper reutilizável para `useTranslation` e refatorar a página de Ranking (`/ranking`, arquivo `src/pages/Stats.tsx`) trocando textos estáticos por chaves de tradução. Sem mudar lógica, busca, dados, estilos ou comportamento.
+Este é um épico grande. Vou dividir em **4 sprints sequenciais** para podermos validar cada etapa antes de seguir. Você aprova sprint por sprint.
 
 ---
 
-### 1. Novo hook: `src/hooks/useTranslationApp.ts`
-Wrapper fino sobre `react-i18next`:
-- Reexpõe `t`, `i18n`, idioma atual (`language`) e helper `changeLanguage(lng)`.
-- Namespace padrão `translation` (o que já usamos).
-- Assinatura `useTranslationApp()` — uso idêntico ao atual: `const { t } = useTranslationApp();`.
-- Centraliza para facilitar trocas futuras (ex.: logging, fallback custom, namespaces).
+## Sprint 1 — Banco de Dados + Vinculação do Time do Coração
 
-### 2. Estrutura de chaves nos JSONs
-Adicionar bloco `ranking.*` em `pt.json`, `en.json`, `es.json` mantendo o que já existe (`header.*`). Hierarquia proposta:
+**Migrações Supabase:**
 
-```text
-ranking.title
-ranking.subtitle
-ranking.search.placeholder
-ranking.scope.global
-ranking.scope.country
-ranking.scope.state
-ranking.scope.city
-ranking.scope.neighborhood
-ranking.table.position
-ranking.table.club
-ranking.table.votes
-ranking.table.share
-ranking.table.trend
-ranking.empty_state
-ranking.loading
-ranking.rivals.title
-ranking.rivals.empty
-ranking.census.title
-ranking.share.button
-ranking.share.copied
-ranking.invite.title
-ranking.invite.cta
-```
-(Chaves finais serão derivadas 1:1 dos textos visíveis encontrados no arquivo; a lista acima é a espinha dorsal.)
+1. `profiles.time_do_coracao_id INT` — guarda o ID oficial da API-Football. Preenchido automaticamente após o voto original (lendo de `clubes_cache.api_id`).
+2. `notification_preferences` (1 linha por usuário):
+   - `alert_kickoff BOOL DEFAULT true`
+   - `alert_lineup BOOL DEFAULT true`
+   - `alert_goal BOOL DEFAULT true`
+   - `alert_fulltime BOOL DEFAULT true`
+3. `push_subscriptions` (N por usuário) — guarda endpoint, p256dh, auth keys do navegador.
+4. `notification_history` — histórico para o sininho (tipo, título, corpo, fixture_id, lida, created_at). TTL de 7 dias via cron.
+5. Trigger pós-voto: ao gravar voto original, popula `profiles.time_do_coracao_id` a partir do `clubes_cache`.
+6. RLS: cada usuário só vê suas próprias preferências/subscriptions/histórico. `service_role` total para edge functions.
 
-### 3. Refatoração de `src/pages/Stats.tsx`
-- Importar `useTranslationApp`.
-- Substituir **apenas literais visíveis** (títulos, labels, placeholders, mensagens vazias, tooltips, aria-labels, textos de toast voltados ao usuário) por `t("ranking.<chave>")`.
-- Strings interpoladas usam `t("ranking.x", { valor })` com `{{valor}}` nos JSONs.
-- **NÃO alterar**: queries Supabase, lógica de cascade de emblemas (`ClubBadge`), cálculos, ordenação, hooks de dados, classes Tailwind, estrutura JSX, IDs, rotas, ícones.
-- Nomes de clubes, números formatados via `fmt()` e dados do banco permanecem como estão (não traduzidos).
+---
 
-### 4. Garantias
-- Idioma padrão continua `pt` (fallback). Visual idêntico em PT.
-- Demais páginas intactas — só Header (etapa 1) e Ranking (etapa 2) usam i18n.
-- Nenhum arquivo de backend/edge function alterado.
+## Sprint 2 — Edge Functions + Polling Inteligente
 
-### Arquivos a criar/editar
-- **criar**: `src/hooks/useTranslationApp.ts`
-- **editar**: `src/locales/pt.json`, `src/locales/en.json`, `src/locales/es.json`, `src/pages/Stats.tsx`
+1. **`fixtures-sync`** (cron diário, 06:00 BRT): lê todos os `time_do_coracao_id` distintos, busca jogos dos próximos 7 dias na API-Football, salva em `team_fixtures_cache`.
+2. **`fixtures-live-poll`** (cron a cada 1 minuto): identifica jogos com status `1H/2H/HT/ET/LIVE` agora; busca eventos novos; compara com último estado em cache; para cada evento novo (gol, kickoff, lineup, FT) → dispara push + grava em `notification_history`.
+3. **`fixtures-prematch-poll`** (cron a cada 5 minutos): para jogos que começam nos próximos 60 min, busca escalações (`lineups`). Quando aparecem, marca `lineup_ready=true`.
+4. **`push-send`**: helper que envia Web Push via VAPID a todos os tokens do usuário, com fallback para tokens inválidos (limpa).
+5. **VAPID keys** geradas e armazenadas como secrets (`VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`).
 
-Aprovando, executo a refatoração mantendo PT como referência e EN/ES como traduções iniciais (revisáveis depois).
+**Quota:** o polling de 1min só roda enquanto houver pelo menos 1 jogo ao vivo de um time-do-coração; senão pula. Estimativa: ~90 calls/jogo, multiplicado pelos jogos simultâneos únicos (não por usuário).
+
+---
+
+## Sprint 3 — Frontend: Toast, Card Pré-jogo, Escalações, Live
+
+1. **`public/sw.js`** — Service Worker para receber push e exibir notificação nativa do SO.
+2. **`src/lib/push.ts`** — registra SW, pede permissão, assina push, envia subscription pro Supabase.
+3. **`src/hooks/useHeartClubFixture.ts`** — Realtime subscription em `team_fixtures_cache` + `notification_history` do usuário.
+4. **`src/components/dashboard/MatchAnnouncementToast.tsx`** — toast "Hoje tem jogo do Tigrão!" com fade-in/out, 6s, 1x por dia (flag localStorage).
+5. **`src/components/dashboard/MatchCountdownCard.tsx`** — card do banner com cronômetro regressivo (atualiza a cada segundo).
+6. **`src/components/dashboard/MatchLineupsCard.tsx`** — substitui o cronômetro a partir de T-40min: 2 colunas (mandante/visitante), titulares + reservas + esquema tático.
+7. **`src/components/dashboard/LiveMatchOverlay.tsx`** — banner pulsante quando AO VIVO, mostra placar, gol mais recente com autor.
+
+Toda string nova entra nos 3 locales (pt/en/es).
+
+---
+
+## Sprint 4 — Sininho (Central) + Preferências
+
+1. **`src/components/notifications/NotificationBell.tsx`** — ícone no header do Dashboard com badge de não-lidas; popover lista histórico (últimas 20).
+2. **`src/pages/NotificationSettings.tsx`** — `/notificacoes` — 4 checkboxes (Início, Escalação, Gols, Fim) + botão "Ativar notificações no navegador" (push).
+3. Link para configurações dentro do popover do sininho.
+
+---
+
+## Detalhes técnicos
+
+- API-Football endpoints: `fixtures?team={id}&next=5`, `fixtures?live=all&team={id}`, `fixtures/lineups?fixture={id}`, `fixtures/events?fixture={id}`.
+- Push: lib `web-push` via npm specifier no Deno (`npm:web-push@3`).
+- Toast: `sonner` (já no projeto).
+- O ID API-Football virá de `clubes_cache.api_id`; se o clube do usuário não tiver, mostramos só o toast "sem jogos hoje" silencioso.
+- Cron via `pg_cron` + `pg_net` (extensions já habilitadas no projeto pelo histórico).
+
+---
+
+## Pré-requisitos / decisões que preciso de você
+
+1. **Confirmar API-Football**: o projeto já tem o secret `API_FOOTBALL_KEY` (vi `league-standings`, `check-club-feminino`). Reutilizo o mesmo, OK?
+2. **VAPID**: vou gerar via `generate_secret`. Você precisa só do `VAPID_SUBJECT` (um email de contato exigido pelo padrão Web Push). Posso usar `admin@heartclubapp.com`?
+3. **Escopo do toast "Hoje tem jogo do Tigrão!"**: o apelido ("Tigrão") sai de onde? Posso usar o `clubes_cache.mascote` que já existe; quando não tiver mascote, uso o nome do clube. OK?
+4. **Começo por qual sprint?** Recomendo **Sprint 1 + Sprint 2** juntos (backend pronto), depois Sprint 3 e 4 no front. Mas confirma se prefere uma sequência diferente.
+
+Aprovando, começo pelo Sprint 1 (migração do Supabase) na sequência.
