@@ -68,6 +68,20 @@ serve(async (req) => {
       fixture_id: payload?.fixture_id || null,
     });
 
+    // 2.5) Gera URL assinada de opt-out para essa categoria
+    let unsub_url: string | undefined;
+    if (PREF_COL[type]) {
+      const SECRET = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+      const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(SECRET),
+        { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+      const sigBuf = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(`${user_id}|${type}`));
+      const sig = btoa(String.fromCharCode(...new Uint8Array(sigBuf)))
+        .replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");
+      const base = Deno.env.get("SUPABASE_URL")!;
+      unsub_url = `${base}/functions/v1/notification-unsubscribe?u=${user_id}&c=${type}&s=${sig}`;
+    }
+    const enrichedPayload = { ...(payload || {}), unsub_url };
+
     // 3) Busca subscriptions
     const { data: subs } = await supabase
       .from("push_subscriptions")
@@ -79,7 +93,7 @@ serve(async (req) => {
       try {
         await webpush.sendNotification(
           { endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } },
-          JSON.stringify({ type, title, body, payload }),
+          JSON.stringify({ type, title, body, payload: enrichedPayload }),
         );
         sent++;
         await supabase.from("push_subscriptions")

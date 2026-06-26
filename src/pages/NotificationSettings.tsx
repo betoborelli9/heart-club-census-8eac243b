@@ -34,7 +34,16 @@ export default function NotificationSettings() {
         .from("notification_preferences")
         .select("alert_kickoff, alert_lineup, alert_goal, alert_fulltime")
         .eq("user_id", user.id).maybeSingle();
-      if (data) setPrefs(data as Prefs);
+      if (data) {
+        setPrefs(data as Prefs);
+      } else {
+        // Opt-out automático: cria registro com todos os alertas ativos por padrão
+        await supabase.from("notification_preferences").upsert(
+          { user_id: user.id, ...DEFAULTS },
+          { onConflict: "user_id" },
+        );
+        setPrefs(DEFAULTS);
+      }
       setLoading(false);
     })();
   }, [user?.id]);
