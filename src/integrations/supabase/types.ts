@@ -500,6 +500,72 @@ export type Database = {
         }
         Relationships: []
       }
+      notification_history: {
+        Row: {
+          body: string | null
+          created_at: string
+          fixture_id: number | null
+          id: string
+          payload: Json | null
+          read: boolean
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          body?: string | null
+          created_at?: string
+          fixture_id?: number | null
+          id?: string
+          payload?: Json | null
+          read?: boolean
+          title: string
+          type: string
+          user_id: string
+        }
+        Update: {
+          body?: string | null
+          created_at?: string
+          fixture_id?: number | null
+          id?: string
+          payload?: Json | null
+          read?: boolean
+          title?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      notification_preferences: {
+        Row: {
+          alert_fulltime: boolean
+          alert_goal: boolean
+          alert_kickoff: boolean
+          alert_lineup: boolean
+          created_at: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          alert_fulltime?: boolean
+          alert_goal?: boolean
+          alert_kickoff?: boolean
+          alert_lineup?: boolean
+          created_at?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          alert_fulltime?: boolean
+          alert_goal?: boolean
+          alert_kickoff?: boolean
+          alert_lineup?: boolean
+          created_at?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       partner_clicks: {
         Row: {
           bairro: string | null
@@ -577,6 +643,7 @@ export type Database = {
           telefone: string | null
           terms_accepted_at: string | null
           terms_version: string | null
+          time_do_coracao_id: number | null
           username: string | null
           votos_time: string | null
         }
@@ -608,6 +675,7 @@ export type Database = {
           telefone?: string | null
           terms_accepted_at?: string | null
           terms_version?: string | null
+          time_do_coracao_id?: number | null
           username?: string | null
           votos_time?: string | null
         }
@@ -639,8 +707,42 @@ export type Database = {
           telefone?: string | null
           terms_accepted_at?: string | null
           terms_version?: string | null
+          time_do_coracao_id?: number | null
           username?: string | null
           votos_time?: string | null
+        }
+        Relationships: []
+      }
+      push_subscriptions: {
+        Row: {
+          auth: string
+          created_at: string
+          endpoint: string
+          id: string
+          last_used_at: string | null
+          p256dh: string
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          auth: string
+          created_at?: string
+          endpoint: string
+          id?: string
+          last_used_at?: string | null
+          p256dh: string
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          auth?: string
+          created_at?: string
+          endpoint?: string
+          id?: string
+          last_used_at?: string | null
+          p256dh?: string
+          user_agent?: string | null
+          user_id?: string
         }
         Relationships: []
       }
@@ -1086,6 +1188,7 @@ export type Database = {
       check_fixture_status: { Args: { p_fixture_json: Json }; Returns: boolean }
       clean_dead_competitions: { Args: never; Returns: undefined }
       clean_fictitious_data: { Args: never; Returns: undefined }
+      cleanup_old_notifications: { Args: never; Returns: undefined }
       club_name_tokens: { Args: { t: string }; Returns: string[] }
       count_votes_since: { Args: { p_since: string }; Returns: number }
       fake_votes_summary: { Args: never; Returns: Json }
