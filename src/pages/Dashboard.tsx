@@ -173,6 +173,7 @@ const Dashboard = () => {
             <ClubSearch onSelect={(club) => handlePickClub(club.name)} />
           </div>
           <div className="flex items-center gap-2 shrink-0">
+            <NotificationBell userId={user?.id} />
             <LanguageSwitcher />
             <Button variant="ghost" size="icon" onClick={() => signOut()} aria-label={t("header.logout")} title={t("header.logout")} className="text-white/30 hover:text-white">
               <LogOut className="w-5 h-5" />
