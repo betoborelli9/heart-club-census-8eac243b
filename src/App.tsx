@@ -52,6 +52,7 @@ import Convite from "./pages/Convite";
 import Privacy from "./pages/Privacy";
 import Terms from "./pages/Terms";
 import PrivacyManagement from "./pages/PrivacyManagement";
+import NotificationSettings from "./pages/NotificationSettings";
 
 /* ═══════════════════════════════════════════════════════════
     MÓDULO: PÁGINAS (ADMIN & BI)
@@ -103,6 +104,7 @@ const App = () => (
             <Route path="/privacidade" element={<Privacy />} />
             <Route path="/termos" element={<Terms />} />
             <Route path="/gerenciar-dados" element={<PrivacyManagement />} />
+            <Route path="/notificacoes" element={<NotificationSettings />} />
 
             {/* 👑 Gestão Administrativa e BI */}
             <Route path="/admin" element={<Admin />} />

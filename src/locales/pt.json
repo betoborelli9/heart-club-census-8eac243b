@@ -6,6 +6,31 @@
     "substitutes": "Reservas",
     "live": "AO VIVO"
   },
+  "notifications": {
+    "title": "Notificações",
+    "aria": "Abrir notificações",
+    "empty": "Sem notificações por enquanto.",
+    "mark_all_read": "Marcar todas como lidas",
+    "settings": "Preferências",
+    "page_title": "Central de Notificações",
+    "page_subtitle": "Escolha quais alertas você quer receber do seu time do coração.",
+    "alert_kickoff": { "label": "Início do jogo", "desc": "Aviso quando a bola rolar." },
+    "alert_lineup": { "label": "Escalação confirmada", "desc": "Quando o time titular for divulgado." },
+    "alert_goal": { "label": "Gols", "desc": "Cada gol da partida, com o autor." },
+    "alert_fulltime": { "label": "Fim de jogo", "desc": "Placar final e resultado." },
+    "browser_push_title": "Notificações no navegador",
+    "browser_push_desc": "Ative para receber alertas mesmo com o site fechado.",
+    "enable_browser_push": "Ativar no navegador",
+    "push_enabled": "Notificações ativadas!",
+    "push_error_generic": "Não foi possível ativar.",
+    "push_error": {
+      "denied": "Permissão negada pelo navegador.",
+      "unsupported": "Navegador sem suporte a Web Push.",
+      "missing_vapid_public_key": "Configuração de push pendente (VAPID).",
+      "not_authenticated": "Faça login para ativar."
+    },
+    "push_unsupported": "Seu navegador não suporta notificações Web Push."
+  },
   "header": {
     "brand": "Heart Club",
     "logout": "Sair",

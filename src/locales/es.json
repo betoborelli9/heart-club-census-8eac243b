@@ -6,6 +6,31 @@
     "substitutes": "Suplentes",
     "live": "EN VIVO"
   },
+  "notifications": {
+    "title": "Notificaciones",
+    "aria": "Abrir notificaciones",
+    "empty": "Aún no hay notificaciones.",
+    "mark_all_read": "Marcar todas como leídas",
+    "settings": "Preferencias",
+    "page_title": "Centro de Notificaciones",
+    "page_subtitle": "Elige qué alertas quieres recibir de tu equipo.",
+    "alert_kickoff": { "label": "Inicio del partido", "desc": "Aviso cuando empiece." },
+    "alert_lineup": { "label": "Alineación confirmada", "desc": "Cuando se anuncie el once." },
+    "alert_goal": { "label": "Goles", "desc": "Cada gol con el autor." },
+    "alert_fulltime": { "label": "Final del partido", "desc": "Resultado final." },
+    "browser_push_title": "Notificaciones en el navegador",
+    "browser_push_desc": "Activa para recibir alertas incluso con el sitio cerrado.",
+    "enable_browser_push": "Activar en el navegador",
+    "push_enabled": "¡Notificaciones activadas!",
+    "push_error_generic": "No se pudo activar.",
+    "push_error": {
+      "denied": "Permiso denegado por el navegador.",
+      "unsupported": "El navegador no admite Web Push.",
+      "missing_vapid_public_key": "Configuración de push pendiente (VAPID).",
+      "not_authenticated": "Inicia sesión para activar."
+    },
+    "push_unsupported": "Tu navegador no admite Web Push."
+  },
   "header": {
     "brand": "Heart Club",
     "logout": "Cerrar sesión",
