@@ -1,4 +1,11 @@
 {
+  "match": {
+    "today_toast": "Match day! {{home}} vs {{away}}",
+    "starts_in": "Starts in",
+    "lineups_title": "Confirmed line-ups",
+    "substitutes": "Substitutes",
+    "live": "LIVE"
+  },
   "header": {
     "brand": "Heart Club",
     "logout": "Log out",

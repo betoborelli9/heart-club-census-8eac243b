@@ -1,4 +1,11 @@
 {
+  "match": {
+    "today_toast": "¡Hoy hay partido! {{home}} vs {{away}}",
+    "starts_in": "Empieza en",
+    "lineups_title": "Alineaciones confirmadas",
+    "substitutes": "Suplentes",
+    "live": "EN VIVO"
+  },
   "header": {
     "brand": "Heart Club",
     "logout": "Cerrar sesión",
