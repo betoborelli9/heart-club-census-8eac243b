@@ -27,6 +27,8 @@ import SympathyCarousel from "@/components/dashboard/SympathyCarousel";
 import CompetitionsPanel from "@/components/dashboard/CompetitionsPanel";
 import SocialShareBanners from "@/components/dashboard/SocialShareBanners";
 import ClubIdentityCard from "@/components/dashboard/ClubIdentityCard";
+import { MatchCenter } from "@/components/match/MatchCenter";
+import { NotificationBell } from "@/components/notifications/NotificationBell";
 
 /* ═══════════════════════════════════════════════════════════
     MÓDULO 2: HOOKS E ASSETS
@@ -198,6 +200,11 @@ const Dashboard = () => {
 
 
         {heartClubName && <ClubIdentityCard clubName={heartClubName} />}
+
+        {/* MatchCenter — isolado; só renderiza se o usuário tem time_do_coracao_id + jogos no cache */}
+        <section className="fade-in w-full">
+          <MatchCenter userId={user?.id} />
+        </section>
 
         <section className="fade-in w-full">
           <div className="glass-card rounded-[32px] p-4 md:p-6">
