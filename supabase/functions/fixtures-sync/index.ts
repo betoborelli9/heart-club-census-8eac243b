@@ -50,10 +50,24 @@ serve(async (req) => {
       new Set((rows || []).map((r: any) => r.time_do_coracao_id).filter(Boolean)),
     );
 
-    let ok = 0, fail = 0;
+    // GUARDA DE CACHE: 1 consulta por time por dia (20h hard limit).
+    // Lê quem já foi sincronizado nas últimas 20h e PULA esses times.
+    const { data: existing } = await supabase
+      .from("team_fixtures_cache")
+      .select("team_id, updated_at")
+      .in("team_id", teamIds);
+    const cutoff = Date.now() - 20 * 60 * 60 * 1000;
+    const fresh = new Set(
+      (existing || [])
+        .filter((r: any) => new Date(r.updated_at).getTime() > cutoff)
+        .map((r: any) => r.team_id),
+    );
+
+    let ok = 0, fail = 0, skipped = 0;
     for (const teamId of teamIds) {
+      if (fresh.has(teamId)) { skipped++; continue; }
       try {
-        // Próximos 7 dias
+        // Próximos 7 dias — 1 call por time, no máximo 1x a cada 20h
         const j = await af(`/fixtures?team=${teamId}&next=10`);
         const fixtures = (j?.response || []).map((f: any) => ({
           id: f.fixture.id,
@@ -81,7 +95,7 @@ serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ teams: teamIds.length, ok, fail }),
+      JSON.stringify({ teams: teamIds.length, ok, fail, skipped_cached: skipped }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   } catch (e) {

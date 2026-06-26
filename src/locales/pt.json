@@ -1,4 +1,11 @@
 {
+  "match": {
+    "today_toast": "Hoje tem jogo! {{home}} x {{away}}",
+    "starts_in": "Começa em",
+    "lineups_title": "Escalações confirmadas",
+    "substitutes": "Reservas",
+    "live": "AO VIVO"
+  },
   "header": {
     "brand": "Heart Club",
     "logout": "Sair",
