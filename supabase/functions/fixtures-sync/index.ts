@@ -95,7 +95,7 @@ serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ teams: teamIds.length, ok, fail }),
+      JSON.stringify({ teams: teamIds.length, ok, fail, skipped_cached: skipped }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   } catch (e) {
