@@ -77,9 +77,6 @@ export function NotificationBell({ userId }: { userId?: string }) {
             <Button size="icon" variant="ghost" className="h-7 w-7 text-white/70 hover:text-white" onClick={markAllRead} title={t("notifications.mark_all_read")}>
               <CheckCheck className="w-4 h-4" />
             </Button>
-            <Button size="icon" variant="ghost" className="h-7 w-7 text-white/70 hover:text-white" onClick={() => { setOpen(false); navigate("/notificacoes"); }} title={t("notifications.settings")}>
-              <SettingsIcon className="w-4 h-4" />
-            </Button>
           </div>
         </div>
         <div className="max-h-96 overflow-y-auto">
