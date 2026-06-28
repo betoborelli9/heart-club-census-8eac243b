@@ -23,6 +23,7 @@ import { getFingerprint, getFastIP, runSilentAudit } from "@/lib/vote-auditor";
 import { detectDeviceModel } from "@/lib/device-detect";
 import { captureIpAudit } from "@/lib/address";
 import { useTranslationApp } from "@/hooks/useTranslationApp";
+import i18n from "@/i18n";
 
 type ClubResult = ClubSearchResult;
 const MAX_SYMPATHY_CLUBS = 4;
@@ -30,6 +31,22 @@ const MAX_SYMPATHY_CLUBS = 4;
 // [SILENCIOSO] Não pedimos permissão de geolocalização ao torcedor.
 // Coordenadas serão derivadas do IP no backend, sem prompt do browser.
 const getBrowserGeo = async (): Promise<{ lat: number; lng: number } | null> => null;
+const VERIFY_TIMEOUT_MS = 8000;
+
+const withTimeout = async <T,>(promise: Promise<T>, timeoutMs: number): Promise<T> => {
+  let timeoutId: number | undefined;
+  const timeout = new Promise<never>((_, reject) => {
+    timeoutId = window.setTimeout(
+      () => reject(new Error(i18n.t("auth.verify.timeout") as string)),
+      timeoutMs,
+    );
+  });
+  try {
+    return await Promise.race([promise, timeout]);
+  } finally {
+    if (timeoutId) window.clearTimeout(timeoutId);
+  }
+};
 
 const Voting = () => {
   const navigate = useNavigate();
@@ -37,9 +54,57 @@ const Voting = () => {
   const { user, profile, hasVoted, isLoading, isAuthReady, isAuthenticated, refreshProfile, updateProfile } = useUser();
   const { toast } = useToast();
   const { t } = useTranslationApp();
+  const authToken = searchParams.get("token");
+  const authTokenHandledRef = useRef(false);
 
   const IS_MASTER_ADMIN = user?.email === "betoborelli9@gmail.com";
   const TEST_MODE = IS_MASTER_ADMIN && searchParams.get("test") === "1";
+
+  useEffect(() => {
+    if (!authToken || authTokenHandledRef.current) return;
+    authTokenHandledRef.current = true;
+
+    const authenticateFromEmail = async () => {
+      try {
+        const { data, error } = await withTimeout(
+          supabase.functions.invoke("verify-auth-token", { body: { token: authToken } }),
+          VERIFY_TIMEOUT_MS,
+        );
+
+        if (error || !data?.valid || !data.token_hash) {
+          const reason = data?.error;
+          if (reason === "already_used") toast({ variant: "destructive", title: t("auth.verify.already_used") });
+          else if (reason === "expired") toast({ variant: "destructive", title: t("auth.verify.expired") });
+          else toast({ variant: "destructive", title: t("auth.verify.invalid") });
+          navigate("/login", { replace: true });
+          return;
+        }
+
+        const { error: otpErr } = await withTimeout(
+          supabase.auth.verifyOtp({
+            token_hash: data.token_hash,
+            type: data.type === "signup" ? "signup" : "magiclink",
+          }),
+          VERIFY_TIMEOUT_MS,
+        );
+
+        if (otpErr) {
+          console.error("[VOTING_AUTH] verifyOtp falhou", otpErr);
+          toast({ variant: "destructive", title: t("auth.verify.session_failed") });
+          navigate("/login", { replace: true });
+          return;
+        }
+
+        navigate("/voting", { replace: true });
+      } catch (err) {
+        console.error("[VOTING_AUTH] conexão instável", err);
+        toast({ variant: "destructive", title: t("auth.verify.unstable") });
+        navigate("/login", { replace: true });
+      }
+    };
+
+    void authenticateFromEmail();
+  }, [authToken, navigate, t, toast]);
 
   // [BLOQUEIO] Torcedor comum só vota uma vez. Master nunca trava.
   useEffect(() => {
@@ -326,7 +391,7 @@ const Voting = () => {
     );
   };
 
-  if (!isAuthReady || isLoading || !isAuthenticated) {
+  if (authToken || !isAuthReady || isLoading || !isAuthenticated) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
