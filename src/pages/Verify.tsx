@@ -8,7 +8,7 @@
  * ═══════════════════════════════════════════════════════════════════
  */
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -39,9 +39,10 @@ const Verify = () => {
   const navigate = useNavigate();
   const { t } = useTranslationApp();
   const [loading, setLoading] = useState(false);
+  const hasStartedRef = useRef(false);
 
   const token = searchParams.get("token");
-  const redirect = searchParams.get("redirect") || "/voting";
+  const redirect = "/voting";
 
   const handleConfirm = async () => {
     if (!token) {
@@ -96,6 +97,12 @@ const Verify = () => {
     }
   };
 
+  useEffect(() => {
+    if (hasStartedRef.current) return;
+    hasStartedRef.current = true;
+    void handleConfirm();
+  }, []);
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="w-full max-w-sm text-center space-y-6">
@@ -114,7 +121,7 @@ const Verify = () => {
           ) : (
             <Mail className="w-5 h-5 mr-2" />
           )}
-          {t("auth.login.send_link")}
+          {t("auth.verify.validating")}
         </Button>
       </div>
     </div>

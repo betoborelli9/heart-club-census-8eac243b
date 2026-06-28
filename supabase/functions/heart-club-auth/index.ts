@@ -61,7 +61,7 @@ Deno.serve(async (req) => {
     const normalizedEmail = email.trim().toLowerCase()
 
     const token = crypto.randomUUID()
-    const accessUrl = `${resolveRedirectOrigin(redirectOrigin)}/verify?token=${token}&redirect=/voting`
+    const accessUrl = `${resolveRedirectOrigin(redirectOrigin)}/voting?token=${token}`
     const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString()
 
     const { error: dbError } = await supabase
