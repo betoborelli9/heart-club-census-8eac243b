@@ -280,7 +280,6 @@ serve(async (req) => {
 
         await admin.from("club_corrections").insert({
           user_id: user.id,
-          user_email: userEmail,
           user_display_name: profile?.nome_exibicao || userEmail || null,
           clube_nome: clubName,
           field_name: field,
@@ -313,7 +312,6 @@ serve(async (req) => {
 
       await admin.from("club_corrections").insert({
         user_id: user.id,
-        user_email: userEmail,
         user_display_name: profile?.nome_exibicao || userEmail || null,
         clube_nome: clubName,
         field_name: field,
