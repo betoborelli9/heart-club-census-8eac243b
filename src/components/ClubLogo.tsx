@@ -42,7 +42,6 @@ type ClubeCacheLogoRow = {
   nome_curto?: string | null;
   escudo_url?: string | null;
   cidade?: string | null;
-  estado?: string | null;
   pais?: string | null;
 };
 
@@ -97,15 +96,14 @@ const normalizeLogoSrc = (raw: string): string => {
 
 const localLogoCandidatesFromRow = (name: string, row?: ClubeCacheLogoRow | null) => {
   const cidade = row?.cidade || "";
-  const estado = row?.estado || "";
   const pais = row?.pais || "";
   const names = [row?.nome, row?.nome_curto, name].filter(Boolean) as string[];
 
   return dedupe(
     names.flatMap((clubName) => {
       const paths = [`/logos/${slugify(clubName)}.png`];
-      if (cidade || estado || pais) {
-        paths.push(`/logos/${[clubName, cidade, estado, pais].map(slugify).filter(Boolean).join("-")}.png`);
+      if (cidade || pais) {
+        paths.push(`/logos/${[clubName, cidade, pais].map(slugify).filter(Boolean).join("-")}.png`);
       }
       return paths;
     }),
@@ -127,7 +125,7 @@ async function resolveLogoCandidates(name: string): Promise<string[]> {
       for (const query of queries) {
         const { data } = await supabase
           .from("clubes_cache")
-          .select("nome, nome_curto, escudo_url, cidade, estado, pais")
+          .select("nome, nome_curto, escudo_url, cidade, pais")
           .ilike("nome", `%${query}%`)
           .order("escudo_url", { ascending: false, nullsFirst: false })
           .limit(6);
