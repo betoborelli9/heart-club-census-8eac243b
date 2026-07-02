@@ -409,6 +409,15 @@ const Ambassadors = () => {
   }, [indicacoesCount]);
 
 
+  /* [MÓDULO: HOOKS DE LOGOS — precisam ficar antes de qualquer return condicional] */
+  const allClubNames = [
+    ...activityFeed.map((e) => e.clube_nome || ""),
+    ...ranking.map((e) => e.clube_nome || ""),
+  ].filter(Boolean);
+  const clubLogoMap = useClubLogos(allClubNames);
+  const logoFor = (name: string | null | undefined) =>
+    name ? (resolveClub(name)?.logoUrl || clubLogoMap[normalizeClubName(name)]) : undefined;
+
   /* [MÓDULO: LOADING / AUTH GUARD] */
   if (isLoading) {
     return (
@@ -433,14 +442,6 @@ const Ambassadors = () => {
   }
 
   const rivalClubData = (name: string | null) => resolveClub(name);
-
-  const allClubNames = [
-    ...activityFeed.map((e) => e.clube_nome || ""),
-    ...ranking.map((e) => e.clube_nome || ""),
-  ].filter(Boolean);
-  const clubLogoMap = useClubLogos(allClubNames);
-  const logoFor = (name: string | null | undefined) =>
-    name ? (resolveClub(name)?.logoUrl || clubLogoMap[normalizeClubName(name)]) : undefined;
 
   return (
     <div data-build={BUILD_SYNC_TAG} className="min-h-screen bg-[#0a0a0a] text-white font-sans">
