@@ -1,5 +1,6 @@
 import { useTranslation } from "react-i18next";
 import type { Fixture } from "@/hooks/useHeartClubFixture";
+import { ClubLogo } from "@/components/ClubLogo";
 
 function fmt(ms: number) {
   if (ms <= 0) return "00:00:00";
@@ -22,13 +23,13 @@ export function MatchCountdownCard({ fixture, diffMs }: { fixture: Fixture; diff
     <div className="rounded-xl border border-white/10 bg-black/40 p-4 text-white">
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2 min-w-0">
-          <img src={fixture.home.logo} alt="" className="h-8 w-8" />
+          <ClubLogo src={fixture.home.logo} alt={fixture.home.name} clubName={fixture.home.name} size="sm" />
           <span className="font-semibold truncate">{fixture.home.name}</span>
         </div>
         <span className="text-xs opacity-70">×</span>
         <div className="flex items-center gap-2 min-w-0 justify-end">
           <span className="font-semibold truncate">{fixture.away.name}</span>
-          <img src={fixture.away.logo} alt="" className="h-8 w-8" />
+          <ClubLogo src={fixture.away.logo} alt={fixture.away.name} clubName={fixture.away.name} size="sm" />
         </div>
       </div>
       <div className="mt-2 text-xs opacity-70">{fixture.league.name} • {dt}</div>

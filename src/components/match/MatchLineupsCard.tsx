@@ -1,5 +1,6 @@
 import { useTranslation } from "react-i18next";
 import type { Fixture } from "@/hooks/useHeartClubFixture";
+import { ClubLogo } from "@/components/ClubLogo";
 
 export function MatchLineupsCard({ fixture, lineups }: { fixture: Fixture; lineups: any[] }) {
   const { t } = useTranslation();
@@ -13,7 +14,7 @@ export function MatchLineupsCard({ fixture, lineups }: { fixture: Fixture; lineu
         {[home, away].map((side: any, i: number) => side ? (
           <div key={i}>
             <div className="flex items-center gap-2 mb-2">
-              <img src={side.team?.logo} alt="" className="h-6 w-6" />
+              <ClubLogo src={side.team?.logo} alt={side.team?.name || ""} clubName={side.team?.name} size="sm" />
               <div className="font-semibold truncate">{side.team?.name}</div>
               <span className="ml-auto text-xs opacity-70">{side.formation}</span>
             </div>
