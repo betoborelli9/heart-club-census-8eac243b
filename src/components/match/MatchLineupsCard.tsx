@@ -15,6 +15,7 @@ export function MatchLineupsCard({ fixture, lineups }: { fixture: Fixture; lineu
           <div key={i}>
             <div className="flex items-center gap-2 mb-2">
               <ClubLogo src={side.team?.logo} alt={side.team?.name || ""} clubName={side.team?.name} size="sm" />
+              <div className="font-semibold truncate">{side.team?.name}</div>
               <span className="ml-auto text-xs opacity-70">{side.formation}</span>
             </div>
             <ul className="text-xs space-y-1">
