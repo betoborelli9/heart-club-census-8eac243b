@@ -220,7 +220,8 @@ const initialsFromName = (name: string) => {
 const fallbackPalette = (name: string) => {
   let hash = 0;
   for (let i = 0; i < name.length; i += 1) hash = (hash * 31 + name.charCodeAt(i)) >>> 0;
-  const hue = hash % 360;
+  const safeHues = [28, 46, 142, 186, 206, 228, 272];
+  const hue = safeHues[hash % safeHues.length];
   return {
     primary: `hsl(${hue} 78% 42%)`,
     secondary: `hsl(${(hue + 42) % 360} 82% 58%)`,
