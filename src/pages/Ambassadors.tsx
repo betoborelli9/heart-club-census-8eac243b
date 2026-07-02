@@ -482,7 +482,7 @@ const Ambassadors = () => {
 
         {/* [MÓDULO: BANNER REUTILIZÁVEL] */}
         <ClubBanner
-          clubName={clubName}
+          clubName={clubName ?? ""}
           clubData={clubData}
           theme={theme}
           pageLabel={t("ambassadors.page_label")}
