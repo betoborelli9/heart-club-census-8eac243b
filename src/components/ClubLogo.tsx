@@ -50,9 +50,9 @@ const BRAZIL_STATE_TO_UF: Record<string, string> = {
 
 interface ClubLogoProps {
   src: string | null | undefined;
-  alt: string;
+  alt: string | null | undefined;
   /** Nome do clube para acionar resolver de fallback (cache -> API -> Wikipedia). Se omitido, usa `alt`. */
-  clubName?: string;
+  clubName?: string | null;
   size?: LogoSize;
   className?: string;
   loading?: "lazy" | "eager";
@@ -308,7 +308,7 @@ export const ClubLogo = ({
   loading = "lazy",
   fetchPriority = "auto",
 }: ClubLogoProps) => {
-  const effectiveName = clubName || alt;
+  const effectiveName = String(clubName || alt || "Heart Club");
   const normalizedInitial = typeof src === "string" && src.trim() ? normalizeLogoSrc(src) : null;
   const cacheKey = normalizeName(effectiveName);
   const failedSources = useRef<Set<string>>(new Set());
