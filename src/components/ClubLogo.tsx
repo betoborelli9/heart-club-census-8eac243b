@@ -1,10 +1,9 @@
 /* src/components/ClubLogo.tsx
    Componente único e BLINDADO para renderizar escudos de clubes.
-   Cascata de fallback: src -> Supabase cache -> logos locais -> API-Football -> Wikipedia -> Shield.
+   Cascata de fallback: src -> Supabase cache -> logos locais -> API-Football -> Wikipedia -> emblema sintético.
    Nunca altera lógica de votos ou dados dinâmicos. */
 
 import { useEffect, useRef, useState } from "react";
-import { Shield } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -24,6 +23,36 @@ const fallbackIconSize: Record<LogoSize, string> = {
   md: "w-5 h-5",
   lg: "w-6 h-6",
   xl: "w-8 h-8",
+};
+
+const BRAZIL_STATE_TO_UF: Record<string, string> = {
+  acre: "ac",
+  alagoas: "al",
+  amapa: "ap",
+  amazonas: "am",
+  bahia: "ba",
+  ceara: "ce",
+  "distrito-federal": "df",
+  "espirito-santo": "es",
+  goias: "go",
+  maranhao: "ma",
+  "mato-grosso": "mt",
+  "mato-grosso-do-sul": "ms",
+  "minas-gerais": "mg",
+  para: "pa",
+  paraiba: "pb",
+  parana: "pr",
+  pernambuco: "pe",
+  piaui: "pi",
+  "rio-de-janeiro": "rj",
+  "rio-grande-do-norte": "rn",
+  "rio-grande-do-sul": "rs",
+  rondonia: "ro",
+  roraima: "rr",
+  "santa-catarina": "sc",
+  "sao-paulo": "sp",
+  sergipe: "se",
+  tocantins: "to",
 };
 
 interface ClubLogoProps {
@@ -57,6 +86,15 @@ const slugify = (s: string) =>
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/-+/g, "-")
     .replace(/^-|-$/g, "");
+
+const splitCityState = (value: string) => {
+  const parts = value.split(",").map((part) => part.trim()).filter(Boolean);
+  const city = parts[0] || value;
+  const stateRaw = parts[1] || "";
+  const stateSlug = slugify(stateRaw);
+  const state = stateSlug.length === 2 ? stateSlug : BRAZIL_STATE_TO_UF[stateSlug] || stateSlug;
+  return { city, state };
+};
 
 const dedupe = (items: Array<string | null | undefined>) => {
   const seen = new Set<string>();
@@ -98,16 +136,33 @@ const localLogoCandidatesFromRow = (name: string, row?: ClubeCacheLogoRow | null
   const cidade = row?.cidade || "";
   const pais = row?.pais || "";
   const names = [row?.nome, row?.nome_curto, name].filter(Boolean) as string[];
+  const { city, state } = splitCityState(cidade);
+  const countrySlug = slugify(pais);
+  const countryAliases = countrySlug === "brazil" || countrySlug === "brasil" ? ["brasil", "brazil"] : [countrySlug];
 
   return dedupe(
     names.flatMap((clubName) => {
-      const paths = [`/logos/${slugify(clubName)}.png`];
-      if (cidade || pais) {
-        paths.push(`/logos/${[clubName, cidade, pais].map(slugify).filter(Boolean).join("-")}.png`);
+      const clubSlug = slugify(clubName);
+      const paths = [`/logos/${clubSlug}.png`];
+      if (city || state || pais) {
+        countryAliases.forEach((country) => {
+          paths.push(`/logos/${[clubSlug, slugify(city), state, country].filter(Boolean).join("-")}.png`);
+          paths.push(`/logos/${[clubSlug, slugify(cidade), country].filter(Boolean).join("-")}.png`);
+        });
       }
       return paths;
     }),
   );
+};
+
+const withTimeout = async <T,>(promise: Promise<T>, ms: number): Promise<T | null> => {
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<null>((resolve) => {
+    timeoutId = setTimeout(() => resolve(null), ms);
+  });
+  const result = await Promise.race([promise, timeout]);
+  if (timeoutId) clearTimeout(timeoutId);
+  return result as T | null;
 };
 
 async function resolveLogoCandidates(name: string): Promise<string[]> {
@@ -138,14 +193,19 @@ async function resolveLogoCandidates(name: string): Promise<string[]> {
         if (candidates.length > 0) break;
       }
 
-      const { data } = await supabase.functions.invoke("resolve-club-logo", {
-        body: { clubName: name },
-      });
+      const cacheUrls = dedupe(candidates);
+      if (cacheUrls.length) resolvedCache.set(key, cacheUrls);
+
+      const functionResult = await withTimeout(
+        supabase.functions.invoke("resolve-club-logo", { body: { clubName: name } }),
+        2500,
+      );
+      const data = functionResult?.data;
       const url = (data as any)?.url as string | null;
       if (url) candidates.push(url);
 
       const urls = dedupe(candidates);
-      if (urls.length) resolvedCache.set(key, urls);
+      resolvedCache.set(key, urls);
       return urls;
     } catch {
       const urls = dedupe(candidates);
@@ -158,6 +218,65 @@ async function resolveLogoCandidates(name: string): Promise<string[]> {
   inflight.set(key, p);
   return p;
 }
+
+const initialsFromName = (name: string) => {
+  const tokens = significantTokens(name).slice(0, 3);
+  const initials = tokens.map((token) => token[0]).join("").toUpperCase();
+  return initials || normalizeName(name).slice(0, 2).toUpperCase() || "HC";
+};
+
+const fallbackPalette = (name: string) => {
+  let hash = 0;
+  for (let i = 0; i < name.length; i += 1) hash = (hash * 31 + name.charCodeAt(i)) >>> 0;
+  const hue = hash % 360;
+  return {
+    primary: `hsl(${hue} 78% 42%)`,
+    secondary: `hsl(${(hue + 42) % 360} 82% 58%)`,
+  };
+};
+
+const SyntheticCrest = ({ name, size, className }: { name: string; size: LogoSize; className?: string }) => {
+  const palette = fallbackPalette(name);
+  const initials = initialsFromName(name);
+  return (
+    <div
+      className={cn(sizeClasses[size], "flex items-center justify-center shrink-0", className)}
+      title={name}
+      aria-label={name}
+    >
+      <svg viewBox="0 0 64 64" role="img" aria-hidden="true" className="w-full h-full drop-shadow-sm">
+        <defs>
+          <linearGradient id={`crest-${slugify(name) || "club"}`} x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stopColor={palette.secondary} />
+            <stop offset="100%" stopColor={palette.primary} />
+          </linearGradient>
+        </defs>
+        <path
+          d="M32 4 54 12v18c0 15.5-8.8 25-22 30C18.8 55 10 45.5 10 30V12L32 4Z"
+          fill={`url(#crest-${slugify(name) || "club"})`}
+          stroke="rgba(255,255,255,0.86)"
+          strokeWidth="3"
+        />
+        <path d="M18 18h28M18 46h28" stroke="rgba(0,0,0,0.28)" strokeWidth="3" strokeLinecap="round" />
+        <text
+          x="32"
+          y="38"
+          textAnchor="middle"
+          fontFamily="Verdana, Arial, sans-serif"
+          fontSize={initials.length > 2 ? 15 : 19}
+          fontWeight="900"
+          fontStyle="italic"
+          fill="white"
+          stroke="rgba(0,0,0,0.45)"
+          strokeWidth="0.8"
+          paintOrder="stroke"
+        >
+          {initials}
+        </text>
+      </svg>
+    </div>
+  );
+};
 
 export const ClubLogo = ({
   src,
@@ -226,18 +345,7 @@ export const ClubLogo = ({
         />
       );
     }
-    return (
-      <div
-        className={cn(
-          sizeClasses[size],
-          "rounded-full bg-secondary/50 flex items-center justify-center shrink-0",
-          className,
-        )}
-        title={alt}
-      >
-        <Shield className={cn(fallbackIconSize[size], "text-muted-foreground")} />
-      </div>
-    );
+    return <SyntheticCrest name={effectiveName} size={size} className={className} />;
   }
 
   return (
@@ -266,6 +374,6 @@ export const ClubLogo = ({
 
 /**
  * [RODAPÉ TÉCNICO]
- * Versão: 4.0 — Blindagem: src → cache → logos locais → API-Football → Wikipedia
+ * Versão: 5.0 — Blindagem: src → cache imediato → logos locais normalizados → API-Football/Wikipedia com timeout → emblema sintético
  * Regra invariável: nunca altera lógica de votos, apenas garante presença visual do escudo.
  */
