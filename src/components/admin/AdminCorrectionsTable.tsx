@@ -13,7 +13,7 @@ import { Loader2 } from "lucide-react";
 interface Row {
   id: string;
   user_display_name: string | null;
-  user_email: string | null;
+  
   clube_nome: string;
   field_name: string;
   old_value: string | null;
@@ -89,7 +89,7 @@ export default function AdminCorrectionsTable() {
               <TableRow>
                 <TableHead>Quando</TableHead>
                 <TableHead>Torcedor</TableHead>
-                <TableHead>E-mail</TableHead>
+                
                 <TableHead>Clube</TableHead>
                 <TableHead>Campo</TableHead>
                 <TableHead>De → Para</TableHead>
@@ -105,7 +105,7 @@ export default function AdminCorrectionsTable() {
                     {new Date(r.created_at).toLocaleString("pt-BR")}
                   </TableCell>
                   <TableCell className="text-sm font-bold">{r.user_display_name || "—"}</TableCell>
-                  <TableCell className="text-xs font-mono text-white/70">{r.user_email || "—"}</TableCell>
+                  
                   <TableCell className="text-sm">{r.clube_nome}</TableCell>
                   <TableCell className="text-xs font-mono uppercase">{r.field_name}</TableCell>
                   <TableCell className="text-xs">
