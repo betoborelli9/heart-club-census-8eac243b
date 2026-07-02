@@ -1,7 +1,7 @@
 /**
  * [CAMINHO]: supabase/functions/resolve-club-logo/index.ts
  * [OBJETIVO]: BLINDAGEM DE ESCUDOS — nunca retornar vazio.
- *   Cascata: clubes_cache -> API-Football -> Wikipedia -> null.
+ *   Cascata: clubes_cache -> API-Football proxy/base64 -> Wikipedia -> null.
  *   Ao encontrar em fonte externa, persiste em clubes_cache (upsert).
  * [ENTRADA]: { clubName: string }
  * [SAÍDA]: { url: string | null, source: "cache"|"api-football"|"wikipedia"|"none" }
@@ -17,6 +17,27 @@ const corsHeaders = {
 
 const norm = (s: string) =>
   (s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+
+const isApiSportsAsset = (url: string) => /^https:\/\/media\.api-sports\.io\/football\/(teams|leagues)\/\d+\.png(?:\?.*)?$/i.test(url);
+
+async function imageUrlToDataUrl(url: string): Promise<string | null> {
+  if (!isApiSportsAsset(url)) return url;
+  try {
+    const r = await fetch(url, { redirect: "follow" });
+    if (!r.ok) return null;
+    const contentType = r.headers.get("content-type") || "image/png";
+    if (!contentType.startsWith("image/")) return null;
+    const bytes = new Uint8Array(await r.arrayBuffer());
+    let binary = "";
+    const chunkSize = 0x8000;
+    for (let i = 0; i < bytes.length; i += chunkSize) {
+      binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize));
+    }
+    return `data:${contentType};base64,${btoa(binary)}`;
+  } catch {
+    return null;
+  }
+}
 
 async function urlAlive(url: string): Promise<boolean> {
   try {
@@ -95,7 +116,8 @@ serve(async (req) => {
       .maybeSingle();
 
     if (row?.escudo_url && (await urlAlive(row.escudo_url))) {
-      return new Response(JSON.stringify({ url: row.escudo_url, source: "cache" }), {
+      const safeUrl = await imageUrlToDataUrl(row.escudo_url);
+      return new Response(JSON.stringify({ url: safeUrl || row.escudo_url, source: "cache" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -109,7 +131,8 @@ serve(async (req) => {
           { onConflict: "nome" },
         );
       } catch {}
-      return new Response(JSON.stringify({ url: api.url, source: "api-football" }), {
+      const safeUrl = await imageUrlToDataUrl(api.url);
+      return new Response(JSON.stringify({ url: safeUrl || api.url, source: "api-football" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
