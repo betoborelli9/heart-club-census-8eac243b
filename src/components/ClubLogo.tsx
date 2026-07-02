@@ -6,6 +6,7 @@
 import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
+import { LOCAL_LOGOS } from "@/data/logos-manifest";
 
 type LogoSize = "xs" | "sm" | "md" | "lg" | "xl";
 
