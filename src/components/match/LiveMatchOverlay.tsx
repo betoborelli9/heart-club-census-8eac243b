@@ -1,5 +1,6 @@
 import { useTranslation } from "react-i18next";
 import type { Fixture } from "@/hooks/useHeartClubFixture";
+import { ClubLogo } from "@/components/ClubLogo";
 
 export function LiveMatchOverlay({ fixture, liveState }: { fixture: Fixture; liveState: any }) {
   const { t } = useTranslation();
