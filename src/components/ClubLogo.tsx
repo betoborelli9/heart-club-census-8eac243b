@@ -302,7 +302,7 @@ export const ClubLogo = ({
   const failedSources = useRef<Set<string>>(new Set());
 
   const [candidates, setCandidates] = useState<string[]>(
-    dedupe([normalizedInitial, ...(resolvedCache.get(cacheKey) || []), ...localLogoCandidatesFromRow(effectiveName)]),
+    dedupe([normalizedInitial, ...localLogosByName(effectiveName), ...(resolvedCache.get(cacheKey) || []), ...localLogoCandidatesFromRow(effectiveName)]),
   );
   const [resolving, setResolving] = useState(false);
   const [failed, setFailed] = useState(false);
@@ -312,7 +312,7 @@ export const ClubLogo = ({
   useEffect(() => {
     let cancelled = false;
     failedSources.current = new Set();
-    const initial = dedupe([normalizedInitial, ...(resolvedCache.get(cacheKey) || []), ...localLogoCandidatesFromRow(effectiveName)]);
+    const initial = dedupe([normalizedInitial, ...localLogosByName(effectiveName), ...(resolvedCache.get(cacheKey) || []), ...localLogoCandidatesFromRow(effectiveName)]);
     setCandidates(initial);
     setFailed(false);
     setResolving(true);
