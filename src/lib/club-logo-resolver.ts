@@ -40,6 +40,22 @@ async function fetchLogos(names: string[]): Promise<void> {
           if (row.escudo_url) memoryCache.set(normalize(row.nome), row.escudo_url);
         });
       }
+      // BLINDAGEM: para nomes ainda sem escudo, aciona o resolver em cascata
+      // (Supabase → API-Football → Wikipedia) via edge function.
+      const finalMissing = missing.filter((n) => !memoryCache.has(normalize(n)));
+      if (finalMissing.length > 0) {
+        await Promise.all(
+          finalMissing.map(async (n) => {
+            try {
+              const { data: r } = await supabase.functions.invoke("resolve-club-logo", {
+                body: { clubName: n },
+              });
+              const url = (r as any)?.url as string | undefined;
+              if (url) memoryCache.set(normalize(n), url);
+            } catch {}
+          }),
+        );
+      }
     } catch (err) {
       console.warn("[club-logo-resolver]", err);
     } finally {
