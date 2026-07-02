@@ -325,18 +325,6 @@ export const ClubLogo = ({
   const showFallback = !currentSrc || failed;
 
   if (showFallback) {
-    if (resolving && !failed) {
-      return (
-        <div
-          className={cn(
-            sizeClasses[size],
-            "rounded-full bg-white/10 flex items-center justify-center shrink-0 animate-pulse",
-            className,
-          )}
-          title={alt}
-        />
-      );
-    }
     return <SyntheticCrest name={effectiveName} size={size} className={className} />;
   }
 
