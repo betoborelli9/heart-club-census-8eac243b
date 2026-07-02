@@ -1,6 +1,6 @@
 /* src/components/ClubLogo.tsx
    Componente único e BLINDADO para renderizar escudos de clubes.
-   Cascata de fallback: src -> Supabase cache -> logos locais -> API-Football -> Wikipedia -> emblema sintético.
+   Cascata de fallback: logos locais -> Supabase cache -> src seguro -> Wikipedia -> emblema sintético.
    Nunca altera lógica de votos ou dados dinâmicos. */
 
 import { useEffect, useRef, useState } from "react";
@@ -89,13 +89,18 @@ const splitCityState = (value: string) => {
   return { city, state };
 };
 
+const isApiSportsAsset = (src: string) => /^https:\/\/media\.api-sports\.io\/football\/(teams|leagues)\/\d+\.png(?:\?.*)?$/i.test(src);
+
+const logoPath = (file: string) => `/logos/${file}.png`;
+
 const dedupe = (items: Array<string | null | undefined>) => {
   const seen = new Set<string>();
   const out: string[] = [];
   items.forEach((item) => {
     if (!item) return;
     const normalized = normalizeLogoSrc(item);
-    if (!normalized || seen.has(normalized)) return;
+    // No desktop do usuário o DNS de media.api-sports.io está falhando; não tentamos esse host no browser.
+    if (!normalized || isApiSportsAsset(normalized) || seen.has(normalized)) return;
     seen.add(normalized);
     out.push(normalized);
   });
@@ -125,18 +130,21 @@ const normalizeLogoSrc = (raw: string): string => {
   return `/${s.replace(/^\.?\/+/, "")}`;
 };
 
-// Match manifest entries (arquivos reais em /public/logos/) pelo prefixo do slug do clube.
-// Ex.: "Vila Nova" → prefixo "vila-nova-" casa "vila-nova-goiania-go-brasil.png".
+// Match manifest entries (arquivos reais em /public/logos/) por slug e tokens relevantes.
+// Ex.: "Clube de Regatas do Flamengo" → token "flamengo" casa "flamengo-rio-de-janeiro-rj-brasil.png".
 const localLogosByName = (name: string): string[] => {
   const slug = slugify(name);
   if (!slug) return [];
   const exact: string[] = [];
   const prefixed: string[] = [];
+  const tokenMatches: string[] = [];
+  const tokens = significantTokens(name).filter((token) => token.length >= 4);
   for (const file of LOCAL_LOGOS) {
-    if (file === slug) exact.push(`/logos/${file}.png`);
-    else if (file.startsWith(`${slug}-`)) prefixed.push(`/logos/${file}.png`);
+    if (file === slug) exact.push(logoPath(file));
+    else if (file.startsWith(`${slug}-`)) prefixed.push(logoPath(file));
+    else if (tokens.some((token) => file.split("-").includes(token))) tokenMatches.push(logoPath(file));
   }
-  return [...exact, ...prefixed];
+  return dedupe([...exact, ...prefixed, ...tokenMatches]);
 };
 
 
@@ -151,11 +159,13 @@ const localLogoCandidatesFromRow = (name: string, row?: ClubeCacheLogoRow | null
   return dedupe(
     names.flatMap((clubName) => {
       const clubSlug = slugify(clubName);
-      const paths = [`/logos/${clubSlug}.png`];
+      const paths = [LOCAL_LOGOS.includes(clubSlug) ? logoPath(clubSlug) : null, ...localLogosByName(clubName)];
       if (city || state || pais) {
         countryAliases.forEach((country) => {
-          paths.push(`/logos/${[clubSlug, slugify(city), state, country].filter(Boolean).join("-")}.png`);
-          paths.push(`/logos/${[clubSlug, slugify(cidade), country].filter(Boolean).join("-")}.png`);
+          const byCityState = [clubSlug, slugify(city), state, country].filter(Boolean).join("-");
+          const byCity = [clubSlug, slugify(cidade), country].filter(Boolean).join("-");
+          if (LOCAL_LOGOS.includes(byCityState)) paths.push(logoPath(byCityState));
+          if (LOCAL_LOGOS.includes(byCity)) paths.push(logoPath(byCity));
         });
       }
       return paths;
@@ -194,6 +204,8 @@ async function resolveLogoCandidates(name: string): Promise<string[]> {
           .limit(6);
 
         (data || []).forEach((row: ClubeCacheLogoRow) => {
+          candidates.push(...localLogosByName(row.nome || ""));
+          candidates.push(...localLogosByName(row.nome_curto || ""));
           candidates.push(row.escudo_url || "");
           candidates.push(...localLogoCandidatesFromRow(name, row));
         });
@@ -302,7 +314,7 @@ export const ClubLogo = ({
   const failedSources = useRef<Set<string>>(new Set());
 
   const [candidates, setCandidates] = useState<string[]>(
-    dedupe([normalizedInitial, ...localLogosByName(effectiveName), ...(resolvedCache.get(cacheKey) || []), ...localLogoCandidatesFromRow(effectiveName)]),
+    dedupe([...localLogosByName(effectiveName), ...(resolvedCache.get(cacheKey) || []), ...localLogoCandidatesFromRow(effectiveName), normalizedInitial]),
   );
   const [resolving, setResolving] = useState(false);
   const [failed, setFailed] = useState(false);
@@ -312,7 +324,7 @@ export const ClubLogo = ({
   useEffect(() => {
     let cancelled = false;
     failedSources.current = new Set();
-    const initial = dedupe([normalizedInitial, ...localLogosByName(effectiveName), ...(resolvedCache.get(cacheKey) || []), ...localLogoCandidatesFromRow(effectiveName)]);
+    const initial = dedupe([...localLogosByName(effectiveName), ...(resolvedCache.get(cacheKey) || []), ...localLogoCandidatesFromRow(effectiveName), normalizedInitial]);
     setCandidates(initial);
     setFailed(false);
     setResolving(true);
@@ -371,6 +383,6 @@ export const ClubLogo = ({
 
 /**
  * [RODAPÉ TÉCNICO]
- * Versão: 5.0 — Blindagem: src → cache imediato → logos locais normalizados → API-Football/Wikipedia com timeout → emblema sintético
+  * Versão: 5.1 — Blindagem desktop: logos locais absolutos primeiro; media.api-sports.io bloqueado no browser → cache/Wikipedia → emblema sintético
  * Regra invariável: nunca altera lógica de votos, apenas garante presença visual do escudo.
  */
