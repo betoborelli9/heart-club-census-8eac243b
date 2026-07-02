@@ -6,6 +6,7 @@
 import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
+import { LOCAL_LOGOS } from "@/data/logos-manifest";
 
 type LogoSize = "xs" | "sm" | "md" | "lg" | "xl";
 
@@ -123,6 +124,21 @@ const normalizeLogoSrc = (raw: string): string => {
   if (/^[a-z0-9-]+(\.[a-z0-9-]+)+\//i.test(s)) return `https://${s}`;
   return `/${s.replace(/^\.?\/+/, "")}`;
 };
+
+// Match manifest entries (arquivos reais em /public/logos/) pelo prefixo do slug do clube.
+// Ex.: "Vila Nova" → prefixo "vila-nova-" casa "vila-nova-goiania-go-brasil.png".
+const localLogosByName = (name: string): string[] => {
+  const slug = slugify(name);
+  if (!slug) return [];
+  const exact: string[] = [];
+  const prefixed: string[] = [];
+  for (const file of LOCAL_LOGOS) {
+    if (file === slug) exact.push(`/logos/${file}.png`);
+    else if (file.startsWith(`${slug}-`)) prefixed.push(`/logos/${file}.png`);
+  }
+  return [...exact, ...prefixed];
+};
+
 
 const localLogoCandidatesFromRow = (name: string, row?: ClubeCacheLogoRow | null) => {
   const cidade = row?.cidade || "";
@@ -286,7 +302,7 @@ export const ClubLogo = ({
   const failedSources = useRef<Set<string>>(new Set());
 
   const [candidates, setCandidates] = useState<string[]>(
-    dedupe([normalizedInitial, ...(resolvedCache.get(cacheKey) || []), ...localLogoCandidatesFromRow(effectiveName)]),
+    dedupe([normalizedInitial, ...localLogosByName(effectiveName), ...(resolvedCache.get(cacheKey) || []), ...localLogoCandidatesFromRow(effectiveName)]),
   );
   const [resolving, setResolving] = useState(false);
   const [failed, setFailed] = useState(false);
@@ -296,7 +312,7 @@ export const ClubLogo = ({
   useEffect(() => {
     let cancelled = false;
     failedSources.current = new Set();
-    const initial = dedupe([normalizedInitial, ...(resolvedCache.get(cacheKey) || []), ...localLogoCandidatesFromRow(effectiveName)]);
+    const initial = dedupe([normalizedInitial, ...localLogosByName(effectiveName), ...(resolvedCache.get(cacheKey) || []), ...localLogoCandidatesFromRow(effectiveName)]);
     setCandidates(initial);
     setFailed(false);
     setResolving(true);
