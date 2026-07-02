@@ -254,15 +254,15 @@ serve(async (req) => {
     const venue = teamInfo?.venue || {};
 
     if (!team?.id || !team?.name) {
-      return new Response(JSON.stringify({ success: false, error: "clube não encontrado na API-Football" }), {
-        status: 404,
+      return new Response(JSON.stringify({ success: false, error: "clube não encontrado na API-Football", not_found: true }), {
+        status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
     if (!api_id && club_name && normalizeName(team.name) !== normalizeName(club_name)) {
-      return new Response(JSON.stringify({ success: false, error: "clube não confirmado pela API-Football" }), {
-        status: 404,
+      return new Response(JSON.stringify({ success: false, error: "clube não confirmado pela API-Football", not_found: true }), {
+        status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
