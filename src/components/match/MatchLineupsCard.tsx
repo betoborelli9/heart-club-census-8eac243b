@@ -1,5 +1,6 @@
 import { useTranslation } from "react-i18next";
 import type { Fixture } from "@/hooks/useHeartClubFixture";
+import { ClubLogo } from "@/components/ClubLogo";
 
 export function MatchLineupsCard({ fixture, lineups }: { fixture: Fixture; lineups: any[] }) {
   const { t } = useTranslation();
