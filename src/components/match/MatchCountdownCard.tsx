@@ -23,13 +23,13 @@ export function MatchCountdownCard({ fixture, diffMs }: { fixture: Fixture; diff
     <div className="rounded-xl border border-white/10 bg-black/40 p-4 text-white">
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2 min-w-0">
-          <ClubLogo clubName={fixture.home.name} logoUrl={fixture.home.logo} size="sm" />
+          <ClubLogo src={fixture.home.logo} alt={fixture.home.name} clubName={fixture.home.name} size="sm" />
           <span className="font-semibold truncate">{fixture.home.name}</span>
         </div>
         <span className="text-xs opacity-70">×</span>
         <div className="flex items-center gap-2 min-w-0 justify-end">
           <span className="font-semibold truncate">{fixture.away.name}</span>
-          <ClubLogo clubName={fixture.away.name} logoUrl={fixture.away.logo} size="sm" />
+          <ClubLogo src={fixture.away.logo} alt={fixture.away.name} clubName={fixture.away.name} size="sm" />
         </div>
       </div>
       <div className="mt-2 text-xs opacity-70">{fixture.league.name} • {dt}</div>
