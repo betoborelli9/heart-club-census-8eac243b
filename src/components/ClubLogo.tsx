@@ -17,14 +17,6 @@ const sizeClasses: Record<LogoSize, string> = {
   xl: "w-20 h-20 sm:w-24 sm:h-24",
 };
 
-const fallbackIconSize: Record<LogoSize, string> = {
-  xs: "w-3 h-3",
-  sm: "w-4 h-4",
-  md: "w-5 h-5",
-  lg: "w-6 h-6",
-  xl: "w-8 h-8",
-};
-
 const BRAZIL_STATE_TO_UF: Record<string, string> = {
   acre: "ac",
   alagoas: "al",
