@@ -1,20 +1,21 @@
 /* src/components/ClubLogo.tsx
-   Componente único para renderizar escudos de clubes.
-   Fonte: exclusivamente clube.logoUrl de clubes-data.ts ou escudo_url do Supabase.
-   Fallback: placeholder neutro, nunca outro escudo. */
+   Componente único e BLINDADO para renderizar escudos de clubes.
+   Cascata de fallback: src -> resolver (Supabase cache -> API-Football -> Wikipedia) -> Shield.
+   Nunca altera lógica de votos ou dados dinâmicos. */
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Shield } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
 
 type LogoSize = "xs" | "sm" | "md" | "lg" | "xl";
 
 const sizeClasses: Record<LogoSize, string> = {
   xs: "w-6 h-6 sm:w-7 sm:h-7",
-  sm: "w-8 h-8 sm:w-10 sm:h-10", // dropdown / lista
-  md: "w-10 h-10 sm:w-12 sm:h-12", // voto
-  lg: "w-14 h-14 sm:w-16 sm:h-16", // dashboard profile
-  xl: "w-20 h-20 sm:w-24 sm:h-24", // destaque
+  sm: "w-8 h-8 sm:w-10 sm:h-10",
+  md: "w-10 h-10 sm:w-12 sm:h-12",
+  lg: "w-14 h-14 sm:w-16 sm:h-16",
+  xl: "w-20 h-20 sm:w-24 sm:h-24",
 };
 
 const fallbackIconSize: Record<LogoSize, string> = {
@@ -28,43 +29,99 @@ const fallbackIconSize: Record<LogoSize, string> = {
 interface ClubLogoProps {
   src: string | null | undefined;
   alt: string;
+  /** Nome do clube para acionar resolver de fallback (cache -> API -> Wikipedia). Se omitido, usa `alt`. */
+  clubName?: string;
   size?: LogoSize;
   className?: string;
   loading?: "lazy" | "eager";
   fetchPriority?: "high" | "low" | "auto";
 }
 
-/**
- * Normaliza a URL do escudo para evitar ERR_NAME_NOT_RESOLVED.
- * - data:/blob: → mantém
- * - http(s):// → mantém
- * - // (protocol-relative) → prefixa https:
- * - "dominio.tld/..." (sem protocolo) → prefixa https://
- * - "arquivo.png" ou "pasta/arquivo.png" → prefixa "/" (raiz absoluta)
- * - "/..." → mantém
- */
+// Cache global em memória por nome normalizado — evita chamadas repetidas ao resolver
+const resolvedCache = new Map<string, string>();
+const inflight = new Map<string, Promise<string | null>>();
+
+const normalizeName = (s: string) =>
+  (s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toLowerCase();
+
 const normalizeLogoSrc = (raw: string): string => {
   const s = raw.trim();
   if (!s) return s;
   if (/^(data:|blob:|https?:\/\/)/i.test(s)) return s;
   if (s.startsWith("//")) return `https:${s}`;
   if (s.startsWith("/")) return s;
-  // Detecta domínio sem protocolo (ex.: "votenoseutime.com.br/26550.png")
   if (/^[a-z0-9-]+(\.[a-z0-9-]+)+\//i.test(s)) return `https://${s}`;
-  // Caminho relativo simples → torna absoluto à raiz para funcionar em qualquer rota/domínio
   return `/${s.replace(/^\.?\/+/, "")}`;
 };
 
-export const ClubLogo = ({ src, alt, size = "md", className, loading = "lazy", fetchPriority = "auto" }: ClubLogoProps) => {
-  const [error, setError] = useState(false);
-  const normalizedSrc = typeof src === "string" ? normalizeLogoSrc(src) : src;
+async function resolveLogo(name: string): Promise<string | null> {
+  const key = normalizeName(name);
+  if (!key) return null;
+  if (resolvedCache.has(key)) return resolvedCache.get(key)!;
+  if (inflight.has(key)) return inflight.get(key)!;
 
-  /* ═══════════════════════════════════════════════════════════
-      MÓDULO: RENDERIZAÇÃO DE FALLBACK (ERRO OU AUSÊNCIA)
-     ═══════════════════════════════════════════════════════════ */
+  const p = (async () => {
+    try {
+      const { data } = await supabase.functions.invoke("resolve-club-logo", {
+        body: { clubName: name },
+      });
+      const url = (data as any)?.url as string | null;
+      if (url) resolvedCache.set(key, url);
+      return url || null;
+    } catch {
+      return null;
+    } finally {
+      inflight.delete(key);
+    }
+  })();
+  inflight.set(key, p);
+  return p;
+}
 
-  if (!normalizedSrc || error) {
+export const ClubLogo = ({
+  src,
+  alt,
+  clubName,
+  size = "md",
+  className,
+  loading = "lazy",
+  fetchPriority = "auto",
+}: ClubLogoProps) => {
+  const effectiveName = clubName || alt;
+  const normalizedInitial = typeof src === "string" && src.trim() ? normalizeLogoSrc(src) : null;
 
+  const [currentSrc, setCurrentSrc] = useState<string | null>(
+    normalizedInitial || resolvedCache.get(normalizeName(effectiveName)) || null,
+  );
+  const [failed, setFailed] = useState(false);
+  const triedResolver = useRef(false);
+
+  // Se não temos src inicial, tenta resolver imediatamente
+  useEffect(() => {
+    if (currentSrc || triedResolver.current || !effectiveName) return;
+    triedResolver.current = true;
+    resolveLogo(effectiveName).then((url) => {
+      if (url) setCurrentSrc(normalizeLogoSrc(url));
+      else setFailed(true);
+    });
+  }, [effectiveName, currentSrc]);
+
+  const handleError = () => {
+    if (!triedResolver.current && effectiveName) {
+      triedResolver.current = true;
+      resolveLogo(effectiveName).then((url) => {
+        if (url && normalizeLogoSrc(url) !== currentSrc) {
+          setCurrentSrc(normalizeLogoSrc(url));
+        } else {
+          setFailed(true);
+        }
+      });
+    } else {
+      setFailed(true);
+    }
+  };
+
+  if (!currentSrc || failed) {
     return (
       <div
         className={cn(
@@ -79,10 +136,6 @@ export const ClubLogo = ({ src, alt, size = "md", className, loading = "lazy", f
     );
   }
 
-  /* ═══════════════════════════════════════════════════════════
-      MÓDULO: RENDERIZAÇÃO DA IMAGEM (WIKIMEDIA COMPLIANT)
-     ═══════════════════════════════════════════════════════════ */
-
   return (
     <div
       className={cn(
@@ -93,14 +146,14 @@ export const ClubLogo = ({ src, alt, size = "md", className, loading = "lazy", f
       title={alt}
     >
       <img
-        src={normalizedSrc}
-
+        key={currentSrc}
+        src={currentSrc}
         alt={alt}
         className="w-full h-full object-contain p-0.5"
         referrerPolicy="no-referrer"
-        onError={() => setError(true)}
+        onError={handleError}
         loading={loading}
-        // @ts-expect-error fetchpriority é atributo HTML válido, suportado em React 18.3+
+        // @ts-expect-error fetchpriority é atributo HTML válido
         fetchpriority={fetchPriority}
       />
     </div>
@@ -109,5 +162,6 @@ export const ClubLogo = ({ src, alt, size = "md", className, loading = "lazy", f
 
 /**
  * [RODAPÉ TÉCNICO]
- * Versão: 2.1 - Adicionado suporte a múltiplos fallbacks (API-Football + Wikimedia)
+ * Versão: 3.0 — Blindagem: resolver em cascata (cache → API-Football → Wikipedia)
+ * Regra invariável: nunca altera lógica de votos, apenas garante presença visual do escudo.
  */
