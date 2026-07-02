@@ -125,6 +125,21 @@ const normalizeLogoSrc = (raw: string): string => {
   return `/${s.replace(/^\.?\/+/, "")}`;
 };
 
+// Match manifest entries (arquivos reais em /public/logos/) pelo prefixo do slug do clube.
+// Ex.: "Vila Nova" → prefixo "vila-nova-" casa "vila-nova-goiania-go-brasil.png".
+const localLogosByName = (name: string): string[] => {
+  const slug = slugify(name);
+  if (!slug) return [];
+  const exact: string[] = [];
+  const prefixed: string[] = [];
+  for (const file of LOCAL_LOGOS) {
+    if (file === slug) exact.push(`/logos/${file}.png`);
+    else if (file.startsWith(`${slug}-`)) prefixed.push(`/logos/${file}.png`);
+  }
+  return [...exact, ...prefixed];
+};
+
+
 const localLogoCandidatesFromRow = (name: string, row?: ClubeCacheLogoRow | null) => {
   const cidade = row?.cidade || "";
   const pais = row?.pais || "";
