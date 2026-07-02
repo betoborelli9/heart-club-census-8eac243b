@@ -14,13 +14,13 @@ export function LiveMatchOverlay({ fixture, liveState }: { fixture: Fixture; liv
       </div>
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2 min-w-0">
-          <img src={fixture.home.logo} alt="" className="h-8 w-8" />
+          <ClubLogo src={fixture.home.logo} alt={fixture.home.name} clubName={fixture.home.name} size="sm" />
           <span className="font-semibold truncate">{fixture.home.name}</span>
         </div>
         <div className="font-mono text-3xl">{gh} <span className="opacity-50">×</span> {ga}</div>
         <div className="flex items-center gap-2 min-w-0 justify-end">
           <span className="font-semibold truncate">{fixture.away.name}</span>
-          <img src={fixture.away.logo} alt="" className="h-8 w-8" />
+          <ClubLogo src={fixture.away.logo} alt={fixture.away.name} clubName={fixture.away.name} size="sm" />
         </div>
       </div>
     </div>
