@@ -231,29 +231,59 @@ serve(async (req) => {
       return null;
     }
 
-    // 🛡️ FALLBACK MULTI-FONTE + MULTI-CONSULTA:
-    // A consulta com cidade/estado evita homônimos, mas às vezes derruba todas
-    // as notícias recentes. Por isso buscamos também uma consulta mais ampla e
-    // deixamos o filtro local validar relevância, 48h e conflitos de UF.
-    const queryVariants: string[][] = [];
-    const addVariant = (parts: string[]) => {
-      const key = parts.map(normalize).join("|");
-      if (!queryVariants.some((v) => v.map(normalize).join("|") === key)) {
-        queryVariants.push(parts);
+    // 🌎 CONSTRUÇÃO DINÂMICA E UNIVERSAL DA QUERY (qualquer clube do mundo):
+    //   Padrão base:  "{Nome}" Futebol Clube notícias oficiais
+    //   + Exclusões automáticas contra homônimos geográficos/utilitários
+    //     (cidade, tempo, trânsito, prefeitura, turismo, hotel…)
+    //   + Contexto do clube (país / cidade / estado) para desambiguar
+    //     "Real Madrid" (Espanha) vs "Real" local, "São Paulo FC" vs a cidade,
+    //     "Nacional" (Uruguai) vs "Nacional-MG", etc.
+    //   + Priorização de domínios esportivos confiáveis via `site:` OR-chain
+    //     (ge.globo.com, uol.com.br/esporte, espn.com.br, goal.com…)
+    // Nenhum hardcoding por time — tudo derivado do metadado do clube.
+
+    const EXCLUSIONS = [
+      "-cidade", "-tempo", "-transito", "-trânsito", "-prefeitura",
+      "-turismo", "-hotel", "-imobiliaria", "-imobiliária", "-clima",
+    ].join(" ");
+
+    const TRUSTED_SITES = [
+      "ge.globo.com", "uol.com.br", "espn.com.br", "goal.com",
+      "lance.com.br", "cnnbrasil.com.br", "gazetaesportiva.com",
+      "oglobo.globo.com", "terra.com.br/esportes", "marca.com",
+      "as.com", "mundodeportivo.com", "bbc.com/sport",
+    ];
+    const trustedFilter = TRUSTED_SITES.map((d) => `site:${d}`).join(" OR ");
+
+    // Contexto geo/país normalizado — usado como discriminador na query.
+    const geoCtxParts = [cidade, estado, countryContext].filter(Boolean) as string[];
+    const geoCtx = geoCtxParts.join(" ");
+
+    const quotedClub = `"${clubName}"`;
+    const shortName = typeof body?.nomeCurto === "string" && body.nomeCurto.trim()
+      ? `"${body.nomeCurto.trim()}"`
+      : null;
+
+    const queryVariants: string[] = [];
+    const addVariant = (q: string) => {
+      const clean = q.replace(/\s+/g, " ").trim();
+      if (clean && !queryVariants.some((v) => normalize(v) === normalize(clean))) {
+        queryVariants.push(clean);
       }
     };
 
-    const quotedClub = `"${clubName}"`;
-    addVariant([quotedClub, "futebol", countryContext]);
-    addVariant([quotedClub, "clube", "futebol"]);
-    addVariant([quotedClub, "futebol", cidade, estado, countryContext].filter(Boolean) as string[]);
-    if (body?.nomeCurto && typeof body.nomeCurto === "string") {
-      addVariant([`"${body.nomeCurto}"`, "futebol", countryContext]);
-    }
+    // 1) Consulta editorial rica: clube + futebol clube + fontes confiáveis + geo + exclusões
+    addVariant(`${quotedClub} futebol clube notícias oficiais ${geoCtx} (${trustedFilter}) ${EXCLUSIONS}`);
+    // 2) Sem site-filter, mantendo contexto e exclusões (Bing costuma cortar queries muito longas)
+    addVariant(`${quotedClub} futebol clube notícias ${geoCtx} ${EXCLUSIONS}`);
+    // 3) Fallback amplo: clube + futebol + país
+    addVariant(`${quotedClub} futebol ${countryContext}`);
+    // 4) Nome curto (apelido) se existir
+    if (shortName) addVariant(`${shortName} futebol clube ${countryContext} ${EXCLUSIONS}`);
 
     const xmlDocs: string[] = [];
-    for (const parts of queryVariants) {
-      const query = encodeURIComponent(parts.join(" "));
+    for (const q of queryVariants) {
+      const query = encodeURIComponent(q);
       const bingUrl = `https://www.bing.com/news/search?q=${query}&format=rss&cc=br&setlang=pt-BR&qft=interval%3d%227%22`;
 
       const bingXml = await fetchRss(bingUrl);
