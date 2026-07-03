@@ -295,8 +295,8 @@ serve(async (req) => {
     // Google News costuma retornar 503 no Edge Runtime; fica como último
     // recurso, para não travar o dashboard quando o Bing já trouxe notícias.
     if (xmlDocs.length === 0) {
-      for (const parts of queryVariants.slice(0, 2)) {
-        const query = encodeURIComponent(parts.join(" "));
+      for (const q of queryVariants.slice(0, 2)) {
+        const query = encodeURIComponent(q);
         const googleUrl = `https://news.google.com/rss/search?q=${query}&hl=pt-BR&gl=BR&ceid=BR:pt-419`;
         const googleXml = await fetchRss(googleUrl);
         if (googleXml) xmlDocs.push(googleXml);
