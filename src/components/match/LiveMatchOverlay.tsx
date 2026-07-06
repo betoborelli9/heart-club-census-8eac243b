@@ -6,7 +6,7 @@ export function LiveMatchOverlay({ fixture, liveState }: { fixture: Fixture; liv
   const { t } = useTranslation();
   const gh = liveState?.goalsHome ?? fixture.goals?.home ?? 0;
   const ga = liveState?.goalsAway ?? fixture.goals?.away ?? 0;
-  const elapsed = liveState?.elapsed;
+  const elapsed = liveState?.elapsed ?? Math.max(1, Math.floor((Date.now() - new Date(fixture.date).getTime()) / 60000));
   return (
     <div className="rounded-xl border border-red-500/40 bg-black/60 p-3 sm:p-4 text-white animate-pulse">
       <div className="flex items-center justify-between text-[10px] sm:text-xs uppercase tracking-wider mb-3">
