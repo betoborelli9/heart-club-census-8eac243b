@@ -220,6 +220,9 @@ function MatchCard({ match, live, primaryColor }: { match: Match | null; live: b
         </div>
         {isLive && (
           <div className="flex flex-col items-center justify-center px-2 shrink-0">
+            {match.elapsed != null && (
+              <span className="text-[11px] font-mono text-white/70 mb-0.5">{match.elapsed}'</span>
+            )}
             <span className="text-xl font-black tabular-nums leading-none" style={{ color: primaryColor }}>
               {match.goals.home ?? 0} - {match.goals.away ?? 0}
             </span>
