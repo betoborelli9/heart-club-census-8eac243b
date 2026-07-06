@@ -218,6 +218,16 @@ function MatchCard({ match, live, primaryColor }: { match: Match | null; live: b
             {match.home.name}
           </span>
         </div>
+        {isLive && (
+          <div className="flex flex-col items-center justify-center px-2 shrink-0">
+            <span className="text-xl font-black tabular-nums leading-none" style={{ color: primaryColor }}>
+              {match.goals.home ?? 0} - {match.goals.away ?? 0}
+            </span>
+            <span className="mt-1 text-[8px] font-mono uppercase tracking-widest text-red-500 flex items-center gap-1">
+              <Radio className="w-2 h-2 animate-pulse" /> {t("competitions.live")}
+            </span>
+          </div>
+        )}
         <div className="flex-1 flex flex-col items-center gap-1.5 min-w-0">
           <ClubLogo src={match.away.logo} alt={match.away.name} size="sm" className="w-10 h-10 shrink-0" />
           <span className="text-[10px] font-black italic uppercase text-white text-center leading-tight break-words w-full">
@@ -236,6 +246,7 @@ function MatchCard({ match, live, primaryColor }: { match: Match | null; live: b
           )}
         </div>
       </div>
+
       {match.venue && (
         <div className="flex items-center gap-1.5 text-[9px] italic text-white/40">
           <MapPin className="w-2.5 h-2.5" /> {match.venue}
