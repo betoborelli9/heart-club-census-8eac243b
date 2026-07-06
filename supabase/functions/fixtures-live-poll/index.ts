@@ -100,6 +100,7 @@ serve(async (req) => {
       if (!f) continue;
 
       const status = f.fixture.status?.short;
+      const elapsed = f.fixture.status?.elapsed ?? null;
       const goalsHome = f.goals?.home ?? 0;
       const goalsAway = f.goals?.away ?? 0;
       const prev = c.liveState || { status: "NS", goalsHome: 0, goalsAway: 0, finished: false };
@@ -139,7 +140,7 @@ serve(async (req) => {
       // Atualiza cache do row dono
       const row = c.row;
       const liveState = (row.payload?.live_state || {});
-      liveState[fixtureId] = { status, goalsHome, goalsAway, finished, updated_at: new Date().toISOString() };
+      liveState[fixtureId] = { status, goalsHome, goalsAway, elapsed, finished, updated_at: new Date().toISOString() };
       row.payload.live_state = liveState;
       updatedRows.set(row.team_id, row);
     }

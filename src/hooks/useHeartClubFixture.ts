@@ -20,7 +20,7 @@ export type Fixture = {
 export type FixturePayload = {
   next?: Fixture[];
   lineups?: Record<string, { ready: boolean; data?: any[] }>;
-  live_state?: Record<string, { status: string; goalsHome: number; goalsAway: number; finished: boolean }>;
+  live_state?: Record<string, { status: string; goalsHome: number; goalsAway: number; elapsed?: number | null; finished: boolean }>;
 };
 
 export function useHeartClubFixture(userId?: string) {

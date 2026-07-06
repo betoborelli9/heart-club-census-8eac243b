@@ -218,19 +218,6 @@ function MatchCard({ match, live, primaryColor }: { match: Match | null; live: b
             {match.home.name}
           </span>
         </div>
-        {isLive && (
-          <div className="flex flex-col items-center justify-center px-2 shrink-0">
-            {match.elapsed != null && (
-              <span className="text-[11px] font-mono text-white/70 mb-0.5">{match.elapsed}'</span>
-            )}
-            <span className="text-xl font-black tabular-nums leading-none" style={{ color: primaryColor }}>
-              {match.goals.home ?? 0} - {match.goals.away ?? 0}
-            </span>
-            <span className="mt-1 text-[8px] font-mono uppercase tracking-widest text-red-500 flex items-center gap-1">
-              <Radio className="w-2 h-2 animate-pulse" /> {t("competitions.live")}
-            </span>
-          </div>
-        )}
         <div className="flex-1 flex flex-col items-center gap-1.5 min-w-0">
           <ClubLogo src={match.away.logo} alt={match.away.name} size="sm" className="w-10 h-10 shrink-0" />
           <span className="text-[10px] font-black italic uppercase text-white text-center leading-tight break-words w-full">
@@ -239,11 +226,23 @@ function MatchCard({ match, live, primaryColor }: { match: Match | null; live: b
         </div>
       </div>
       <div className="flex justify-center">
-        <div className="px-4 py-1 rounded-md bg-black/40 text-center min-w-[80px] shrink-0">
+        <div className="px-4 py-1.5 rounded-md bg-black/40 text-center min-w-[92px] shrink-0">
           {isLive || match.goals.home != null ? (
-            <span className="text-lg font-black tabular-nums" style={{ color: primaryColor }}>
-              {match.goals.home ?? 0} - {match.goals.away ?? 0}
-            </span>
+            <div className="flex flex-col items-center leading-none">
+              {isLive && match.elapsed != null && (
+                <span className="mb-1 text-[10px] font-mono font-bold tabular-nums" style={{ color: primaryColor }}>
+                  {match.elapsed}'
+                </span>
+              )}
+              <span className="text-base font-black tabular-nums" style={{ color: primaryColor }}>
+                {match.goals.home ?? 0} - {match.goals.away ?? 0}
+              </span>
+              {isLive && (
+                <span className="mt-1 flex items-center gap-1 text-[8px] font-mono uppercase tracking-widest" style={{ color: primaryColor }}>
+                  <Radio className="w-2 h-2 animate-pulse" /> {t("competitions.live")}
+                </span>
+              )}
+            </div>
           ) : (
             <span className="text-xs font-black text-white/60">{timeStr}</span>
           )}
