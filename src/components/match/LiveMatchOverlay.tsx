@@ -19,7 +19,7 @@ export function LiveMatchOverlay({ fixture, liveState }: { fixture: Fixture; liv
           <span className="font-semibold text-xs sm:text-sm truncate min-w-0">{fixture.home.name}</span>
         </div>
         <div className="flex flex-col items-center justify-center font-mono tabular-nums whitespace-nowrap px-1 leading-none">
-          {elapsed != null && <span className="mb-1 text-[10px] sm:text-xs font-bold text-red-300">{elapsed}'</span>}
+          {elapsed != null && <span className="mb-1 text-[10px] sm:text-xs font-bold text-primary">{elapsed}'</span>}
           <span className="text-lg sm:text-2xl font-bold">
             {gh} <span className="opacity-50">×</span> {ga}
           </span>
