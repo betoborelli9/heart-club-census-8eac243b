@@ -1,0 +1,103 @@
+{
+  "version": 1,
+  "sdk_version": "0.20.0",
+  "path": "/functions/v1/mcp",
+  "auth": {
+    "type": "none"
+  },
+  "mcp": {
+    "server": {
+      "name": "heart-club-mcp",
+      "version": "0.1.0",
+      "title": "Heart Club MCP"
+    },
+    "tools": [
+      {
+        "name": "search_clubs",
+        "title": "Search football clubs",
+        "description": "Search the Heart Club catalog of football clubs by name. Returns basic identity (name, city, country, mascot, colors, stadium).",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "query": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Club name or fragment, e.g. 'Flamengo' or 'Real Madrid'."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 25,
+              "description": "Maximum results (default 10)."
+            }
+          },
+          "required": [
+            "query"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_club_ranking",
+        "title": "Get Heart Club ranking",
+        "description": "Return the top football clubs on Heart Club ranked by original vote count. Optionally filter by country or city.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "description": "How many clubs to return (default 10)."
+            },
+            "country": {
+              "type": "string",
+              "description": "Optional country filter, e.g. 'Brasil'."
+            },
+            "city": {
+              "type": "string",
+              "description": "Optional city filter, e.g. 'São Paulo'."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_census_stats",
+        "title": "Get census stats",
+        "description": "Return aggregate Heart Club census statistics: total original votes, distinct clubs, and top countries.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "club": {
+              "type": "string",
+              "description": "Optional club name to scope the stats to a single club."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      }
+    ]
+  }
+}
