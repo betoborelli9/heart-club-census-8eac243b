@@ -218,20 +218,22 @@ function MatchCard({ match, live, primaryColor }: { match: Match | null; live: b
             {match.home.name}
           </span>
         </div>
-        <div className="px-3 py-1 rounded-md bg-black/40 text-center min-w-[60px] mt-2 shrink-0">
-          {isLive || match.goals.home != null ? (
-            <span className="text-base font-black" style={{ color: primaryColor }}>
-              {match.goals.home ?? 0} - {match.goals.away ?? 0}
-            </span>
-          ) : (
-            <span className="text-[11px] font-black text-white/60">{timeStr}</span>
-          )}
-        </div>
         <div className="flex-1 flex flex-col items-center gap-1.5 min-w-0">
           <ClubLogo src={match.away.logo} alt={match.away.name} size="sm" className="w-10 h-10 shrink-0" />
           <span className="text-[10px] font-black italic uppercase text-white text-center leading-tight break-words w-full">
             {match.away.name}
           </span>
+        </div>
+      </div>
+      <div className="flex justify-center">
+        <div className="px-4 py-1 rounded-md bg-black/40 text-center min-w-[80px] shrink-0">
+          {isLive || match.goals.home != null ? (
+            <span className="text-lg font-black tabular-nums" style={{ color: primaryColor }}>
+              {match.goals.home ?? 0} - {match.goals.away ?? 0}
+            </span>
+          ) : (
+            <span className="text-xs font-black text-white/60">{timeStr}</span>
+          )}
         </div>
       </div>
       {match.venue && (
