@@ -2,9 +2,10 @@
  * src/components/InstallAppButton.tsx
  * Floating install prompt with Heart Club logo thumbnail.
  * - Android/Chrome: usa beforeinstallprompt + modal de alertas de dia de jogo.
- * - iOS/Safari: força exibição e mostra passo a passo visual (Compartilhar → Adicionar à Tela de Início).
+ * - iOS: força exibição; Safari mostra passo a passo curto, outros navegadores
+ *   redirecionam para x-web-search:// com o site pronto.
  */
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { Download, X, Share, Plus } from "lucide-react";
 import {
   Dialog,
@@ -24,15 +25,26 @@ interface BIPEvent extends Event {
 
 const DISMISS_KEY = "hc_install_dismissed_at";
 const ALERTS_PREF_KEY = "hc_gameday_alerts_pref";
+const SITE_URL = "votenoseuclube.com.br";
 
 const isIOSDevice = () => {
   if (typeof window === "undefined") return false;
   const ua = window.navigator.userAgent || "";
   const iOSUA = /iPhone|iPad|iPod/i.test(ua);
-  // iPadOS 13+ se identifica como Mac, mas tem touch
   const iPadOS =
     ua.includes("Mac") && typeof document !== "undefined" && "ontouchend" in document;
   return iOSUA || iPadOS;
+};
+
+const isSafariIOS = () => {
+  if (typeof window === "undefined") return false;
+  const ua = window.navigator.userAgent || "";
+  // Safari no iOS não contém CriOS (Chrome), FxiOS (Firefox), EdgiOS (Edge) etc.
+  return (
+    /iPhone|iPad|iPod/i.test(ua) &&
+    /Safari/i.test(ua) &&
+    !/CriOS|FxiOS|EdgiOS|OPiOS|Mercury/i.test(ua)
+  );
 };
 
 const isStandaloneMode = () => {
@@ -50,6 +62,8 @@ const InstallAppButton = () => {
   const [askAlerts, setAskAlerts] = useState(false);
   const [showIOSGuide, setShowIOSGuide] = useState(false);
   const [busy, setBusy] = useState(false);
+
+  const safariIOS = useMemo(() => isSafariIOS(), []);
 
   useEffect(() => {
     if (isStandaloneMode()) return;
@@ -114,6 +128,15 @@ const InstallAppButton = () => {
     setBusy(true);
     localStorage.setItem(ALERTS_PREF_KEY, "no");
     await triggerNativeInstall();
+  };
+
+  const handleIOSConfirm = () => {
+    if (safariIOS) {
+      setShowIOSGuide(false);
+      return;
+    }
+    // Chrome/outros no iOS: abre o motor de busca nativo da Apple com o site
+    window.location.href = `x-web-search://${SITE_URL}`;
   };
 
   const dismiss = () => {
@@ -186,56 +209,48 @@ const InstallAppButton = () => {
         </DialogContent>
       </Dialog>
 
-      {/* iOS: passo a passo visual para adicionar à Tela de Início */}
+      {/* iOS: modal enxuto — Safari mostra 2 passos, outros navegadores redirecionam */}
       <Dialog open={showIOSGuide} onOpenChange={setShowIOSGuide}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="italic">Instalar no iPhone</DialogTitle>
+            <DialogTitle className="italic">
+              {safariIOS ? "Adicionar à Tela de Início" : "Abrir no Safari"}
+            </DialogTitle>
             <DialogDescription>
-              Em apenas 2 passos você adiciona o Heart Club à Tela de Início.
+              {safariIOS
+                ? "2 toques e pronto."
+                : "Para instalar no iPhone, abra este site no Safari."}
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4 py-2">
-            <div className="flex items-start gap-3 rounded-xl border border-primary/30 bg-black/40 p-3">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary text-white font-bold">
-                1
-              </div>
-              <div className="flex-1">
+          {safariIOS && (
+            <div className="space-y-3 py-2">
+              <div className="flex items-center gap-3 rounded-xl border border-primary/30 bg-black/40 p-3">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-white text-sm font-bold">
+                  1
+                </div>
                 <p className="text-sm font-semibold text-foreground flex items-center gap-2">
-                  Toque em <Share className="w-4 h-4 text-primary" /> Compartilhar
+                  Toque <Share className="w-4 h-4 text-primary" /> Compartilhar
                 </p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Ícone do quadrado com a seta para cima, na barra do Safari.
+              </div>
+
+              <div className="flex items-center gap-3 rounded-xl border border-primary/30 bg-black/40 p-3">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-white text-sm font-bold">
+                  2
+                </div>
+                <p className="text-sm font-semibold text-foreground flex items-center gap-2">
+                  Toque <Plus className="w-4 h-4 text-primary" /> Adicionar
                 </p>
               </div>
             </div>
-
-            <div className="flex items-start gap-3 rounded-xl border border-primary/30 bg-black/40 p-3">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary text-white font-bold">
-                2
-              </div>
-              <div className="flex-1">
-                <p className="text-sm font-semibold text-foreground flex items-center gap-2">
-                  Escolha <Plus className="w-4 h-4 text-primary" /> Adicionar à Tela de Início
-                </p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Role a lista para baixo até encontrar a opção e confirme em "Adicionar".
-                </p>
-              </div>
-            </div>
-
-            <p className="text-[11px] text-muted-foreground text-center">
-              Dica: se não vir o botão Compartilhar, abra este site no <strong>Safari</strong>.
-            </p>
-          </div>
+          )}
 
           <DialogFooter>
             <Button
-              onClick={() => setShowIOSGuide(false)}
+              onClick={handleIOSConfirm}
               className="bg-[#ff6200] hover:bg-[#ff6200]/90 text-white w-full"
             >
-              Entendi
+              {safariIOS ? "Entendi" : "Abrir no Safari"}
             </Button>
           </DialogFooter>
         </DialogContent>
