@@ -1,10 +1,11 @@
 /**
  * src/components/InstallAppButton.tsx
  * Floating install prompt with Heart Club logo thumbnail.
- * Adds a game-day alerts opt-in dialog before firing the native PWA install prompt.
+ * - Android/Chrome: usa beforeinstallprompt + modal de alertas de dia de jogo.
+ * - iOS/Safari: força exibição e mostra passo a passo visual (Compartilhar → Adicionar à Tela de Início).
  */
 import { useEffect, useState } from "react";
-import { Download, X } from "lucide-react";
+import { Download, X, Share, Plus } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -24,21 +25,46 @@ interface BIPEvent extends Event {
 const DISMISS_KEY = "hc_install_dismissed_at";
 const ALERTS_PREF_KEY = "hc_gameday_alerts_pref";
 
+const isIOSDevice = () => {
+  if (typeof window === "undefined") return false;
+  const ua = window.navigator.userAgent || "";
+  const iOSUA = /iPhone|iPad|iPod/i.test(ua);
+  // iPadOS 13+ se identifica como Mac, mas tem touch
+  const iPadOS =
+    ua.includes("Mac") && typeof document !== "undefined" && "ontouchend" in document;
+  return iOSUA || iPadOS;
+};
+
+const isStandaloneMode = () => {
+  if (typeof window === "undefined") return false;
+  return (
+    window.matchMedia("(display-mode: standalone)").matches ||
+    (window.navigator as any).standalone === true
+  );
+};
+
 const InstallAppButton = () => {
   const [deferred, setDeferred] = useState<BIPEvent | null>(null);
   const [visible, setVisible] = useState(false);
+  const [isIOS, setIsIOS] = useState(false);
   const [askAlerts, setAskAlerts] = useState(false);
+  const [showIOSGuide, setShowIOSGuide] = useState(false);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    const isStandalone =
-      window.matchMedia("(display-mode: standalone)").matches ||
-      (window.navigator as any).standalone === true;
-    if (isStandalone) return;
+    if (isStandaloneMode()) return;
 
     const dismissedAt = Number(localStorage.getItem(DISMISS_KEY) || 0);
     if (dismissedAt && Date.now() - dismissedAt < 1000 * 60 * 60 * 24 * 7) return;
 
+    // iOS: mostra imediatamente (sem esperar beforeinstallprompt, que nunca dispara)
+    if (isIOSDevice()) {
+      setIsIOS(true);
+      setVisible(true);
+      return;
+    }
+
+    // Android/Chrome: aguarda beforeinstallprompt
     const handler = (e: Event) => {
       e.preventDefault();
       setDeferred(e as BIPEvent);
@@ -61,7 +87,11 @@ const InstallAppButton = () => {
     }
   };
 
-  const openAlertsDialog = () => {
+  const handleInstallClick = () => {
+    if (isIOS) {
+      setShowIOSGuide(true);
+      return;
+    }
     if (!deferred) return;
     setAskAlerts(true);
   };
@@ -91,7 +121,9 @@ const InstallAppButton = () => {
     setVisible(false);
   };
 
-  if (!visible || !deferred) return null;
+  if (!visible) return null;
+  // Android exige o evento diferido; iOS ignora essa checagem
+  if (!isIOS && !deferred) return null;
 
   return (
     <>
@@ -107,11 +139,13 @@ const InstallAppButton = () => {
               Instalar App do Heart Club
             </p>
             <p className="text-xs text-muted-foreground truncate">
-              Acesso rápido na tela inicial do seu celular
+              {isIOS
+                ? "Adicione à Tela de Início do seu iPhone"
+                : "Acesso rápido na tela inicial do seu celular"}
             </p>
           </div>
           <button
-            onClick={openAlertsDialog}
+            onClick={handleInstallClick}
             className="btn-orange-gradient rounded-full px-3 py-2 text-xs flex items-center gap-1 shrink-0"
             aria-label="Instalar"
           >
@@ -128,6 +162,7 @@ const InstallAppButton = () => {
         </div>
       </div>
 
+      {/* Android: opt-in de alertas antes do install nativo */}
       <Dialog open={askAlerts} onOpenChange={(o) => !busy && setAskAlerts(o)}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -137,11 +172,7 @@ const InstallAppButton = () => {
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="gap-2 sm:gap-2">
-            <Button
-              variant="outline"
-              onClick={handleAlertsNo}
-              disabled={busy}
-            >
+            <Button variant="outline" onClick={handleAlertsNo} disabled={busy}>
               Não
             </Button>
             <Button
@@ -150,6 +181,61 @@ const InstallAppButton = () => {
               className="bg-[#ff6200] hover:bg-[#ff6200]/90 text-white"
             >
               Sim
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* iOS: passo a passo visual para adicionar à Tela de Início */}
+      <Dialog open={showIOSGuide} onOpenChange={setShowIOSGuide}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="italic">Instalar no iPhone</DialogTitle>
+            <DialogDescription>
+              Em apenas 2 passos você adiciona o Heart Club à Tela de Início.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            <div className="flex items-start gap-3 rounded-xl border border-primary/30 bg-black/40 p-3">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary text-white font-bold">
+                1
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-semibold text-foreground flex items-center gap-2">
+                  Toque em <Share className="w-4 h-4 text-primary" /> Compartilhar
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Ícone do quadrado com a seta para cima, na barra do Safari.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-3 rounded-xl border border-primary/30 bg-black/40 p-3">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary text-white font-bold">
+                2
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-semibold text-foreground flex items-center gap-2">
+                  Escolha <Plus className="w-4 h-4 text-primary" /> Adicionar à Tela de Início
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Role a lista para baixo até encontrar a opção e confirme em "Adicionar".
+                </p>
+              </div>
+            </div>
+
+            <p className="text-[11px] text-muted-foreground text-center">
+              Dica: se não vir o botão Compartilhar, abra este site no <strong>Safari</strong>.
+            </p>
+          </div>
+
+          <DialogFooter>
+            <Button
+              onClick={() => setShowIOSGuide(false)}
+              className="bg-[#ff6200] hover:bg-[#ff6200]/90 text-white w-full"
+            >
+              Entendi
             </Button>
           </DialogFooter>
         </DialogContent>
