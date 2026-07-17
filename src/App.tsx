@@ -19,6 +19,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { UserProvider } from "@/contexts/UserContext";
 import FeedbackWidget from "@/components/FeedbackWidget";
+import InstallAppButton from "@/components/InstallAppButton";
 import AppNavBar from "@/components/AppNavBar";
 import GlobalFooter from "@/components/GlobalFooter";
 import { useLocation } from "react-router-dom";
@@ -121,6 +122,7 @@ const App = () => (
             <Route path="*" element={<NotFound />} />
           </Routes>
           <FeedbackWidget />
+          <InstallAppButton />
           <GlobalNav />
           <GlobalFooter />
         </BrowserRouter>
