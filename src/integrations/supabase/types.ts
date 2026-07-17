@@ -833,6 +833,48 @@ export type Database = {
         }
         Relationships: []
       }
+      users: {
+        Row: {
+          birth_date: string
+          country_code: string
+          created_at: string
+          email: string
+          has_voted: boolean | null
+          id: string
+          name: string
+          primary_club_id: number | null
+          push_token: string | null
+          secondary_clubs: Json | null
+          updated_at: string
+        }
+        Insert: {
+          birth_date: string
+          country_code: string
+          created_at?: string
+          email: string
+          has_voted?: boolean | null
+          id: string
+          name: string
+          primary_club_id?: number | null
+          push_token?: string | null
+          secondary_clubs?: Json | null
+          updated_at?: string
+        }
+        Update: {
+          birth_date?: string
+          country_code?: string
+          created_at?: string
+          email?: string
+          has_voted?: boolean | null
+          id?: string
+          name?: string
+          primary_club_id?: number | null
+          push_token?: string | null
+          secondary_clubs?: Json | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       votos: {
         Row: {
           bairro: string | null
