@@ -135,8 +135,30 @@ const InstallAppButton = () => {
       setShowIOSGuide(false);
       return;
     }
-    // Chrome/outros no iOS: abre o motor de busca nativo da Apple com o site
-    window.location.href = `x-web-search://${SITE_URL}`;
+    // Chrome/outros navegadores no iOS: tenta abrir direto no Safari.
+    // 1º) x-safari-https:// — funciona na maior parte dos iPhones modernos.
+    // 2º) Fallback x-web-search:// — abre a busca do Safari já com o site.
+    // A Apple não expõe API oficial de "abrir no Safari"; esta é a melhor
+    // aproximação possível dentro das restrições do iOS.
+    const primary = `x-safari-https://${SITE_URL}`;
+    const fallback = `x-web-search://${SITE_URL}`;
+    const startedAt = Date.now();
+
+    // Se em ~1.2s a página ainda estiver visível, o scheme primário falhou
+    // (Chrome iOS não abriu o Safari) — tentamos o fallback.
+    const timer = window.setTimeout(() => {
+      if (Date.now() - startedAt < 2000 && document.visibilityState === "visible") {
+        window.location.href = fallback;
+      }
+    }, 1200);
+
+    const cancel = () => {
+      window.clearTimeout(timer);
+      document.removeEventListener("visibilitychange", cancel);
+    };
+    document.addEventListener("visibilitychange", cancel);
+
+    window.location.href = primary;
   };
 
   const dismiss = () => {
