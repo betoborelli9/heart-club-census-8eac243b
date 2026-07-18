@@ -47,12 +47,10 @@ serve(async (req) => {
       .limit(30);
 
     const cacheByApiId = new Map<string, any>();
-    const cacheByName = new Map<string, any>();
     (cacheRows || []).forEach((c: any) => {
       if (c.api_id) cacheByApiId.set(String(c.api_id), c);
-      cacheByName.set(norm(c.nome), c);
-      if (c.nome_curto) cacheByName.set(norm(c.nome_curto), c);
     });
+
 
     // 2️⃣ API-Football (complementa homônimos internacionais)
     const apiKey = Deno.env.get("API_FOOTBALL_KEY");
