@@ -287,47 +287,19 @@ function MatchCard({ match, live, primaryColor }: { match: Match | null; live: b
   );
 }
 
-type ZoneKey = "lib_g" | "lib_p" | "sul" | "reb" | "promocao" | "playoff" | "reb_c";
-
-const ZONE_META: Record<ZoneKey, { color: string; pulse: boolean }> = {
-  lib_g:    { color: "#10b981", pulse: false },
-  lib_p:    { color: "#34d399", pulse: false },
-  sul:      { color: "#3b82f6", pulse: false },
-  reb:      { color: "#ef4444", pulse: false },
-  promocao: { color: "#ff6200", pulse: true  }, // laranja padrão do site
-  playoff:  { color: "#ff9147", pulse: true  }, // laranja mais claro
-  reb_c:    { color: "#ef4444", pulse: false },
-};
-
-// Mapeia posição → zona, baseado em leagueId (API-Football).
-// 71 = Brasileirão Série A, 72 = Brasileirão Série B.
-function getZoneForPosition(leagueId: number, pos: number, total: number): ZoneKey | null {
-  if (leagueId === 71) {
-    if (pos <= 4) return "lib_g";
-    if (pos <= 6) return "lib_p";
-    if (pos <= 12) return "sul";
-    if (pos > total - 4) return "reb";
-  }
-  if (leagueId === 72) {
-    if (pos <= 2) return "promocao";
-    if (pos <= 6) return "playoff";
-    if (pos > total - 4) return "reb_c";
-  }
-  return null;
-}
-
 function StandingsTable({
   rows,
   meTeamId,
   opponentTeamId,
+  opponentName,
   heartClubName,
   primaryColor,
   leagueId,
-  leagueName,
 }: {
   rows: StandingRow[];
   meTeamId?: number;
   opponentTeamId?: number;
+  opponentName?: string;
   heartClubName?: string | null;
   primaryColor: string;
   leagueId?: number;
@@ -341,23 +313,43 @@ function StandingsTable({
   const total = rows.length;
   const lid = leagueId ?? 0;
 
+  // Cor tradicional do adversário (via mapa estático de cores dos clubes).
+  // Se ausente, cai no âmbar padrão para preservar contraste.
+  const opponentTheme = opponentName ? teamColors[opponentName] : null;
+  const opponentColor = opponentTheme?.primaryHex || "#fbbf24";
+  const hexToRgba = (hex: string, a: number) => {
+    const h = hex.replace("#", "");
+    const r = parseInt(h.slice(0, 2), 16) || 0;
+    const g = parseInt(h.slice(2, 4), 16) || 0;
+    const b = parseInt(h.slice(4, 6), 16) || 0;
+    return `rgba(${r}, ${g}, ${b}, ${a})`;
+  };
+  const opponentBg = hexToRgba(opponentColor, 0.16);
+
   // matcher robusto de rivais históricos (nome + apelidos da API-Football)
   const isRivalName = (name: string) => isHistoricalRival(name, heartClubName);
 
-  // legenda dinâmica — apenas zonas presentes
-  const presentZones: ZoneKey[] = [];
-  rows.forEach((r) => {
-    const z = getZoneForPosition(lid, r.position, total);
-    if (z && !presentZones.includes(z)) presentZones.push(z);
-  });
+  // Zonas presentes → legenda + cabeçalhos dinâmicos.
+  // Cabeçalho de grupo aparece na PRIMEIRA linha de cada zona.
+  const zoneByPos = useMemo(() => {
+    const map = new Map<number, LeagueZone>();
+    rows.forEach((r) => {
+      const z = getZoneForPosition(lid, r.position, total);
+      if (z) map.set(r.position, z);
+    });
+    return map;
+  }, [rows, lid, total]);
 
-  // renderiza um cabeçalho de grupo para Série B antes das posições 1 e 3
-  const groupLabelFor = (pos: number): string | null => {
-    if (lid !== 72) return null;
-    if (pos === 1) return t("competitions.groups.promocao");
-    if (pos === 3) return t("competitions.groups.playoff");
-    return null;
-  };
+  const presentZones: LeagueZone[] = [];
+  const firstPosOfZone = new Map<string, number>();
+  zoneByPos.forEach((z, pos) => {
+    if (!firstPosOfZone.has(z.key)) {
+      firstPosOfZone.set(z.key, pos);
+      presentZones.push(z);
+    } else if (pos < (firstPosOfZone.get(z.key) ?? Infinity)) {
+      firstPosOfZone.set(z.key, pos);
+    }
+  });
 
   return (
     <div className="space-y-2">
@@ -384,16 +376,15 @@ function StandingsTable({
               const isMe = !!(meTeamId && r.teamId === meTeamId);
               const isOpponent = !isMe && !!(opponentTeamId && r.teamId === opponentTeamId);
               const isRival = !isMe && !isOpponent && isRivalName(r.name);
-              const zone = getZoneForPosition(lid, r.position, total);
-              const zoneMeta = zone ? ZONE_META[zone] : null;
-              const groupLabel = groupLabelFor(r.position);
+              const zone = zoneByPos.get(r.position) || null;
+              const isFirstOfZone = zone && firstPosOfZone.get(zone.key) === r.position;
+              const groupLabel = isFirstOfZone && zone?.header ? zone.header : null;
 
-              // Cores translúcidas para pintar a linha inteira
-              // Time do coração → primaryColor; Adversário → âmbar; Rival → vermelho suave
+              // Fundo translúcido da linha por contexto
               const rowStyle: React.CSSProperties = isMe
                 ? { backgroundColor: `${primaryColor}26` }
                 : isOpponent
-                ? { backgroundColor: "rgba(251, 191, 36, 0.14)" }
+                ? { backgroundColor: opponentBg }
                 : isRival
                 ? { backgroundColor: "rgba(239, 68, 68, 0.06)" }
                 : {};
@@ -404,28 +395,28 @@ function StandingsTable({
                 isRival ? "hc-pulse-soft" : "",
               ].filter(Boolean).join(" ");
 
-              // Cor sticky-cell = mesma da linha (mantém sticky legível ao scroll horizontal)
               const stickyStyle: React.CSSProperties = {
                 ...rowStyle,
                 backgroundColor: rowStyle.backgroundColor || "#0b0b0b",
               };
 
-              // Marcadores de borda esquerda (inset shadow) — combinam:
-              //  · zona (bracket colorido) — pulsa se a zona for de promoção/playoff
-              //  · time do coração sobrescreve com primaryColor forte
-              //  · rival adiciona 3px vermelho
+              // Borda-inset esquerda: prioridade → time do coração > rival > zona
               let insetColor: string | null = null;
               if (isMe) insetColor = primaryColor;
               else if (isRival) insetColor = "#ef4444";
-              else if (zoneMeta) insetColor = zoneMeta.color;
+              else if (zone) insetColor = zone.style.color;
 
-              const stickyClass = zoneMeta?.pulse && !isMe && !isRival ? "hc-pulse-bracket" : "";
+              const stickyClass = zone?.style.pulse && !isMe && !isRival ? "hc-pulse-bracket" : "";
 
               return (
                 <Fragment key={`${r.teamId}-${r.position}`}>
                   {groupLabel && (
                     <tr key={`gh-${r.position}`}>
-                      <td colSpan={7} className="pt-3 pb-1 pl-2 pr-1 text-[9px] font-black italic uppercase tracking-widest text-white/55">
+                      <td
+                        colSpan={7}
+                        className="pt-3 pb-1 pl-2 pr-1 text-[9px] font-black italic uppercase tracking-widest"
+                        style={{ color: zone?.style.color || "rgba(255,255,255,0.55)" }}
+                      >
                         {groupLabel}
                       </td>
                     </tr>
@@ -441,26 +432,29 @@ function StandingsTable({
                       <div className="flex items-center gap-1.5 min-w-0">
                         <span
                           className="w-3 font-mono shrink-0 text-right text-[9px]"
-                          style={{ color: zoneMeta?.color || "rgba(255,255,255,0.5)" }}
+                          style={{ color: zone?.style.color || "rgba(255,255,255,0.5)" }}
                         >
                           {r.position}
                         </span>
                         <ClubLogo src={r.logo} alt={r.name} size="xs" className="w-3.5 h-3.5 shrink-0" />
                         <span
                           className={`truncate text-[10px] ${
-                            isMe ? "font-black text-white" : isOpponent ? "font-bold text-amber-200" : isRival ? "font-semibold text-white/90" : "text-white/85"
+                            isMe ? "font-black text-white" : isOpponent ? "font-bold" : isRival ? "font-semibold text-white/90" : "text-white/85"
                           }`}
+                          style={isOpponent ? { color: opponentColor } : undefined}
                         >
                           {r.name}
                           {isOpponent && (
-                            <span className="ml-1 text-[8px] font-mono uppercase text-amber-300/80">· {t("competitions.target")}</span>
+                            <span className="ml-1 text-[8px] font-mono uppercase" style={{ color: opponentColor, opacity: 0.85 }}>
+                              · {t("competitions.target")}
+                            </span>
                           )}
                         </span>
                       </div>
                     </td>
                     <td
                       className={`${numCol} font-black`}
-                      style={{ color: isMe ? primaryColor : isOpponent ? "#fcd34d" : "rgba(255,255,255,0.95)" }}
+                      style={{ color: isMe ? primaryColor : isOpponent ? opponentColor : "rgba(255,255,255,0.95)" }}
                     >
                       {fmt(r.points)}
                     </td>
@@ -482,13 +476,13 @@ function StandingsTable({
       {presentZones.length > 0 && (
         <div className="flex flex-wrap gap-x-3 gap-y-1.5 px-1 pt-1 border-t border-white/5">
           {presentZones.map((z) => (
-            <div key={z} className="flex items-center gap-1.5">
+            <div key={z.key} className="flex items-center gap-1.5">
               <span
                 className="inline-block w-2.5 h-2.5 rounded-sm shrink-0"
-                style={{ backgroundColor: ZONE_META[z].color }}
+                style={{ backgroundColor: z.style.color }}
               />
               <span className="text-[8.5px] font-bold uppercase tracking-wider text-white/55">
-                {t(`competitions.zones.${z}`)}
+                {z.legend}
               </span>
             </div>
           ))}
@@ -499,34 +493,33 @@ function StandingsTable({
 }
 
 /**
- * Painel informativo de regras do acesso — Brasileirão Série B 2026.
- * Largura acompanha a tabela: no desktop herda o max-width do container pai;
- * no mobile ocupa 100% com padding lateral para evitar overflow.
+ * Painel de regras dinâmico por competição.
+ * Renderiza título + seções (descrição + bullets) a partir do registro
+ * `leagueRules.ts`. Largura acompanha a tabela (herda max-width do pai)
+ * e ocupa 100% no mobile com padding lateral para evitar overflow.
  */
-function SerieBRulesPanel() {
-  const { t } = useTranslationApp();
+function LeagueRulesPanel({ leagueId }: { leagueId: number }) {
+  const rules: LeagueRules | null = getLeagueRules(leagueId);
+  if (!rules) return null;
   return (
     <div className="w-full rounded-xl bg-white/[0.02] border border-white/10 px-3 sm:px-4 py-3 space-y-3 text-white/80">
       <h4 className="text-[11px] font-black italic uppercase tracking-widest" style={{ color: "#ff6200" }}>
-        {t("competitions.rules.title")}
+        {rules.rulesTitle}
       </h4>
-
-      <div className="space-y-1">
-        <p className="text-[11px] font-bold text-white">{t("competitions.rules.direct_title")}</p>
-        <p className="text-[11px] leading-snug break-words">{t("competitions.rules.direct_body")}</p>
-      </div>
-
-      <div className="space-y-1">
-        <p className="text-[11px] font-bold text-white">{t("competitions.rules.playoff_title")}</p>
-        <p className="text-[11px] leading-snug break-words">{t("competitions.rules.playoff_body")}</p>
-        <ul className="text-[11px] leading-snug list-disc pl-4 space-y-0.5">
-          <li>{t("competitions.rules.playoff_semi")}</li>
-          <li>3º x 6º</li>
-          <li>4º x 5º</li>
-          <li>{t("competitions.rules.playoff_advantage")}</li>
-          <li>{t("competitions.rules.playoff_outcome")}</li>
-        </ul>
-      </div>
+      {rules.sections.map((sec, i) => (
+        <div key={i} className="space-y-1">
+          <p className="text-[11px] font-bold text-white">{sec.title}</p>
+          {sec.body && <p className="text-[11px] leading-snug break-words">{sec.body}</p>}
+          {sec.bullets && sec.bullets.length > 0 && (
+            <ul className="text-[11px] leading-snug list-disc pl-4 space-y-0.5">
+              {sec.bullets.map((b, j) => (
+                <li key={j}>{b}</li>
+              ))}
+            </ul>
+          )}
+        </div>
+      ))}
     </div>
   );
 }
+
