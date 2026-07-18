@@ -392,15 +392,16 @@ function StandingsTable({
             </tr>
           </thead>
           <tbody>
-            {rows.map((r) => {
+            {displayRows.map((r) => {
               const isMe = !!(meTeamId && r.teamId === meTeamId);
               const isOpponent = !isMe && !!(opponentTeamId && r.teamId === opponentTeamId);
               const isRival = !isMe && !isOpponent && isRivalName(r.name);
               const zone = zoneByPos.get(r.position) || null;
+              const isNeutralZone = !!zone?.neutral;
               const isFirstOfZone = zone && firstPosOfZone.get(zone.key) === r.position;
               const groupLabel = isFirstOfZone && zone?.header ? zone.header : null;
 
-              // Fundo translúcido da linha por contexto
+              // Fundo translúcido da linha por contexto (zona neutra NÃO pinta fundo)
               const rowStyle: React.CSSProperties = isMe
                 ? { backgroundColor: `${primaryColor}26` }
                 : isOpponent
@@ -420,42 +421,24 @@ function StandingsTable({
                 backgroundColor: rowStyle.backgroundColor || "#0b0b0b",
               };
 
-              // Borda-inset esquerda: prioridade → time do coração > rival > zona
+              // Borda-inset esquerda: prioridade → time do coração > rival > zona (não neutra)
               let insetColor: string | null = null;
               if (isMe) insetColor = primaryColor;
               else if (isRival) insetColor = "#ef4444";
-              else if (zone) insetColor = zone.style.color;
+              else if (zone && !isNeutralZone) insetColor = zone.style.color;
 
-              const stickyClass = zone?.style.pulse && !isMe && !isRival ? "hc-pulse-bracket" : "";
+              const stickyClass =
+                zone?.style.pulse && !isNeutralZone && !isMe && !isRival ? "hc-pulse-bracket" : "";
 
-              return (
-                <Fragment key={`${r.teamId}-${r.position}`}>
-                  {groupLabel && (
-                    <tr key={`gh-${r.position}`}>
-                      <td
-                        colSpan={7}
-                        className="pt-3 pb-1 pl-2 pr-1 text-[9px] font-black italic uppercase tracking-widest"
-                        style={{ color: zone?.style.color || "rgba(255,255,255,0.55)" }}
-                      >
-                        {groupLabel}
-                      </td>
-                    </tr>
-                  )}
-                  <tr key={`${r.teamId}-${r.position}`} className={rowClass} style={rowStyle}>
-                    <td
-                      className={`sticky left-0 z-10 py-1.5 pl-1.5 pr-1 border-b border-white/[0.06] min-w-[110px] ${stickyClass}`}
-                      style={{
-                        ...stickyStyle,
-                        boxShadow: insetColor ? `inset 3px 0 0 ${insetColor}` : undefined,
-                      }}
-                    >
-                      <div className="flex items-center gap-1.5 min-w-0">
-                        <span
-                          className="w-3 font-mono shrink-0 text-right text-[9px]"
-                          style={{ color: zone?.style.color || "rgba(255,255,255,0.5)" }}
-                        >
-                          {r.position}
-                        </span>
+              // Cor do número da posição — neutra usa branco padrão
+              const posColor = isNeutralZone
+                ? "rgba(255,255,255,0.5)"
+                : zone?.style.color || "rgba(255,255,255,0.5)";
+
+              // Cor do subcabeçalho de grupo — neutro usa branco suave
+              const headerColor = isNeutralZone
+                ? "rgba(255,255,255,0.55)"
+                : zone?.style.color || "rgba(255,255,255,0.55)";
                         <ClubLogo src={r.logo} alt={r.name} size="xs" className="w-3.5 h-3.5 shrink-0" />
                         <span
                           className={`truncate text-[10px] ${
