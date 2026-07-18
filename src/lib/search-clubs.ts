@@ -32,6 +32,29 @@ export function stripAccents(str: string): string {
     .trim();
 }
 
+const AMBIGUOUS_CANONICAL_KEYS = new Set([
+  "america",
+  "atletico",
+  "nacional",
+  "internacional",
+  "real",
+  "vitoria",
+  "goiania",
+  "sport",
+  "racing",
+  "union",
+  "central",
+]);
+
+const dedupeClubKey = (club: Pick<ClubSearchResult, "name" | "city" | "country" | "api_id">) => {
+  if (club.api_id) return `api:${club.api_id}`;
+  const canonical = canonicalClubKey(club.name);
+  const normalizedName = stripAccents(club.name);
+  const location = [club.city, club.country].map(stripAccents).filter(Boolean).join("|");
+  if (!canonical || AMBIGUOUS_CANONICAL_KEYS.has(canonical)) return `name:${normalizedName}|${location}`;
+  return `canon:${canonical}|${location}`;
+};
+
 function mapCacheRow(c: any): ClubSearchResult {
   return {
     id: String(c.id),
@@ -113,22 +136,21 @@ export async function searchClubsWithFallback(query: string, limit = 20): Promis
         source: "api" as const,
       }));
 
-    // Dedupe por api_id, nome bruto E chave canônica (ex.: "Sport Club Corinthians Paulista"
-    // colapsa em "Corinthians"). Cache local sempre vence (tem cores/mascote/logo oficial).
+    // Dedupe por identificador único. Homônimos nunca podem colapsar por chave canônica
+    // (ex.: América-MG, América-RJ, América-RN, América de Cali).
     const localApiIds = new Set(localMatches.map((c) => c.api_id).filter(Boolean));
-    const localNames = new Set(localMatches.map((c) => stripAccents(c.name)));
-    const seenCanonical = new Set<string>();
+    const seenClubKeys = new Set<string>();
     const pushUnique = (acc: ClubSearchResult[], c: ClubSearchResult) => {
-      const k = canonicalClubKey(c.name);
-      if (k && seenCanonical.has(k)) return acc;
-      if (k) seenCanonical.add(k);
+      const k = dedupeClubKey(c);
+      if (seenClubKeys.has(k)) return acc;
+      seenClubKeys.add(k);
       acc.push(c);
       return acc;
     };
     const merged: ClubSearchResult[] = [];
     localMatches.forEach((c) => pushUnique(merged, c));
     apiMatches
-      .filter((a) => !(a.api_id && localApiIds.has(a.api_id)) && !localNames.has(stripAccents(a.name)))
+      .filter((a) => !(a.api_id && localApiIds.has(a.api_id)))
       .forEach((c) => pushUnique(merged, c));
 
     return merged.slice(0, limit);

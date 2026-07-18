@@ -67,6 +67,23 @@ type ClubeCacheLogoRow = {
   pais?: string | null;
 };
 
+const AMBIGUOUS_LOCAL_TOKEN_MATCHES = new Set([
+  "america",
+  "atletico",
+  "nacional",
+  "internacional",
+  "real",
+  "vitoria",
+  "goiania",
+  "sport",
+  "racing",
+  "union",
+  "central",
+  "city",
+  "united",
+  "deportivo",
+]);
+
 // Cache global em memória por nome normalizado — evita chamadas repetidas ao resolver
 const resolvedCache = new Map<string, string[]>();
 const inflight = new Map<string, Promise<string[]>>();
@@ -130,8 +147,8 @@ const normalizeLogoSrc = (raw: string): string => {
   return `/${s.replace(/^\.?\/+/, "")}`;
 };
 
-// Match manifest entries (arquivos reais em /public/logos/) por slug e tokens relevantes.
-// Ex.: "Clube de Regatas do Flamengo" → token "flamengo" casa "flamengo-rio-de-janeiro-rj-brasil.png".
+// Match manifest entries (arquivos reais em /public/logos/) sem herdar escudo por cidade/homônimo.
+// Regra: nome exato/prefixo seguro primeiro; token solto só se for único e não ambíguo.
 const localLogosByName = (name: string): string[] => {
   const slug = slugify(name);
   if (!slug) return [];
@@ -142,9 +159,22 @@ const localLogosByName = (name: string): string[] => {
   for (const file of LOCAL_LOGOS) {
     if (file === slug) exact.push(logoPath(file));
     else if (file.startsWith(`${slug}-`)) prefixed.push(logoPath(file));
-    else if (tokens.some((token) => file.split("-").includes(token))) tokenMatches.push(logoPath(file));
   }
-  return dedupe([...exact, ...prefixed, ...tokenMatches]);
+
+  if (exact.length > 0) return dedupe(exact);
+
+  const slugParts = slug.split("-").filter(Boolean);
+  const isSingleAmbiguousSlug = slugParts.length === 1 && AMBIGUOUS_LOCAL_TOKEN_MATCHES.has(slugParts[0]);
+  if (prefixed.length === 1 && !isSingleAmbiguousSlug) return dedupe(prefixed);
+  if (prefixed.length > 1 && slugParts.length > 1) return dedupe(prefixed);
+
+  tokens.forEach((token) => {
+    if (AMBIGUOUS_LOCAL_TOKEN_MATCHES.has(token)) return;
+    const matches = LOCAL_LOGOS.filter((file) => file === token || file.startsWith(`${token}-`));
+    if (matches.length === 1) tokenMatches.push(logoPath(matches[0]));
+  });
+
+  return dedupe(tokenMatches);
 };
 
 
@@ -204,9 +234,9 @@ async function resolveLogoCandidates(name: string): Promise<string[]> {
           .limit(6);
 
         (data || []).forEach((row: ClubeCacheLogoRow) => {
+          candidates.push(row.escudo_url || "");
           candidates.push(...localLogosByName(row.nome || ""));
           candidates.push(...localLogosByName(row.nome_curto || ""));
-          candidates.push(row.escudo_url || "");
           candidates.push(...localLogoCandidatesFromRow(name, row));
         });
 
@@ -314,7 +344,7 @@ export const ClubLogo = ({
   const failedSources = useRef<Set<string>>(new Set());
 
   const [candidates, setCandidates] = useState<string[]>(
-    dedupe([...localLogosByName(effectiveName), ...(resolvedCache.get(cacheKey) || []), ...localLogoCandidatesFromRow(effectiveName), normalizedInitial]),
+    dedupe([normalizedInitial, ...(resolvedCache.get(cacheKey) || []), ...localLogoCandidatesFromRow(effectiveName), ...localLogosByName(effectiveName)]),
   );
   const [resolving, setResolving] = useState(false);
   const [failed, setFailed] = useState(false);
@@ -324,7 +354,7 @@ export const ClubLogo = ({
   useEffect(() => {
     let cancelled = false;
     failedSources.current = new Set();
-    const initial = dedupe([...localLogosByName(effectiveName), ...(resolvedCache.get(cacheKey) || []), ...localLogoCandidatesFromRow(effectiveName), normalizedInitial]);
+    const initial = dedupe([normalizedInitial, ...(resolvedCache.get(cacheKey) || []), ...localLogoCandidatesFromRow(effectiveName), ...localLogosByName(effectiveName)]);
     setCandidates(initial);
     setFailed(false);
     setResolving(true);

@@ -7,7 +7,7 @@
  */
 
 const GENERIC_TOKENS = new RegExp(
-  String.raw`\b(sport club|sport clube|football club|futebol clube|futbol club|clube de regatas|clube atletico|associacao atletica|esporte clube|esporte club|sociedade esportiva|club deportivo|atletico club|clube de futebol|sport recife|sport|club|clube|fc|sc|ec|ac|cr|cf|aa|se|cd|ca|paulista|paulistano|carioca|mineiro|gaucho|catarinense|baiano)\b`,
+  String.raw`\b(sport club|sport clube|football club|futebol clube|futbol club|clube de regatas|clube atletico|associacao atletica|esporte clube|esporte club|sociedade esportiva|club deportivo|atletico club|clube de futebol|sport recife|sport|club|clube|fc|sc|ec|ac|cr|cf|aa|se|cd|ca)\b`,
   "g",
 );
 
