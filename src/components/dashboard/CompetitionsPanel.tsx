@@ -184,24 +184,25 @@ export default function CompetitionsPanel({ clubName, primaryColor = "#ff6200" }
 
         {competitions.map((c) => {
           const focusMatch = c.liveMatch || c.nextMatch;
-          const opponentId = focusMatch
+          const opponent = focusMatch
             ? focusMatch.home.id === team?.id
-              ? focusMatch.away.id
-              : focusMatch.home.id
-            : undefined;
+              ? focusMatch.away
+              : focusMatch.home
+            : null;
           return (
             <TabsContent key={c.leagueId} value={String(c.leagueId)} className="space-y-4 mt-3">
               <MatchCard match={focusMatch} live={!!c.liveMatch} primaryColor={primaryColor} />
               <StandingsTable
                 rows={c.standings}
                 meTeamId={team?.id}
-                opponentTeamId={opponentId}
+                opponentTeamId={opponent?.id}
+                opponentName={opponent?.name}
                 heartClubName={clubName}
                 primaryColor={primaryColor}
                 leagueId={c.leagueId}
                 leagueName={c.leagueName}
               />
-              {c.leagueId === 72 && <SerieBRulesPanel />}
+              <LeagueRulesPanel leagueId={c.leagueId} />
             </TabsContent>
           );
         })}
