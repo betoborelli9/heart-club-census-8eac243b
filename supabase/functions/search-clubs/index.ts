@@ -65,19 +65,19 @@ serve(async (req) => {
         const apiData = await res.json();
         apiResults = (apiData.response || []).map((item: any) => {
           const apiId = item.team?.id ? String(item.team.id) : null;
-          const cached =
-            (apiId && cacheByApiId.get(apiId)) ||
-            cacheByName.get(norm(item.team?.name || ""));
-          // 🛡️ Se o clube já existe no cache, usa o escudo do cache (regra do usuário)
+          // 🛡️ ANTI-COLISÃO DE HOMÔNIMOS: só reaproveita cache por api_id idêntico.
+          // Match por nome fazia todos os "América" herdarem o mesmo escudo.
+          const cached = apiId ? cacheByApiId.get(apiId) : null;
           return {
             api_id: item.team.id,
             name: cached?.nome || item.team.name,
-            city: cached?.cidade || item.venue?.city || "Brasil",
+            city: cached?.cidade || item.venue?.city || item.team.country || "",
             country: cached?.pais || item.team.country,
             logo: cached?.escudo_url || item.team.logo,
             source: cached ? "cache" : "api",
           };
         });
+
       } catch (e) {
         console.warn("[search-clubs] api-football falhou:", (e as Error).message);
       }
