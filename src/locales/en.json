@@ -571,8 +571,24 @@
       "lib_p": "Pre-Libertadores",
       "sul": "Sudamericana",
       "reb": "Relegation",
+      "promocao": "Promotion",
+      "playoff": "Promotion Play-off",
       "acesso": "Promotion to Série A",
       "reb_c": "Relegation to Série C"
+    },
+    "groups": {
+      "promocao": "Promotion",
+      "playoff": "Promotion Play-off"
+    },
+    "rules": {
+      "title": "Promotion Rules — Brazilian Série B 2026",
+      "direct_title": "1. Direct Promotion (only 2 spots)",
+      "direct_body": "The round-robin format with home and away legs (38 rounds) remains the base. Only the Champion and Runner-up secure an automatic spot in Série A 2027.",
+      "playoff_title": "2. The New Playoff (Knockout)",
+      "playoff_body": "The other two remaining top-flight spots will be decided in a knockout tournament after the group stage. Clubs finishing between 3rd and 6th face each other in two-legged ties:",
+      "playoff_semi": "Promotion Semifinals:",
+      "playoff_advantage": "Advantage: the better-ranked sides (3rd and 4th) host the return leg.",
+      "playoff_outcome": "Outcome: the two winners earn promotion to Série A. There is no final between them — the playoff only defines the last two promoted clubs."
     }
   }
 }

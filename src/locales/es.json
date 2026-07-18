@@ -571,8 +571,24 @@
       "lib_p": "Pre-Libertadores",
       "sul": "Sudamericana",
       "reb": "Descenso",
+      "promocao": "Ascenso",
+      "playoff": "Play-off de Ascenso",
       "acesso": "Ascenso a Serie A",
       "reb_c": "Descenso a Serie C"
+    },
+    "groups": {
+      "promocao": "Ascenso",
+      "playoff": "Play-off de Ascenso"
+    },
+    "rules": {
+      "title": "Reglas de Ascenso — Brasileño Serie B 2026",
+      "direct_title": "1. Ascenso Directo (solo 2 plazas)",
+      "direct_body": "El formato de todos contra todos con ida y vuelta (38 fechas) sigue siendo la base. Solo el Campeón y el Subcampeón garantizan plaza automática en la Serie A 2027.",
+      "playoff_title": "2. El Nuevo Playoff (Eliminatorias)",
+      "playoff_body": "Las otras dos plazas restantes se definen en un torneo eliminatorio posterior. Los clubes que terminen entre el 3º y el 6º lugar se enfrentan en partidos de ida y vuelta:",
+      "playoff_semi": "Semifinales de Ascenso:",
+      "playoff_advantage": "Ventaja: los equipos con mejor campaña (3º y 4º) definen la vuelta en casa.",
+      "playoff_outcome": "Desenlace: los dos ganadores logran el ascenso a la Serie A. No hay final entre ellos — el playoff solo define los dos últimos ascendidos."
     }
   }
 }
