@@ -3,13 +3,14 @@
  * [MÓDULO]: Painel global de competições — abas dinâmicas com classificação,
  * próximo jogo e modo AO VIVO. Dados via edge function league-standings (API-Football).
  */
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { Trophy, Radio, Calendar, MapPin } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { ClubLogo } from "@/components/ClubLogo";
 import { supabase } from "@/integrations/supabase/client";
 import { useTranslationApp } from "@/hooks/useTranslationApp";
+import { getHistoricalRivals } from "@/lib/rivalries";
 
 interface Props {
   clubName: string | null;
@@ -56,6 +57,19 @@ interface Competition {
 
 const LIVE_STATUSES = new Set(["1H", "2H", "HT", "ET", "BT", "P", "LIVE"]);
 
+/**
+ * Keyframes injetados uma única vez para pulsos usados na tabela.
+ * Isolado ao componente para não poluir index.css.
+ */
+const PULSE_CSS = `
+@keyframes hc-pulse-strong { 0%,100%{opacity:1} 50%{opacity:.55} }
+@keyframes hc-pulse-soft   { 0%,100%{opacity:1} 50%{opacity:.82} }
+@keyframes hc-pulse-bracket{ 0%,100%{opacity:.95} 50%{opacity:.45} }
+.hc-pulse-strong{animation:hc-pulse-strong 2s ease-in-out infinite}
+.hc-pulse-soft  {animation:hc-pulse-soft   3s ease-in-out infinite}
+.hc-pulse-bracket{animation:hc-pulse-bracket 2.4s ease-in-out infinite}
+`;
+
 export default function CompetitionsPanel({ clubName, primaryColor = "#ff6200" }: Props) {
   const { t, language } = useTranslationApp();
   const [loading, setLoading] = useState(true);
@@ -76,8 +90,6 @@ export default function CompetitionsPanel({ clubName, primaryColor = "#ff6200" }
         if (cancelled) return;
         setTeam(data?.team || null);
         const comps: Competition[] = data?.competitions || [];
-        // Priorização pelo calendário: aba inicial = competição com jogo AO VIVO
-        // ou com nextMatch mais próximo. Mantém todas as abas navegáveis.
         const sorted = [...comps].sort((a, b) => {
           if (a.liveMatch && !b.liveMatch) return -1;
           if (!a.liveMatch && b.liveMatch) return 1;
@@ -95,7 +107,6 @@ export default function CompetitionsPanel({ clubName, primaryColor = "#ff6200" }
     };
     setLoading(true);
     tick();
-    // refresh leve a cada 60s para pegar lives/standings novos (cache do servidor protege a cota)
     const id = setInterval(tick, 60_000);
     return () => {
       cancelled = true;
@@ -131,6 +142,7 @@ export default function CompetitionsPanel({ clubName, primaryColor = "#ff6200" }
 
   return (
     <section className="rounded-2xl bg-white/[0.03] border border-white/10 p-4 space-y-4">
+      <style dangerouslySetInnerHTML={{ __html: PULSE_CSS }} />
       <header className="flex items-center gap-2 pb-2 border-b border-white/5">
         <Trophy className="w-4 h-4" style={{ color: primaryColor }} />
         <h3 className="text-[11px] font-black italic uppercase tracking-widest text-white flex-1">
@@ -169,11 +181,12 @@ export default function CompetitionsPanel({ clubName, primaryColor = "#ff6200" }
                 rows={c.standings}
                 meTeamId={team?.id}
                 opponentTeamId={opponentId}
+                heartClubName={clubName}
                 primaryColor={primaryColor}
                 leagueId={c.leagueId}
                 leagueName={c.leagueName}
               />
-
+              {c.leagueId === 72 && <SerieBRulesPanel />}
             </TabsContent>
           );
         })}
@@ -258,15 +271,16 @@ function MatchCard({ match, live, primaryColor }: { match: Match | null; live: b
   );
 }
 
-type ZoneKey = "lib_g" | "lib_p" | "sul" | "reb" | "acesso" | "reb_c";
+type ZoneKey = "lib_g" | "lib_p" | "sul" | "reb" | "promocao" | "playoff" | "reb_c";
 
-const ZONE_META: Record<ZoneKey, { color: string; label: string }> = {
-  lib_g: { color: "#10b981", label: "Libertadores (Fase de Grupos)" },
-  lib_p: { color: "#34d399", label: "Pré-Libertadores" },
-  sul: { color: "#3b82f6", label: "Sul-Americana" },
-  reb: { color: "#ef4444", label: "Rebaixamento" },
-  acesso: { color: "#10b981", label: "Acesso à Série A" },
-  reb_c: { color: "#ef4444", label: "Rebaixamento à Série C" },
+const ZONE_META: Record<ZoneKey, { color: string; pulse: boolean }> = {
+  lib_g:    { color: "#10b981", pulse: false },
+  lib_p:    { color: "#34d399", pulse: false },
+  sul:      { color: "#3b82f6", pulse: false },
+  reb:      { color: "#ef4444", pulse: false },
+  promocao: { color: "#ff6200", pulse: true  }, // laranja padrão do site
+  playoff:  { color: "#ff9147", pulse: true  }, // laranja mais claro
+  reb_c:    { color: "#ef4444", pulse: false },
 };
 
 // Mapeia posição → zona, baseado em leagueId (API-Football).
@@ -279,7 +293,8 @@ function getZoneForPosition(leagueId: number, pos: number, total: number): ZoneK
     if (pos > total - 4) return "reb";
   }
   if (leagueId === 72) {
-    if (pos <= 4) return "acesso";
+    if (pos <= 2) return "promocao";
+    if (pos <= 6) return "playoff";
     if (pos > total - 4) return "reb_c";
   }
   return null;
@@ -289,6 +304,7 @@ function StandingsTable({
   rows,
   meTeamId,
   opponentTeamId,
+  heartClubName,
   primaryColor,
   leagueId,
   leagueName,
@@ -296,26 +312,42 @@ function StandingsTable({
   rows: StandingRow[];
   meTeamId?: number;
   opponentTeamId?: number;
+  heartClubName?: string | null;
   primaryColor: string;
   leagueId?: number;
   leagueName?: string;
 }) {
   const { t } = useTranslationApp();
   if (!rows.length) return <p className="text-[11px] italic text-white/40">{t("competitions.no_standings")}</p>;
-  const stickyBg = "bg-[#0b0b0b]";
   const headerBg = "bg-[#141414]";
-  const opponentBg = "bg-[#2a1f3d]";
   const numCol = "text-center px-1 py-1.5 w-7 border-b border-white/[0.06] tabular-nums";
   const fmt = (v: number | undefined | null) => (v === undefined || v === null ? 0 : v);
   const total = rows.length;
   const lid = leagueId ?? 0;
 
-  // legenda dinâmica — apenas zonas presentes nesta tabela
+  // rivais históricos do time do coração (nomes normalizados)
+  const rivalNames = new Set(
+    getHistoricalRivals(heartClubName || undefined, 8).map((n) =>
+      n.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim()
+    )
+  );
+  const isRivalName = (name: string) =>
+    rivalNames.has(name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim());
+
+  // legenda dinâmica — apenas zonas presentes
   const presentZones: ZoneKey[] = [];
   rows.forEach((r) => {
     const z = getZoneForPosition(lid, r.position, total);
     if (z && !presentZones.includes(z)) presentZones.push(z);
   });
+
+  // renderiza um cabeçalho de grupo para Série B antes das posições 1 e 3
+  const groupLabelFor = (pos: number): string | null => {
+    if (lid !== 72) return null;
+    if (pos === 1) return t("competitions.groups.promocao");
+    if (pos === 3) return t("competitions.groups.playoff");
+    return null;
+  };
 
   return (
     <div className="space-y-2">
@@ -323,9 +355,7 @@ function StandingsTable({
         <table className="w-full text-[10px] min-w-[360px] md:min-w-0 border-separate border-spacing-0">
           <thead>
             <tr className="text-[9px] font-mono uppercase tracking-wider text-white/70">
-              <th
-                className={`sticky left-0 z-20 ${headerBg} text-left py-1.5 pl-1.5 pr-1 border-b border-white/15 min-w-[110px]`}
-              >
+              <th className={`sticky left-0 z-20 ${headerBg} text-left py-1.5 pl-1.5 pr-1 border-b border-white/15 min-w-[110px]`}>
                 <div className="flex items-center gap-1.5">
                   <span className="w-3 inline-block text-white/50">#</span>
                   <span>{t("competitions.team_col")}</span>
@@ -343,58 +373,96 @@ function StandingsTable({
             {rows.map((r) => {
               const isMe = !!(meTeamId && r.teamId === meTeamId);
               const isOpponent = !isMe && !!(opponentTeamId && r.teamId === opponentTeamId);
-              const rowBg = isMe ? "bg-white/[0.08]" : isOpponent ? opponentBg : stickyBg;
-              const rowClass = isMe ? "bg-white/[0.04]" : isOpponent ? "bg-[#a78bfa]/10" : "";
+              const isRival = !isMe && !isOpponent && isRivalName(r.name);
               const zone = getZoneForPosition(lid, r.position, total);
-              const zoneColor = zone ? ZONE_META[zone].color : null;
+              const zoneMeta = zone ? ZONE_META[zone] : null;
+              const groupLabel = groupLabelFor(r.position);
+
+              // Cores translúcidas para pintar a linha inteira
+              // Time do coração → primaryColor; Adversário → âmbar; Rival → vermelho suave
+              const rowStyle: React.CSSProperties = isMe
+                ? { backgroundColor: `${primaryColor}26` }
+                : isOpponent
+                ? { backgroundColor: "rgba(251, 191, 36, 0.14)" }
+                : isRival
+                ? { backgroundColor: "rgba(239, 68, 68, 0.06)" }
+                : {};
+
+              const rowClass = [
+                isMe ? "hc-pulse-strong" : "",
+                isOpponent ? "hc-pulse-strong" : "",
+                isRival ? "hc-pulse-soft" : "",
+              ].filter(Boolean).join(" ");
+
+              // Cor sticky-cell = mesma da linha (mantém sticky legível ao scroll horizontal)
+              const stickyStyle: React.CSSProperties = {
+                ...rowStyle,
+                backgroundColor: rowStyle.backgroundColor || "#0b0b0b",
+              };
+
+              // Marcadores de borda esquerda (inset shadow) — combinam:
+              //  · zona (bracket colorido) — pulsa se a zona for de promoção/playoff
+              //  · time do coração sobrescreve com primaryColor forte
+              //  · rival adiciona 3px vermelho
+              let insetColor: string | null = null;
+              if (isMe) insetColor = primaryColor;
+              else if (isRival) insetColor = "#ef4444";
+              else if (zoneMeta) insetColor = zoneMeta.color;
+
+              const stickyClass = zoneMeta?.pulse && !isMe && !isRival ? "hc-pulse-bracket" : "";
+
               return (
-                <tr key={`${r.teamId}-${r.position}`} className={rowClass}>
-                  <td
-                    className={`sticky left-0 z-10 ${rowBg} py-1.5 pl-1.5 pr-1 border-b border-white/[0.06] min-w-[110px] ${
-                      isOpponent ? "border-l-4 border-l-dashed border-l-[#a78bfa]" : ""
-                    }`}
-                    style={
-                      isMe
-                        ? { boxShadow: `inset 3px 0 0 ${primaryColor}` }
-                        : zoneColor
-                        ? { boxShadow: `inset 3px 0 0 ${zoneColor}` }
-                        : undefined
-                    }
-                  >
-                    <div className="flex items-center gap-1.5 min-w-0">
-                      <span
-                        className="w-3 font-mono shrink-0 text-right text-[9px]"
-                        style={{ color: zoneColor || "rgba(255,255,255,0.5)" }}
-                      >
-                        {r.position}
-                      </span>
-                      <ClubLogo src={r.logo} alt={r.name} size="xs" className="w-3.5 h-3.5 shrink-0" />
-                      <span
-                        className={`truncate text-[10px] ${
-                          isMe ? "font-black text-white" : isOpponent ? "font-bold text-[#c4b5fd]" : "text-white/85"
-                        }`}
-                      >
-                        {r.name}
-                        {isOpponent && (
-                          <span className="ml-1 text-[8px] font-mono uppercase text-[#a78bfa]/80">· {t("competitions.target")}</span>
-                        )}
-                      </span>
-                    </div>
-                  </td>
-                  <td
-                    className={`${numCol} font-black`}
-                    style={{ color: isMe ? primaryColor : isOpponent ? "#c4b5fd" : "rgba(255,255,255,0.95)" }}
-                  >
-                    {fmt(r.points)}
-                  </td>
-                  <td className={`${numCol} text-white/70`}>{fmt(r.played)}</td>
-                  <td className={`${numCol} text-white/70`}>{fmt(r.win)}</td>
-                  <td className={`${numCol} text-white/70`}>{fmt(r.draw)}</td>
-                  <td className={`${numCol} text-white/70`}>{fmt(r.lose)}</td>
-                  <td className={`${numCol} text-white/70 w-9`}>
-                    {(r.goalsDiff ?? 0) > 0 ? `+${r.goalsDiff}` : fmt(r.goalsDiff)}
-                  </td>
-                </tr>
+                <Fragment key={`${r.teamId}-${r.position}`}>
+                  {groupLabel && (
+                    <tr key={`gh-${r.position}`}>
+                      <td colSpan={7} className="pt-3 pb-1 pl-2 pr-1 text-[9px] font-black italic uppercase tracking-widest text-white/55">
+                        {groupLabel}
+                      </td>
+                    </tr>
+                  )}
+                  <tr key={`${r.teamId}-${r.position}`} className={rowClass} style={rowStyle}>
+                    <td
+                      className={`sticky left-0 z-10 py-1.5 pl-1.5 pr-1 border-b border-white/[0.06] min-w-[110px] ${stickyClass}`}
+                      style={{
+                        ...stickyStyle,
+                        boxShadow: insetColor ? `inset 3px 0 0 ${insetColor}` : undefined,
+                      }}
+                    >
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <span
+                          className="w-3 font-mono shrink-0 text-right text-[9px]"
+                          style={{ color: zoneMeta?.color || "rgba(255,255,255,0.5)" }}
+                        >
+                          {r.position}
+                        </span>
+                        <ClubLogo src={r.logo} alt={r.name} size="xs" className="w-3.5 h-3.5 shrink-0" />
+                        <span
+                          className={`truncate text-[10px] ${
+                            isMe ? "font-black text-white" : isOpponent ? "font-bold text-amber-200" : isRival ? "font-semibold text-white/90" : "text-white/85"
+                          }`}
+                        >
+                          {r.name}
+                          {isOpponent && (
+                            <span className="ml-1 text-[8px] font-mono uppercase text-amber-300/80">· {t("competitions.target")}</span>
+                          )}
+                        </span>
+                      </div>
+                    </td>
+                    <td
+                      className={`${numCol} font-black`}
+                      style={{ color: isMe ? primaryColor : isOpponent ? "#fcd34d" : "rgba(255,255,255,0.95)" }}
+                    >
+                      {fmt(r.points)}
+                    </td>
+                    <td className={`${numCol} text-white/70`}>{fmt(r.played)}</td>
+                    <td className={`${numCol} text-white/70`}>{fmt(r.win)}</td>
+                    <td className={`${numCol} text-white/70`}>{fmt(r.draw)}</td>
+                    <td className={`${numCol} text-white/70`}>{fmt(r.lose)}</td>
+                    <td className={`${numCol} text-white/70 w-9`}>
+                      {(r.goalsDiff ?? 0) > 0 ? `+${r.goalsDiff}` : fmt(r.goalsDiff)}
+                    </td>
+                  </tr>
+                </Fragment>
               );
             })}
           </tbody>
@@ -416,6 +484,39 @@ function StandingsTable({
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+/**
+ * Painel informativo de regras do acesso — Brasileirão Série B 2026.
+ * Largura acompanha a tabela: no desktop herda o max-width do container pai;
+ * no mobile ocupa 100% com padding lateral para evitar overflow.
+ */
+function SerieBRulesPanel() {
+  const { t } = useTranslationApp();
+  return (
+    <div className="w-full rounded-xl bg-white/[0.02] border border-white/10 px-3 sm:px-4 py-3 space-y-3 text-white/80">
+      <h4 className="text-[11px] font-black italic uppercase tracking-widest" style={{ color: "#ff6200" }}>
+        {t("competitions.rules.title")}
+      </h4>
+
+      <div className="space-y-1">
+        <p className="text-[11px] font-bold text-white">{t("competitions.rules.direct_title")}</p>
+        <p className="text-[11px] leading-snug break-words">{t("competitions.rules.direct_body")}</p>
+      </div>
+
+      <div className="space-y-1">
+        <p className="text-[11px] font-bold text-white">{t("competitions.rules.playoff_title")}</p>
+        <p className="text-[11px] leading-snug break-words">{t("competitions.rules.playoff_body")}</p>
+        <ul className="text-[11px] leading-snug list-disc pl-4 space-y-0.5">
+          <li>{t("competitions.rules.playoff_semi")}</li>
+          <li>3º x 6º</li>
+          <li>4º x 5º</li>
+          <li>{t("competitions.rules.playoff_advantage")}</li>
+          <li>{t("competitions.rules.playoff_outcome")}</li>
+        </ul>
+      </div>
     </div>
   );
 }

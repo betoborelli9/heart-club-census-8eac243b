@@ -571,8 +571,24 @@
       "lib_p": "Pré-Libertadores",
       "sul": "Sul-Americana",
       "reb": "Rebaixamento",
+      "promocao": "Promoção",
+      "playoff": "Play-off para Promoção",
       "acesso": "Acesso à Série A",
       "reb_c": "Rebaixamento à Série C"
+    },
+    "groups": {
+      "promocao": "Promoção",
+      "playoff": "Play-off para Promoção"
+    },
+    "rules": {
+      "title": "Regras de Acesso — Brasileiro Série B 2026",
+      "direct_title": "1. Acesso Direto (apenas 2 vagas)",
+      "direct_body": "O formato de pontos corridos com turno e returno (38 rodadas) continua sendo a base. Apenas o Campeão e o Vice-campeão garantem vaga automática na Série A de 2027.",
+      "playoff_title": "2. O Novo Playoff (Mata-Mata)",
+      "playoff_body": "As outras duas vagas restantes para a elite serão decididas em um torneio eliminatório pós-fase de grupos. Os clubes que terminarem entre o 3º e o 6º lugar se enfrentam em jogos de ida e volta:",
+      "playoff_semi": "Semifinais do Acesso:",
+      "playoff_advantage": "Vantagem: os times de melhor campanha (3º e 4º) decidem a segunda partida em casa.",
+      "playoff_outcome": "Desfecho: os dois vencedores conquistam o acesso à Série A. Não há final entre eles — o objetivo do playoff é apenas definir os dois últimos promovidos."
     }
   }
 }
