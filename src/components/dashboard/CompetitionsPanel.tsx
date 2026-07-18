@@ -306,15 +306,26 @@ function StandingsTable({
   leagueName?: string;
 }) {
   const { t } = useTranslationApp();
-  if (!rows.length) return <p className="text-[11px] italic text-white/40">{t("competitions.no_standings")}</p>;
   const headerBg = "bg-[#141414]";
   const numCol = "text-center px-1 py-1.5 w-7 border-b border-white/[0.06] tabular-nums";
   const fmt = (v: number | undefined | null) => (v === undefined || v === null ? 0 : v);
-  const total = rows.length;
   const lid = leagueId ?? 0;
 
+  // Se a competição ainda não começou (todos zerados) → ordena por A→Z e
+  // reatribui posições. Mantém subcabeçalhos/colchetes das zonas previstas.
+  const displayRows = useMemo(() => {
+    if (!rows.length) return rows;
+    const notStarted = rows.every((r) => (r.points ?? 0) === 0 && (r.played ?? 0) === 0);
+    if (!notStarted) return rows;
+    const sorted = [...rows].sort((a, b) =>
+      (a.name || "").localeCompare(b.name || "", "pt-BR", { sensitivity: "base" }),
+    );
+    return sorted.map((r, i) => ({ ...r, position: i + 1 }));
+  }, [rows]);
+
+  const total = displayRows.length;
+
   // Cor tradicional do adversário (via mapa estático de cores dos clubes).
-  // Se ausente, cai no âmbar padrão para preservar contraste.
   const opponentTheme = opponentName ? teamColors[opponentName] : null;
   const opponentColor = opponentTheme?.primaryHex || "#fbbf24";
   const hexToRgba = (hex: string, a: number) => {
@@ -326,30 +337,39 @@ function StandingsTable({
   };
   const opponentBg = hexToRgba(opponentColor, 0.16);
 
-  // matcher robusto de rivais históricos (nome + apelidos da API-Football)
   const isRivalName = (name: string) => isHistoricalRival(name, heartClubName);
 
-  // Zonas presentes → legenda + cabeçalhos dinâmicos.
-  // Cabeçalho de grupo aparece na PRIMEIRA linha de cada zona.
   const zoneByPos = useMemo(() => {
     const map = new Map<number, LeagueZone>();
-    rows.forEach((r) => {
+    displayRows.forEach((r) => {
       const z = getZoneForPosition(lid, r.position, total);
       if (z) map.set(r.position, z);
     });
     return map;
-  }, [rows, lid, total]);
+  }, [displayRows, lid, total]);
 
   const presentZones: LeagueZone[] = [];
   const firstPosOfZone = new Map<string, number>();
   zoneByPos.forEach((z, pos) => {
     if (!firstPosOfZone.has(z.key)) {
       firstPosOfZone.set(z.key, pos);
-      presentZones.push(z);
+      // Zonas neutras não entram na legenda (limpar visual)
+      if (!z.neutral) presentZones.push(z);
     } else if (pos < (firstPosOfZone.get(z.key) ?? Infinity)) {
       firstPosOfZone.set(z.key, pos);
     }
   });
+
+  // Skeleton se ainda não temos linhas — nunca deixar o container vazio/sumindo.
+  if (!displayRows.length) {
+    return (
+      <div className="space-y-1.5">
+        {Array.from({ length: 8 }).map((_, i) => (
+          <Skeleton key={i} className="h-6 w-full bg-white/[0.04] rounded" />
+        ))}
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-2">
@@ -372,15 +392,16 @@ function StandingsTable({
             </tr>
           </thead>
           <tbody>
-            {rows.map((r) => {
+            {displayRows.map((r) => {
               const isMe = !!(meTeamId && r.teamId === meTeamId);
               const isOpponent = !isMe && !!(opponentTeamId && r.teamId === opponentTeamId);
               const isRival = !isMe && !isOpponent && isRivalName(r.name);
               const zone = zoneByPos.get(r.position) || null;
+              const isNeutralZone = !!zone?.neutral;
               const isFirstOfZone = zone && firstPosOfZone.get(zone.key) === r.position;
               const groupLabel = isFirstOfZone && zone?.header ? zone.header : null;
 
-              // Fundo translúcido da linha por contexto
+              // Fundo translúcido da linha por contexto (zona neutra NÃO pinta fundo)
               const rowStyle: React.CSSProperties = isMe
                 ? { backgroundColor: `${primaryColor}26` }
                 : isOpponent
@@ -400,13 +421,24 @@ function StandingsTable({
                 backgroundColor: rowStyle.backgroundColor || "#0b0b0b",
               };
 
-              // Borda-inset esquerda: prioridade → time do coração > rival > zona
+              // Borda-inset esquerda: prioridade → time do coração > rival > zona (não neutra)
               let insetColor: string | null = null;
               if (isMe) insetColor = primaryColor;
               else if (isRival) insetColor = "#ef4444";
-              else if (zone) insetColor = zone.style.color;
+              else if (zone && !isNeutralZone) insetColor = zone.style.color;
 
-              const stickyClass = zone?.style.pulse && !isMe && !isRival ? "hc-pulse-bracket" : "";
+              const stickyClass =
+                zone?.style.pulse && !isNeutralZone && !isMe && !isRival ? "hc-pulse-bracket" : "";
+
+              // Cor do número da posição — neutra usa branco padrão
+              const posColor = isNeutralZone
+                ? "rgba(255,255,255,0.5)"
+                : zone?.style.color || "rgba(255,255,255,0.5)";
+
+              // Cor do subcabeçalho de grupo — neutro usa branco suave
+              const headerColor = isNeutralZone
+                ? "rgba(255,255,255,0.55)"
+                : zone?.style.color || "rgba(255,255,255,0.55)";
 
               return (
                 <Fragment key={`${r.teamId}-${r.position}`}>
@@ -415,7 +447,7 @@ function StandingsTable({
                       <td
                         colSpan={7}
                         className="pt-3 pb-1 pl-2 pr-1 text-[9px] font-black italic uppercase tracking-widest"
-                        style={{ color: zone?.style.color || "rgba(255,255,255,0.55)" }}
+                        style={{ color: headerColor }}
                       >
                         {groupLabel}
                       </td>
@@ -432,7 +464,7 @@ function StandingsTable({
                       <div className="flex items-center gap-1.5 min-w-0">
                         <span
                           className="w-3 font-mono shrink-0 text-right text-[9px]"
-                          style={{ color: zone?.style.color || "rgba(255,255,255,0.5)" }}
+                          style={{ color: posColor }}
                         >
                           {r.position}
                         </span>
