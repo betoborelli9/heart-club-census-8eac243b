@@ -3,7 +3,7 @@
  * [MÓDULO]: Painel global de competições — abas dinâmicas com classificação,
  * próximo jogo e modo AO VIVO. Dados via edge function league-standings (API-Football).
  */
-import { Fragment, useEffect, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { Trophy, Radio, Calendar, MapPin } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -11,6 +11,8 @@ import { ClubLogo } from "@/components/ClubLogo";
 import { supabase } from "@/integrations/supabase/client";
 import { useTranslationApp } from "@/hooks/useTranslationApp";
 import { isHistoricalRival } from "@/lib/rivalries";
+import { getLeagueRules, getZoneForPosition, type LeagueRules, type LeagueZone } from "@/data/leagueRules";
+import { teamColors } from "@/data/teamColors";
 
 interface Props {
   clubName: string | null;
