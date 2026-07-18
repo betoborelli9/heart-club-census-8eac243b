@@ -18,6 +18,14 @@ const corsHeaders = {
 const norm = (s: string) =>
   (s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
 
+const canonical = (s: string) =>
+  norm(s)
+    .replace(/[^a-z0-9 ]/g, " ")
+    .replace(/\b(sport club|sport clube|football club|futebol clube|futbol club|clube de regatas|clube atletico|associacao atletica|esporte clube|esporte club|sociedade esportiva|club deportivo|atletico club|clube de futebol|sport|club|clube|fc|sc|ec|ac|cr|cf|aa|se|cd|ca)\b/g, " ")
+    .replace(/\b(do|da|de|dos|das|of|the|el|la|los|las|del)\b/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
 const isApiSportsAsset = (url: string) => /^https:\/\/media\.api-sports\.io\/football\/(teams|leagues)\/\d+\.png(?:\?.*)?$/i.test(url);
 
 async function imageUrlToDataUrl(url: string): Promise<string | null> {
@@ -61,7 +69,10 @@ async function fromApiFootball(name: string): Promise<{ url: string; api_id: num
       { headers: { "x-apisports-key": key } },
     );
     const j = await r.json();
-    const t = j?.response?.[0]?.team;
+    const wanted = canonical(name);
+    const rows = j?.response || [];
+    const exact = rows.find((item: any) => canonical(item?.team?.name || "") === wanted);
+    const t = (exact || rows[0])?.team;
     if (t?.logo) return { url: t.logo, api_id: t.id };
   } catch {}
   return null;
@@ -109,11 +120,14 @@ serve(async (req) => {
     );
 
     // 1) CACHE
-    const { data: row } = await supabase
+    const { data: rows } = await supabase
       .from("clubes_cache")
       .select("nome, escudo_url, api_id")
-      .ilike("nome", name)
-      .maybeSingle();
+      .or(`nome.ilike.${name},nome_curto.ilike.${name}`)
+      .limit(10);
+
+    const row = (rows || []).find((r: any) => norm(r.nome || "") === norm(name))
+      || (rows || []).find((r: any) => canonical(r.nome || "") === canonical(name));
 
     if (row?.escudo_url && (await urlAlive(row.escudo_url))) {
       const safeUrl = await imageUrlToDataUrl(row.escudo_url);

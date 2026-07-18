@@ -20,6 +20,14 @@ const norm = (s: string) =>
     .toLowerCase()
     .trim();
 
+const uniqueClubKey = (item: any) => {
+  const apiId = item.api_id || item.team?.id;
+  if (apiId) return `api:${apiId}`;
+  return [item.nome || item.name || item.team?.name || "", item.cidade || item.city || item.venue?.city || "", item.pais || item.country || item.team?.country || ""]
+    .map(norm)
+    .join("|");
+};
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -99,7 +107,13 @@ serve(async (req) => {
         source: "cache",
       }));
 
-    const results = [...cacheOnly, ...apiResults];
+    const seen = new Set<string>();
+    const results = [...cacheOnly, ...apiResults].filter((item) => {
+      const key = uniqueClubKey(item);
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
 
     return new Response(JSON.stringify(results), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
