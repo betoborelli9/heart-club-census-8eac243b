@@ -412,7 +412,7 @@ function StandingsTable({
               const stickyClass = zoneMeta?.pulse && !isMe && !isRival ? "hc-pulse-bracket" : "";
 
               return (
-                <>
+                <Fragment key={`${r.teamId}-${r.position}`}>
                   {groupLabel && (
                     <tr key={`gh-${r.position}`}>
                       <td colSpan={7} className="pt-3 pb-1 pl-2 pr-1 text-[9px] font-black italic uppercase tracking-widest text-white/55">
@@ -462,7 +462,7 @@ function StandingsTable({
                       {(r.goalsDiff ?? 0) > 0 ? `+${r.goalsDiff}` : fmt(r.goalsDiff)}
                     </td>
                   </tr>
-                </>
+                </Fragment>
               );
             })}
           </tbody>
