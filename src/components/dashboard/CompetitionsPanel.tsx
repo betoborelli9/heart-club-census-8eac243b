@@ -10,7 +10,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { ClubLogo } from "@/components/ClubLogo";
 import { supabase } from "@/integrations/supabase/client";
 import { useTranslationApp } from "@/hooks/useTranslationApp";
-import { getHistoricalRivals } from "@/lib/rivalries";
+import { isHistoricalRival } from "@/lib/rivalries";
 
 interface Props {
   clubName: string | null;
