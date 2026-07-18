@@ -10,7 +10,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { ClubLogo } from "@/components/ClubLogo";
 import { supabase } from "@/integrations/supabase/client";
 import { useTranslationApp } from "@/hooks/useTranslationApp";
-import { getHistoricalRivals } from "@/lib/rivalries";
+import { isHistoricalRival } from "@/lib/rivalries";
 
 interface Props {
   clubName: string | null;
@@ -79,6 +79,7 @@ export default function CompetitionsPanel({ clubName, primaryColor = "#ff6200" }
 
   useEffect(() => {
     let cancelled = false;
+    let firstLoad = true;
     const tick = async () => {
       if (!clubName) {
         setCompetitions([]);
@@ -86,23 +87,35 @@ export default function CompetitionsPanel({ clubName, primaryColor = "#ff6200" }
         return;
       }
       try {
-        const { data } = await supabase.functions.invoke("league-standings", { body: { clubName } });
+        const { data, error } = await supabase.functions.invoke("league-standings", { body: { clubName } });
         if (cancelled) return;
-        setTeam(data?.team || null);
+        if (error) throw error;
         const comps: Competition[] = data?.competitions || [];
-        const sorted = [...comps].sort((a, b) => {
-          if (a.liveMatch && !b.liveMatch) return -1;
-          if (!a.liveMatch && b.liveMatch) return 1;
-          const ta = a.nextMatch ? new Date(a.nextMatch.date).getTime() : Infinity;
-          const tb = b.nextMatch ? new Date(b.nextMatch.date).getTime() : Infinity;
-          return ta - tb;
-        });
-        setCompetitions(comps);
-        if (sorted.length && !activeTab) setActiveTab(String(sorted[0].leagueId));
-      } catch {
-        if (!cancelled) setCompetitions([]);
+        // Só atualiza se veio conteúdo — evita "sumir" a tabela quando o
+        // polling recebe uma resposta vazia transitória da API-Football.
+        if (comps.length) {
+          setTeam(data?.team || null);
+          const sorted = [...comps].sort((a, b) => {
+            if (a.liveMatch && !b.liveMatch) return -1;
+            if (!a.liveMatch && b.liveMatch) return 1;
+            const ta = a.nextMatch ? new Date(a.nextMatch.date).getTime() : Infinity;
+            const tb = b.nextMatch ? new Date(b.nextMatch.date).getTime() : Infinity;
+            return ta - tb;
+          });
+          setCompetitions(sorted);
+          if (!activeTab) setActiveTab(String(sorted[0].leagueId));
+        } else if (firstLoad) {
+          setCompetitions([]);
+        }
+      } catch (e) {
+        // Preserva estado anterior em falha de polling — só limpa no 1º carregamento.
+        console.warn("[CompetitionsPanel] tick failed:", e);
+        if (!cancelled && firstLoad) setCompetitions([]);
       } finally {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) {
+          if (firstLoad) setLoading(false);
+          firstLoad = false;
+        }
       }
     };
     setLoading(true);
@@ -325,14 +338,8 @@ function StandingsTable({
   const total = rows.length;
   const lid = leagueId ?? 0;
 
-  // rivais históricos do time do coração (nomes normalizados)
-  const rivalNames = new Set(
-    getHistoricalRivals(heartClubName || undefined, 8).map((n) =>
-      n.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim()
-    )
-  );
-  const isRivalName = (name: string) =>
-    rivalNames.has(name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim());
+  // matcher robusto de rivais históricos (nome + apelidos da API-Football)
+  const isRivalName = (name: string) => isHistoricalRival(name, heartClubName);
 
   // legenda dinâmica — apenas zonas presentes
   const presentZones: ZoneKey[] = [];
