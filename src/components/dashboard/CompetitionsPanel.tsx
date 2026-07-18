@@ -325,14 +325,8 @@ function StandingsTable({
   const total = rows.length;
   const lid = leagueId ?? 0;
 
-  // rivais históricos do time do coração (nomes normalizados)
-  const rivalNames = new Set(
-    getHistoricalRivals(heartClubName || undefined, 8).map((n) =>
-      n.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim()
-    )
-  );
-  const isRivalName = (name: string) =>
-    rivalNames.has(name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim());
+  // matcher robusto de rivais históricos (nome + apelidos da API-Football)
+  const isRivalName = (name: string) => isHistoricalRival(name, heartClubName);
 
   // legenda dinâmica — apenas zonas presentes
   const presentZones: ZoneKey[] = [];
