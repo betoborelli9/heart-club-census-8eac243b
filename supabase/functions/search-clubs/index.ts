@@ -83,19 +83,13 @@ serve(async (req) => {
       }
     }
 
-    // 3️⃣ Resultados do CACHE que a API não devolveu (sempre na frente)
-    const seen = new Set<string>();
+    // 3️⃣ Resultados do CACHE que a API não devolveu (dedup só por api_id)
     const cacheOnly = (cacheRows || [])
       .filter((c: any) => {
-        const key = c.api_id ? `id:${c.api_id}` : `n:${norm(c.nome)}`;
-        if (seen.has(key)) return true;
-        const alsoInApi = apiResults.some(
-          (a) =>
-            (c.api_id && String(a.api_id) === String(c.api_id)) ||
-            norm(a.name) === norm(c.nome),
-        );
-        return !alsoInApi;
+        if (!c.api_id) return true;
+        return !apiResults.some((a) => String(a.api_id) === String(c.api_id));
       })
+
       .map((c: any) => ({
         api_id: c.api_id ? Number(c.api_id) : null,
         name: c.nome,
