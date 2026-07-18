@@ -16,6 +16,8 @@ export interface LeagueZone {
   header?: string; // subcabeçalho exibido logo antes da 1ª linha da zona
   legend: string;
   style: ZoneStyle;
+  /** Zona neutra: exibe apenas o subcabeçalho, sem colchete/cor de fundo/legenda. */
+  neutral?: boolean;
   /** Verdadeiro se a posição pertence à zona. `total` = nº de times. */
   match: (pos: number, total: number) => boolean;
 }
