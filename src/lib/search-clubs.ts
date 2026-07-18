@@ -139,7 +139,6 @@ export async function searchClubsWithFallback(query: string, limit = 20): Promis
     // Dedupe por identificador único. Homônimos nunca podem colapsar por chave canônica
     // (ex.: América-MG, América-RJ, América-RN, América de Cali).
     const localApiIds = new Set(localMatches.map((c) => c.api_id).filter(Boolean));
-    const localNames = new Set(localMatches.map((c) => stripAccents(c.name)));
     const seenClubKeys = new Set<string>();
     const pushUnique = (acc: ClubSearchResult[], c: ClubSearchResult) => {
       const k = dedupeClubKey(c);
@@ -151,7 +150,7 @@ export async function searchClubsWithFallback(query: string, limit = 20): Promis
     const merged: ClubSearchResult[] = [];
     localMatches.forEach((c) => pushUnique(merged, c));
     apiMatches
-      .filter((a) => !(a.api_id && localApiIds.has(a.api_id)) && !localNames.has(stripAccents(a.name)))
+      .filter((a) => !(a.api_id && localApiIds.has(a.api_id)))
       .forEach((c) => pushUnique(merged, c));
 
     return merged.slice(0, limit);
