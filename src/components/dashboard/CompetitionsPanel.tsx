@@ -439,6 +439,35 @@ function StandingsTable({
               const headerColor = isNeutralZone
                 ? "rgba(255,255,255,0.55)"
                 : zone?.style.color || "rgba(255,255,255,0.55)";
+
+              return (
+                <Fragment key={`${r.teamId}-${r.position}`}>
+                  {groupLabel && (
+                    <tr key={`gh-${r.position}`}>
+                      <td
+                        colSpan={7}
+                        className="pt-3 pb-1 pl-2 pr-1 text-[9px] font-black italic uppercase tracking-widest"
+                        style={{ color: headerColor }}
+                      >
+                        {groupLabel}
+                      </td>
+                    </tr>
+                  )}
+                  <tr key={`${r.teamId}-${r.position}`} className={rowClass} style={rowStyle}>
+                    <td
+                      className={`sticky left-0 z-10 py-1.5 pl-1.5 pr-1 border-b border-white/[0.06] min-w-[110px] ${stickyClass}`}
+                      style={{
+                        ...stickyStyle,
+                        boxShadow: insetColor ? `inset 3px 0 0 ${insetColor}` : undefined,
+                      }}
+                    >
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <span
+                          className="w-3 font-mono shrink-0 text-right text-[9px]"
+                          style={{ color: posColor }}
+                        >
+                          {r.position}
+                        </span>
                         <ClubLogo src={r.logo} alt={r.name} size="xs" className="w-3.5 h-3.5 shrink-0" />
                         <span
                           className={`truncate text-[10px] ${
