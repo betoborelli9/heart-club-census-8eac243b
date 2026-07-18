@@ -306,15 +306,26 @@ function StandingsTable({
   leagueName?: string;
 }) {
   const { t } = useTranslationApp();
-  if (!rows.length) return <p className="text-[11px] italic text-white/40">{t("competitions.no_standings")}</p>;
   const headerBg = "bg-[#141414]";
   const numCol = "text-center px-1 py-1.5 w-7 border-b border-white/[0.06] tabular-nums";
   const fmt = (v: number | undefined | null) => (v === undefined || v === null ? 0 : v);
-  const total = rows.length;
   const lid = leagueId ?? 0;
 
+  // Se a competição ainda não começou (todos zerados) → ordena por A→Z e
+  // reatribui posições. Mantém subcabeçalhos/colchetes das zonas previstas.
+  const displayRows = useMemo(() => {
+    if (!rows.length) return rows;
+    const notStarted = rows.every((r) => (r.points ?? 0) === 0 && (r.played ?? 0) === 0);
+    if (!notStarted) return rows;
+    const sorted = [...rows].sort((a, b) =>
+      (a.name || "").localeCompare(b.name || "", "pt-BR", { sensitivity: "base" }),
+    );
+    return sorted.map((r, i) => ({ ...r, position: i + 1 }));
+  }, [rows]);
+
+  const total = displayRows.length;
+
   // Cor tradicional do adversário (via mapa estático de cores dos clubes).
-  // Se ausente, cai no âmbar padrão para preservar contraste.
   const opponentTheme = opponentName ? teamColors[opponentName] : null;
   const opponentColor = opponentTheme?.primaryHex || "#fbbf24";
   const hexToRgba = (hex: string, a: number) => {
@@ -326,30 +337,39 @@ function StandingsTable({
   };
   const opponentBg = hexToRgba(opponentColor, 0.16);
 
-  // matcher robusto de rivais históricos (nome + apelidos da API-Football)
   const isRivalName = (name: string) => isHistoricalRival(name, heartClubName);
 
-  // Zonas presentes → legenda + cabeçalhos dinâmicos.
-  // Cabeçalho de grupo aparece na PRIMEIRA linha de cada zona.
   const zoneByPos = useMemo(() => {
     const map = new Map<number, LeagueZone>();
-    rows.forEach((r) => {
+    displayRows.forEach((r) => {
       const z = getZoneForPosition(lid, r.position, total);
       if (z) map.set(r.position, z);
     });
     return map;
-  }, [rows, lid, total]);
+  }, [displayRows, lid, total]);
 
   const presentZones: LeagueZone[] = [];
   const firstPosOfZone = new Map<string, number>();
   zoneByPos.forEach((z, pos) => {
     if (!firstPosOfZone.has(z.key)) {
       firstPosOfZone.set(z.key, pos);
-      presentZones.push(z);
+      // Zonas neutras não entram na legenda (limpar visual)
+      if (!z.neutral) presentZones.push(z);
     } else if (pos < (firstPosOfZone.get(z.key) ?? Infinity)) {
       firstPosOfZone.set(z.key, pos);
     }
   });
+
+  // Skeleton se ainda não temos linhas — nunca deixar o container vazio/sumindo.
+  if (!displayRows.length) {
+    return (
+      <div className="space-y-1.5">
+        {Array.from({ length: 8 }).map((_, i) => (
+          <Skeleton key={i} className="h-6 w-full bg-white/[0.04] rounded" />
+        ))}
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-2">
