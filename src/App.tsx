@@ -12,6 +12,7 @@
 /* ═══════════════════════════════════════════════════════════
     MÓDULO: IMPORTS (CORE & UI)
    ═══════════════════════════════════════════════════════════ */
+import { Suspense, lazy } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -24,6 +25,7 @@ import AppNavBar from "@/components/AppNavBar";
 import GlobalFooter from "@/components/GlobalFooter";
 import UsersTableSync from "@/integrations/users-table/UsersTableSync";
 import { useLocation } from "react-router-dom";
+import { Loader2 } from "lucide-react";
 
 // Inclusão do Verify no HIDE_NAV para não mostrar barra de navegação durante o login
 const HIDE_NAV_ROUTES = ["/", "/splash", "/login", "/profile-setup", "/voting", "/convite", "/verify"];
@@ -36,38 +38,40 @@ const GlobalNav = () => {
 
 /* ═══════════════════════════════════════════════════════════
     MÓDULO: PÁGINAS (USER & PUBLIC)
+    Carregadas sob demanda (code-splitting por rota) para reduzir
+    o tamanho do pacote inicial.
    ═══════════════════════════════════════════════════════════ */
-import Splash from "./pages/Splash";
-import Landing from "./pages/Landing";
-import Login from "./pages/Login";
-import Verify from "./pages/Verify"; // Nova página do Guardião
-import ProfileSetup from "./pages/ProfileSetup";
-import Voting from "./pages/Voting";
-import Dashboard from "./pages/Dashboard";
-import MapaCalor from "./pages/MapaCalor";
-import Stats from "./pages/Stats";
-import Ambassadors from "./pages/Ambassadors";
-import AmbassadorCenter from "./pages/AmbassadorCenter";
-import Correcao from "./pages/Correcao";
-import NotFound from "./pages/NotFound";
-import Convite from "./pages/Convite";
-import Privacy from "./pages/Privacy";
-import Terms from "./pages/Terms";
-import PrivacyManagement from "./pages/PrivacyManagement";
-import NotificationSettings from "./pages/NotificationSettings";
+const Splash = lazy(() => import("./pages/Splash"));
+const Landing = lazy(() => import("./pages/Landing"));
+const Login = lazy(() => import("./pages/Login"));
+const Verify = lazy(() => import("./pages/Verify")); // Nova página do Guardião
+const ProfileSetup = lazy(() => import("./pages/ProfileSetup"));
+const Voting = lazy(() => import("./pages/Voting"));
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const MapaCalor = lazy(() => import("./pages/MapaCalor"));
+const Stats = lazy(() => import("./pages/Stats"));
+const Ambassadors = lazy(() => import("./pages/Ambassadors"));
+const AmbassadorCenter = lazy(() => import("./pages/AmbassadorCenter"));
+const Correcao = lazy(() => import("./pages/Correcao"));
+const NotFound = lazy(() => import("./pages/NotFound"));
+const Convite = lazy(() => import("./pages/Convite"));
+const Privacy = lazy(() => import("./pages/Privacy"));
+const Terms = lazy(() => import("./pages/Terms"));
+const PrivacyManagement = lazy(() => import("./pages/PrivacyManagement"));
+const NotificationSettings = lazy(() => import("./pages/NotificationSettings"));
 
 /* ═══════════════════════════════════════════════════════════
     MÓDULO: PÁGINAS (ADMIN & BI)
    ═══════════════════════════════════════════════════════════ */
-import Admin from "./pages/Admin";
-import DebugApi from "./pages/DebugApi";
-import AdminIngestion from "./pages/AdminIngestion";
-import ClubColors from "./pages/Admin/ClubColors";
-import ClubFeminino from "./pages/Admin/ClubFeminino";
-import GlobalBI from "./pages/Admin/GlobalBI"; 
-import VotosFicticios from "./pages/VotosFicticios"; 
-import MasterProfile from "./pages/MasterProfile";
-import MasterVotesAdmin from "./pages/MasterVotesAdmin";
+const Admin = lazy(() => import("./pages/Admin"));
+const DebugApi = lazy(() => import("./pages/DebugApi"));
+const AdminIngestion = lazy(() => import("./pages/AdminIngestion"));
+const ClubColors = lazy(() => import("./pages/Admin/ClubColors"));
+const ClubFeminino = lazy(() => import("./pages/Admin/ClubFeminino"));
+const GlobalBI = lazy(() => import("./pages/Admin/GlobalBI"));
+const VotosFicticios = lazy(() => import("./pages/VotosFicticios"));
+const MasterProfile = lazy(() => import("./pages/MasterProfile"));
+const MasterVotesAdmin = lazy(() => import("./pages/MasterVotesAdmin"));
 
 const queryClient = new QueryClient();
 
@@ -82,6 +86,13 @@ const App = () => (
         <Toaster />
         <Sonner />
         <BrowserRouter>
+          <Suspense
+            fallback={
+              <div className="min-h-screen bg-background flex items-center justify-center">
+                <Loader2 className="w-10 h-10 animate-spin text-primary" />
+              </div>
+            }
+          >
           <Routes>
             {/* Fluxo Inicial e Auth */}
             <Route path="/" element={<Landing />} />
@@ -123,6 +134,7 @@ const App = () => (
             {/* Tratamento de Erros */}
             <Route path="*" element={<NotFound />} />
           </Routes>
+          </Suspense>
           <FeedbackWidget />
           <InstallAppButton />
           <GlobalNav />
