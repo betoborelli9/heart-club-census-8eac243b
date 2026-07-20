@@ -223,7 +223,7 @@ const withTimeout = async <T,>(promise: Promise<T>, ms: number): Promise<T | nul
   return result as T | null;
 };
 
-async function resolveLogoCandidates(name: string): Promise<string[]> {
+async function resolveLogoCandidates(name: string, rawSrc?: string | null): Promise<string[]> {
   const key = normalizeName(name);
   if (!key) return [];
   if (resolvedCache.has(key)) return resolvedCache.get(key)!;
@@ -232,6 +232,23 @@ async function resolveLogoCandidates(name: string): Promise<string[]> {
   const p = (async () => {
     const candidates: string[] = [];
     try {
+      // 0) URL ESPECÍFICA DO PRÓPRIO CLUBE — quando quem chamou já tem o
+      // escudo certo (ex.: veio de uma linha de classificação ou de um
+      // resultado de busca com api_id próprio), resolve exatamente essa URL
+      // pelo servidor (que não tem o problema de DNS do navegador com
+      // media.api-sports.io) em vez de adivinhar por nome. Maior prioridade
+      // sempre — nunca deixa um "chute" por nome aparecer na frente do
+      // escudo correto e específico daquele clube.
+      const normalizedSrc = rawSrc && rawSrc.trim() ? normalizeLogoSrc(rawSrc) : null;
+      if (normalizedSrc && isApiSportsAsset(normalizedSrc)) {
+        const direct = await withTimeout(
+          supabase.functions.invoke("resolve-club-logo", { body: { clubName: name, logoUrl: normalizedSrc } }),
+          2500,
+        );
+        const directUrl = (direct?.data as any)?.url as string | null;
+        if (directUrl) candidates.push(directUrl);
+      }
+
       // Busca apenas pelo NOME COMPLETO do clube — nunca por um token isolado
       // (ex.: só "Botafogo"), que casaria com qualquer homônimo (Botafogo SP,
       // PB, BA...) e "emprestaria" o escudo errado de outro clube.
@@ -255,13 +272,15 @@ async function resolveLogoCandidates(name: string): Promise<string[]> {
       const cacheUrls = dedupe(candidates);
       if (cacheUrls.length) resolvedCache.set(key, cacheUrls);
 
-      const functionResult = await withTimeout(
-        supabase.functions.invoke("resolve-club-logo", { body: { clubName: name } }),
-        2500,
-      );
-      const data = functionResult?.data;
-      const url = (data as any)?.url as string | null;
-      if (url) candidates.push(url);
+      if (!candidates.length) {
+        const functionResult = await withTimeout(
+          supabase.functions.invoke("resolve-club-logo", { body: { clubName: name } }),
+          2500,
+        );
+        const data = functionResult?.data;
+        const url = (data as any)?.url as string | null;
+        if (url) candidates.push(url);
+      }
 
       const urls = dedupe(candidates);
       resolvedCache.set(key, urls);
@@ -368,7 +387,7 @@ export const ClubLogo = ({
     setFailed(false);
     setResolving(true);
 
-    resolveLogoCandidates(effectiveName).then((urls) => {
+    resolveLogoCandidates(effectiveName, src).then((urls) => {
       if (cancelled) return;
       const next = dedupe([...initial, ...urls]).filter((url) => !failedSources.current.has(url));
       setCandidates(next);

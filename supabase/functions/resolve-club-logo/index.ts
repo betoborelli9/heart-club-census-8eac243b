@@ -106,8 +106,27 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   try {
-    const { clubName } = await req.json();
+    const { clubName, logoUrl } = await req.json();
     const name = (clubName || "").trim();
+
+    // 0) URL DIRETA — quando o chamador já sabe o escudo exato do clube
+    // específico (ex.: veio de uma linha de classificação ou resultado de
+    // busca com api_id próprio), converte essa URL exata em vez de tentar
+    // "adivinhar" por nome. Elimina qualquer risco de pegar o escudo de um
+    // homônimo — o navegador do torcedor não consegue acessar
+    // media.api-sports.io diretamente (DNS), mas o servidor consegue.
+    if (typeof logoUrl === "string" && logoUrl.trim()) {
+      const raw = logoUrl.trim();
+      if (await urlAlive(raw)) {
+        const safeUrl = await imageUrlToDataUrl(raw);
+        return new Response(JSON.stringify({ url: safeUrl || raw, source: "direct" }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      // URL informada não respondeu — segue para a cascata por nome abaixo
+      // (só quando também temos um clubName; senão devolve vazio).
+    }
+
     if (!name) {
       return new Response(JSON.stringify({ url: null, source: "none" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
