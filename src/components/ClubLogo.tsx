@@ -125,15 +125,20 @@ const dedupe = (items: Array<string | null | undefined>) => {
   return out;
 };
 
+// Palavras "genéricas" (forma jurídica/esportiva) que NÃO identificam um
+// clube específico — diferente de qualificadores curtos como "SP"/"MG"/"BA",
+// que precisam continuar contando como diferenciadores (ver nonGenericParts).
+const GENERIC_NAME_WORDS = new Set([
+  "sport", "club", "clube", "de", "da", "do", "dos", "das", "e", "futebol",
+  "esporte", "esportes", "esportiva", "esportivo", "sociedade", "associacao",
+  "association", "football", "fc", "cf", "ec", "sc", "ac", "regatas", "regata",
+  "atletico", "atletica", "gremio",
+]);
+
 const significantTokens = (name: string) => {
-  const stop = new Set([
-    "sport", "club", "clube", "de", "da", "do", "dos", "das", "e", "futebol",
-    "esporte", "esportes", "sociedade", "associacao", "association", "football", "fc",
-    "cf", "ec", "sc", "ac", "regatas", "regata", "atletico", "atletica", "gremio",
-  ]);
   return slugify(name)
     .split("-")
-    .filter((token) => token.length > 2 && !stop.has(token))
+    .filter((token) => token.length > 2 && !GENERIC_NAME_WORDS.has(token))
     .sort((a, b) => b.length - a.length);
 };
 
@@ -156,8 +161,6 @@ const localLogosByName = (name: string): string[] => {
   const exact: string[] = [];
   const prefixed: string[] = [];
   const tokenMatches: string[] = [];
-  const allSignificantTokens = significantTokens(name);
-  const tokens = allSignificantTokens.filter((token) => token.length >= 4);
   for (const file of LOCAL_LOGOS) {
     if (file === slug) exact.push(logoPath(file));
     else if (file.startsWith(`${slug}-`)) prefixed.push(logoPath(file));
@@ -166,22 +169,28 @@ const localLogosByName = (name: string): string[] => {
   if (exact.length > 0) return dedupe(exact);
 
   const slugParts = slug.split("-").filter(Boolean);
+  // Diferente de significantTokens() (usado só para achar o "apelido" do
+  // clube), aqui NÃO filtramos por tamanho — uma sigla de 2 letras como
+  // "SP"/"MG"/"BA"/"PB" É um qualificador que distingue clubes homônimos e
+  // não pode ser ignorada, só as palavras genéricas de forma jurídica.
+  const nonGenericParts = slugParts.filter((p) => !GENERIC_NAME_WORDS.has(p));
   const isSingleAmbiguousSlug = slugParts.length === 1 && AMBIGUOUS_LOCAL_TOKEN_MATCHES.has(slugParts[0]);
   if (prefixed.length === 1 && !isSingleAmbiguousSlug) return dedupe(prefixed);
   if (prefixed.length > 1 && slugParts.length > 1) return dedupe(prefixed);
 
   // Casar por uma única palavra-chave (ex.: "botafogo") só é seguro quando o
-  // nome do clube NÃO tem nenhum outro qualificador significativo (sigla de
-  // estado, cidade etc.). Caso contrário um homônimo mais famoso "empresta"
-  // o escudo local errado para outro clube (ex.: Botafogo SP/PB/BA pegando
-  // o escudo do Botafogo do Rio). Mais robusto que manter uma lista manual
-  // de nomes ambíguos, que nunca cobre todos os casos.
-  if (allSignificantTokens.length === 1) {
-    tokens.forEach((token) => {
-      if (AMBIGUOUS_LOCAL_TOKEN_MATCHES.has(token)) return;
+  // nome do clube NÃO tem nenhum outro qualificador (sigla de estado, "U20",
+  // "B", cidade etc.) além da palavra genérica de forma jurídica. Caso
+  // contrário um homônimo mais famoso "empresta" o escudo local errado para
+  // outro clube (ex.: Botafogo SP/PB/BA pegando o escudo do Botafogo do
+  // Rio). Mais robusto que manter uma lista manual de nomes ambíguos, que
+  // nunca cobre todos os casos.
+  if (nonGenericParts.length === 1) {
+    const token = nonGenericParts[0];
+    if (token.length >= 3 && !AMBIGUOUS_LOCAL_TOKEN_MATCHES.has(token)) {
       const matches = LOCAL_LOGOS.filter((file) => file === token || file.startsWith(`${token}-`));
       if (matches.length === 1) tokenMatches.push(logoPath(matches[0]));
-    });
+    }
   }
 
   return dedupe(tokenMatches);
@@ -389,7 +398,10 @@ export const ClubLogo = ({
 
     resolveLogoCandidates(effectiveName, src).then((urls) => {
       if (cancelled) return;
-      const next = dedupe([...initial, ...urls]).filter((url) => !failedSources.current.has(url));
+      // A resolução assíncrona (direta por URL/api_id, ou cache exato por
+      // nome) é sempre mais confiável que o "chute" local usado só para
+      // evitar tela em branco enquanto carrega — por isso vem primeiro.
+      const next = dedupe([...urls, ...initial]).filter((url) => !failedSources.current.has(url));
       setCandidates(next);
       setFailed(next.length === 0);
       setResolving(false);
