@@ -120,17 +120,34 @@ async function getStandings(leagueId: number, season: number, bypassCache = fals
   if (!bypassCache && cached && Date.now() - new Date(cached.updated_at as any).getTime() < TTL_2M) {
     return cached.standings_json as any;
   }
-  const j = await af(`/standings?league=${leagueId}&season=${season}`);
-  const groups = j?.response?.[0]?.league?.standings || [];
-  const payload = { groups, league_name: j?.response?.[0]?.league?.name };
-  await supabase.from("competition_standings_cache").upsert({
-    league_id: leagueId,
-    season,
-    league_name: payload.league_name,
-    standings_json: payload,
-    updated_at: new Date().toISOString(),
-  });
-  return payload;
+  try {
+    const j = await af(`/standings?league=${leagueId}&season=${season}`);
+    const groups = j?.response?.[0]?.league?.standings || [];
+    // API-Football às vezes devolve resposta vazia momentaneamente (rate
+    // limit, instabilidade durante jogo ao vivo) — preserva o cache anterior
+    // em vez de sobrescrever/servir um resultado vazio.
+    if (groups.length === 0 && cached?.standings_json) {
+      return cached.standings_json as any;
+    }
+    const payload = { groups, league_name: j?.response?.[0]?.league?.name };
+    await supabase.from("competition_standings_cache").upsert({
+      league_id: leagueId,
+      season,
+      league_name: payload.league_name,
+      standings_json: payload,
+      updated_at: new Date().toISOString(),
+    });
+    return payload;
+  } catch (e) {
+    // Falha na busca fresca (ex.: rate limit da API durante jogo ao vivo em
+    // outra partida da competição) — cai para o último cache bom conhecido
+    // em vez de deixar a tabela desaparecer para o torcedor.
+    if (cached?.standings_json) {
+      console.warn(`[getStandings] fetch falhou para league=${leagueId} season=${season}, usando cache anterior:`, e);
+      return cached.standings_json as any;
+    }
+    throw e;
+  }
 }
 
 async function getFixtures(teamId: number) {
