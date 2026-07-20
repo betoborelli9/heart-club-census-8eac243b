@@ -99,6 +99,19 @@ async function getCurrentLeagues(teamId: number, teamName: string, teamLogo: str
       };
     }).filter((l: any) => l.id && l.season);
   }
+  // Fetch fresco (current=true + fallback todas as temporadas) ainda assim
+  // veio vazio, mas já tínhamos uma lista de ligas boa guardada (mesmo que
+  // com o cache de 24h expirado) — provável instabilidade/limite momentâneo
+  // da API-Football, não que o time parou de disputar tudo. Mantém a lista
+  // antiga em vez de apagar as competições do torcedor.
+  const cachedLeagues: any[] = Array.isArray((cached?.leagues_json as any)?.leagues)
+    ? (cached!.leagues_json as any).leagues
+    : [];
+  if (leagues.length === 0 && cachedLeagues.length > 0) {
+    console.warn(`[getCurrentLeagues] fetch veio vazio para team=${teamId}, usando cache anterior`);
+    return cachedLeagues;
+  }
+
   await supabase.from("team_leagues_mapping").upsert({
     team_id: teamId,
     team_name: teamName,
@@ -180,6 +193,20 @@ async function getFixtures(teamId: number) {
     next: (next?.response || []).map(mapFx),
     live: (live?.response || []).map(mapFx),
   };
+
+  // Resposta fresca veio totalmente vazia (ex.: limite de requisições da
+  // API-Football momentâneo) mas já tínhamos jogos guardados — mantém o
+  // último estado bom conhecido em vez de apagar o próximo jogo/a tabela
+  // inteira do torcedor (a ausência de jogos vira "nenhuma competição
+  // ativa" mais adiante, derrubando a tabela de classificação também).
+  const cachedPayload = cached?.payload as { next?: unknown[]; live?: unknown[] } | undefined;
+  const hadGoodCache = !!(cachedPayload && (((cachedPayload.next as unknown[])?.length ?? 0) > 0 || ((cachedPayload.live as unknown[])?.length ?? 0) > 0));
+  const freshIsEmpty = payload.next.length === 0 && payload.live.length === 0;
+  if (freshIsEmpty && hadGoodCache) {
+    console.warn(`[getFixtures] fetch veio vazio para team=${teamId}, usando cache anterior`);
+    return cachedPayload;
+  }
+
   await supabase.from("team_fixtures_cache").upsert({
     team_id: teamId,
     payload,
