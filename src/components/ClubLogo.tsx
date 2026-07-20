@@ -234,12 +234,8 @@ const withTimeout = async <T,>(promise: Promise<T>, ms: number): Promise<T | nul
 
 async function resolveLogoCandidates(name: string, rawSrc?: string | null): Promise<string[]> {
   const key = normalizeName(name);
-  console.debug("[HC-DEBUG] resolveLogoCandidates called", { name, rawSrc, key });
   if (!key) return [];
-  if (resolvedCache.has(key)) {
-    console.debug("[HC-DEBUG] resolvedCache HIT", { key, cached: resolvedCache.get(key) });
-    return resolvedCache.get(key)!;
-  }
+  if (resolvedCache.has(key)) return resolvedCache.get(key)!;
   if (inflight.has(key)) return inflight.get(key)!;
 
   const p = (async () => {
@@ -253,14 +249,11 @@ async function resolveLogoCandidates(name: string, rawSrc?: string | null): Prom
       // sempre — nunca deixa um "chute" por nome aparecer na frente do
       // escudo correto e específico daquele clube.
       const normalizedSrc = rawSrc && rawSrc.trim() ? normalizeLogoSrc(rawSrc) : null;
-      console.debug("[HC-DEBUG] step0 check", { normalizedSrc, isApiSports: normalizedSrc ? isApiSportsAsset(normalizedSrc) : null });
       if (normalizedSrc && isApiSportsAsset(normalizedSrc)) {
-        console.debug("[HC-DEBUG] step0 calling resolve-club-logo", { name, normalizedSrc });
         const direct = await withTimeout(
           supabase.functions.invoke("resolve-club-logo", { body: { clubName: name, logoUrl: normalizedSrc } }),
           2500,
         );
-        console.debug("[HC-DEBUG] step0 result", { data: direct?.data, error: (direct as any)?.error });
         const directUrl = (direct?.data as any)?.url as string | null;
         if (directUrl) candidates.push(directUrl);
       }
