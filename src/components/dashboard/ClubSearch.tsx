@@ -113,9 +113,16 @@ export const ClubSearch = ({ onSelect }: { onSelect: (club: ClubSearchResult) =>
               {club.mascote && ` • 🐾 ${club.mascote}`}
             </span>
           </div>
-          {club.source === "api" && (
-            <Globe className="w-3.5 h-3.5 text-primary/60 shrink-0" />
-          )}
+          <span
+            className={`shrink-0 flex items-center gap-1 text-[8px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded-full border ${
+              club.source === "api"
+                ? "text-primary/80 border-primary/40 bg-primary/10"
+                : "text-emerald-400/80 border-emerald-400/30 bg-emerald-400/10"
+            }`}
+          >
+            {club.source === "api" ? <Globe className="w-2.5 h-2.5" /> : null}
+            {club.source === "api" ? "API" : "LOCAL"}
+          </span>
         </button>
       ))}
     </div>

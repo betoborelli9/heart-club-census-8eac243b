@@ -113,6 +113,7 @@ export async function searchClubsWithFallback(query: string, limit = 20): Promis
       .filter(
         (c: any) =>
           isValidClubName(c.nome) &&
+          !isYouthTeam(c.nome) &&
           (stripAccents(c.nome).includes(normalized) || matchesCanon(c.nome)),
       )
       .map(mapCacheRow);
@@ -121,6 +122,7 @@ export async function searchClubsWithFallback(query: string, limit = 20): Promis
       .filter(
         (t: any) =>
           isValidClubName(t.name) &&
+          !isYouthTeam(t.name) &&
           (stripAccents(t.name).includes(normalized) || matchesCanon(t.name)),
       )
       .map((t: any) => ({
@@ -175,6 +177,16 @@ export function isValidClubName(raw: string | null | undefined): boolean {
   if (blacklist.test(name)) return false;
   if (/seu\s+clube/i.test(name)) return false;
   return true;
+}
+
+/**
+ * Times de base/categorias de formação (Sub-15, Sub-17, U17, U20, U23...) —
+ * o Heart Club é um censo de torcida do time profissional, não faz sentido
+ * aparecer como clube separado na busca.
+ */
+export function isYouthTeam(raw: string | null | undefined): boolean {
+  const name = (raw || "").trim();
+  return /\b(u-?1[0-9]|u-?2[0-3]|sub-?1[0-9]|sub-?2[0-3])\b/i.test(name);
 }
 
 export async function persistClubsIfMissing(clubs: ClubSearchResult[]): Promise<void> {

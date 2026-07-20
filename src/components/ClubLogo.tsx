@@ -278,10 +278,13 @@ async function resolveLogoCandidates(name: string, rawSrc?: string | null): Prom
         candidates.push(...localLogoCandidatesFromRow(name, row));
       });
 
-      const cacheUrls = dedupe(candidates);
-      if (cacheUrls.length) resolvedCache.set(key, cacheUrls);
-
-      if (!candidates.length) {
+      // Decide se ainda precisa buscar por nome olhando o resultado JÁ
+      // FILTRADO (pós-dedupe) — não o array bruto. Uma URL do
+      // media.api-sports.io ainda não convertida conta como candidata no
+      // array bruto, mas é descartada pelo dedupe() por não carregar no
+      // navegador; se essa fosse a única coisa encontrada, o sistema achava
+      // (errado) que já tinha resolvido e desistia de buscar de verdade.
+      if (!dedupe(candidates).length) {
         const functionResult = await withTimeout(
           supabase.functions.invoke("resolve-club-logo", { body: { clubName: name } }),
           2500,

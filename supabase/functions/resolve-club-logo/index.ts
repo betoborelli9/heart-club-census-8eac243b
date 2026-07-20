@@ -78,6 +78,13 @@ async function fromApiFootball(name: string): Promise<{ url: string; api_id: num
   return null;
 }
 
+// Confirma que a página achada é mesmo sobre um clube de futebol antes de
+// usar a imagem — sem isso, um nome ruim/inexistente (ex.: uma cidade
+// cadastrada por engano como "rival") pode casar com o artigo errado da
+// Wikipedia (ex.: a página da cidade) e devolver a foto errada como se
+// fosse um escudo.
+const FOOTBALL_KEYWORDS = /football club|soccer club|association football|futebol clube|clube de futebol/i;
+
 async function fromWikipedia(name: string): Promise<string | null> {
   // 1) Busca a página
   try {
@@ -88,15 +95,21 @@ async function fromWikipedia(name: string): Promise<string | null> {
     const sj = await s.json();
     const title = sj?.query?.search?.[0]?.title;
     if (!title) return null;
-    // 2) Imagem principal (page image)
+    // 2) Imagem principal + categorias + resumo, pra confirmar que a página
+    // é realmente sobre um clube de futebol (não uma cidade, pessoa etc.)
     const p = await fetch(
-      `https://en.wikipedia.org/w/api.php?action=query&format=json&prop=pageimages&piprop=original&titles=${encodeURIComponent(title)}&origin=*`,
+      `https://en.wikipedia.org/w/api.php?action=query&format=json&prop=pageimages|categories|extracts&piprop=original&exintro=true&explaintext=true&cllimit=50&titles=${encodeURIComponent(title)}&origin=*`,
     );
     const pj = await p.json();
     const pages = pj?.query?.pages || {};
     for (const k of Object.keys(pages)) {
-      const src = pages[k]?.original?.source;
-      if (src) return src as string;
+      const page = pages[k];
+      const src = page?.original?.source;
+      if (!src) continue;
+      const categoryText = (page?.categories || []).map((c: any) => c?.title || "").join(" ");
+      const extract = page?.extract || "";
+      if (!FOOTBALL_KEYWORDS.test(categoryText) && !FOOTBALL_KEYWORDS.test(extract)) continue;
+      return src as string;
     }
   } catch {}
   return null;
@@ -155,12 +168,20 @@ serve(async (req) => {
       });
     }
 
+    // Se já existe uma linha pra esse clube (achada por nome exato/canônico
+    // acima) mas com escudo ausente/quebrado, qualquer escudo novo que
+    // acharmos abaixo deve ATUALIZAR essa mesma linha — nunca criar uma
+    // linha nova sob o nome de entrada (que pode vir em outra grafia, ex.:
+    // "Club de Regatas Vasco da Gama" vs a linha já existente "Vasco DA
+    // Gama"). Isso é o que gerava registros duplicados/incompletos.
+    const upsertName = row?.nome || name;
+
     // 2) API-FOOTBALL
     const api = await fromApiFootball(name);
     if (api?.url) {
       try {
         await supabase.from("clubes_cache").upsert(
-          { nome: name, escudo_url: api.url, api_id: api.api_id },
+          { nome: upsertName, escudo_url: api.url, api_id: api.api_id },
           { onConflict: "nome" },
         );
       } catch {}
@@ -175,7 +196,7 @@ serve(async (req) => {
     if (wiki) {
       try {
         await supabase.from("clubes_cache").upsert(
-          { nome: name, escudo_url: wiki },
+          { nome: upsertName, escudo_url: wiki },
           { onConflict: "nome" },
         );
       } catch {}
