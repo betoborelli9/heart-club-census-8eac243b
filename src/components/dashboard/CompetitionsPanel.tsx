@@ -105,7 +105,14 @@ export default function CompetitionsPanel({ clubName, primaryColor = "#ff6200" }
             return ta - tb;
           });
           setCompetitions(sorted);
-          if (!activeTab) setActiveTab(String(sorted[0].leagueId));
+          // Usa updater funcional (nunca closure obsoleta) e só troca de aba
+          // quando a competição atual não existe mais na lista — evita tanto
+          // o "reset forçado" a cada poll quanto a aba órfã (tabela em branco)
+          // quando uma competição some/volta da resposta da API-Football.
+          setActiveTab((prev) => {
+            const stillValid = prev && sorted.some((c) => String(c.leagueId) === prev);
+            return stillValid ? prev : String(sorted[0].leagueId);
+          });
         } else if (firstLoad) {
           setCompetitions([]);
         }
