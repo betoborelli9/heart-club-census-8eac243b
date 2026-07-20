@@ -7,6 +7,7 @@ import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { LOCAL_LOGOS } from "@/data/logos-manifest";
+import { canonicalClubKey } from "@/lib/canonical-club";
 
 type LogoSize = "xs" | "sm" | "md" | "lg" | "xl";
 
@@ -155,7 +156,8 @@ const localLogosByName = (name: string): string[] => {
   const exact: string[] = [];
   const prefixed: string[] = [];
   const tokenMatches: string[] = [];
-  const tokens = significantTokens(name).filter((token) => token.length >= 4);
+  const allSignificantTokens = significantTokens(name);
+  const tokens = allSignificantTokens.filter((token) => token.length >= 4);
   for (const file of LOCAL_LOGOS) {
     if (file === slug) exact.push(logoPath(file));
     else if (file.startsWith(`${slug}-`)) prefixed.push(logoPath(file));
@@ -168,11 +170,19 @@ const localLogosByName = (name: string): string[] => {
   if (prefixed.length === 1 && !isSingleAmbiguousSlug) return dedupe(prefixed);
   if (prefixed.length > 1 && slugParts.length > 1) return dedupe(prefixed);
 
-  tokens.forEach((token) => {
-    if (AMBIGUOUS_LOCAL_TOKEN_MATCHES.has(token)) return;
-    const matches = LOCAL_LOGOS.filter((file) => file === token || file.startsWith(`${token}-`));
-    if (matches.length === 1) tokenMatches.push(logoPath(matches[0]));
-  });
+  // Casar por uma única palavra-chave (ex.: "botafogo") só é seguro quando o
+  // nome do clube NÃO tem nenhum outro qualificador significativo (sigla de
+  // estado, cidade etc.). Caso contrário um homônimo mais famoso "empresta"
+  // o escudo local errado para outro clube (ex.: Botafogo SP/PB/BA pegando
+  // o escudo do Botafogo do Rio). Mais robusto que manter uma lista manual
+  // de nomes ambíguos, que nunca cobre todos os casos.
+  if (allSignificantTokens.length === 1) {
+    tokens.forEach((token) => {
+      if (AMBIGUOUS_LOCAL_TOKEN_MATCHES.has(token)) return;
+      const matches = LOCAL_LOGOS.filter((file) => file === token || file.startsWith(`${token}-`));
+      if (matches.length === 1) tokenMatches.push(logoPath(matches[0]));
+    });
+  }
 
   return dedupe(tokenMatches);
 };
@@ -222,26 +232,25 @@ async function resolveLogoCandidates(name: string): Promise<string[]> {
   const p = (async () => {
     const candidates: string[] = [];
     try {
-      const token = significantTokens(name)[0];
-      const queries = [name, token].filter(Boolean) as string[];
+      // Busca apenas pelo NOME COMPLETO do clube — nunca por um token isolado
+      // (ex.: só "Botafogo"), que casaria com qualquer homônimo (Botafogo SP,
+      // PB, BA...) e "emprestaria" o escudo errado de outro clube.
+      const { data: cacheRows } = await supabase
+        .from("clubes_cache")
+        .select("nome, nome_curto, escudo_url, cidade, pais")
+        .ilike("nome", `%${name}%`)
+        .order("escudo_url", { ascending: false, nullsFirst: false })
+        .limit(6);
 
-      for (const query of queries) {
-        const { data } = await supabase
-          .from("clubes_cache")
-          .select("nome, nome_curto, escudo_url, cidade, pais")
-          .ilike("nome", `%${query}%`)
-          .order("escudo_url", { ascending: false, nullsFirst: false })
-          .limit(6);
-
-        (data || []).forEach((row: ClubeCacheLogoRow) => {
-          candidates.push(row.escudo_url || "");
-          candidates.push(...localLogosByName(row.nome || ""));
-          candidates.push(...localLogosByName(row.nome_curto || ""));
-          candidates.push(...localLogoCandidatesFromRow(name, row));
-        });
-
-        if (candidates.length > 0) break;
-      }
+      (cacheRows || []).forEach((row: ClubeCacheLogoRow) => {
+        // Só aceita o escudo da linha se o nome dela bater com o clube pedido
+        // (mesma chave canônica) — impede vazamento de escudo entre homônimos.
+        if (canonicalClubKey(row.nome || "") !== canonicalClubKey(name)) return;
+        candidates.push(row.escudo_url || "");
+        candidates.push(...localLogosByName(row.nome || ""));
+        candidates.push(...localLogosByName(row.nome_curto || ""));
+        candidates.push(...localLogoCandidatesFromRow(name, row));
+      });
 
       const cacheUrls = dedupe(candidates);
       if (cacheUrls.length) resolvedCache.set(key, cacheUrls);
