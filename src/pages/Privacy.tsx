@@ -1,6 +1,6 @@
 /**
  * [CAMINHO]: src/pages/Privacy.tsx
- * [DESCRIÇÃO]: Política de Privacidade — LGPD (texto padrão, revisar com jurídico).
+ * [DESCRIÇÃO]: Política de Privacidade — LGPD.
  */
 import { Link } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
@@ -15,7 +15,7 @@ const Privacy = () => (
       <header className="space-y-2">
         <h1 className="text-3xl font-display font-bold">Política de Privacidade</h1>
         <p className="text-sm text-muted-foreground">
-          Última atualização: 22 de junho de 2026 — Versão 1.0
+          Última atualização: 20 de julho de 2026 — Versão 1.1
         </p>
       </header>
 
@@ -36,6 +36,7 @@ const Privacy = () => (
             (<code>votos_tracking</code>), com acesso apenas administrativo, exclusivamente para garantir
             a regra de <em>"1 pessoa = 1 voto"</em> (Voto Sagrado).</li>
           <li><strong>Perfil socioeconômico (opcional):</strong> faixa etária, profissão, classe social — apenas se você informar.</li>
+          <li><strong>Notificações push (opcional):</strong> token do dispositivo, gerado apenas se você autorizar notificações — usado exclusivamente para envio de avisos da plataforma. Pode ser revogado a qualquer momento nas configurações de notificação.</li>
         </ul>
 
         <h2 className="text-lg font-bold pt-4">2. Por que coletamos (base legal)</h2>
@@ -50,7 +51,8 @@ const Privacy = () => (
           Não vendemos seus dados. Dados agregados e anonimizados (sem identificação pessoal)
           podem ser publicados em relatórios, mapas e rankings públicos da plataforma.
           Provedores de infraestrutura utilizados: Supabase (banco de dados), Resend (e-mails),
-          FingerprintJS (identificação de dispositivo).
+          FingerprintJS (identificação de dispositivo), Mapbox (busca de endereço/cidade no
+          mapa de calor — recebe apenas o texto pesquisado, sem dados de identificação).
         </p>
 
         <h2 className="text-lg font-bold pt-4">4. Seus direitos (Art. 18 LGPD)</h2>
@@ -82,13 +84,10 @@ const Privacy = () => (
 
         <h2 className="text-lg font-bold pt-4">7. Encarregado (DPO) e contato</h2>
         <p>
-          Para dúvidas, exercício de direitos ou denúncias relacionadas à LGPD, contate:
+          Para dúvidas, exercício de direitos ou denúncias relacionadas à LGPD, contate nosso
+          Encarregado de Proteção de Dados:
           <br />
-          <strong>[NOME DO DPO — PREENCHER]</strong> — <a className="text-primary underline" href="mailto:admin@heartclubapp.com">admin@heartclubapp.com</a>
-        </p>
-
-        <p className="pt-4 text-xs text-muted-foreground">
-          [TEXTO PADRÃO — REVISAR COM ADVOGADO ANTES DE PUBLICAR EM PRODUÇÃO]
+          <a className="text-primary underline" href="mailto:admin@heartclubapp.com">admin@heartclubapp.com</a>
         </p>
       </section>
     </div>
