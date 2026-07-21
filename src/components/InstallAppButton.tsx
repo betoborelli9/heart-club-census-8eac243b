@@ -4,6 +4,9 @@
  * - Android/Chrome: usa beforeinstallprompt + modal de alertas de dia de jogo.
  * - iOS: força exibição; Safari mostra passo a passo curto, outros navegadores
  *   redirecionam para x-web-search:// com o site pronto.
+ * - Nunca aparece na 1ª visita (não atrapalha o cadastro/voto inicial) — só
+ *   a partir da 2ª vez que o torcedor voltar. Some por 7 dias se ele fechar
+ *   sem instalar. Se instalar, nunca mais aparece pra ele.
  */
 import { useEffect, useState, useMemo } from "react";
 import { Download, X, Share, Plus } from "lucide-react";
@@ -25,6 +28,8 @@ interface BIPEvent extends Event {
 
 const DISMISS_KEY = "hc_install_dismissed_at";
 const ALERTS_PREF_KEY = "hc_gameday_alerts_pref";
+const VISITED_KEY = "hc_visited_before";
+const INSTALLED_KEY = "hc_app_installed";
 const SITE_URL = "votenoseuclube.com.br";
 
 const isIOSDevice = () => {
@@ -66,7 +71,21 @@ const InstallAppButton = () => {
   const safariIOS = useMemo(() => isSafariIOS(), []);
 
   useEffect(() => {
-    if (isStandaloneMode()) return;
+    // Já rodando como app instalado — marca permanentemente (cobre também
+    // instalações feitas fora do nosso botão, ex.: menu do próprio navegador)
+    // e nunca mostra o banner de novo pra esse torcedor.
+    if (isStandaloneMode()) {
+      localStorage.setItem(INSTALLED_KEY, "1");
+      return;
+    }
+    if (localStorage.getItem(INSTALLED_KEY)) return;
+
+    // 1ª visita: não atrapalha o cadastro/voto do torcedor. Só marca que ele
+    // já esteve aqui — o banner passa a valer a partir da próxima vez.
+    if (!localStorage.getItem(VISITED_KEY)) {
+      localStorage.setItem(VISITED_KEY, "1");
+      return;
+    }
 
     const dismissedAt = Number(localStorage.getItem(DISMISS_KEY) || 0);
     if (dismissedAt && Date.now() - dismissedAt < 1000 * 60 * 60 * 24 * 7) return;
@@ -85,14 +104,27 @@ const InstallAppButton = () => {
       setVisible(true);
     };
     window.addEventListener("beforeinstallprompt", handler);
-    return () => window.removeEventListener("beforeinstallprompt", handler);
+
+    // Sinal definitivo de instalação concluída — nunca mais mostra.
+    const onInstalled = () => {
+      localStorage.setItem(INSTALLED_KEY, "1");
+      setVisible(false);
+      setDeferred(null);
+    };
+    window.addEventListener("appinstalled", onInstalled);
+
+    return () => {
+      window.removeEventListener("beforeinstallprompt", handler);
+      window.removeEventListener("appinstalled", onInstalled);
+    };
   }, []);
 
   const triggerNativeInstall = async () => {
     if (!deferred) return;
     try {
       await deferred.prompt();
-      await deferred.userChoice;
+      const choice = await deferred.userChoice;
+      if (choice.outcome === "accepted") localStorage.setItem(INSTALLED_KEY, "1");
     } finally {
       setDeferred(null);
       setVisible(false);
@@ -132,7 +164,13 @@ const InstallAppButton = () => {
 
   const handleIOSConfirm = () => {
     if (safariIOS) {
+      // iOS não tem evento de confirmação de instalação (a Apple não expõe
+      // isso pra web) — ao confirmar que seguiu o passo a passo, assume
+      // concluído e não mostra mais. Se o site for aberto depois em modo
+      // standalone, isso também fica confirmado automaticamente.
+      localStorage.setItem(INSTALLED_KEY, "1");
       setShowIOSGuide(false);
+      setVisible(false);
       return;
     }
     // Chrome/outros navegadores no iOS: tenta abrir direto no Safari.
