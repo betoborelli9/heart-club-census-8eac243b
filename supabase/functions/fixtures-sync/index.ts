@@ -82,6 +82,25 @@ serve(async (req) => {
           goals: f.goals,
         }));
 
+        // A API-Football às vezes responde 200 com resposta vazia (ex.: limite
+        // de requisições momentâneo) em vez de erro — se isso acontecer e já
+        // havia jogos salvos, NÃO sobrescreve (e não marca como sincronizado
+        // agora, pra tentar de novo antes das 20h) em vez de apagar o "próximo
+        // jogo" de todo mundo até a próxima janela.
+        if (fixtures.length === 0) {
+          const { data: prevRow } = await supabase
+            .from("team_fixtures_cache")
+            .select("payload")
+            .eq("team_id", teamId)
+            .maybeSingle();
+          const prevFixtures = (prevRow as any)?.payload?.next;
+          if (Array.isArray(prevFixtures) && prevFixtures.length > 0) {
+            console.warn(`team ${teamId}: fetch veio vazio, mantendo cache anterior`);
+            skipped++;
+            continue;
+          }
+        }
+
         await supabase.from("team_fixtures_cache").upsert({
           team_id: teamId,
           payload: { next: fixtures, live: [], synced_at: new Date().toISOString() },
