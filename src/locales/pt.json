@@ -566,6 +566,12 @@
     "live": "AO VIVO",
     "team_col": "Time",
     "target": "alvo",
+    "kickoff_in": "Começa em",
+    "starting_soon": "Começando...",
+    "days_short": "dias",
+    "hours_short": "hrs",
+    "min_short": "min",
+    "sec_short": "seg",
     "zones": {
       "lib_g": "Libertadores (Fase de Grupos)",
       "lib_p": "Pré-Libertadores",

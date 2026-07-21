@@ -566,6 +566,12 @@
     "live": "LIVE",
     "team_col": "Team",
     "target": "target",
+    "kickoff_in": "Kicks off in",
+    "starting_soon": "Starting...",
+    "days_short": "days",
+    "hours_short": "hrs",
+    "min_short": "min",
+    "sec_short": "sec",
     "zones": {
       "lib_g": "Libertadores (Group Stage)",
       "lib_p": "Pre-Libertadores",

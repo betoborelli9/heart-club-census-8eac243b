@@ -262,7 +262,7 @@ function MatchCard({ match, live, primaryColor }: { match: Match | null; live: b
         </div>
       </div>
       <div className="flex justify-center">
-        <div className="px-4 py-1.5 rounded-md bg-black/40 text-center min-w-[92px] shrink-0">
+        <div className="px-4 py-2 rounded-xl bg-black/40 text-center shrink-0">
           {isLive || match.goals.home != null ? (
             <div className="flex flex-col items-center leading-none">
               {isLive && match.elapsed != null && (
@@ -280,7 +280,7 @@ function MatchCard({ match, live, primaryColor }: { match: Match | null; live: b
               )}
             </div>
           ) : (
-            <span className="text-xs font-black text-white/60">{timeStr}</span>
+            <MatchCountdown targetDate={match.date} primaryColor={primaryColor} fallbackTime={timeStr} />
           )}
         </div>
       </div>
@@ -290,6 +290,83 @@ function MatchCard({ match, live, primaryColor }: { match: Match | null; live: b
           <MapPin className="w-2.5 h-2.5" /> {match.venue}
         </div>
       )}
+    </div>
+  );
+}
+
+/**
+ * Contagem regressiva ao vivo (atualiza a cada segundo) até o apito inicial.
+ * Dias+horas+minutos quando falta mais de 1 dia; horas+minutos+segundos
+ * quando falta menos — sempre os 3 números mais relevantes pro torcedor.
+ */
+function MatchCountdown({
+  targetDate,
+  primaryColor,
+  fallbackTime,
+}: {
+  targetDate: string;
+  primaryColor: string;
+  fallbackTime: string;
+}) {
+  const { t } = useTranslationApp();
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  const diffMs = new Date(targetDate).getTime() - now;
+
+  if (diffMs <= 0) {
+    return (
+      <span className="text-[11px] font-black uppercase italic text-white/60 animate-pulse">
+        {t("competitions.starting_soon")}
+      </span>
+    );
+  }
+
+  const totalSeconds = Math.floor(diffMs / 1000);
+  const days = Math.floor(totalSeconds / 86400);
+  const hours = Math.floor((totalSeconds % 86400) / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  const pad = (n: number) => String(n).padStart(2, "0");
+
+  const units: Array<[number, string]> =
+    days > 0
+      ? [
+          [days, t("competitions.days_short")],
+          [hours, t("competitions.hours_short")],
+          [minutes, t("competitions.min_short")],
+        ]
+      : [
+          [hours, t("competitions.hours_short")],
+          [minutes, t("competitions.min_short")],
+          [seconds, t("competitions.sec_short")],
+        ];
+
+  return (
+    <div className="flex flex-col items-center gap-1">
+      <span className="text-[8px] font-black uppercase tracking-widest text-white/35">
+        {t("competitions.kickoff_in")}
+      </span>
+      <div className="flex items-end gap-2.5">
+        {units.map(([value, label], i) => (
+          <div key={i} className="flex flex-col items-center min-w-[26px]">
+            <span
+              className="text-lg font-black tabular-nums leading-none"
+              style={{ color: primaryColor }}
+            >
+              {pad(value)}
+            </span>
+            <span className="text-[7px] font-bold uppercase tracking-widest text-white/40 mt-1">
+              {label}
+            </span>
+          </div>
+        ))}
+      </div>
+      <span className="text-[8px] font-mono text-white/25">{fallbackTime}</span>
     </div>
   );
 }

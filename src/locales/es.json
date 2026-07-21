@@ -566,6 +566,12 @@
     "live": "EN VIVO",
     "team_col": "Equipo",
     "target": "objetivo",
+    "kickoff_in": "Comienza en",
+    "starting_soon": "Comenzando...",
+    "days_short": "días",
+    "hours_short": "hrs",
+    "min_short": "min",
+    "sec_short": "seg",
     "zones": {
       "lib_g": "Libertadores (Fase de Grupos)",
       "lib_p": "Pre-Libertadores",
