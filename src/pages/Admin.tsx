@@ -70,7 +70,7 @@ const Admin = () => {
   return (
     <div className="min-h-screen bg-background text-foreground">
       <header className="sticky top-0 z-50 border-b border-border bg-background/90 backdrop-blur-xl">
-        <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-4 min-h-16 py-3 flex items-center justify-between flex-wrap gap-y-2">
           <div className="flex items-center gap-3">
             <img src={logo} alt="Logo" className="h-9 w-9 object-contain" />
             <span className="text-lg font-black italic">HEART CLUB</span>
