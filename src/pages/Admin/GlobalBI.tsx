@@ -22,60 +22,81 @@ import {
   Globe,
   ShieldAlert,
   Zap,
-  Users,
-  BarChart3,
-  Map as MapIcon,
-  Crown,
   RefreshCcw,
-  FileText,
-  Send,
   UserCheck,
   ShieldCheck,
   MapPin,
   Activity,
+  Download,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
+import { MapContainer, TileLayer, CircleMarker, Tooltip as LTooltip } from "react-leaflet";
+import "leaflet/dist/leaflet.css";
 import logo from "@/assets/logo.png";
 
 /* ═══════════════════════════════════════════════════════════
     MÓDULO 2: COMPONENTES AUXILIARES VISUAIS (WORLD MAP)
+    Mapa real (react-leaflet), plotando só votos com coordenada
+    própria salva (voto_lat/voto_lng) — nunca posição inventada.
    ═══════════════════════════════════════════════════════════ */
 const WorldMap = ({ votes }: { votes: any[] }) => {
-  return (
-    <div className="relative w-full h-full flex items-center justify-center overflow-hidden">
-      {/* SVG do Mapa Mundial (Representação Visual War Room) */}
-      <svg viewBox="0 0 1000 500" className="w-full h-full opacity-20 fill-white/10 stroke-white/5">
-        <path d="M150,150 L180,150 L200,180 L150,220 Z M400,100 L450,120 L440,180 L380,160 Z M600,300 L680,320 L650,400 L580,380 Z M800,100 L850,150 L820,200 L780,180 Z" />
-      </svg>
-
-      {/* Pontos de Votos (Animação de Ping Baseada em Real-time) */}
-      <div className="absolute inset-0">
-        {votes.slice(0, 15).map((vote) => {
-          // Dispersão visual baseada no hash do ID (Simulação enquanto não usamos Lat/Lng reais)
-          const x = (parseInt(vote.id?.slice(0, 2) || "0", 16) % 80) + 10;
-          const y = (parseInt(vote.id?.slice(2, 4) || "0", 16) % 60) + 20;
-
-          return (
-            <div key={vote.id} className="absolute group" style={{ left: `${x}%`, top: `${y}%` }}>
-              <div className="relative">
-                <div className="absolute -inset-2 bg-orange-500 rounded-full animate-ping opacity-75" />
-                <div className="w-2 h-2 bg-orange-500 rounded-full shadow-[0_0_10px_#f97316]" />
-
-                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/90 border border-white/10 p-2 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50">
-                  <p className="text-[10px] font-black uppercase italic text-orange-500">{vote.clube_nome}</p>
-                  <p className="text-[8px] text-white/60 uppercase">
-                    {vote.voto_cidade}, {vote.voto_pais}
-                  </p>
-                </div>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    </div>
+  const withCoords = votes.filter(
+    (v) => typeof v.voto_lat === "number" && typeof v.voto_lng === "number",
   );
+
+  return (
+    <MapContainer
+      center={[-14, -51]}
+      zoom={3}
+      minZoom={2}
+      className="w-full h-full rounded-[1.5rem] z-0"
+      worldCopyJump
+    >
+      <TileLayer
+        url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+        attribution='&copy; OpenStreetMap &copy; CARTO'
+      />
+      {withCoords.map((vote) => (
+        <CircleMarker
+          key={vote.id}
+          center={[vote.voto_lat, vote.voto_lng]}
+          radius={6}
+          pathOptions={{ color: "#f97316", fillColor: "#f97316", fillOpacity: 0.8, weight: 2 }}
+        >
+          <LTooltip direction="top">
+            <span className="font-bold">{vote.clube_nome}</span>
+            <br />
+            {vote.voto_cidade}, {vote.voto_pais}
+          </LTooltip>
+        </CircleMarker>
+      ))}
+    </MapContainer>
+  );
+};
+
+/* Exporta os votos carregados como CSV — dado real, sem depender de
+   nenhuma API externa nova. */
+const exportVotesCsv = (votes: any[]) => {
+  const header = ["clube", "cidade", "estado", "pais", "data", "suspeito"];
+  const rows = votes.map((v) => [
+    v.clube_nome ?? "",
+    v.voto_cidade ?? "",
+    v.estado ?? "",
+    v.voto_pais ?? "",
+    v.created_at ?? "",
+    v.is_suspicious ? "sim" : "nao",
+  ]);
+  const csv = [header, ...rows]
+    .map((r) => r.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(","))
+    .join("\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `heart-club-votos-${new Date().toISOString().slice(0, 10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
 };
 
 /* ═══════════════════════════════════════════════════════════
@@ -124,7 +145,11 @@ const GlobalBI = () => {
       .channel("votos-global-audit")
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "votos" }, (payload) => {
         setVotes((prev) => [payload.new, ...prev].slice(0, 50));
-        setStats((prev) => ({ ...prev, totalGlobal: prev.totalGlobal + 1 }));
+        setStats((prev) => ({
+          ...prev,
+          totalGlobal: prev.totalGlobal + 1,
+          fraudesBloqueadas: prev.fraudesBloqueadas + ((payload.new as any).is_suspicious ? 1 : 0),
+        }));
         toast.info(`Novo voto: ${payload.new.clube_nome}`, {
           description: `${payload.new.voto_cidade}, ${payload.new.voto_pais}`,
         });
@@ -140,12 +165,13 @@ const GlobalBI = () => {
   const calculateStats = (data: any[]) => {
     const countries = new Set(data.map((v) => v.voto_pais)).size;
     const residents = data.filter((v) => v.is_residente).length;
+    const suspicious = data.filter((v) => v.is_suspicious).length;
 
     setStats({
       totalGlobal: data.length,
       paisesAtivos: countries,
       votosResidentes: residents,
-      fraudesBloqueadas: 0,
+      fraudesBloqueadas: suspicious,
     });
   };
 
@@ -224,24 +250,8 @@ const GlobalBI = () => {
           />
         </div>
 
-        {/* 4.3: WAR ROOM NAVIGATION */}
-        <Tabs defaultValue="heatmap" className="space-y-8">
-          <TabsList className="bg-[#111] border border-white/5 p-1.5 h-14 rounded-2xl w-full md:w-auto">
-            <TabsTrigger
-              value="heatmap"
-              className="rounded-xl px-6 font-black italic uppercase text-xs data-[state=active]:bg-orange-600"
-            >
-              <MapIcon size={14} className="mr-2" /> War Room Map
-            </TabsTrigger>
-            <TabsTrigger
-              value="partners"
-              className="rounded-xl px-6 font-black italic uppercase text-xs data-[state=active]:bg-orange-600"
-            >
-              <Crown size={14} className="mr-2" /> Inteligência Nike/Adidas
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="heatmap" className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* 4.3: WAR ROOM MAP + LOGS */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* 4.3.1: GEOGRAPHIC HEATMAP */}
             <div className="lg:col-span-2 bg-[#111] border border-white/5 rounded-[2.5rem] p-8 h-[650px] relative overflow-hidden shadow-2xl group">
               <div className="absolute top-8 left-8 z-10 space-y-2">
@@ -271,8 +281,12 @@ const GlobalBI = () => {
                     )}
                   </p>
                 </div>
-                <Button className="bg-white text-black font-black italic uppercase rounded-2xl h-14 px-8 shadow-xl">
-                  Exportar Heatmap
+                <Button
+                  onClick={() => exportVotesCsv(votes)}
+                  disabled={votes.length === 0}
+                  className="bg-white text-black font-black italic uppercase rounded-2xl h-14 px-8 shadow-xl gap-2"
+                >
+                  <Download size={16} /> Exportar CSV
                 </Button>
               </div>
             </div>
@@ -316,8 +330,7 @@ const GlobalBI = () => {
                 ))}
               </div>
             </div>
-          </TabsContent>
-        </Tabs>
+        </div>
       </main>
     </div>
   );
