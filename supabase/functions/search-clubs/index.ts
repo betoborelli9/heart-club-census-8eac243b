@@ -28,19 +28,32 @@ const uniqueClubKey = (item: any) => {
     .join("|");
 };
 
-// Espelho de src/lib/canonical-club.ts — reconhece "Flamengo", "Clube de
-// Regatas do Flamengo", "Sport Club Corinthians Paulista" etc. como o MESMO
-// clube, pra nunca duplicar no Supabase só porque o torcedor digitou o nome
-// completo/formal em vez do nome curto já cadastrado.
-const GENERIC_TOKENS = /\b(sport club|sport clube|football club|futebol clube|futbol club|clube de regatas|clube atletico|associacao atletica|esporte clube|esporte club|sociedade esportiva|club deportivo|atletico club|clube de futebol|sport recife|sport|club|clube|fc|sc|ec|ac|cr|cf|aa|se|cd|ca)\b/g;
-const STOPWORDS = /\b(do|da|de|dos|das|of|the|el|la|los|las|del)\b/g;
-const canonicalKey = (name: string | null | undefined): string => {
-  if (!name) return "";
-  let s = norm(name); // já normaliza NFD, remove acentos e deixa minúsculo
-  s = s.replace(/[^a-z0-9 ]/g, " ").replace(/\s+/g, " ").trim();
-  s = s.replace(GENERIC_TOKENS, " ").replace(STOPWORDS, " ");
-  return s.replace(/\s+/g, " ").trim();
+// Reconhece "Flamengo", "Clube de Regatas do Flamengo", "Sport Club
+// Corinthians Paulista", "Sociedade Esportiva Palmeiras" etc. como o MESMO
+// clube já cadastrado — sem depender de uma lista de "palavras genéricas"
+// (que nunca cobre todo mundo: "Club" sem E, "Paulista" no fim, etc.).
+// Regra simples e universal: separa em palavras e confere se TODAS as
+// palavras do nome já salvo (curto) aparecem dentro do nome digitado
+// (completo/formal) — não importa a ordem nem palavras extras.
+const wordSet = (name: string | null | undefined): Set<string> => {
+  const s = norm(name || "").replace(/[^a-z0-9 ]/g, " ").trim();
+  return new Set(s.split(/\s+/).filter((w) => w.length > 0));
 };
+const isSameClubByWords = (storedName: string, searchedName: string): boolean => {
+  const stored = wordSet(storedName);
+  const searched = wordSet(searchedName);
+  if (stored.size === 0) return false;
+  for (const w of stored) if (!searched.has(w)) return false;
+  return true;
+};
+// Palavra única e comum demais pra decidir sozinha entre dois clubes que
+// cobrem o mesmo número de palavras (ex.: "Sport" dentro de "Sport Club
+// Corinthians Paulista" — Sport (Recife) é um clube de verdade, mas não é
+// esse). Mesma lista de risco já usada na resolução de escudos.
+const AMBIGUOUS_SINGLE_WORDS = new Set([
+  "america", "atletico", "nacional", "internacional", "real", "vitoria",
+  "goiania", "sport", "racing", "union", "central", "city", "united", "deportivo",
+]);
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -70,21 +83,42 @@ serve(async (req) => {
         .limit(30)
     ).data;
 
-    // 1️⃣b FALLBACK POR NOME CANÔNICO — busca literal (acima) não acha "Clube
-    // de Regatas do Flamengo" quando só existe "Flamengo" salvo (o termo
+    // 1️⃣b FALLBACK POR PALAVRAS — busca literal (acima) não acha "Clube de
+    // Regatas do Flamengo" quando só existe "Flamengo" salvo (o termo
     // digitado é mais longo/formal que o nome curto cadastrado). Sem isso,
     // o torcedor cairia na API-Football à toa e arriscaria duplicar o clube.
+    // Funciona pra qualquer clube: tenta VÁRIAS palavras digitadas (não só a
+    // mais longa) como âncora — o nome curto salvo pode não conter
+    // justamente a palavra mais "chamativa" do nome completo (ex.: "Vasco
+    // DA Gama" não tem "Regatas", mas tem "Vasco" e "Gama"). Confirma o
+    // achado conferindo se o nome salvo é "coberto" pelas palavras
+    // digitadas (isSameClubByWords), nunca confia só na palavra-âncora.
     if (!cacheRows || cacheRows.length === 0) {
-      const searchCanon = canonicalKey(cleanSearch);
-      const distinctiveToken = searchCanon.split(" ").sort((a, b) => b.length - a.length)[0];
-      if (distinctiveToken && distinctiveToken.length >= 3) {
+      const anchorWords = Array.from(wordSet(cleanSearch))
+        .filter((w) => w.length >= 3)
+        .sort((a, b) => b.length - a.length)
+        .slice(0, 6);
+      if (anchorWords.length > 0) {
+        const orFilter = anchorWords.map((w) => `nome.ilike.%${w}%`).join(",");
         const { data: broader } = await supabase
           .from("clubes_cache")
           .select("id, api_id, nome, nome_curto, cidade, pais, escudo_url")
-          .ilike("nome", `%${distinctiveToken}%`)
+          .or(orFilter)
           .limit(30);
-        const exact = (broader || []).filter((c: any) => canonicalKey(c.nome) === searchCanon);
-        if (exact.length > 0) cacheRows = exact;
+        const matched = (broader || []).filter((c: any) => isSameClubByWords(c.nome, cleanSearch));
+        if (matched.length > 0) {
+          // Entre os que bateram, fica só com quem cobre MAIS palavras do
+          // nome digitado (o mais completo/específico vence — ex.: "Vasco
+          // DA Gama" com 3 palavras ganha de "Gama" com 1). Em empate,
+          // descarta palavra única conhecidamente ambígua.
+          const withCount = matched.map((c: any) => ({ row: c, count: wordSet(c.nome).size }));
+          const maxCount = Math.max(...withCount.map((x) => x.count));
+          let best = withCount.filter((x) => x.count === maxCount);
+          if (best.length > 1) {
+            best = best.filter((x) => !(x.count === 1 && AMBIGUOUS_SINGLE_WORDS.has(Array.from(wordSet(x.row.nome))[0])));
+          }
+          if (best.length === 1) cacheRows = [best[0].row];
+        }
       }
     }
 
