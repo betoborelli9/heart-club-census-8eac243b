@@ -5,7 +5,10 @@
  */
 
 import { useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useUser } from "@/contexts/UserContext";
+import { Loader2, ShieldAlert, ArrowLeft } from "lucide-react";
 
 interface Result {
   api_id: number;
@@ -18,6 +21,23 @@ interface Result {
 }
 
 export default function DebugApi() {
+  // Página técnica sem trava de acesso — mesma regra de admin usada em
+  // src/pages/Admin.tsx (evita expor a ferramenta de debug pra qualquer
+  // pessoa que souber a URL).
+  const navigate = useNavigate();
+  const { user, profile, isLoading } = useUser();
+  const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    if (isLoading) return;
+    if (!user) {
+      navigate("/login");
+      return;
+    }
+    const isMaster = user.email?.toLowerCase() === "betoborelli9@gmail.com";
+    setIsAdmin(profile?.role === "admin" || isMaster);
+  }, [user, profile, isLoading, navigate]);
+
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<Result[]>([]);
   const [loading, setLoading] = useState(false);
@@ -74,6 +94,29 @@ export default function DebugApi() {
 
     return () => clearTimeout(handle);
   }, [query]);
+
+  if (isLoading || isAdmin === null) {
+    return (
+      <div style={{ minHeight: "100vh", background: "#fff", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <Loader2 className="w-8 h-8 animate-spin" style={{ color: "#000" }} />
+      </div>
+    );
+  }
+
+  if (!isAdmin) {
+    return (
+      <div style={{ minHeight: "100vh", background: "#fff", color: "#000", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16, fontFamily: "monospace", padding: 24, textAlign: "center" }}>
+        <ShieldAlert style={{ width: 48, height: 48 }} />
+        <p style={{ fontSize: 14 }}>Acesso restrito — página exclusiva para administradores do Heart Club.</p>
+        <button
+          onClick={() => navigate("/dashboard")}
+          style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 16px", border: "1px solid #000", background: "#fff", color: "#000", cursor: "pointer" }}
+        >
+          <ArrowLeft style={{ width: 16, height: 16 }} /> Voltar ao Dashboard
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div style={{ minHeight: "100vh", background: "#fff", color: "#000", fontFamily: "monospace", padding: 24 }}>
