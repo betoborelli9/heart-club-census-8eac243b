@@ -6,7 +6,13 @@ import { Input } from "@/components/ui/input";
 import { ClubLogo } from "@/components/ClubLogo";
 import { searchClubsWithFallback, ClubSearchResult } from "@/lib/search-clubs";
 
-export const ClubSearch = ({ onSelect }: { onSelect: (club: ClubSearchResult) => void }) => {
+export const ClubSearch = ({
+  onSelect,
+  onClear,
+}: {
+  onSelect: (club: ClubSearchResult) => void;
+  onClear?: () => void;
+}) => {
   const [results, setResults] = useState<ClubSearchResult[]>([]);
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(false);
@@ -61,6 +67,7 @@ export const ClubSearch = ({ onSelect }: { onSelect: (club: ClubSearchResult) =>
     if (val.length < 2) {
       setResults([]);
       setLoading(false);
+      if (val.length === 0 && onClear) onClear();
       return;
     }
 

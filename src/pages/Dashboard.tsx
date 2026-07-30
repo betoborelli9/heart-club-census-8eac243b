@@ -136,6 +136,20 @@ const Dashboard = () => {
   const secondary = viewedTheme?.secondaryHex || "#000000";
   const isViewingHeart = viewedClubName === heartClubName;
 
+  // Exclusivo do Master Admin: ao consultar outro clube na busca, a Dashboard
+  // inteira (banner, identidade, próximo jogo) reflete o clube consultado —
+  // só de exibição, o voto real (heartClubName) nunca é tocado. Para o
+  // torcedor comum, banner/identidade/próximo jogo continuam presos ao
+  // clube do coração de verdade, como sempre foi.
+  const effectiveHeartName = isMasterAdmin ? viewedClubName : heartClubName;
+  const effectiveHeartData = isMasterAdmin ? viewedClubData : heartClubData;
+  const effectiveHeartTheme = isMasterAdmin ? viewedTheme : heartTheme;
+  const masterTeamIdOverride =
+    isMasterAdmin && !isViewingHeart && viewedClubMeta?.apiId ? Number(viewedClubMeta.apiId) : undefined;
+  const handleClearMasterPreview = () => {
+    if (isMasterAdmin && heartClubName) handlePickClub(heartClubName);
+  };
+
   if (!isAuthReady || isLoading || (!profile && !isMasterAdmin))
     return (
       <div className="h-screen flex items-center justify-center bg-background">
@@ -170,7 +184,10 @@ const Dashboard = () => {
           </div>
           {/* Desktop: pesquisa inline no header */}
           <div className="hidden md:block flex-1 max-w-xl">
-            <ClubSearch onSelect={(club) => handlePickClub(club.name)} />
+            <ClubSearch
+              onSelect={(club) => handlePickClub(club.name)}
+              onClear={isMasterAdmin ? handleClearMasterPreview : undefined}
+            />
           </div>
           <div className="flex items-center gap-2 shrink-0">
             <NotificationBell userId={user?.id} />
@@ -185,13 +202,16 @@ const Dashboard = () => {
       <main className="max-w-[1440px] mx-auto px-4 md:px-6 py-6 space-y-6 pb-24">
         {/* Mobile: pesquisa larga entre o header e o banner */}
         <div className="md:hidden">
-          <ClubSearch onSelect={(club) => handlePickClub(club.name)} />
+          <ClubSearch
+            onSelect={(club) => handlePickClub(club.name)}
+            onClear={isMasterAdmin ? handleClearMasterPreview : undefined}
+          />
         </div>
 
         <ClubBanner
-          clubName={heartClubName || "SELECIONE SEU CLUBE"}
-          clubData={heartClubData}
-          theme={heartTheme}
+          clubName={effectiveHeartName || "SELECIONE SEU CLUBE"}
+          clubData={effectiveHeartData}
+          theme={effectiveHeartTheme}
           profileName={effectiveProfile.nome_exibicao || "TORCEDOR"}
           profileCity={effectiveProfile.cidade || "BRASIL"}
           profileState={effectiveProfile.estado || ""}
@@ -200,11 +220,11 @@ const Dashboard = () => {
         />
 
 
-        {heartClubName && <ClubIdentityCard clubName={heartClubName} />}
+        {effectiveHeartName && <ClubIdentityCard clubName={effectiveHeartName} />}
 
         {/* MatchCenter — isolado; só renderiza se o usuário tem time_do_coracao_id + jogos no cache */}
         <section className="fade-in w-full">
-          <MatchCenter userId={user?.id} />
+          <MatchCenter userId={user?.id} teamIdOverride={masterTeamIdOverride} />
         </section>
 
         <section className="fade-in w-full">

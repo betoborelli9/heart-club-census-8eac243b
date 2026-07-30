@@ -23,12 +23,27 @@ export type FixturePayload = {
   live_state?: Record<string, { status: string; goalsHome: number; goalsAway: number; elapsed?: number | null; finished: boolean }>;
 };
 
-export function useHeartClubFixture(userId?: string) {
+export function useHeartClubFixture(userId?: string, teamIdOverride?: number | null) {
   const [teamId, setTeamId] = useState<number | null>(null);
   const [payload, setPayload] = useState<FixturePayload | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Override exclusivo do Master Admin: pula a busca pelo time do voto real
+    // e usa direto o time que ele está consultando na busca do Dashboard.
+    if (teamIdOverride) {
+      let active = true;
+      setTeamId(teamIdOverride);
+      (async () => {
+        const { data: row } = await supabase
+          .from("team_fixtures_cache").select("payload").eq("team_id", teamIdOverride).maybeSingle();
+        if (!active) return;
+        setPayload((row as any)?.payload || null);
+        setLoading(false);
+      })();
+      return () => { active = false; };
+    }
+
     if (!userId) { setLoading(false); return; }
     let active = true;
     (async () => {
@@ -46,7 +61,7 @@ export function useHeartClubFixture(userId?: string) {
     })();
 
     return () => { active = false; };
-  }, [userId]);
+  }, [userId, teamIdOverride]);
 
   useEffect(() => {
     if (!teamId) return;

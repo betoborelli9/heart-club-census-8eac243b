@@ -13,9 +13,9 @@ import { LiveMatchOverlay } from "./LiveMatchOverlay";
 
 const LIVE = new Set(["1H", "2H", "HT", "ET", "BT", "P", "LIVE"]);
 
-export function MatchCenter({ userId }: { userId?: string }) {
+export function MatchCenter({ userId, teamIdOverride }: { userId?: string; teamIdOverride?: number | null }) {
   const { t } = useTranslation();
-  const { upcoming, liveState, lineups, loading } = useHeartClubFixture(userId);
+  const { upcoming, liveState, lineups, loading } = useHeartClubFixture(userId, teamIdOverride);
   const [now, setNow] = useState(Date.now());
 
   useEffect(() => {
