@@ -465,11 +465,21 @@ function relationToFeature(el: any): any | null {
   }
 }
 
-async function overpassQuery(query: string): Promise<any | null> {
+// Orçamento total de tempo para achar o contorno de UM território (soma de
+// todos os níveis administrativos × endpoints × tentativas de fallback).
+// Sem isso, uma cidade sem nenhum dado no OSM (comum em lugares pouco
+// mapeados, de qualquer país) fazia a busca em cascata por vários minutos —
+// sentia como travado mesmo sem ter quebrado de verdade.
+const OVERPASS_DEADLINE_MS = 20_000;
+const OVERPASS_PER_REQUEST_TIMEOUT_MS = 8_000;
+
+async function overpassQuery(query: string, deadlineAt: number): Promise<any | null> {
   for (const ep of OVERPASS_ENDPOINTS) {
+    if (Date.now() >= deadlineAt) return null;
     try {
       const ctrl = new AbortController();
-      const timer = setTimeout(() => ctrl.abort(), 65_000);
+      const remaining = Math.max(1_000, deadlineAt - Date.now());
+      const timer = setTimeout(() => ctrl.abort(), Math.min(OVERPASS_PER_REQUEST_TIMEOUT_MS, remaining));
       const res = await fetch(ep, { method: "POST", body: "data=" + encodeURIComponent(query), signal: ctrl.signal });
       clearTimeout(timer);
       if (res.ok) return await res.json();
@@ -495,7 +505,9 @@ async function fetchAdminSubdivisions(
           ? [8, 7, 9, 6]
           : [adminLevel];
   const head = `[out:json][timeout:60][maxsize:1073741824];`;
+  const deadlineAt = Date.now() + OVERPASS_DEADLINE_MS;
   for (const lv of levels) {
+    if (Date.now() >= deadlineAt) break;
     let areaSelector = "";
     let relationSelector = "";
     if (scope?.cityName && (lv === 10 || lv === 9 || lv === 11 || lv === 8)) {
@@ -512,7 +524,7 @@ async function fetchAdminSubdivisions(
       relationSelector = `relation["boundary"="administrative"]["admin_level"="${lv}"](${s},${w},${n},${e});`;
     }
     const q = `${head}${areaSelector}(${relationSelector});out geom;`;
-    const data = await overpassQuery(q);
+    const data = await overpassQuery(q, deadlineAt);
     let features: any[] = [];
     if (data?.elements?.length) {
       for (const el of data.elements) {
@@ -522,9 +534,9 @@ async function fetchAdminSubdivisions(
         }
       }
     }
-    if (!features.length) {
+    if (!features.length && Date.now() < deadlineAt) {
       const fallbackQ = `${head}(relation["boundary"="administrative"]["admin_level"="${lv}"](${s},${w},${n},${e}););out geom;`;
-      const fb = await overpassQuery(fallbackQ);
+      const fb = await overpassQuery(fallbackQ, deadlineAt);
       if (fb?.elements?.length) {
         for (const el of fb.elements) {
           if (el.type === "relation") {
