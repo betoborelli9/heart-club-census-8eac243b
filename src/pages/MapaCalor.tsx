@@ -375,7 +375,12 @@ function saveOvCache() {
 
 function assembleRings(ways: { id: number; geometry: { lat: number; lon: number }[] }[]): number[][][] {
   const rings: number[][][] = [];
-  const remaining = ways.map((w) => w.geometry.map((p) => [p.lon, p.lat] as number[]));
+  // Cidades pouco mapeadas no OSM (ex.: Bodø/Nordland) às vezes retornam "ways"
+  // com geometria vazia ou degenerada — descarta antes de montar os anéis, senão
+  // head/tail ficam undefined e o loop abaixo quebra silenciosamente.
+  const remaining = ways
+    .map((w) => (w.geometry || []).map((p) => [p.lon, p.lat] as number[]))
+    .filter((seg) => seg.length >= 2);
   while (remaining.length) {
     let ring = remaining.shift()!;
     let extended = true;
@@ -383,10 +388,12 @@ function assembleRings(ways: { id: number; geometry: { lat: number; lon: number 
       extended = false;
       const head = ring[0];
       const tail = ring[ring.length - 1];
+      if (!head || !tail) break;
       for (let i = 0; i < remaining.length; i++) {
         const seg = remaining[i];
         const sH = seg[0];
         const sT = seg[seg.length - 1];
+        if (!sH || !sT) continue;
         if (tail[0] === sH[0] && tail[1] === sH[1]) {
           ring = ring.concat(seg.slice(1));
           remaining.splice(i, 1);
@@ -419,34 +426,43 @@ function assembleRings(ways: { id: number; geometry: { lat: number; lon: number 
 }
 
 function relationToFeature(el: any): any | null {
-  if (!el.members) return null;
-  const tags = el.tags || {};
-  const outers = el.members.filter((m: any) => m.role === "outer" && m.geometry);
-  const inners = el.members.filter((m: any) => m.role === "inner" && m.geometry);
-  if (!outers.length) return null;
-  const outerRings = assembleRings(outers.map((m: any, i: number) => ({ id: i, geometry: m.geometry })));
-  const innerRings = assembleRings(inners.map((m: any, i: number) => ({ id: i, geometry: m.geometry })));
-  if (!outerRings.length) return null;
-  const polygons = outerRings.map((o) => [o, ...innerRings.filter(() => false)]);
-  const geometry =
-    polygons.length === 1
-      ? { type: "Polygon", coordinates: polygons[0] }
-      : { type: "MultiPolygon", coordinates: polygons };
-  return {
-    type: "Feature",
-    properties: {
-      name: tags.name || tags["name:pt"] || tags.official_name || tags["name:en"] || "—",
-      name_en: tags["name:en"],
-      name_pt: tags["name:pt"],
-      name_ar: tags["name:ar"],
-      int_name: tags.int_name,
-      admin_level: tags.admin_level,
-      osm_id: el.id,
-      area_id: el.id ? 3600000000 + Number(el.id) : null,
-      sigla: tags.short_name || tags.ref || tags["addr:state"] || null,
-    },
-    geometry,
-  };
+  // Blindagem geral: cidades com pouco mapeamento no OSM (qualquer lugar do
+  // planeta, não só Brasil) podem vir com relações/geometrias incompletas.
+  // Nunca deixamos isso explodir e travar o carregamento do mapa — só
+  // ignoramos essa relação específica.
+  try {
+    if (!el.members) return null;
+    const tags = el.tags || {};
+    const outers = el.members.filter((m: any) => m.role === "outer" && m.geometry?.length);
+    const inners = el.members.filter((m: any) => m.role === "inner" && m.geometry?.length);
+    if (!outers.length) return null;
+    const outerRings = assembleRings(outers.map((m: any, i: number) => ({ id: i, geometry: m.geometry })));
+    const innerRings = assembleRings(inners.map((m: any, i: number) => ({ id: i, geometry: m.geometry })));
+    if (!outerRings.length) return null;
+    const polygons = outerRings.map((o) => [o, ...innerRings.filter(() => false)]);
+    const geometry =
+      polygons.length === 1
+        ? { type: "Polygon", coordinates: polygons[0] }
+        : { type: "MultiPolygon", coordinates: polygons };
+    return {
+      type: "Feature",
+      properties: {
+        name: tags.name || tags["name:pt"] || tags.official_name || tags["name:en"] || "—",
+        name_en: tags["name:en"],
+        name_pt: tags["name:pt"],
+        name_ar: tags["name:ar"],
+        int_name: tags.int_name,
+        admin_level: tags.admin_level,
+        osm_id: el.id,
+        area_id: el.id ? 3600000000 + Number(el.id) : null,
+        sigla: tags.short_name || tags.ref || tags["addr:state"] || null,
+      },
+      geometry,
+    };
+  } catch (err) {
+    console.warn("[MapaCalor] Relação OSM ignorada (geometria malformada):", el?.id, err);
+    return null;
+  }
 }
 
 async function overpassQuery(query: string): Promise<any | null> {
@@ -931,6 +947,11 @@ const MapaCalor = () => {
       setGeoLoading(true);
       let geo: any = null;
       let parent: any = null;
+      // Blindagem: qualquer falha ao buscar/montar o contorno geográfico (comum em
+      // cidades com pouco mapeamento no OSM, de qualquer país) não pode deixar o
+      // spinner "CARREGANDO TERRITÓRIO..." girando pra sempre — cai pra "sem
+      // contorno" e o mapa segue funcionando normalmente.
+      try {
       if (viewMode === "world") {
         geo = await fetchGeo(GEO_URLS.worldGeo);
         parent = null;
@@ -996,10 +1017,16 @@ const MapaCalor = () => {
               { ...cityScope, cityName: activeCity || null },
             );
       }
-      if (!cancelled) {
-        setCurrentGeo(geo);
-        setParentFeature(parent);
-        setGeoLoading(false);
+      } catch (err) {
+        console.warn("[MapaCalor] Falha ao carregar contorno do território, seguindo sem ele:", err);
+        geo = null;
+        parent = null;
+      } finally {
+        if (!cancelled) {
+          setCurrentGeo(geo);
+          setParentFeature(parent);
+          setGeoLoading(false);
+        }
       }
     };
     run();
