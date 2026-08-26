@@ -470,8 +470,8 @@ function relationToFeature(el: any): any | null {
 // Sem isso, uma cidade sem nenhum dado no OSM (comum em lugares pouco
 // mapeados, de qualquer país) fazia a busca em cascata por vários minutos —
 // sentia como travado mesmo sem ter quebrado de verdade.
-const OVERPASS_DEADLINE_MS = 20_000;
-const OVERPASS_PER_REQUEST_TIMEOUT_MS = 8_000;
+const OVERPASS_DEADLINE_MS = 12_000;
+const OVERPASS_PER_REQUEST_TIMEOUT_MS = 6_000;
 
 async function overpassQuery(query: string, deadlineAt: number): Promise<any | null> {
   for (const ep of OVERPASS_ENDPOINTS) {
@@ -1839,6 +1839,13 @@ const MapaCalor = () => {
                   <Loader2 className="w-3 h-3 animate-spin text-primary" />
                   <span className="text-[9px] font-black italic uppercase text-primary">
                     {loading ? t("heatmap.loading_votes") : t("heatmap.loading_territory")}
+                  </span>
+                </div>
+              )}
+              {!loading && !geoLoading && !currentGeo?.features?.length && (
+                <div className="absolute top-3 right-3 z-[500] px-3 py-1.5 rounded-xl bg-black/70 border border-white/20 flex items-center gap-2 max-w-[220px]">
+                  <span className="text-[9px] font-bold italic text-white/60 leading-snug">
+                    Sem contorno detalhado disponível para este território (mapa mundial de referência continua abaixo).
                   </span>
                 </div>
               )}
