@@ -27,12 +27,15 @@ import UsersTableSync from "@/integrations/users-table/UsersTableSync";
 import { useLocation } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 
-// Inclusão do Verify no HIDE_NAV para não mostrar barra de navegação durante o login
+// Barra de navegação (com o link de Embaixador) escondida só nas telas de
+// onboarding/fluxo especial (splash, login, profile-setup, voting, convite,
+// verify) e em /debug — visível em todo o resto, inclusive /admin/*, que é
+// onde estava faltando o acesso ao painel de embaixador.
 const HIDE_NAV_ROUTES = ["/", "/splash", "/login", "/profile-setup", "/voting", "/convite", "/verify"];
 const GlobalNav = () => {
   const { pathname } = useLocation();
   if (HIDE_NAV_ROUTES.includes(pathname)) return null;
-  if (pathname.startsWith("/admin") || pathname.startsWith("/debug")) return null;
+  if (pathname.startsWith("/debug")) return null;
   return <AppNavBar />;
 };
 

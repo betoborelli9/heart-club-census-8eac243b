@@ -4,18 +4,24 @@
  */
 
 import { NavLink } from "react-router-dom";
-import { Home, Trophy, Map, Users, Megaphone } from "lucide-react";
+import { Home, Trophy, Map, Users, Megaphone, LayoutDashboard } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTranslationApp } from "@/hooks/useTranslationApp";
+import { useUser } from "@/contexts/UserContext";
+import { isMasterEmail } from "@/lib/master";
 
 export default function AppNavBar() {
   const { t } = useTranslationApp();
+  const { user } = useUser();
+  const isMasterAdmin = isMasterEmail(user?.email);
   const ITEMS = [
     { to: "/dashboard", label: t("navbar.home"), shortLabel: t("navbar.home"), icon: Home },
     { to: "/stats", label: t("navbar.ranking"), shortLabel: t("navbar.ranking"), icon: Trophy },
     { to: "/mapa-calor", label: t("navbar.map_long"), shortLabel: t("navbar.map"), icon: Map },
     { to: "/embaixadores", label: t("navbar.ambassadors_long"), shortLabel: t("navbar.ambassadors_short"), icon: Users },
     { to: "/embaixador", label: t("navbar.panel"), shortLabel: t("navbar.panel"), icon: Megaphone },
+    // Atalho pro painel admin, visível só pro master admin (betoborelli9)
+    ...(isMasterAdmin ? [{ to: "/admin", label: t("navbar.admin"), shortLabel: t("navbar.admin"), icon: LayoutDashboard }] : []),
   ];
 
   return (

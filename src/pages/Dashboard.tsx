@@ -5,7 +5,7 @@
  */
 
 import { useEffect, useState } from "react";
-import { LogOut, Loader2, Heart, Home, BarChart3, Map, Users, LayoutDashboard, Beaker, Vote } from "lucide-react";
+import { LogOut, Loader2, Heart, Beaker } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { useUser } from "@/contexts/UserContext";
@@ -272,58 +272,6 @@ const Dashboard = () => {
           </aside>
         </div>
       </main>
-
-      {/* RODAPÉ TAB BAR - PROTEÇÃO DE LINKS DE GESTÃO */}
-      <footer className="fixed bottom-0 left-0 right-0 h-20 md:h-16 bg-black/80 backdrop-blur-2xl border-t border-white/5 z-[100] flex items-center justify-center">
-        <nav className="w-full px-3 flex items-center justify-around gap-1 md:w-auto md:px-0 md:justify-start md:gap-16">
-          <button className="flex flex-col items-center justify-center gap-1 text-[#ff6200] min-w-0" onClick={() => navigate("/dashboard")}>
-            <Home className="w-5 h-5" />
-            <span className="block text-center text-[10px] leading-none font-bold uppercase tracking-normal md:text-[9px] md:tracking-widest">{t("navbar.home")}</span>
-          </button>
-          <button
-            className="flex flex-col items-center justify-center gap-1 text-white/40 hover:text-white min-w-0"
-            onClick={() => navigate("/ranking")}
-          >
-            <BarChart3 className="w-5 h-5" />
-            <span className="block text-center text-[10px] leading-none font-bold uppercase tracking-normal md:text-[9px] md:tracking-widest">{t("navbar.ranking")}</span>
-          </button>
-          <button
-            className="flex flex-col items-center justify-center gap-1 text-white/40 hover:text-white min-w-0"
-            onClick={() => navigate("/mapa-calor")}
-          >
-            <Map className="w-5 h-5" />
-            <span className="block text-center text-[10px] leading-none font-bold uppercase tracking-normal md:text-[9px] md:tracking-widest">{t("navbar.map")}</span>
-          </button>
-          
-          {/* LINKS RESTRITOS BETOBORELLI9 NO RODAPÉ */}
-          {isMasterAdmin ? (
-            <>
-              <button
-                className="flex flex-col items-center justify-center gap-1 text-[#ff6200] hover:text-white min-w-0"
-                onClick={() => navigate("/voting")}
-              >
-                <Vote className="w-5 h-5" />
-                <span className="block text-center text-[10px] leading-none font-bold uppercase tracking-normal md:text-[9px] md:tracking-widest">{t("navbar.voting")}</span>
-              </button>
-              <button
-                className="flex flex-col items-center justify-center gap-1 text-white/40 hover:text-white min-w-0"
-                onClick={() => navigate("/admin")}
-              >
-                <LayoutDashboard className="w-5 h-5" />
-                <span className="block text-center text-[10px] leading-none font-bold uppercase tracking-normal md:text-[9px] md:tracking-widest">{t("navbar.admin")}</span>
-              </button>
-            </>
-          ) : (
-            <button
-              className="flex flex-col items-center justify-center gap-1 text-white/40 hover:text-white min-w-0"
-              onClick={() => navigate("/embaixadores")}
-            >
-              <Users className="w-5 h-5" />
-              <span className="block text-center text-[10px] leading-none font-bold uppercase tracking-normal md:text-[9px] md:tracking-widest">{t("navbar.ambassadors")}</span>
-            </button>
-          )}
-        </nav>
-      </footer>
 
       {/* Painel flutuante de testes — exclusivo do Master Admin */}
       <MasterTestPanel />
