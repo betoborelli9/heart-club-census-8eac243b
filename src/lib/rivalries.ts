@@ -68,7 +68,7 @@ const PAIRS: [string, string][] = [
   ["Atlético Nacional", "Independiente Medellín"],
 ];
 
-const norm = (s: string) =>
+export const norm = (s: string) =>
   (s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
 
 export function getHistoricalRival(clubName: string | null | undefined): string | null {

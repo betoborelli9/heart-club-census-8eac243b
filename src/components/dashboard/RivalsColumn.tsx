@@ -9,6 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import ShareTropaModal from "@/components/dashboard/ShareTropaModal";
 import { ClubLogo } from "@/components/ClubLogo";
 import { useTranslationApp } from "@/hooks/useTranslationApp";
+import { norm as normalizeName } from "@/lib/rivalries";
 
 type RivalItem = {
   name: string;
@@ -43,8 +44,11 @@ export default function RivalsColumn({ clubName, refCode, primaryColor = "#ff620
         .ilike("nome", clubName)
         .maybeSingle();
 
+      const ownNameNorm = normalizeName(clubName);
       const cachedNames: string[] = Array.isArray((cacheRow as any)?.rivais)
-        ? ((cacheRow as any).rivais as string[]).filter(Boolean)
+        ? ((cacheRow as any).rivais as string[]).filter(
+            (n) => Boolean(n) && normalizeName(n) !== ownNameNorm,
+          )
         : [];
 
       const renderWithVotes = async (baseList: RivalItem[]) => {
@@ -166,7 +170,7 @@ export default function RivalsColumn({ clubName, refCode, primaryColor = "#ff620
         const details = Array.isArray((data as any)?.rivalDetails) ? (data as any).rivalDetails : [];
         const names = Array.isArray((data as any)?.rivals) ? (data as any).rivals : [];
         const baseList: RivalItem[] = (details.length ? details : names.map((name: string) => ({ name, logo: null })))
-          .filter((r: RivalItem) => r?.name)
+          .filter((r: RivalItem) => r?.name && normalizeName(r.name) !== ownNameNorm)
           .slice(0, 4);
         await renderWithVotes(baseList);
       }
