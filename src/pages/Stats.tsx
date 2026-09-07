@@ -24,8 +24,8 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { useUser } from "@/contexts/UserContext";
 import { supabase } from "@/integrations/supabase/client";
-import { CLUBS_DATA } from "@/clubes-data";
 import { searchClubsWithFallback } from "@/lib/search-clubs";
+import { ClubLogo } from "@/components/ClubLogo";
 import { getHistoricalRivals } from "@/lib/rivalries";
 import { useTranslationApp } from "@/hooks/useTranslationApp";
 
@@ -36,54 +36,6 @@ import { useTranslationApp } from "@/hooks/useTranslationApp";
 const fmt = (n: number) => (n || 0).toLocaleString("pt-BR");
 const norm = (s: string) =>
   (s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
-
-const clearbitLogo = (clubName: string) => {
-  const clean = clubName.toLowerCase().replace(/f\.?c\.?|futebol clube/g, "").trim().replace(/\s+/g, "");
-  return `https://logo.clearbit.com/${clean}.com.br`;
-};
-
-const localLogo = (clubName: string) => {
-  const local = CLUBS_DATA.find((c) => norm(c.nome) === norm(clubName));
-  return local?.logoUrl || "";
-};
-
-// ─────────────────────────────────────────────────────────
-// ClubBadge — emblema com cascade clubes_cache → CLUBS_DATA → Clearbit
-// ─────────────────────────────────────────────────────────
-
-const ClubBadge = ({
-  club, cacheUrl, size = 36, className = "",
-}: { club: string; cacheUrl?: string; size?: number; className?: string }) => {
-  const sources = useMemo(() => {
-    const arr = [cacheUrl, localLogo(club), clearbitLogo(club)].filter(Boolean) as string[];
-    return Array.from(new Set(arr));
-  }, [club, cacheUrl]);
-  const [idx, setIdx] = useState(0);
-  useEffect(() => { setIdx(0); }, [club, cacheUrl]);
-
-  if (idx >= sources.length) {
-    return (
-      <div
-        style={{ width: size, height: size }}
-        className={`rounded-full bg-white/10 flex items-center justify-center ${className}`}
-        title={club}
-      >
-        <Trophy className="h-1/2 w-1/2 text-white/40" />
-      </div>
-    );
-  }
-  return (
-    <img
-      src={sources[idx]}
-      alt={club}
-      style={{ width: size, height: size }}
-      onError={() => setIdx((i) => i + 1)}
-      className={`rounded-full bg-white p-0.5 object-contain ${className}`}
-      referrerPolicy="no-referrer"
-      loading="lazy"
-    />
-  );
-};
 
 // ─────────────────────────────────────────────────────────
 // Types
@@ -385,7 +337,7 @@ const Stats = () => {
         <div className="flex justify-between items-center gap-3 max-w-6xl mx-auto">
           <div className="flex items-center gap-3 min-w-0">
             {clubName && (
-              <ClubBadge club={clubName} cacheUrl={logoFor(clubName)} size={40} />
+              <ClubLogo clubName={clubName} src={logoFor(clubName)} alt={clubName} size="md" />
             )}
             <div className="min-w-0">
               <p className="text-[10px] tracking-widest text-primary font-black">{t("ranking.eyebrow")}</p>
@@ -427,7 +379,7 @@ const Stats = () => {
                       }}
                       className="w-full flex items-center gap-3 p-2 hover:bg-white/10 rounded-lg text-left transition"
                     >
-                      <ClubBadge club={c.name} cacheUrl={c.logo} size={32} />
+                      <ClubLogo clubName={c.name} src={c.logo} alt={c.name} size="sm" />
                       <div className="flex-1 min-w-0">
                         <p className="text-xs font-black italic truncate">{c.name}</p>
                         <p className="text-[10px] text-white/50 truncate">{c.location}</p>
@@ -529,7 +481,7 @@ const Stats = () => {
               <Target className="h-3.5 w-3.5" /> {t("ranking.next_target.title")}
             </p>
             <div className="flex items-center gap-3 mt-2">
-              <ClubBadge club={aboveRow.club} cacheUrl={logoFor(aboveRow.club)} size={48} />
+              <ClubLogo clubName={aboveRow.club} src={logoFor(aboveRow.club)} alt={aboveRow.club} size="md" />
               <div className="flex-1 min-w-0">
                 <p className="font-black italic truncate">{aboveRow.club}</p>
                 <p className="text-xs text-white/60">#{myIdx} · {fmt(aboveRow.votes)} {t("ranking.position.votes")}</p>
@@ -631,7 +583,7 @@ const Stats = () => {
                       <span className="font-black italic text-white/70">#{i + 1}</span>
                     )}
                   </div>
-                  <ClubBadge club={r.club} cacheUrl={logoFor(r.club)} size={36} />
+                  <ClubLogo clubName={r.club} src={logoFor(r.club)} alt={r.club} size="sm" />
                   <div className="flex-1 min-w-0">
                     <p className={`font-black italic truncate text-sm ${isMe ? "text-primary" : ""}`}>
                       {r.club}
