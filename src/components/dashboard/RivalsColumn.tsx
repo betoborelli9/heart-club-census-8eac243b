@@ -102,8 +102,12 @@ export default function RivalsColumn({ clubName, refCode, primaryColor = "#ff620
               .select("nome, escudo_url, cidade, pais")
               .ilike("nome", `%${primary}%`)
               .limit(10);
-            if (hits && hits.length) {
-              const best = [...hits].sort((a: any, b: any) => a.nome.length - b.nome.length)[0];
+            // Nunca deixa o "match aproximado" resolver pro próprio time do
+            // coração (ex.: "Club Atlético de Madrid" casando com "Real
+            // Madrid" só porque os dois têm "Madrid" no nome).
+            const safeHits = (hits || []).filter((h: any) => normalizeName(h.nome) !== ownNameNorm);
+            if (safeHits.length) {
+              const best = [...safeHits].sort((a: any, b: any) => a.nome.length - b.nome.length)[0];
               resolved.set(fullName, best);
               return;
             }
@@ -117,7 +121,7 @@ export default function RivalsColumn({ clubName, refCode, primaryColor = "#ff620
               if (list.length) {
                 const wantNorm = fullName.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
                 const best = list
-                  .filter((c: any) => c?.logo)
+                  .filter((c: any) => c?.logo && normalizeName(c?.name) !== ownNameNorm)
                   .sort((a: any, b: any) => {
                     const an = (a.name || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
                     const bn = (b.name || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
