@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.heartclubapp.twa",
+      "sha256_cert_fingerprints": [
+        "A9:E0:04:0D:B1:91:D8:E4:0A:C6:E7:D5:18:F0:E8:8F:B1:32:D3:A9:33:37:74:72:7E:CF:9F:91:AF:BB:1F:71"
+      ]
+    }
+  }
+]
