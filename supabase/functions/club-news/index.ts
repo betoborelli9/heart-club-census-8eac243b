@@ -1,4 +1,9 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
+const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
+const LOVABLE_KEY = Deno.env.get("LOVABLE_API_KEY") || "";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -49,7 +54,17 @@ function decodeHtmlEntities(s: string): string {
 // a correção quando esses bytes formam UTF-8 válido, pra nunca estragar um
 // título que já está correto.
 function fixMojibake(s: string): string {
-  if (!s || !/[Â-Ã][-¿]/.test(s)) return s;
+  if (!s) return s;
+  let hasPattern = false;
+  for (let i = 0; i < s.length - 1; i++) {
+    const c1 = s.charCodeAt(i);
+    const c2 = s.charCodeAt(i + 1);
+    if ((c1 === 0xc2 || c1 === 0xc3) && c2 >= 0x80 && c2 <= 0xbf) {
+      hasPattern = true;
+      break;
+    }
+  }
+  if (!hasPattern) return s;
   try {
     const bytes = Uint8Array.from([...s].map((c) => c.charCodeAt(0)));
     return new TextDecoder("utf-8", { fatal: true }).decode(bytes);
@@ -195,6 +210,108 @@ const UF_BY_CITY: Record<string, string> = {
   "vitoria": "es", "vila velha": "es",
 };
 
+// Ranking de confiabilidade das fontes — usado para decidir, quando duas
+// notícias são sobre o mesmo assunto, qual delas manter. Quanto menor o
+// número, mais confiável. Site oficial do clube sempre vence (rank 0),
+// atribuído separadamente por domínio, não por nome de fonte.
+const SOURCE_RANK: Array<{ match: RegExp; rank: number }> = [
+  { match: /ge\.?globo|globoesporte/i, rank: 1 },
+  { match: /espn/i, rank: 2 },
+  { match: /uol/i, rank: 3 },
+  { match: /lance/i, rank: 4 },
+  { match: /cnn ?brasil/i, rank: 5 },
+  { match: /gazeta ?esportiva/i, rank: 6 },
+  { match: /o ?globo/i, rank: 7 },
+  { match: /terra/i, rank: 8 },
+  { match: /marca|^as$|as\.com|mundo ?deportivo/i, rank: 9 },
+  { match: /bbc/i, rank: 10 },
+  { match: /goal/i, rank: 11 },
+];
+
+function rankForSource(source: string): number {
+  const found = SOURCE_RANK.find((s) => s.match.test(source));
+  return found ? found.rank : 50;
+}
+
+function getDomain(url: string): string {
+  try {
+    return new URL(url).hostname.replace(/^www\./, "").toLowerCase();
+  } catch {
+    return "";
+  }
+}
+
+// Bing entrega o link real dentro de ?url=... por trás de um redirecionador
+// (apiclick.aspx). Extrai a URL real pra sabermos o domínio verdadeiro da
+// notícia (necessário pra comparar com o site oficial do clube).
+function extractRealUrl(bingUrl: string): string {
+  try {
+    const u = new URL(bingUrl);
+    const real = u.searchParams.get("url");
+    return real ? decodeURIComponent(real) : bingUrl;
+  } catch {
+    return bingUrl;
+  }
+}
+
+async function urlIsAlive(url: string): Promise<boolean> {
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 3500);
+    const r = await fetch(url, { method: "HEAD", redirect: "follow", signal: controller.signal });
+    clearTimeout(timeout);
+    if (r.ok) return true;
+    // Alguns sites bloqueiam HEAD — tenta GET como fallback.
+    const g = await fetch(url, { method: "GET", redirect: "follow" });
+    return g.ok;
+  } catch {
+    return false;
+  }
+}
+
+// Resolve (e cacheia em clubes_cache.site_oficial) o domínio do site oficial
+// do clube, perguntando a IA e verificando se o domínio de fato responde
+// antes de confiar nele — nunca aceita um domínio "alucinado" sem checar.
+async function resolveOfficialSite(admin: any, clubName: string): Promise<string | null> {
+  try {
+    const { data: row } = await admin
+      .from("clubes_cache")
+      .select("id, site_oficial")
+      .ilike("nome", clubName)
+      .maybeSingle();
+
+    if (row?.site_oficial) return row.site_oficial;
+    if (!LOVABLE_KEY) return null;
+
+    const prompt = `Qual é o domínio do site OFICIAL do clube de futebol "${clubName}"? Responda APENAS com o domínio puro, sem "https://" e sem "www." (exemplo: "flamengo.com.br"). Se você não tiver certeza absoluta, responda exatamente "unknown".`;
+
+    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${LOVABLE_KEY}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash",
+        messages: [{ role: "user", content: prompt }],
+        temperature: 0,
+      }),
+    });
+    if (!res.ok) return null;
+    const json = await res.json();
+    const answer = String(json?.choices?.[0]?.message?.content || "").trim().toLowerCase();
+    const domain = answer.replace(/^https?:\/\//, "").replace(/^www\./, "").replace(/\/.*/, "");
+
+    if (!domain || domain === "unknown" || !/^[a-z0-9.-]+\.[a-z]{2,}$/.test(domain)) return null;
+    if (!(await urlIsAlive(`https://${domain}`))) return null;
+
+    if (row?.id) {
+      await admin.from("clubes_cache").update({ site_oficial: domain }).eq("id", row.id);
+    }
+    return domain;
+  } catch (e) {
+    console.warn("[club-news] resolveOfficialSite falhou:", e);
+    return null;
+  }
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -213,6 +330,9 @@ serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
+    const admin = SUPABASE_URL && SERVICE_ROLE ? createClient(SUPABASE_URL, SERVICE_ROLE) : null;
+    const officialDomain = admin ? await resolveOfficialSite(admin, clubName) : null;
 
     const countryContext = pais && normalize(pais) !== "brazil" && normalize(pais) !== "brasil"
       ? pais
@@ -288,6 +408,11 @@ serve(async (req) => {
       }
     };
 
+    // 0) Site OFICIAL do clube, quando resolvido — tentado primeiro, com
+    // prioridade máxima, antes até dos agregadores de notícia confiáveis.
+    if (officialDomain) {
+      addVariant(`${quotedClub} site:${officialDomain} ${EXCLUSIONS}`);
+    }
     // 1) Consulta editorial rica: clube + futebol clube + fontes confiáveis + geo + exclusões
     addVariant(`${quotedClub} futebol clube notícias oficiais ${geoCtx} (${trustedFilter}) ${EXCLUSIONS}`);
     // 2) Sem site-filter, mantendo contexto e exclusões (Bing costuma cortar queries muito longas)
@@ -328,7 +453,7 @@ serve(async (req) => {
     }
 
     const items: any[] = [];
-    const seenTitles = new Set<string>();
+    const seenTitles = new Map<string, number>();
 
     const itemRegex = /<item>([\s\S]*?)<\/item>/g;
     let match;
@@ -426,10 +551,33 @@ serve(async (req) => {
       debug.ambig++;
 
       const titleNorm = normalize(cleanTitle);
-      if (seenTitles.has(titleNorm)) continue;
-      seenTitles.add(titleNorm);
 
       const link = get("link");
+      const realLink = extractRealUrl(link);
+      const linkDomain = getDomain(realLink);
+      const isOfficial = Boolean(officialDomain && linkDomain === officialDomain);
+      const sourceRank = isOfficial ? 0 : rankForSource(source);
+
+      const existingIdx = seenTitles.get(titleNorm);
+      if (existingIdx !== undefined) {
+        // Mesmo assunto já visto de outra fonte — só substitui se a nova
+        // fonte for mais confiável (rank menor) que a que já está na lista.
+        if (sourceRank < items[existingIdx].sourceRank) {
+          items[existingIdx] = {
+            title: decodeHtmlEntities(cleanTitle),
+            link: decodeHtmlEntities(link),
+            pubDate,
+            source: decodeHtmlEntities(source),
+            imageUrl: extractImage(block),
+            guid: get("guid") || `${titleNorm}-${existingIdx}`,
+            isOfficial,
+            sourceRank,
+          };
+        }
+        continue;
+      }
+      seenTitles.set(titleNorm, items.length);
+
       const imageUrl = extractImage(block);
 
       items.push({
@@ -439,6 +587,8 @@ serve(async (req) => {
         source: decodeHtmlEntities(source),
         imageUrl,
         guid: get("guid") || `${titleNorm}-${items.length}`,
+        isOfficial,
+        sourceRank,
       });
       debug.accepted++;
       }
