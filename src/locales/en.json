@@ -572,6 +572,9 @@
     "hours_short": "hrs",
     "min_short": "min",
     "sec_short": "sec",
+    "share": "Share",
+    "share_error_title": "Couldn't share",
+    "share_error_desc": "Try again in a few seconds, or take a screenshot.",
     "zones": {
       "lib_g": "Libertadores (Group Stage)",
       "lib_p": "Pre-Libertadores",

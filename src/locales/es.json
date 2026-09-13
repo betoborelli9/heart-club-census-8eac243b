@@ -572,6 +572,9 @@
     "hours_short": "hrs",
     "min_short": "min",
     "sec_short": "seg",
+    "share": "Compartir",
+    "share_error_title": "No se pudo compartir",
+    "share_error_desc": "Intenta de nuevo en unos segundos, o toma una captura de pantalla.",
     "zones": {
       "lib_g": "Libertadores (Fase de Grupos)",
       "lib_p": "Pre-Libertadores",

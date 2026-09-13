@@ -3,13 +3,15 @@
  * [MÓDULO]: Painel global de competições — abas dinâmicas com classificação,
  * próximo jogo e modo AO VIVO. Dados via edge function league-standings (API-Football).
  */
-import { Fragment, useEffect, useMemo, useState } from "react";
-import { Trophy, Radio, Calendar, MapPin } from "lucide-react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
+import { Trophy, Radio, Calendar, MapPin, Share2, Loader2 } from "lucide-react";
+import { toPng } from "html-to-image";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { ClubLogo } from "@/components/ClubLogo";
 import { supabase } from "@/integrations/supabase/client";
 import { useTranslationApp } from "@/hooks/useTranslationApp";
+import { useToast } from "@/hooks/use-toast";
 import { isHistoricalRival } from "@/lib/rivalries";
 import { getLeagueRules, getZoneForPosition, type LeagueRules, type LeagueZone } from "@/data/leagueRules";
 import { teamColors } from "@/data/teamColors";
@@ -74,10 +76,69 @@ const PULSE_CSS = `
 
 export default function CompetitionsPanel({ clubName, primaryColor = "#ff6200" }: Props) {
   const { t, language } = useTranslationApp();
+  const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [team, setTeam] = useState<{ id: number; name: string; logo: string } | null>(null);
   const [competitions, setCompetitions] = useState<Competition[]>([]);
   const [activeTab, setActiveTab] = useState<string>("");
+  const [sharing, setSharing] = useState(false);
+  const shareRefs = useRef<Record<string, HTMLDivElement | null>>({});
+
+  // Captura a tabela + próximo jogo REAIS da tela (com todas as cores, o
+  // destaque do adversário, as zonas etc.) como imagem, e abre o menu de
+  // compartilhar do celular (WhatsApp incluído). A tabela tem uma rolagem
+  // horizontal no mobile (overflow-x-auto) — antes de tirar a "foto",
+  // forçamos ela a mostrar a largura inteira, sem cortar nenhuma coluna.
+  const handleShare = async () => {
+    const node = shareRefs.current[activeTab];
+    if (!node || sharing) return;
+    setSharing(true);
+
+    const scrollBox = node.querySelector<HTMLElement>(".thin-orange-scroll");
+    const prevOverflow = scrollBox?.style.overflow;
+    const prevWidth = scrollBox?.style.width;
+    if (scrollBox) {
+      scrollBox.style.overflow = "visible";
+      scrollBox.style.width = `${scrollBox.scrollWidth}px`;
+    }
+
+    try {
+      const dataUrl = await toPng(node, {
+        pixelRatio: 2,
+        cacheBust: true,
+        backgroundColor: "#0b0b0b",
+        width: node.scrollWidth,
+        height: node.scrollHeight,
+      });
+      const blob = await (await fetch(dataUrl)).blob();
+      const fileName = `heart-club-tabela-${(clubName || "time").toLowerCase().replace(/\s+/g, "-")}.png`;
+      const file = new File([blob], fileName, { type: "image/png" });
+
+      if (navigator.canShare?.({ files: [file] })) {
+        await navigator.share({ files: [file], title: "Heart Club", text: `Tabela e próximo jogo do ${clubName}` });
+      } else {
+        const a = document.createElement("a");
+        a.href = dataUrl;
+        a.download = fileName;
+        a.click();
+      }
+    } catch (e) {
+      if ((e as any)?.name !== "AbortError") {
+        console.error("[CompetitionsPanel] handleShare falhou:", e);
+        toast({
+          variant: "destructive",
+          title: t("competitions.share_error_title"),
+          description: t("competitions.share_error_desc"),
+        });
+      }
+    } finally {
+      if (scrollBox) {
+        scrollBox.style.overflow = prevOverflow || "";
+        scrollBox.style.width = prevWidth || "";
+      }
+      setSharing(false);
+    }
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -171,6 +232,16 @@ export default function CompetitionsPanel({ clubName, primaryColor = "#ff6200" }
           {t("competitions.title")}
         </h3>
         <span className="text-[9px] font-mono text-white/30">{t("competitions.tournaments", { count: competitions.length })}</span>
+        <button
+          type="button"
+          onClick={handleShare}
+          disabled={sharing}
+          title={t("competitions.share")}
+          className="flex items-center gap-1 px-2 py-1 rounded-lg border border-white/10 text-white/70 hover:text-white hover:border-white/30 transition-colors disabled:opacity-50 shrink-0"
+        >
+          {sharing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Share2 className="w-3.5 h-3.5" />}
+          <span className="text-[9px] font-black uppercase italic">{t("competitions.share")}</span>
+        </button>
       </header>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
@@ -198,17 +269,26 @@ export default function CompetitionsPanel({ clubName, primaryColor = "#ff6200" }
             : null;
           return (
             <TabsContent key={c.leagueId} value={String(c.leagueId)} className="space-y-4 mt-3">
-              <MatchCard match={focusMatch} live={!!c.liveMatch} primaryColor={primaryColor} />
-              <StandingsTable
-                rows={c.standings}
-                meTeamId={team?.id}
-                opponentTeamId={opponent?.id}
-                opponentName={opponent?.name}
-                heartClubName={clubName}
-                primaryColor={primaryColor}
-                leagueId={c.leagueId}
-                leagueName={c.leagueName}
-              />
+              <div
+                ref={(el) => (shareRefs.current[String(c.leagueId)] = el)}
+                className="space-y-4 bg-[#0b0b0b] p-2 rounded-xl"
+              >
+                <MatchCard match={focusMatch} live={!!c.liveMatch} primaryColor={primaryColor} />
+                <StandingsTable
+                  rows={c.standings}
+                  meTeamId={team?.id}
+                  opponentTeamId={opponent?.id}
+                  opponentName={opponent?.name}
+                  heartClubName={clubName}
+                  primaryColor={primaryColor}
+                  leagueId={c.leagueId}
+                  leagueName={c.leagueName}
+                />
+                <div className="flex items-center justify-center gap-1.5 pt-1">
+                  <span className="text-[9px] font-black uppercase italic text-white">Heart Club</span>
+                  <span className="text-[9px] text-white/40">· heartclubapp.com</span>
+                </div>
+              </div>
               <LeagueRulesPanel leagueId={c.leagueId} />
             </TabsContent>
           );
