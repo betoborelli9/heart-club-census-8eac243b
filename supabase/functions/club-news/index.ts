@@ -428,7 +428,13 @@ serve(async (req) => {
       const bingUrl = `https://www.bing.com/news/search?q=${query}&format=rss&cc=br&setlang=pt-BR&qft=interval%3d%227%22`;
 
       const bingXml = await fetchRss(bingUrl);
-      if (bingXml) xmlDocs.push(bingXml);
+      const itemCount = bingXml ? (bingXml.match(/<item>/g) || []).length : 0;
+      // Só conta pro "orçamento" de 3 docs quando a resposta realmente tem
+      // notícia — uma busca (ex.: restrita ao site oficial) que responde
+      // certinho mas vem vazia não pode "gastar" uma tentativa e impedir
+      // que a próxima variante (mais ampla, com mais chance de achar algo)
+      // seja tentada.
+      if (bingXml && itemCount > 0) xmlDocs.push(bingXml);
 
       if (xmlDocs.length >= 3) break;
     }
