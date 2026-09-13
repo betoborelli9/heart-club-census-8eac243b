@@ -31,7 +31,7 @@ function normalize(s: string): string {
 // renderiza automaticamente.
 function decodeHtmlEntities(s: string): string {
   if (!s) return s;
-  return s
+  const decoded = s
     .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(Number(n)))
     .replace(/&#x([0-9a-fA-F]+);/g, (_, n) => String.fromCharCode(parseInt(n, 16)))
     .replace(/&amp;/g, "&")
@@ -40,6 +40,22 @@ function decodeHtmlEntities(s: string): string {
     .replace(/&quot;/g, '"')
     .replace(/&apos;/g, "'")
     .replace(/&nbsp;/g, " ");
+  return fixMojibake(decoded);
+}
+
+// Corrige "mojibake" — títulos que vêm com bytes UTF-8 (ex.: "é") lidos como
+// se fossem Latin-1, virando "Ã©" e afins. Reinterpreta os char codes da
+// string como bytes originais e decodifica como UTF-8 de verdade; só aplica
+// a correção quando esses bytes formam UTF-8 válido, pra nunca estragar um
+// título que já está correto.
+function fixMojibake(s: string): string {
+  if (!s || !/[Â-Ã][-¿]/.test(s)) return s;
+  try {
+    const bytes = Uint8Array.from([...s].map((c) => c.charCodeAt(0)));
+    return new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+  } catch {
+    return s;
+  }
 }
 
 function extractSource(title: string): { cleanTitle: string; source: string } {
