@@ -805,14 +805,27 @@ const MapaCalor = () => {
   // clube aqui (ou em outra página) reflete em todas, até o torcedor voltar
   // pro próprio time do coração. "Mapa Geral" continua sendo uma opção só
   // desta página (não existe um "geral" equivalente nas outras telas).
-  const { heartClubName, viewedClubName: sharedViewedClubName, setViewedClubName: setSharedViewedClubName, resetToHeart } = useViewedClub();
+  const {
+    heartClubName,
+    viewedClubName: sharedViewedClubName,
+    setViewedClubName: setSharedViewedClubName,
+    resetToHeart,
+    ready: viewedClubReady,
+  } = useViewedClub();
   const [activeClubName, setActiveClubName] = useState("");
+  // Diferencia "ainda não sei o clube" (não busca nada ainda) de "usuário
+  // clicou em Mapa Geral de propósito" — os dois deixam activeClubName vazio,
+  // mas só o segundo deve realmente disparar a busca agregada de todo mundo.
+  const [explicitGeneral, setExplicitGeneral] = useState(false);
 
   // Sincroniza com o clube compartilhado sempre que ele mudar (inclusive
   // quando muda em outra página) — mas não sobrescreve o "Mapa Geral" (""),
   // que é uma escolha explícita só deste mapa.
   useEffect(() => {
-    if (sharedViewedClubName) setActiveClubName(sharedViewedClubName);
+    if (sharedViewedClubName) {
+      setActiveClubName(sharedViewedClubName);
+      setExplicitGeneral(false);
+    }
   }, [sharedViewedClubName]);
   const [activeClubInfo, setActiveClubInfo] = useState<any>(null);
   const [viewMode, setViewMode] = useState<ViewLevel>("world");
@@ -959,8 +972,17 @@ const MapaCalor = () => {
       setCompareHeatData(compare);
       setLoading(false);
     };
+    // Sem clube definido ainda e o torcedor não escolheu "Mapa Geral" de
+    // propósito → provavelmente é só o clube compartilhado (do coração ou
+    // pesquisado em outra página) ainda carregando. Espera resolver em vez
+    // de já buscar o agregado de todo mundo, que apareceria por um instante
+    // (ou ficaria preso lá, se a resolução demorar) como se fosse o padrão.
+    if (!activeClubName && !explicitGeneral && !viewedClubReady) {
+      setLoading(true);
+      return;
+    }
     fetchHeat();
-  }, [activeClubName, compareClubName, viewMode, activeCountry, activeState, activeCity]);
+  }, [activeClubName, compareClubName, viewMode, activeCountry, activeState, activeCity, explicitGeneral, viewedClubReady]);
 
   const totalVotes = useMemo(() => heatData.reduce((s, e) => s + Number(e.votes), 0), [heatData]);
 
@@ -1629,6 +1651,7 @@ const MapaCalor = () => {
                 <button
                   onClick={() => {
                     setActiveClubName("");
+                    setExplicitGeneral(true);
                     setActiveClubInfo(null);
                     setCompareClubName(null);
                   }}
