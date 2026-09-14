@@ -73,8 +73,17 @@ export function useHeartClubFixture(userId?: string, teamIdOverride?: number | n
     return () => { supabase.removeChannel(ch); };
   }, [teamId]);
 
+  const LIVE_STATUSES = new Set(["1H", "2H", "HT", "ET", "BT", "P", "LIVE"]);
   const next = (payload?.next || [])
     .filter((f) => !payload?.live_state?.[f.id]?.finished)
+    // Blindagem contra cache atrasado do cron: nunca mostra como "próximo
+    // jogo" uma partida cujo horário já passou e que não está ao vivo agora
+    // (senão a contagem regressiva trava em 00:00:00 até o cache atualizar).
+    .filter((f) => {
+      const status = payload?.live_state?.[f.id]?.status || f.status;
+      if (LIVE_STATUSES.has(status)) return true;
+      return new Date(f.date).getTime() > Date.now();
+    })
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
   const upcoming = next[0] || null;
   const liveState = upcoming ? payload?.live_state?.[upcoming.id] : null;
