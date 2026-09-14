@@ -19,6 +19,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { UserProvider } from "@/contexts/UserContext";
+import { ViewedClubProvider } from "@/contexts/ViewedClubContext";
 import FeedbackWidget from "@/components/FeedbackWidget";
 import InstallAppButton from "@/components/InstallAppButton";
 import AppNavBar from "@/components/AppNavBar";
@@ -85,6 +86,7 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <UserProvider>
+        <ViewedClubProvider>
         <UsersTableSync />
         <Toaster />
         <Sonner />
@@ -143,6 +145,7 @@ const App = () => (
           <GlobalNav />
           <GlobalFooter />
         </BrowserRouter>
+        </ViewedClubProvider>
       </UserProvider>
     </TooltipProvider>
   </QueryClientProvider>

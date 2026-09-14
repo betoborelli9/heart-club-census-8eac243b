@@ -9,6 +9,7 @@ import { LogOut, Loader2, Heart, Beaker } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { useUser } from "@/contexts/UserContext";
+import { useViewedClub } from "@/contexts/ViewedClubContext";
 import { supabase } from "@/integrations/supabase/client";
 import { CLUBS_DATA } from "@/clubes-data";
 import { isMasterEmail } from "@/lib/master";
@@ -40,10 +41,9 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const { user, profile, isLoading, isAuthReady, isAuthenticated, signOut } = useUser();
+  const { heartClubName, viewedClubName, setViewedClubName, isViewingHeart } = useViewedClub();
 
-  const [heartClubName, setHeartClubName] = useState<string | null>(null);
   const [heartClubData, setHeartClubData] = useState<any>(null);
-  const [viewedClubName, setViewedClubName] = useState<string | null>(null);
   const [viewedClubData, setViewedClubData] = useState<any>(null);
   const [sympathies, setSympathies] = useState<string[]>([]);
   const [fadeKey, setFadeKey] = useState(0);
@@ -65,27 +65,42 @@ const Dashboard = () => {
     else if (!profile && !isMasterAdmin) navigate("/profile-setup", { replace: true });
   }, [isAuthReady, isLoading, isAuthenticated, profile, isMasterAdmin, navigate]);
 
+  // Nome do time do coração e do clube em exibição agora vêm do
+  // ViewedClubContext (compartilhado entre Dashboard/Ranking/Mapa de Calor) —
+  // aqui só busca as simpatias, que são exclusivas desta página.
   useEffect(() => {
-    const loadVoto = async () => {
+    const loadSympathies = async () => {
       if (!user) return;
       const { data } = await supabase
         .from("votos")
-        .select("clube_nome, sympathy_1, sympathy_2, sympathy_3, sympathy_4")
+        .select("sympathy_1, sympathy_2, sympathy_3, sympathy_4")
         .eq("user_id", user.id)
         .eq("is_original_vote", true)
         .maybeSingle();
-
-      if (data?.clube_nome) {
-        setHeartClubName(data.clube_nome);
-        const info = CLUBS_DATA.find((c) => c.nome.toLowerCase() === data.clube_nome.toLowerCase());
-        setHeartClubData(info || { nome: data.clube_nome });
-        setViewedClubName(data.clube_nome);
-        setViewedClubData(info || { nome: data.clube_nome });
+      if (data) {
         setSympathies([data.sympathy_1, data.sympathy_2, data.sympathy_3, data.sympathy_4].filter(Boolean) as string[]);
       }
     };
-    loadVoto();
+    loadSympathies();
   }, [user]);
+
+  useEffect(() => {
+    if (!heartClubName) {
+      setHeartClubData(null);
+      return;
+    }
+    const info = CLUBS_DATA.find((c) => c.nome.toLowerCase() === heartClubName.toLowerCase());
+    setHeartClubData(info || { nome: heartClubName });
+  }, [heartClubName]);
+
+  useEffect(() => {
+    if (!viewedClubName) {
+      setViewedClubData(null);
+      return;
+    }
+    const info = CLUBS_DATA.find((c) => c.nome.toLowerCase() === viewedClubName.toLowerCase());
+    setViewedClubData(info || { nome: viewedClubName });
+  }, [viewedClubName]);
 
   useEffect(() => {
     let cancelled = false;
@@ -125,8 +140,6 @@ const Dashboard = () => {
   const handlePickClub = (name: string) => {
     if (name === viewedClubName) return;
     setViewedClubName(name);
-    const info = CLUBS_DATA.find((c) => c.nome.toLowerCase() === name.toLowerCase());
-    setViewedClubData(info || { nome: name });
     setFadeKey((k) => k + 1);
   };
 
@@ -134,7 +147,6 @@ const Dashboard = () => {
   const heartTheme = useClubTheme(heartClubName);
   const primary = viewedTheme?.primaryHex || "#ff6200";
   const secondary = viewedTheme?.secondaryHex || "#000000";
-  const isViewingHeart = viewedClubName === heartClubName;
 
   // Exclusivo do Master Admin: ao consultar outro clube na busca, a Dashboard
   // inteira (banner, identidade, próximo jogo) reflete o clube consultado —

@@ -28,6 +28,7 @@ import { MapContainer, TileLayer, GeoJSON, Tooltip as LTooltip, useMap } from "r
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { useUser } from "@/contexts/UserContext";
+import { useViewedClub } from "@/contexts/ViewedClubContext";
 import { supabase } from "@/integrations/supabase/client";
 import { ClubLogo } from "@/components/ClubLogo";
 import { searchClubsLocal, ClubSearchResult } from "@/lib/search-clubs";
@@ -800,8 +801,19 @@ const MapaCalor = () => {
   const navigate = useNavigate();
   const { t } = useTranslationApp();
   const { user, signOut } = useUser();
-  const [heartClubName, setHeartClubName] = useState("");
+  // Clube "em exibição" compartilhado com Dashboard e Ranking. Pesquisar um
+  // clube aqui (ou em outra página) reflete em todas, até o torcedor voltar
+  // pro próprio time do coração. "Mapa Geral" continua sendo uma opção só
+  // desta página (não existe um "geral" equivalente nas outras telas).
+  const { heartClubName, viewedClubName: sharedViewedClubName, setViewedClubName: setSharedViewedClubName, resetToHeart } = useViewedClub();
   const [activeClubName, setActiveClubName] = useState("");
+
+  // Sincroniza com o clube compartilhado sempre que ele mudar (inclusive
+  // quando muda em outra página) — mas não sobrescreve o "Mapa Geral" (""),
+  // que é uma escolha explícita só deste mapa.
+  useEffect(() => {
+    if (sharedViewedClubName) setActiveClubName(sharedViewedClubName);
+  }, [sharedViewedClubName]);
   const [activeClubInfo, setActiveClubInfo] = useState<any>(null);
   const [viewMode, setViewMode] = useState<ViewLevel>("world");
   const [activeCountry, setActiveCountry] = useState<string | null>(null);
@@ -845,8 +857,7 @@ const MapaCalor = () => {
         .eq("user_id", user.id)
         .eq("is_original_vote", true)
         .maybeSingle();
-      const name = data?.clube_nome || "";
-      setHeartClubName(name);
+      // Nome do time do coração agora vem do ViewedClubContext (compartilhado).
       // [VISÃO GERAL]: por padrão o mapa mostra TODOS os clubes votantes.
       // O torcedor clica no card do coração ou pesquisa um clube para filtrar.
       // setActiveClubName fica "" → RPC agrega todos os clubes.
@@ -1377,6 +1388,7 @@ const MapaCalor = () => {
     setSearchResults([]);
     if (club.name === activeClubName) return;
     setActiveClubName(club.name);
+    setSharedViewedClubName(club.name);
     setActiveClubInfo(CLUBS_DATA.find((c) => c.nome === club.name) || null);
     setCompareClubName(null);
     setCompareData(null);
@@ -1627,6 +1639,7 @@ const MapaCalor = () => {
                 {heartClubName && (
                   <button
                     onClick={() => {
+                      resetToHeart();
                       setActiveClubName(heartClubName);
                       setActiveClubInfo(CLUBS_DATA.find((c) => c.nome === heartClubName) || null);
                     }}

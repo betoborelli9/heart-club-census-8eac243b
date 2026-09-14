@@ -14,7 +14,7 @@ import { motion } from "framer-motion";
 import {
   Loader2, LogOut, Search, Globe, Flag, MapPin, Building2, Home,
   TrendingUp, TrendingDown, Trophy, Swords, Target, Share2, Copy, Sparkles, Crown, Zap,
-  Radar, Megaphone,
+  Radar, Megaphone, Heart,
 } from "lucide-react";
 import ShareTropaModal from "@/components/dashboard/ShareTropaModal";
 import RivalsColumn from "@/components/dashboard/RivalsColumn";
@@ -23,6 +23,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { useUser } from "@/contexts/UserContext";
+import { useViewedClub } from "@/contexts/ViewedClubContext";
 import { supabase } from "@/integrations/supabase/client";
 import { searchClubsWithFallback } from "@/lib/search-clubs";
 import { ClubLogo } from "@/components/ClubLogo";
@@ -74,7 +75,10 @@ const Stats = () => {
     } catch {}
   }, []);
 
-  const [clubName, setClubName] = useState<string | null>(null);
+  // Clube "em exibição" — compartilhado com Dashboard e Mapa de Calor via
+  // ViewedClubContext, pra pesquisar um clube aqui e ver o mesmo clube nas
+  // outras páginas, até o torcedor voltar pro próprio time do coração.
+  const { viewedClubName: clubName, setViewedClubName: setClubName, heartClubName, isViewingHeart } = useViewedClub();
   const [userVote, setUserVote] = useState<{ pais?: string; estado?: string; cidade?: string; bairro?: string }>({});
 
   const [level, setLevel] = useState<Level>("global");
@@ -116,18 +120,17 @@ const Stats = () => {
     })();
   }, [clubName]);
 
-  // ─── Load user's club + vote location ───
+  // ─── Load vote location (o nome do clube em si vem do ViewedClubContext) ───
   useEffect(() => {
     if (!user) return;
     (async () => {
       const { data } = await supabase
         .from("votos")
-        .select("clube_nome, voto_pais, pais, estado, voto_cidade, cidade, bairro")
+        .select("voto_pais, pais, estado, voto_cidade, cidade, bairro")
         .eq("user_id", user.id)
         .eq("is_original_vote", true)
         .maybeSingle();
       if (data) {
-        setClubName(data.clube_nome);
         setUserVote({
           pais: data.voto_pais || data.pais || undefined,
           estado: data.estado || undefined,
@@ -394,6 +397,22 @@ const Stats = () => {
             </Button>
           </div>
         </div>
+
+        {/* RADAR ATIVO — aparece quando o torcedor está vendo outro clube pesquisado */}
+        {!isViewingHeart && clubName && (
+          <div className="max-w-6xl mx-auto mt-3 flex items-center justify-between gap-4 px-4 py-3 bg-[#ff6200]/5 border border-[#ff6200]/10 rounded-2xl">
+            <div className="flex items-center gap-3 text-[10px] font-black italic uppercase tracking-[0.15em] text-white/60">
+              <div className="w-2 h-2 rounded-full animate-pulse bg-[#ff6200]" />
+              Radar Ativo: <span className="text-white">{clubName}</span>
+            </div>
+            <button
+              onClick={() => heartClubName && setClubName(heartClubName)}
+              className="text-[10px] font-black italic uppercase text-[#ff6200] flex items-center gap-1 shrink-0"
+            >
+              <Heart className="w-3 h-3 fill-current" /> {t("navbar.back_to_heart")}
+            </button>
+          </div>
+        )}
 
         {/* LEVEL TABS */}
         <div className="max-w-6xl mx-auto mt-3 flex gap-1 overflow-x-auto scrollbar-none">

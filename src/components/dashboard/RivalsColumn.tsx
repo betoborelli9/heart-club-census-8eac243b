@@ -37,15 +37,22 @@ export default function RivalsColumn({ clubName, refCode, primaryColor = "#ff620
 
       setLoading(true);
 
-      // 1) INSTANTÂNEO: tenta cache local em clubes_cache.rivais
+      // 1) INSTANTÂNEO: tenta cache local em clubes_cache.rivais — mas só usa
+      // se foi validado pela IA (pesquisa real) há menos de 60 dias. Rivais
+      // salvos há mais tempo (ou nunca validados pela IA) são tratados como
+      // "vazios" abaixo, disparando uma nova pesquisa real em vez de repetir
+      // pra sempre uma lista antiga/incompleta.
+      const STALE_MS = 60 * 24 * 60 * 60 * 1000;
       const { data: cacheRow } = await supabase
         .from("clubes_cache")
-        .select("rivais")
+        .select("rivais, atualizado_em")
         .ilike("nome", clubName)
         .maybeSingle();
 
       const ownNameNorm = normalizeName(clubName);
-      const cachedNames: string[] = Array.isArray((cacheRow as any)?.rivais)
+      const updatedAt = (cacheRow as any)?.atualizado_em ? new Date((cacheRow as any).atualizado_em).getTime() : 0;
+      const isFresh = updatedAt > 0 && Date.now() - updatedAt < STALE_MS;
+      const cachedNames: string[] = isFresh && Array.isArray((cacheRow as any)?.rivais)
         ? ((cacheRow as any).rivais as string[]).filter(
             (n) => Boolean(n) && normalizeName(n) !== ownNameNorm,
           )
@@ -161,9 +168,12 @@ export default function RivalsColumn({ clubName, refCode, primaryColor = "#ff620
       }
 
 
-      // 2) FALLBACK: sem cache → consultar Gemini/Wikipedia via edge function
+      // 2) FALLBACK: sem cache válido (vazio ou desatualizado) → consultar
+      // Gemini/Wikipedia via edge function, forçando pesquisa nova quando o
+      // motivo foi apenas "estava desatualizado" (senão a função reaproveita
+      // o mesmo cache velho internamente e nada muda).
       const { data, error } = await supabase.functions.invoke("get-rivals", {
-        body: { club_name: clubName },
+        body: { club_name: clubName, force_refresh: !isFresh },
       });
       if (cancelled) return;
 
