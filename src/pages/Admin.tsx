@@ -9,6 +9,7 @@ import AdminAuditTable from "@/components/admin/AdminAuditTable";
 import AdminSympathyTable from "@/components/admin/AdminSympathyTable";
 import AdminBIStats from "@/components/admin/AdminBIStats";
 import AdminCorrectionsTable from "@/components/admin/AdminCorrectionsTable";
+import AccessStats from "@/components/admin/AccessStats";
 import NeighborhoodDominance from "@/components/admin/NeighborhoodDominance";
 import SocioeconomicProfile from "@/components/admin/SocioeconomicProfile";
 import AffinityEcosystem from "@/components/admin/AffinityEcosystem";
@@ -130,6 +131,9 @@ const Admin = () => {
             <TabsTrigger value="bi" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               📊 BI & Estatísticas
             </TabsTrigger>
+            <TabsTrigger value="access" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              📈 Acessos
+            </TabsTrigger>
             <TabsTrigger value="neighborhoods" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               🗺️ Bairros
             </TabsTrigger>
@@ -166,6 +170,10 @@ const Admin = () => {
 
           <TabsContent value="bi">
             <AdminBIStats />
+          </TabsContent>
+
+          <TabsContent value="access">
+            <AccessStats />
           </TabsContent>
 
           <TabsContent value="neighborhoods">

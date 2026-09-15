@@ -25,6 +25,7 @@ import InstallAppButton from "@/components/InstallAppButton";
 import AppNavBar from "@/components/AppNavBar";
 import GlobalFooter from "@/components/GlobalFooter";
 import UsersTableSync from "@/integrations/users-table/UsersTableSync";
+import AccessTracker from "@/components/AccessTracker";
 import { useLocation } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 
@@ -87,6 +88,7 @@ const App = () => (
     <TooltipProvider>
       <UserProvider>
         <ViewedClubProvider>
+        <AccessTracker />
         <UsersTableSync />
         <Toaster />
         <Sonner />
