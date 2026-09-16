@@ -12,6 +12,7 @@ import { Users, Eye, Smartphone, Globe2, FileDown, TrendingUp, Activity, Downloa
 import { Button } from "@/components/ui/button";
 import { exportBrandedPdf } from "@/lib/pdf-export";
 import { toast } from "sonner";
+import { formatLocalDateTime } from "@/lib/country-timezone";
 
 type ClubRow = { club_viewed: string; total: number; unicos: number };
 type PlatformRow = { platform: string; total: number };
@@ -19,6 +20,7 @@ type DetailRow = {
   nome: string;
   email: string | null;
   whatsapp: string | null;
+  pais: string | null;
   club_viewed: string | null;
   platform: string;
   path: string;
@@ -29,6 +31,7 @@ type UserRankRow = {
   nome: string;
   email: string | null;
   whatsapp: string | null;
+  pais: string | null;
   total_accesses: number;
   paginas_visitadas: string[];
   primeiro_acesso: string;
@@ -69,15 +72,16 @@ function friendlyPage(path: string): string {
 }
 
 function exportCsv(rows: DetailRow[]) {
-  const header = ["nome", "email", "whatsapp", "clube", "pagina", "plataforma", "data_hora"];
+  const header = ["nome", "email", "whatsapp", "pais", "clube", "pagina", "plataforma", "data_hora_local_do_torcedor"];
   const body = rows.map((r) => [
     r.nome,
     r.email ?? "",
     r.whatsapp ?? "",
+    r.pais ?? "",
     r.club_viewed ?? "",
     r.path,
     r.platform,
-    new Date(r.created_at).toLocaleString("pt-BR"),
+    formatLocalDateTime(r.created_at, r.pais),
   ]);
   const csv = [header, ...body].map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
   const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" });
@@ -212,7 +216,7 @@ export default function AccessStats() {
           <div className="space-y-1.5 max-h-[220px] overflow-y-auto font-mono">
             {detail.slice(0, 15).map((r, i) => (
               <p key={i} className="text-xs text-green-400/90">
-                <span className="text-white/30">{new Date(r.created_at).toLocaleString("pt-BR")}</span>
+                <span className="text-white/30">{formatLocalDateTime(r.created_at, r.pais)}</span>
                 {" — "}
                 <b>{r.email || r.nome}</b> acessou {r.platform === "android_twa" ? "pelo app" : "pelo site"}
                 {r.club_viewed ? ` (${r.club_viewed})` : ""}
@@ -318,7 +322,7 @@ export default function AccessStats() {
                       <td className="py-2 pr-2 text-green-600">{seen.join(", ") || "—"}</td>
                       <td className="py-2 pr-2 text-orange-500">{missing.join(", ") || "viu tudo ✓"}</td>
                       <td className="py-2 pr-2 text-muted-foreground whitespace-nowrap">
-                        {new Date(u.ultimo_acesso).toLocaleString("pt-BR")}
+                        {formatLocalDateTime(u.ultimo_acesso, u.pais)}
                       </td>
                     </tr>
                   );
@@ -348,7 +352,7 @@ export default function AccessStats() {
                 <th className="py-2 pr-2">Clube</th>
                 <th className="py-2 pr-2">Página</th>
                 <th className="py-2 pr-2">Plataforma</th>
-                <th className="py-2 pr-2">Data/Hora</th>
+                <th className="py-2 pr-2">Data/Hora (fuso do torcedor)</th>
               </tr>
             </thead>
             <tbody>
@@ -361,7 +365,7 @@ export default function AccessStats() {
                   <td className="py-1.5 pr-2 text-muted-foreground">{r.path}</td>
                   <td className="py-1.5 pr-2 text-muted-foreground">{r.platform === "android_twa" ? "App" : "Web"}</td>
                   <td className="py-1.5 pr-2 text-muted-foreground whitespace-nowrap">
-                    {new Date(r.created_at).toLocaleString("pt-BR")}
+                    {formatLocalDateTime(r.created_at, r.pais)}
                   </td>
                 </tr>
               ))}
