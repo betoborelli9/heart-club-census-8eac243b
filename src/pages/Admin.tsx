@@ -10,6 +10,7 @@ import AdminSympathyTable from "@/components/admin/AdminSympathyTable";
 import AdminBIStats from "@/components/admin/AdminBIStats";
 import AdminCorrectionsTable from "@/components/admin/AdminCorrectionsTable";
 import AccessStats from "@/components/admin/AccessStats";
+import PartnerMediaKit from "@/components/admin/PartnerMediaKit";
 import NeighborhoodDominance from "@/components/admin/NeighborhoodDominance";
 import SocioeconomicProfile from "@/components/admin/SocioeconomicProfile";
 import AffinityEcosystem from "@/components/admin/AffinityEcosystem";
@@ -121,7 +122,7 @@ const Admin = () => {
 
       <main className="max-w-7xl mx-auto px-4 py-8">
         <Tabs defaultValue="audit" className="w-full">
-          <TabsList className="bg-card border border-border mb-8 h-12">
+          <TabsList className="bg-card border border-border mb-8 h-auto flex-wrap justify-start gap-1 py-1">
             <TabsTrigger value="audit" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               🔍 Auditoria de Votos
             </TabsTrigger>
@@ -148,6 +149,9 @@ const Admin = () => {
             </TabsTrigger>
             <TabsTrigger value="press" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               📰 Imprensa
+            </TabsTrigger>
+            <TabsTrigger value="mediakit" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              🤝 Mídia Kit
             </TabsTrigger>
             <TabsTrigger value="behavior" className="data-[state=active]:bg-yellow-500 data-[state=active]:text-black">
               ⚠ Auditoria Comportamental
@@ -194,6 +198,10 @@ const Admin = () => {
 
           <TabsContent value="press">
             <PressReleaseGenerator />
+          </TabsContent>
+
+          <TabsContent value="mediakit">
+            <PartnerMediaKit />
           </TabsContent>
 
           <TabsContent value="behavior">

@@ -8,17 +8,27 @@
  */
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Users, Eye, Smartphone, Globe2, FileDown, TrendingUp, Activity, Download } from "lucide-react";
+import { Users, Eye, Smartphone, Globe2, FileDown, TrendingUp, Activity, Download, Radio } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { exportBrandedPdf } from "@/lib/pdf-export";
+import { toast } from "sonner";
 
 type ClubRow = { club_viewed: string; total: number; unicos: number };
 type PlatformRow = { platform: string; total: number };
-type DetailRow = { nome: string; email: string | null; club_viewed: string | null; platform: string; path: string; created_at: string };
+type DetailRow = {
+  nome: string;
+  email: string | null;
+  whatsapp: string | null;
+  club_viewed: string | null;
+  platform: string;
+  path: string;
+  created_at: string;
+};
 type UserRankRow = {
   user_id: string;
   nome: string;
   email: string | null;
+  whatsapp: string | null;
   total_accesses: number;
   paginas_visitadas: string[];
   primeiro_acesso: string;
@@ -51,8 +61,16 @@ function pagesSeen(paths: string[]): string[] {
 }
 
 function exportCsv(rows: DetailRow[]) {
-  const header = ["nome", "email", "clube", "pagina", "plataforma", "data_hora"];
-  const body = rows.map((r) => [r.nome, r.email ?? "", r.club_viewed ?? "", r.path, r.platform, new Date(r.created_at).toLocaleString("pt-BR")]);
+  const header = ["nome", "email", "whatsapp", "clube", "pagina", "plataforma", "data_hora"];
+  const body = rows.map((r) => [
+    r.nome,
+    r.email ?? "",
+    r.whatsapp ?? "",
+    r.club_viewed ?? "",
+    r.path,
+    r.platform,
+    new Date(r.created_at).toLocaleString("pt-BR"),
+  ]);
   const csv = [header, ...body].map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
   const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
@@ -70,6 +88,8 @@ export default function AccessStats() {
   const [loading, setLoading] = useState(true);
   const [isLive, setIsLive] = useState(false);
   const fetchingRef = useRef(false);
+  const lastSeenRef = useRef<string | null>(null);
+  const firstLoadRef = useRef(true);
 
   const fetchAll = async () => {
     if (fetchingRef.current) return;
@@ -80,7 +100,23 @@ export default function AccessStats() {
       supabase.rpc("admin_get_access_by_user"),
     ]);
     if (s) setStats(s as unknown as Stats);
-    if (d) setDetail(d as unknown as DetailRow[]);
+    if (d) {
+      const rows = d as unknown as DetailRow[];
+      setDetail(rows);
+      // Avisa na hora quem acabou de acessar — pula o carregamento inicial
+      // (senão avisaria o histórico inteiro de uma vez ao abrir o painel).
+      if (rows[0] && rows[0].created_at !== lastSeenRef.current) {
+        if (!firstLoadRef.current) {
+          const who = rows[0].email || rows[0].nome;
+          const via = rows[0].platform === "android_twa" ? "pelo app" : "pelo site";
+          toast.info(`🟢 ${who} acabou de acessar ${via}`, {
+            description: `${rows[0].club_viewed ? rows[0].club_viewed + " · " : ""}${new Date(rows[0].created_at).toLocaleString("pt-BR")}`,
+          });
+        }
+        lastSeenRef.current = rows[0].created_at;
+      }
+      firstLoadRef.current = false;
+    }
     if (u) setByUser(u as unknown as UserRankRow[]);
     setLoading(false);
     fetchingRef.current = false;
@@ -153,6 +189,26 @@ export default function AccessStats() {
         </Button>
       </div>
 
+      <div className="rounded-2xl border border-green-500/30 bg-black p-4">
+        <h3 className="text-[10px] font-black uppercase tracking-widest text-green-400 mb-2 flex items-center gap-1.5">
+          <Radio className="w-3.5 h-3.5 animate-pulse" /> Feed ao vivo
+        </h3>
+        {detail.length === 0 ? (
+          <p className="text-sm text-white/40">Aguardando o primeiro acesso...</p>
+        ) : (
+          <div className="space-y-1.5 max-h-[220px] overflow-y-auto font-mono">
+            {detail.slice(0, 15).map((r, i) => (
+              <p key={i} className="text-xs text-green-400/90">
+                <span className="text-white/30">{new Date(r.created_at).toLocaleString("pt-BR")}</span>
+                {" — "}
+                <b>{r.email || r.nome}</b> acessou {r.platform === "android_twa" ? "pelo app" : "pelo site"}
+                {r.club_viewed ? ` (${r.club_viewed})` : ""}
+              </p>
+            ))}
+          </div>
+        )}
+      </div>
+
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <StatCard icon={Eye} label="Hoje" value={stats.total_today} sub={`${stats.unique_today} únicos`} />
         <StatCard icon={TrendingUp} label="Últimos 7 dias" value={stats.total_7d} sub={`${stats.unique_7d} únicos`} />
@@ -200,6 +256,8 @@ export default function AccessStats() {
                 <tr className="text-left text-[10px] uppercase text-muted-foreground border-b border-border">
                   <th className="py-2 pr-2">#</th>
                   <th className="py-2 pr-2">Torcedor</th>
+                  <th className="py-2 pr-2">E-mail</th>
+                  <th className="py-2 pr-2">WhatsApp</th>
                   <th className="py-2 pr-2">Acessos</th>
                   <th className="py-2 pr-2">Páginas vistas</th>
                   <th className="py-2 pr-2">Ainda não viu</th>
@@ -214,6 +272,8 @@ export default function AccessStats() {
                     <tr key={u.user_id} className="border-b border-border/50">
                       <td className="py-2 pr-2 text-muted-foreground">{i + 1}º</td>
                       <td className="py-2 pr-2 font-bold">{u.nome}</td>
+                      <td className="py-2 pr-2 text-muted-foreground">{u.email ?? "—"}</td>
+                      <td className="py-2 pr-2 text-muted-foreground whitespace-nowrap">{u.whatsapp ?? "—"}</td>
                       <td className="py-2 pr-2">{u.total_accesses}</td>
                       <td className="py-2 pr-2 text-green-600">{seen.join(", ") || "—"}</td>
                       <td className="py-2 pr-2 text-orange-500">{missing.join(", ") || "viu tudo ✓"}</td>
@@ -243,6 +303,8 @@ export default function AccessStats() {
             <thead className="sticky top-0 bg-card">
               <tr className="text-left text-[10px] uppercase text-muted-foreground border-b border-border">
                 <th className="py-2 pr-2">Nome</th>
+                <th className="py-2 pr-2">E-mail</th>
+                <th className="py-2 pr-2">WhatsApp</th>
                 <th className="py-2 pr-2">Clube</th>
                 <th className="py-2 pr-2">Página</th>
                 <th className="py-2 pr-2">Plataforma</th>
@@ -253,6 +315,8 @@ export default function AccessStats() {
               {detail.map((r, i) => (
                 <tr key={i} className="border-b border-border/30">
                   <td className="py-1.5 pr-2 font-bold">{r.nome}</td>
+                  <td className="py-1.5 pr-2 text-muted-foreground">{r.email ?? "—"}</td>
+                  <td className="py-1.5 pr-2 text-muted-foreground whitespace-nowrap">{r.whatsapp ?? "—"}</td>
                   <td className="py-1.5 pr-2 text-muted-foreground">{r.club_viewed ?? "—"}</td>
                   <td className="py-1.5 pr-2 text-muted-foreground">{r.path}</td>
                   <td className="py-1.5 pr-2 text-muted-foreground">{r.platform === "android_twa" ? "App" : "Web"}</td>

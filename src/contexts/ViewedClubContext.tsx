@@ -47,6 +47,12 @@ export function ViewedClubProvider({ children }: { children: ReactNode }) {
         setReady(true);
         return;
       }
+      // Enquanto a sessão ainda não tinha resolvido, "ready" pode ter sido
+      // marcado true achando que era visitante anônimo. Ao descobrir que na
+      // verdade há um usuário logado, volta pra "carregando" até resolver
+      // o time do coração de verdade — evita gravar/mostrar dado errado
+      // nesse intervalo (ex: mapa de calor geral, acesso como anônimo).
+      setReady(false);
       const { data } = await supabase
         .from("votos")
         .select("clube_nome")

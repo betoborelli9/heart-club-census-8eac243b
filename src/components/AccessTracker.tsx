@@ -35,12 +35,18 @@ function alreadyLoggedToday(path: string): boolean {
 }
 
 export default function AccessTracker() {
-  const { user } = useUser();
-  const { heartClubName, viewedClubName, ready } = useViewedClub();
+  // isAuthReady (não "ready" do clube) é a trava certa aqui: ele só vira
+  // true DEPOIS que a sessão de login foi checada de verdade. "ready" do
+  // clube pode ficar true por 1 instante achando "visitante anônimo" antes
+  // da sessão real carregar — e como só logamos 1x por página/dia, esse
+  // instante errado ficava "grudado" o dia inteiro (torcedor logado
+  // aparecendo como Visitante Anônimo na planilha).
+  const { user, isAuthReady } = useUser();
+  const { heartClubName, viewedClubName } = useViewedClub();
   const location = useLocation();
 
   useEffect(() => {
-    if (!ready) return;
+    if (!isAuthReady) return;
     if (alreadyLoggedToday(location.pathname)) return;
 
     const isTwa = document.referrer.startsWith("android-app://");
@@ -51,7 +57,7 @@ export default function AccessTracker() {
       platform: isTwa ? "android_twa" : "web",
       path: location.pathname,
     });
-  }, [ready, user, viewedClubName, heartClubName, location.pathname]);
+  }, [isAuthReady, user, viewedClubName, heartClubName, location.pathname]);
 
   return null;
 }
