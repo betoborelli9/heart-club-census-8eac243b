@@ -46,9 +46,12 @@ type Stats = {
   unique_all: number;
   by_platform_30d: PlatformRow[];
   by_club_30d: ClubRow[];
+  by_page_30d: PageRow[];
 };
+type PageRow = { path: string; total: number; unicos: number; via_site: number; via_app: number };
 
-// Páginas "core" do torcedor — usadas pra saber o que cada um já viu / ainda não viu.
+// Páginas "core" do torcedor — usadas pra saber o que cada um já viu / ainda não viu,
+// e pra dar nome amigável no ranking de páginas mais acessadas.
 const CORE_PAGES: { label: string; match: (p: string) => boolean }[] = [
   { label: "Início", match: (p) => p === "/dashboard" },
   { label: "Ranking", match: (p) => ["/stats", "/estatisticas", "/ranking"].includes(p) },
@@ -58,6 +61,11 @@ const CORE_PAGES: { label: string; match: (p: string) => boolean }[] = [
 
 function pagesSeen(paths: string[]): string[] {
   return CORE_PAGES.filter((cp) => paths.some((p) => cp.match(p))).map((cp) => cp.label);
+}
+
+function friendlyPage(path: string): string {
+  const found = CORE_PAGES.find((cp) => cp.match(path));
+  return found ? `${found.label} (${path})` : path;
 }
 
 function exportCsv(rows: DetailRow[]) {
@@ -181,6 +189,11 @@ export default function AccessStats() {
                   head: ["Clube", "Acessos", "Visitantes Únicos"],
                   body: stats.by_club_30d.map((c) => [c.club_viewed, c.total, c.unicos]),
                 },
+                {
+                  title: "Ranking por Página (últimos 30 dias)",
+                  head: ["Página", "Acessos", "Únicos", "Via Site", "Via App"],
+                  body: stats.by_page_30d.map((p) => [friendlyPage(p.path), p.total, p.unicos, p.via_site, p.via_app]),
+                },
               ],
             })
           }
@@ -219,6 +232,33 @@ export default function AccessStats() {
       <div className="grid grid-cols-2 gap-4 max-w-md">
         <StatCard icon={Globe2} label="Site (web) — 30d" value={web} />
         <StatCard icon={Smartphone} label="App Android — 30d" value={twa} />
+      </div>
+
+      <div className="rounded-2xl border border-border bg-card p-5">
+        <h3 className="text-sm font-black uppercase tracking-wide mb-1 text-muted-foreground">
+          Ranking de páginas mais acessadas (30 dias)
+        </h3>
+        <p className="text-[11px] text-muted-foreground mb-3">
+          Use isso pra precificar o espaço publicitário — página com mais tráfego vale mais.
+        </p>
+        {stats.by_page_30d.length === 0 ? (
+          <p className="text-sm text-muted-foreground">Ainda sem dados suficientes.</p>
+        ) : (
+          <div className="space-y-1">
+            {stats.by_page_30d.map((p, i) => (
+              <div key={p.path} className="flex items-center justify-between text-sm border-b border-border/50 py-2 gap-2">
+                <span className="font-bold flex items-center gap-2">
+                  <span className="text-muted-foreground w-5">{i + 1}º</span> {friendlyPage(p.path)}
+                </span>
+                <span className="text-muted-foreground text-right whitespace-nowrap">
+                  <b className="text-foreground">{p.total}</b> acessos · {p.unicos} únicos
+                  <br />
+                  <span className="text-[10px]">🌐 {p.via_site} site · 📱 {p.via_app} app</span>
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="rounded-2xl border border-border bg-card p-5">
