@@ -11,6 +11,7 @@ import AdminBIStats from "@/components/admin/AdminBIStats";
 import AdminCorrectionsTable from "@/components/admin/AdminCorrectionsTable";
 import AccessStats from "@/components/admin/AccessStats";
 import PartnerMediaKit from "@/components/admin/PartnerMediaKit";
+import WhatsAppCampaign from "@/components/admin/WhatsAppCampaign";
 import NeighborhoodDominance from "@/components/admin/NeighborhoodDominance";
 import SocioeconomicProfile from "@/components/admin/SocioeconomicProfile";
 import AffinityEcosystem from "@/components/admin/AffinityEcosystem";
@@ -153,6 +154,9 @@ const Admin = () => {
             <TabsTrigger value="mediakit" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               🤝 Mídia Kit
             </TabsTrigger>
+            <TabsTrigger value="whatsapp" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              📣 WhatsApp
+            </TabsTrigger>
             <TabsTrigger value="behavior" className="data-[state=active]:bg-yellow-500 data-[state=active]:text-black">
               ⚠ Auditoria Comportamental
             </TabsTrigger>
@@ -202,6 +206,10 @@ const Admin = () => {
 
           <TabsContent value="mediakit">
             <PartnerMediaKit />
+          </TabsContent>
+
+          <TabsContent value="whatsapp">
+            <WhatsAppCampaign />
           </TabsContent>
 
           <TabsContent value="behavior">
