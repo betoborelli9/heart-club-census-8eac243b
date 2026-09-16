@@ -88,11 +88,11 @@ const App = () => (
     <TooltipProvider>
       <UserProvider>
         <ViewedClubProvider>
-        <AccessTracker />
         <UsersTableSync />
         <Toaster />
         <Sonner />
         <BrowserRouter>
+          <AccessTracker />
           <Suspense
             fallback={
               <div className="min-h-screen bg-background flex items-center justify-center">
