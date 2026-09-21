@@ -11,14 +11,11 @@
  */
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { CLUBES } from "@/clubes-data";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { MessageCircle, Megaphone, Loader2 } from "lucide-react";
 
 type Contact = { user_id: string; nome: string; email: string; whatsapp: string; pais: string | null; clube_nome: string | null };
-
-const CLUB_NAMES = [...CLUBES.map((c) => c.nome)].sort((a, b) => a.localeCompare(b, "pt-BR"));
 
 function waLink(phone: string, message: string): string {
   const digits = phone.replace(/\D/g, "");
@@ -30,8 +27,21 @@ export default function WhatsAppCampaign() {
     "Oi! 👋 Você já viu que o Mapa de Calor do Heart Club tem países novos votando no seu clube? Dá uma olhada: heartclubapp.com",
   );
   const [club, setClub] = useState<string>("");
+  const [clubNames, setClubNames] = useState<string[]>([]);
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    // Lista de clubes vem do banco (voto real), não de um arquivo estático
+    // — src/clubes-data.ts fica vazio de propósito nesse projeto.
+    (async () => {
+      const { data } = await supabase.from("votos").select("clube_nome").eq("is_original_vote", true);
+      const names = [...new Set((data || []).map((r: any) => r.clube_nome).filter(Boolean))].sort((a, b) =>
+        a.localeCompare(b, "pt-BR"),
+      );
+      setClubNames(names);
+    })();
+  }, []);
 
   useEffect(() => {
     (async () => {
@@ -59,7 +69,7 @@ export default function WhatsAppCampaign() {
           className="h-10 rounded-lg border border-border bg-background px-3 text-sm w-full max-w-xs"
         >
           <option value="">Todos os clubes</option>
-          {CLUB_NAMES.map((n) => (
+          {clubNames.map((n) => (
             <option key={n} value={n}>
               {n}
             </option>

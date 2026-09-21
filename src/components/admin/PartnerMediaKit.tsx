@@ -3,9 +3,8 @@
  * [MÓDULO]: Mídia Kit por clube — PDF pronto pra mostrar a patrocinadores,
  * com número real de torcedores, alcance geográfico e acessos (site+app).
  */
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { CLUBES } from "@/clubes-data";
 import { Button } from "@/components/ui/button";
 import { Handshake, FileDown, Loader2 } from "lucide-react";
 import { exportBrandedPdf } from "@/lib/pdf-export";
@@ -23,11 +22,27 @@ type KitData = {
   acessos_app_30d: number;
 };
 
-const CLUB_NAMES = [...CLUBES.map((c) => c.nome)].sort((a, b) => a.localeCompare(b, "pt-BR"));
-
 export default function PartnerMediaKit() {
   const { toast } = useToast();
-  const [club, setClub] = useState(CLUB_NAMES[0] || "");
+  const [clubNames, setClubNames] = useState<string[]>([]);
+  const [club, setClub] = useState("");
+
+  useEffect(() => {
+    (async () => {
+      // Lista vem do banco (clubes com voto real registrado), não de um
+      // arquivo estático — src/clubes-data.ts é mantido vazio de propósito
+      // no projeto pra forçar uso do Supabase como fonte única de verdade.
+      const { data } = await supabase
+        .from("votos")
+        .select("clube_nome")
+        .eq("is_original_vote", true);
+      const names = [...new Set((data || []).map((r: any) => r.clube_nome).filter(Boolean))].sort((a, b) =>
+        a.localeCompare(b, "pt-BR"),
+      );
+      setClubNames(names);
+      setClub((prev) => prev || names[0] || "");
+    })();
+  }, []);
   const [loading, setLoading] = useState(false);
 
   const generate = async () => {
@@ -90,7 +105,7 @@ export default function PartnerMediaKit() {
           onChange={(e) => setClub(e.target.value)}
           className="flex-1 h-10 rounded-lg border border-border bg-background px-3 text-sm"
         >
-          {CLUB_NAMES.map((n) => (
+          {clubNames.map((n) => (
             <option key={n} value={n}>
               {n}
             </option>
