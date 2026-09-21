@@ -173,6 +173,7 @@ const AMBIGUOUS_ROOTS = [
   "portuguesa", "operario", "uniao", "central", "botafogo", "fluminense",
   "ferroviario", "ferroviaria", "industrial", "comercial", "olimpia",
   "independente", "metropol", "juventude", "santos", "river", "boca",
+  "vila", "nova", "velha", "rica", "aliança", "alianca",
 ];
 
 function clubHasAmbiguousRoot(clubName: string): boolean {
@@ -534,6 +535,12 @@ serve(async (req) => {
 
       // Bloqueio explícito de futebol amador / várzea.
       if (AMATEUR_BLACKLIST.some((b) => haystack.includes(b))) continue;
+
+      // ANTI-HOMÔNIMO GENÉRICO: exige pelo menos um termo de futebol
+      // profissional em título+descrição. Sem isso, notícia de bairro,
+      // cidade ou empresa com o mesmo nome do clube (ex.: bairro "Vila
+      // Nova") passava batido só por ter o nome no título.
+      if (!FOOTBALL_CTX.some((kw) => haystack.includes(kw))) continue;
       debug.ctx++;
 
       // ANTI-HOMÔNIMO: bloqueia conflito explícito de UF (ex.: Botafogo-PB para
