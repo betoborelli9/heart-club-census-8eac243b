@@ -188,10 +188,13 @@ function clubNeedsGeoDiscriminator(clubName: string): boolean {
   const ambiguousTokens = tokens.filter((token) => AMBIGUOUS_ROOTS.includes(token));
   if (ambiguousTokens.length === 0) return false;
 
-  // Nome de uma palavra ambígua (América, Nacional, Atlético, Real...) precisa
-  // de cidade/UF/estado para não cair em homônimo. Nome composto exato (Vila
-  // Nova, Corinthians, Palmeiras) não pode ser bloqueado só por não citar cidade.
-  return tokens.length === 1 || ambiguousTokens.length === tokens.length;
+  // Só nome de UMA palavra ambígua (América, Nacional, Atlético, Real...)
+  // exige cidade/UF/estado obrigatoriamente citada — sem isso, é impossível
+  // saber qual "América" é. Nome composto (Vila Nova, Nova Iguaçu...) já é
+  // suficientemente específico com os dois termos batendo (isStrictlyRelevant
+  // exige ambos) + contexto de futebol (FOOTBALL_CTX); exigir também a
+  // cidade bloquearia notícia legítima que não menciona a cidade-sede.
+  return tokens.length === 1;
 }
 
 // UF brasileira a partir do estado/cidade conhecidos (best-effort)
@@ -467,10 +470,16 @@ serve(async (req) => {
 
     // DISCRIMINADORES GEOGRÁFICOS (sem mascote — mascote não aparece em notícia):
     // cidade, estado por extenso, e a UF (sigla) derivada da cidade.
-    const discriminators: string[] = [];
-    if (cidade) discriminators.push(normalize(cidade));
+    // `cidade` pode vir como "Cidade, Estado" (formato do clubes_cache) — separa
+    // em partes, senão a comparação exige o texto inteiro "Goiânia, Goiás"
+    // aparecendo junto na notícia, o que praticamente nunca acontece.
+    const cidadeParts = cidade
+      ? cidade.split(",").map((p) => normalize(p.trim())).filter(Boolean)
+      : [];
+    const primaryCity = cidadeParts[0] || null;
+    const discriminators: string[] = [...cidadeParts];
     if (estado) discriminators.push(normalize(estado));
-    const uf = cidade ? UF_BY_CITY[normalize(cidade)] : null;
+    const uf = primaryCity ? UF_BY_CITY[primaryCity] : null;
     if (uf) discriminators.push(uf); // ex.: "mg", "sp", "go"
     const ambiguous = clubHasAmbiguousRoot(clubName);
     const needsGeoDiscriminator = clubNeedsGeoDiscriminator(clubName);
