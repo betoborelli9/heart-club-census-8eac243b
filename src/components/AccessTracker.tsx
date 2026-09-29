@@ -50,13 +50,21 @@ export default function AccessTracker() {
     if (alreadyLoggedToday(location.pathname)) return;
 
     const isTwa = document.referrer.startsWith("android-app://");
-    supabase.from("access_log").insert({
-      visitor_id: getVisitorId(),
-      user_id: user?.id || null,
-      club_viewed: viewedClubName || heartClubName || null,
-      platform: isTwa ? "android_twa" : "web",
-      path: location.pathname,
-    });
+    supabase
+      .from("access_log")
+      .insert({
+        visitor_id: getVisitorId(),
+        user_id: user?.id || null,
+        club_viewed: viewedClubName || heartClubName || null,
+        platform: isTwa ? "android_twa" : "web",
+        path: location.pathname,
+      })
+      .then(({ error }) => {
+        if (error) console.error("[AccessTracker] insert falhou:", error);
+      })
+      .catch((err) => {
+        console.error("[AccessTracker] insert lançou exceção:", err);
+      });
   }, [isAuthReady, user, viewedClubName, heartClubName, location.pathname]);
 
   return null;
