@@ -32,6 +32,7 @@ const slotColors: Record<number, string> = {
 
 const AdminSympathyTable = () => {
   const [rows, setRows] = useState<SympathyRow[]>([]);
+  const [totalVoters, setTotalVoters] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
   const [clubFilter, setClubFilter] = useState<string>("");
@@ -39,12 +40,16 @@ const AdminSympathyTable = () => {
 
   const fetchRows = async () => {
     setLoading(true);
-    const { data, error } = await supabase.rpc("admin_get_sympathy_votes");
+    const [{ data, error }, { count }] = await Promise.all([
+      supabase.rpc("admin_get_sympathy_votes"),
+      supabase.from("votos").select("user_id", { count: "exact", head: true }).eq("is_original_vote", true),
+    ]);
     if (error) {
       toast({ title: "Erro", description: error.message, variant: "destructive" });
     } else {
       setRows((data as unknown as SympathyRow[]) || []);
     }
+    setTotalVoters(count ?? null);
     setLoading(false);
   };
 
@@ -75,6 +80,7 @@ const AdminSympathyTable = () => {
   }, [rows]);
 
   const uniqueUsers = useMemo(() => new Set(rows.map((r) => r.user_id)).size, [rows]);
+  const raizCount = totalVoters !== null ? Math.max(totalVoters - uniqueUsers, 0) : null;
 
   const exportCSV = () => {
     const header = ["Slot", "Clube Simpatia", "Clube Coração", "Usuário", "Email", "Cidade", "Estado", "País", "Data"];
@@ -106,7 +112,7 @@ const AdminSympathyTable = () => {
   return (
     <div className="space-y-6">
       {/* Summary */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         <Card className="bg-card border-border">
           <CardContent className="p-4 text-center">
             <p className="text-3xl font-black text-foreground">{rows.length}</p>
@@ -117,6 +123,12 @@ const AdminSympathyTable = () => {
           <CardContent className="p-4 text-center">
             <p className="text-3xl font-black text-primary">{uniqueUsers}</p>
             <p className="text-xs text-muted-foreground font-bold uppercase">Torcedores Únicos</p>
+          </CardContent>
+        </Card>
+        <Card className="bg-card border-border">
+          <CardContent className="p-4 text-center">
+            <p className="text-3xl font-black text-green-500">{raizCount ?? "—"}</p>
+            <p className="text-xs text-muted-foreground font-bold uppercase">Torcedor Raiz (sem simpatia)</p>
           </CardContent>
         </Card>
         <Card className="bg-card border-border">

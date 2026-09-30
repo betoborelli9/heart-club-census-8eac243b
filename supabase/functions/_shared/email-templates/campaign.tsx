@@ -6,11 +6,13 @@ interface CampaignEmailProps {
   siteName?: string;
   siteUrl?: string;
   bodyLines?: string[];
+  trackingPixelUrl?: string;
 }
 
 export default function CampaignEmail({
   siteUrl = 'https://www.heartclubapp.com',
   bodyLines = [],
+  trackingPixelUrl,
 }: CampaignEmailProps) {
   return (
     <Html>
@@ -35,6 +37,9 @@ export default function CampaignEmail({
           <Text style={footer}>
             © Heart Club — O maior censo de torcidas do mundo
           </Text>
+          {trackingPixelUrl && (
+            <Img src={trackingPixelUrl} width="1" height="1" alt="" style={{ display: 'none' }} />
+          )}
         </Container>
       </Body>
     </Html>

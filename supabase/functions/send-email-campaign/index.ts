@@ -75,9 +75,18 @@ serve(async (req) => {
       const lines = personalized.split("\n").filter((l) => l.trim().length > 0);
 
       try {
-        const component = CampaignEmail({ bodyLines: lines });
+        const runId = `campaign-${Date.now()}-${i}-${Math.random().toString(36).slice(2, 8)}`;
+        const trackingPixelUrl = `${SUPABASE_URL}/functions/v1/track-email-open?id=${runId}`;
+        const component = CampaignEmail({ bodyLines: lines, trackingPixelUrl });
         const html = await renderAsync(component);
-        const runId = `campaign-${Date.now()}-${i}`;
+
+        await admin.from("email_campaign_sends").insert({
+          id: runId,
+          email: r.email,
+          nome,
+          subject,
+          sent_by: userData.user.id,
+        });
 
         await sendLovableEmail(
           {

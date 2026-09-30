@@ -19,12 +19,12 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: "Nome é obrigatório" }), { status: 400 });
     }
 
-    // 1. PROCURA NO BANCO
-    const { data: existente } = await supabase
-      .from("clubes_cache")
-      .select("*")
-      .ilike("nome", `%${nome}%`)
-      .maybeSingle();
+    // 1. PROCURA NO BANCO (por nome CANONIZADO, nao substring solta —
+    // ILIKE '%nome%' deixava passar duplicado quando a API externa
+    // devolvia o nome com grafia levemente diferente da ja salva, ex.:
+    // "Vila Nova" vs "Vila Nova Futebol Clube").
+    const { data: existentes } = await supabase.rpc("find_club_by_canonical_name", { p_nome: nome });
+    const existente = existentes?.[0];
 
     if (existente) {
       return new Response(JSON.stringify(existente), { status: 200 });
