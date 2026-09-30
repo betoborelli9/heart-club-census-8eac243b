@@ -13,6 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Mail, Loader2, Smartphone, Apple, Monitor, Users } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useUser } from "@/contexts/UserContext";
 
 type Segment = "todos" | "android" | "iphone" | "desktop";
 type Recipient = { user_id: string; nome: string; email: string; device: string; clube_nome: string | null };
@@ -29,6 +30,8 @@ Fundador — Heart Club`;
 
 export default function EmailCampaign() {
   const { toast } = useToast();
+  const { user, profile } = useUser();
+  const [testMode, setTestMode] = useState(true);
   const [segment, setSegment] = useState<Segment>("android");
   const [clubNames, setClubNames] = useState<string[]>([]);
   const [club, setClub] = useState<string>("");
@@ -67,17 +70,24 @@ export default function EmailCampaign() {
       toast({ variant: "destructive", title: "Muitos destinatários", description: "Máximo de 100 por envio — filtra por clube pra dividir em grupos menores." });
       return;
     }
+    if (testMode && !user?.email) {
+      toast({ variant: "destructive", title: "Sem e-mail pra testar", description: "Não achei seu e-mail de login." });
+      return;
+    }
     setSending(true);
     setResult(null);
     try {
+      const sendList = testMode
+        ? [{ email: user!.email!, nome: profile?.nome_exibicao || "torcedor" }]
+        : recipients.map((r) => ({ email: r.email, nome: r.nome }));
       const { data: sessionData } = await supabase.auth.getSession();
       const token = sessionData.session?.access_token;
       const { data, error } = await supabase.functions.invoke("send-email-campaign", {
         headers: token ? { Authorization: `Bearer ${token}` } : undefined,
         body: {
-          subject,
+          subject: testMode ? `[TESTE] ${subject}` : subject,
           body: message,
-          recipients: recipients.map((r) => ({ email: r.email, nome: r.nome })),
+          recipients: sendList,
         },
       });
       if (error) throw error;
@@ -150,19 +160,28 @@ export default function EmailCampaign() {
           <Textarea value={message} onChange={(e) => setMessage(e.target.value)} rows={10} className="text-sm" />
         </div>
 
+        <label className="flex items-center gap-2 text-sm bg-yellow-500/10 border border-yellow-500/30 rounded-lg px-3 py-2 cursor-pointer">
+          <input type="checkbox" checked={testMode} onChange={(e) => setTestMode(e.target.checked)} className="w-4 h-4" />
+          <span>
+            <b>Modo teste</b> — manda só pro seu próprio e-mail ({user?.email}), pra você conferir antes de mandar valendo
+          </span>
+        </label>
+
         <div className="flex items-center justify-between pt-2 border-t border-border">
           <p className="text-sm text-muted-foreground">
             {loadingList ? (
               <Loader2 className="w-4 h-4 animate-spin inline" />
+            ) : testMode ? (
+              "Vai mandar 1 e-mail de teste pra você"
             ) : (
               <>
                 <b className="text-foreground">{recipients.length}</b> destinatário{recipients.length !== 1 ? "s" : ""} nesse filtro
               </>
             )}
           </p>
-          <Button onClick={handleSend} disabled={sending || loadingList || recipients.length === 0}>
+          <Button onClick={handleSend} disabled={sending || loadingList || recipients.length === 0} variant={testMode ? "outline" : "default"}>
             {sending ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : <Mail className="w-4 h-4 mr-1.5" />}
-            {sending ? "Enviando..." : "Enviar Campanha"}
+            {sending ? "Enviando..." : testMode ? "Enviar Teste" : "Enviar Campanha pra Todos"}
           </Button>
         </div>
       </div>
