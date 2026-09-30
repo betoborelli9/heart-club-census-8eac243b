@@ -133,11 +133,44 @@ const AdminSympathyTable = () => {
         </Card>
       </div>
 
+      {/* Ranking numerado */}
+      {topClubs.length > 0 && (
+        <Card className="bg-card border-border">
+          <CardContent className="p-4">
+            <p className="text-xs font-bold uppercase text-muted-foreground mb-3">
+              🏆 Ranking de Clubes de Simpatia — mais escolhido como time "de coração alternativo"
+            </p>
+            <div className="space-y-1.5">
+              {topClubs.slice(0, 15).map(([club, count], i) => {
+                const max = topClubs[0][1];
+                const pct = (count / max) * 100;
+                return (
+                  <button
+                    key={club}
+                    onClick={() => setClubFilter(clubFilter === club ? "" : club)}
+                    className={`w-full text-left flex items-center gap-3 px-3 py-2 rounded-lg border transition ${
+                      clubFilter === club ? "border-primary bg-primary/10" : "border-transparent hover:bg-white/5"
+                    }`}
+                  >
+                    <span className="text-sm font-black text-muted-foreground w-7 shrink-0">{i + 1}º</span>
+                    <span className="text-sm font-bold flex-1 truncate">{club}</span>
+                    <div className="w-24 h-1.5 rounded-full bg-white/10 overflow-hidden hidden sm:block">
+                      <div className="h-full bg-primary rounded-full" style={{ width: `${pct}%` }} />
+                    </div>
+                    <span className="text-sm font-black text-primary w-10 text-right shrink-0">{count}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Top clubs chips */}
       {topClubs.length > 0 && (
         <Card className="bg-card border-border">
           <CardContent className="p-4">
-            <p className="text-xs font-bold uppercase text-muted-foreground mb-3">Top Clubes de Simpatia</p>
+            <p className="text-xs font-bold uppercase text-muted-foreground mb-3">Filtrar por clube</p>
             <div className="flex flex-wrap gap-2">
               {topClubs.slice(0, 20).map(([club, count]) => (
                 <button
