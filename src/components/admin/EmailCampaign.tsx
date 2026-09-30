@@ -11,12 +11,21 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
-import { Mail, Loader2, Smartphone, Apple, Monitor, Users } from "lucide-react";
+import { Mail, Loader2, Smartphone, Apple, Monitor, Users, Eye, EyeOff } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useUser } from "@/contexts/UserContext";
 
 type Segment = "todos" | "android" | "iphone" | "desktop";
 type Recipient = { user_id: string; nome: string; email: string; device: string; clube_nome: string | null };
+type SentEmail = {
+  id: string;
+  email: string;
+  nome: string | null;
+  subject: string;
+  sent_at: string;
+  opened_at: string | null;
+  open_count: number;
+};
 
 const DEFAULT_MESSAGE = `Oi, {{nome}}! 👋
 
@@ -41,6 +50,19 @@ export default function EmailCampaign() {
   const [loadingList, setLoadingList] = useState(true);
   const [sending, setSending] = useState(false);
   const [result, setResult] = useState<{ sent: number; failed: number; errors: { email: string; error: string }[] } | null>(null);
+  const [history, setHistory] = useState<SentEmail[]>([]);
+  const [loadingHistory, setLoadingHistory] = useState(true);
+
+  const fetchHistory = async () => {
+    setLoadingHistory(true);
+    const { data } = await supabase.rpc("admin_get_email_campaign_history", { p_limit: 200 });
+    setHistory((data as unknown as SentEmail[]) || []);
+    setLoadingHistory(false);
+  };
+
+  useEffect(() => {
+    fetchHistory();
+  }, []);
 
   useEffect(() => {
     (async () => {
@@ -92,6 +114,7 @@ export default function EmailCampaign() {
       });
       if (error) throw error;
       setResult(data);
+      fetchHistory();
       toast({ title: "Campanha enviada!", description: `${data.sent} e-mails enviados, ${data.failed} falharam.` });
     } catch (e: any) {
       toast({ variant: "destructive", title: "Não deu pra enviar", description: e.message || "Tenta de novo em instantes." });
@@ -203,6 +226,60 @@ export default function EmailCampaign() {
           )}
         </div>
       )}
+
+      <div className="rounded-2xl border border-border bg-card p-5">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-sm font-black uppercase tracking-wide text-muted-foreground">
+            Histórico de envios — quem já leu
+          </h3>
+          <Button size="sm" variant="outline" onClick={fetchHistory} disabled={loadingHistory}>
+            {loadingHistory ? <Loader2 className="w-4 h-4 animate-spin" /> : "Atualizar"}
+          </Button>
+        </div>
+        {loadingHistory ? (
+          <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+        ) : history.length === 0 ? (
+          <p className="text-sm text-muted-foreground">Nenhum e-mail de campanha enviado ainda.</p>
+        ) : (
+          <div className="overflow-x-auto max-h-[400px] overflow-y-auto">
+            <table className="w-full text-sm">
+              <thead className="sticky top-0 bg-card">
+                <tr className="text-left text-[10px] uppercase text-muted-foreground border-b border-border">
+                  <th className="py-2 pr-2">Torcedor</th>
+                  <th className="py-2 pr-2">Assunto</th>
+                  <th className="py-2 pr-2">Enviado</th>
+                  <th className="py-2 pr-2">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {history.map((h) => (
+                  <tr key={h.id} className="border-b border-border/30">
+                    <td className="py-1.5 pr-2 font-bold">
+                      {h.nome || h.email}
+                      <p className="text-[11px] font-normal text-muted-foreground">{h.email}</p>
+                    </td>
+                    <td className="py-1.5 pr-2 text-muted-foreground max-w-[240px] truncate">{h.subject}</td>
+                    <td className="py-1.5 pr-2 text-muted-foreground whitespace-nowrap">
+                      {new Date(h.sent_at).toLocaleString("pt-BR")}
+                    </td>
+                    <td className="py-1.5 pr-2 whitespace-nowrap">
+                      {h.opened_at ? (
+                        <span className="text-green-500 flex items-center gap-1 text-xs font-bold">
+                          <Eye className="w-3.5 h-3.5" /> Lido{h.open_count > 1 ? ` (${h.open_count}x)` : ""}
+                        </span>
+                      ) : (
+                        <span className="text-muted-foreground flex items-center gap-1 text-xs">
+                          <EyeOff className="w-3.5 h-3.5" /> Não lido
+                        </span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
