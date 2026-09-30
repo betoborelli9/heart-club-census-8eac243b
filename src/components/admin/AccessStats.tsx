@@ -66,9 +66,37 @@ function pagesSeen(paths: string[]): string[] {
   return CORE_PAGES.filter((cp) => paths.some((p) => cp.match(p))).map((cp) => cp.label);
 }
 
+// Nome amigável de CADA página do site — pra ninguém precisar adivinhar
+// o que "/gerenciar-dados" ou "/privacidade" significa.
+const PATH_LABELS: Record<string, string> = {
+  "/": "Página de Entrada",
+  "/splash": "Tela de Abertura",
+  "/login": "Tela de Login",
+  "/verify": "Confirmação de Acesso",
+  "/profile-setup": "Cadastro de Perfil",
+  "/voting": "Tela de Votação",
+  "/dashboard": "Início (Painel do Torcedor)",
+  "/mapa-calor": "Mapa de Calor",
+  "/stats": "Ranking",
+  "/estatisticas": "Ranking",
+  "/ranking": "Ranking",
+  "/embaixadores": "Embaixadores",
+  "/embaixador": "Painel do Embaixador",
+  "/painel-embaixador": "Painel do Embaixador",
+  "/correcao": "Correção de Voto",
+  "/convite": "Convite de Amigo",
+  "/privacidade": "Política de Privacidade",
+  "/termos": "Termos de Uso",
+  "/gerenciar-dados": "Gerenciar Meus Dados (LGPD)",
+  "/notificacoes": "Config. de Notificações",
+  "/admin": "Painel Admin (visão geral)",
+};
+
 function friendlyPage(path: string): string {
-  const found = CORE_PAGES.find((cp) => cp.match(path));
-  return found ? `${found.label} (${path})` : path;
+  if (PATH_LABELS[path]) return `${PATH_LABELS[path]} (${path})`;
+  if (path.startsWith("/admin")) return `Painel Admin — ${path.replace("/admin/", "").replace("/admin", "geral") || "geral"} (${path})`;
+  if (path.startsWith("/master")) return `Ferramenta Master (${path})`;
+  return path;
 }
 
 function exportCsv(rows: DetailRow[]) {
@@ -169,6 +197,10 @@ export default function AccessStats() {
             {isLive ? "ao vivo" : "conectando..."}
           </span>
         </h2>
+        {/* REGRA FIXA (pedido explícito do Beto): este PDF vai pra parceiros —
+            NUNCA incluir nome, e-mail, WhatsApp ou qualquer dado de torcedor
+            aqui. Só números agregados. Se um parceiro quiser falar com
+            torcedores, quem aciona é o Heart Club, não o parceiro direto. */}
         <Button
           size="sm"
           variant="outline"
