@@ -2,9 +2,10 @@
  * [CAMINHO]: src/components/dashboard/ApiHealthAlert.tsx
  * [MÓDULO]: Alerta de saúde das APIs externas + lembrete de renovação —
  * visível SÓ pro Master Admin (Beto), no topo do próprio Dashboard.
- * Dados vêm de api_health_status, atualizado 1x/dia pelo cron
- * check-api-health (que pergunta direto pra API-Football a data real
- * de vencimento — nunca precisa ser digitada manualmente).
+ * Dados vêm de api_health_status, atualizado a cada 15min pelo cron
+ * check-api-health (API-Football e login/Supabase) + 1x/dia (demais
+ * serviços). Ciclo de pagamento da Supabase (dia 23) é calculado aqui
+ * mesmo, por data — a Supabase não tem API pra perguntar isso.
  */
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -33,17 +34,25 @@ export default function ApiHealthAlert() {
   const days = football?.details?.days_until_renewal ?? null;
   const otherIssues = rows.filter((r) => r.service !== "API-Football" && !r.healthy);
 
-  // Nada de alarme se tudo estiver tranquilo (>10 dias pra vencer e sem outro problema).
-  const urgency: "critical" | "warning" | "ok" =
-    football && !football.healthy
-      ? "critical"
-      : days !== null && days <= 3
-      ? "critical"
-      : days !== null && days <= 10
-      ? "warning"
-      : "ok";
+  // Cobrança da Supabase: sempre dia 23 (confirmado por Beto — foi a causa
+  // do site ficar fora do ar em 01/10/2026). Não tem API pra perguntar isso
+  // pra Supabase, então calculamos a data certinha aqui mesmo.
+  const supaRenewal = (() => {
+    const now = new Date();
+    const target = new Date(now.getFullYear(), now.getMonth() + (now.getDate() > 23 ? 1 : 0), 23);
+    const daysLeft = Math.ceil((target.getTime() - now.getTime()) / (24 * 60 * 60 * 1000));
+    return { date: target, daysLeft };
+  })();
 
-  if (urgency === "ok" && otherIssues.length === 0) return null;
+  // Nada de alarme se tudo estiver tranquilo (>10 dias pra vencer e sem outro problema).
+  // Qualquer outro serviço com problema (ex.: login) também é crítico —
+  // nunca mostra o card em verde/ok com um "🚨" vermelho dentro. Pega o
+  // pior caso entre API-Football e o ciclo de pagamento da Supabase.
+  const isCritical =
+    (football && !football.healthy) || otherIssues.length > 0 ||
+    (days !== null && days <= 3) || supaRenewal.daysLeft <= 3;
+  const isWarning = (days !== null && days <= 10) || supaRenewal.daysLeft <= 10;
+  const urgency: "critical" | "warning" | "ok" = isCritical ? "critical" : isWarning ? "warning" : "ok";
 
   const theme = {
     critical: {
@@ -104,6 +113,13 @@ export default function ApiHealthAlert() {
             )}
           </p>
         )}
+        <p className="text-sm font-bold text-white mt-1">
+          💳 Supabase vence em{" "}
+          <span className={supaRenewal.daysLeft <= 3 ? "text-red-400" : supaRenewal.daysLeft <= 10 ? "text-yellow-400" : "text-green-400"}>
+            {supaRenewal.daysLeft} dia{supaRenewal.daysLeft !== 1 ? "s" : ""}
+          </span>
+          <span className="text-white/50 font-normal"> ({supaRenewal.date.toLocaleDateString("pt-BR")}) — garanta que o cartão está válido</span>
+        </p>
         {otherIssues.map((r) => (
           <p key={r.service} className="text-sm font-bold text-red-400 mt-1">
             🚨 {r.service}: {r.details?.error || "não está respondendo"}

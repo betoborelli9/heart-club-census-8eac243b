@@ -21,7 +21,6 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { UserProvider } from "@/contexts/UserContext";
 import { ViewedClubProvider } from "@/contexts/ViewedClubContext";
 import FeedbackWidget from "@/components/FeedbackWidget";
-import InstallAppButton from "@/components/InstallAppButton";
 import AppNavBar from "@/components/AppNavBar";
 import GlobalFooter from "@/components/GlobalFooter";
 import UsersTableSync from "@/integrations/users-table/UsersTableSync";
@@ -143,7 +142,6 @@ const App = () => (
           </Routes>
           </Suspense>
           <FeedbackWidget />
-          <InstallAppButton />
           <GlobalNav />
           <GlobalFooter />
         </BrowserRouter>
