@@ -73,13 +73,38 @@ export default function ApiHealthAlert() {
     setSupaPaid(true);
   };
 
+  const [loadFailed, setLoadFailed] = useState(false);
+
+  // Lê o status agora e de novo a cada 60s. Se a leitura falhar (ex.: Supabase
+  // lenta), NÃO some em silêncio — mostra aviso, senão parece que está tudo bem.
   useEffect(() => {
-    (async () => {
-      const { data } = await supabase.rpc("admin_get_api_health");
-      setRows((data as unknown as HealthRow[]) || []);
-    })();
+    let alive = true;
+    const load = async () => {
+      const { data, error } = await supabase.rpc("admin_get_api_health");
+      if (!alive) return;
+      if (error || !Array.isArray(data)) {
+        setLoadFailed(true);
+        return;
+      }
+      setLoadFailed(false);
+      setRows(data as unknown as HealthRow[]);
+    };
+    load();
+    const id = setInterval(load, 60_000);
+    return () => {
+      alive = false;
+      clearInterval(id);
+    };
   }, []);
 
+  if ((!rows || rows.length === 0) && loadFailed) {
+    return (
+      <div className="rounded-[28px] border border-yellow-500/40 bg-[#0b0b0b] p-4 text-sm font-bold text-yellow-400">
+        Não consegui ler o status dos serviços agora (a Supabase pode estar lenta). Tentando de novo a cada minuto.
+        <span className="block text-xs font-normal text-white/50 mt-1">Enquanto isso, confira você mesmo: API-Football e Supabase.</span>
+      </div>
+    );
+  }
   if (!rows || rows.length === 0) return null;
 
   const football = rows.find((r) => r.service === "API-Football");
