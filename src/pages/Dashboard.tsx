@@ -21,7 +21,6 @@ import { useTranslation } from "react-i18next";
     MÓDULO 1: COMPONENTES DO DASHBOARD
    ═══════════════════════════════════════════════════════════ */
 import { ClubSearch } from "@/components/dashboard/ClubSearch";
-import ApiHealthAlert from "@/components/dashboard/ApiHealthAlert";
 import ClubBanner from "@/components/dashboard/ClubBanner";
 import NewsFeedCards from "@/components/dashboard/NewsFeedCards";
 import RivalsColumn from "@/components/dashboard/RivalsColumn";
@@ -213,7 +212,6 @@ const Dashboard = () => {
       </header>
 
       <main className="max-w-[1440px] mx-auto px-4 md:px-6 py-6 space-y-6 pb-24">
-        {isMasterAdmin && <ApiHealthAlert />}
         {/* Mobile: pesquisa larga entre o header e o banner */}
         <div className="md:hidden">
           <ClubSearch
