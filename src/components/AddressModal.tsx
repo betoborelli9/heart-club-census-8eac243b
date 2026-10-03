@@ -198,7 +198,7 @@ function useTerritoryEngine() {
   return { searchCities, searchNeighborhoods };
 }
 
-export default function AddressModal({ open, onOpenChange, clubName, onSuccess }: any) {
+export default function AddressModal({ open, onOpenChange, clubName, onSuccess, allowSkipBairro }: any) {
   const { toast } = useToast();
   const { t } = useTranslationApp();
   const { searchCities, searchNeighborhoods } = useTerritoryEngine();
@@ -547,6 +547,16 @@ export default function AddressModal({ open, onOpenChange, clubName, onSuccess }
                   </div>
                 )}
               </div>
+              {allowSkipBairro && (
+                <Button
+                  variant="ghost"
+                  disabled={loading}
+                  onClick={() => handleFinalSave({ text: null, center: null })}
+                  className="text-zinc-400 hover:text-white uppercase font-bold text-xs h-10 w-full"
+                >
+                  Prefiro não informar o bairro
+                </Button>
+              )}
             </div>
           )}
 
