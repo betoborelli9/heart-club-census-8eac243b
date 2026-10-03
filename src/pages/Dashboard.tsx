@@ -30,6 +30,7 @@ import SocialShareBanners from "@/components/dashboard/SocialShareBanners";
 import ClubIdentityCard from "@/components/dashboard/ClubIdentityCard";
 import ApiHealthAlert from "@/components/dashboard/ApiHealthAlert";
 import SuspiciousVotesAlert from "@/components/dashboard/SuspiciousVotesAlert";
+import TermsConsentCard from "@/components/dashboard/TermsConsentCard";
 import { MatchCenter } from "@/components/match/MatchCenter";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 
@@ -212,6 +213,8 @@ const Dashboard = () => {
           </div>
         </div>
       </header>
+
+      <TermsConsentCard />
 
       <main className="max-w-[1440px] mx-auto px-4 md:px-6 py-6 space-y-6 pb-24">
         {isMasterAdmin && <SuspiciousVotesAlert />}

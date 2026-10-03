@@ -13,6 +13,7 @@ import { AlertTriangle, CheckCircle2, Loader2, RefreshCw, Search, ShieldCheck, U
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
+import FormSwitches from "@/components/admin/FormSwitches";
 
 type Row = {
   user_id: string;
@@ -151,6 +152,16 @@ export default function IncompleteProfiles() {
           <div className="h-full bg-primary rounded-full transition-all" style={{ width: `${pct}%` }} />
         </div>
       </div>
+
+      <FormSwitches
+        total={total}
+        missing={{
+          form_termos: rows.filter((r) => r.falta_termos).length,
+          form_territorio: rows.filter((r) => r.falta_territorio).length,
+          form_socio: rows.filter((r) => r.falta_renda || r.falta_profissao).length,
+          form_embaixador: rows.filter((r) => r.falta_embaixador).length,
+        }}
+      />
 
       <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
         {FORMS.map((f) => {
