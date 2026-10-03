@@ -136,11 +136,6 @@ export default function FeedbackWidget() {
                 </button>
               </div>
 
-              <p className="text-[11px] italic text-white/50 mb-3 leading-snug">
-                Por que pedimos: sua mensagem vai direto para a equipe do Heart Club e ajuda a decidir o que
-                melhorar primeiro. Ela nunca é repassada a ninguém.
-              </p>
-
               <Textarea
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}

@@ -119,11 +119,6 @@ export const ClubSearch = ({
               {club.location}
               {club.mascote && ` • 🐾 ${club.mascote}`}
             </span>
-            {club.previousName && (
-              <span className="text-[9px] text-amber-400/90 font-bold tracking-wide mt-0.5">
-                antes: {club.previousName}
-              </span>
-            )}
           </div>
           <span
             className={`shrink-0 flex items-center gap-1 text-[8px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded-full border ${

@@ -5,7 +5,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useUser } from "@/contexts/UserContext";
-import { logShare } from "@/lib/share-log";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -71,7 +70,6 @@ export default function AmbassadorCenter() {
   };
 
   const copyLink = async () => {
-    logShare("copy", "ambassador_center");
     await navigator.clipboard.writeText(inviteUrl);
     setCopied(true);
     toast.success(t("ambassador_center.link_copied"));
@@ -79,7 +77,6 @@ export default function AmbassadorCenter() {
   };
 
   const shareTo = (target: "wa" | "tg" | "ig" | "native") => {
-    logShare(target === "wa" ? "whatsapp" : target === "tg" ? "telegram" : target === "ig" ? "instagram" : "native", "ambassador_center");
     const text = shareText();
     if (target === "wa") return window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
     if (target === "tg") return window.open(`https://t.me/share/url?url=${encodeURIComponent(inviteUrl)}&text=${encodeURIComponent(text)}`, "_blank");

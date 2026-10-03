@@ -11,8 +11,6 @@ export type Fixture = {
   date: string;
   status: string;
   venue?: string;
-  /** Onde assistir (canais) — só aparece quando a fonte de dados traz. */
-  broadcasters?: string[];
   league: { id: number; name: string; logo: string; round: string };
   home: { id: number; name: string; logo: string };
   away: { id: number; name: string; logo: string };

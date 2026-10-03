@@ -29,8 +29,6 @@ import CompetitionsPanel from "@/components/dashboard/CompetitionsPanel";
 import SocialShareBanners from "@/components/dashboard/SocialShareBanners";
 import ClubIdentityCard from "@/components/dashboard/ClubIdentityCard";
 import ApiHealthAlert from "@/components/dashboard/ApiHealthAlert";
-import SuspiciousVotesAlert from "@/components/dashboard/SuspiciousVotesAlert";
-import TermsConsentCard from "@/components/dashboard/TermsConsentCard";
 import { MatchCenter } from "@/components/match/MatchCenter";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 
@@ -214,10 +212,7 @@ const Dashboard = () => {
         </div>
       </header>
 
-      <TermsConsentCard />
-
       <main className="max-w-[1440px] mx-auto px-4 md:px-6 py-6 space-y-6 pb-24">
-        {isMasterAdmin && <SuspiciousVotesAlert />}
         {isMasterAdmin && <ApiHealthAlert />}
         {/* Mobile: pesquisa larga entre o header e o banner */}
         <div className="md:hidden">
@@ -228,7 +223,7 @@ const Dashboard = () => {
         </div>
 
         <ClubBanner
-          clubName={effectiveHeartName || ""}
+          clubName={effectiveHeartName || "SELECIONE SEU CLUBE"}
           clubData={effectiveHeartData}
           theme={effectiveHeartTheme}
           profileName={effectiveProfile.nome_exibicao || "TORCEDOR"}
@@ -243,7 +238,7 @@ const Dashboard = () => {
 
         {/* MatchCenter — isolado; só renderiza se o usuário tem time_do_coracao_id + jogos no cache */}
         <section className="fade-in w-full">
-          <MatchCenter userId={user?.id} teamIdOverride={masterTeamIdOverride} primaryColor={primary} />
+          <MatchCenter userId={user?.id} teamIdOverride={masterTeamIdOverride} />
         </section>
 
         <section className="fade-in w-full">

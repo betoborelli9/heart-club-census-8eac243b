@@ -19,8 +19,6 @@ export interface ClubSearchResult {
   mascote?: string;
   source: "local" | "api";
   api_id?: number | null;
-  /** Preenchido quando a busca bateu com um nome antigo do clube (ex.: "Abecat" → Agro Esporte Clube). */
-  previousName?: string;
   cor_primaria?: string;
   cor_secundaria?: string;
   cor_terciaria?: string;
@@ -125,9 +123,7 @@ export async function searchClubsWithFallback(query: string, limit = 20): Promis
         (t: any) =>
           isValidClubName(t.name) &&
           !isYouthTeam(t.name) &&
-          // Bateu num apelido/nome antigo (ex.: "Abecat") → sempre mostra,
-          // mesmo que o nome atual não contenha o termo digitado.
-          (!!t.matched_alias || stripAccents(t.name).includes(normalized) || matchesCanon(t.name)),
+          (stripAccents(t.name).includes(normalized) || matchesCanon(t.name)),
       )
       .map((t: any) => ({
         id: `api-${t.api_id}`,
@@ -140,7 +136,6 @@ export async function searchClubsWithFallback(query: string, limit = 20): Promis
         country: t.country || "",
         api_id: t.api_id ?? null,
         source: "api" as const,
-        previousName: t.matched_alias || undefined,
       }));
 
     // Dedupe por identificador único. Homônimos nunca podem colapsar por chave canônica

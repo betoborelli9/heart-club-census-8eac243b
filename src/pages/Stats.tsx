@@ -18,7 +18,6 @@ import {
 } from "lucide-react";
 import ShareTropaModal from "@/components/dashboard/ShareTropaModal";
 import RivalsColumn from "@/components/dashboard/RivalsColumn";
-import SocioEconomicGate from "@/components/SocioEconomicGate";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -336,7 +335,6 @@ const Stats = () => {
 
   return (
     <div className="min-h-screen bg-black text-white pb-20">
-      <SocioEconomicGate />
       {/* HEADER */}
       <header className="sticky top-0 z-30 p-3 bg-black/95 backdrop-blur border-b border-primary/20">
         <div className="flex justify-between items-center gap-3 max-w-6xl mx-auto">

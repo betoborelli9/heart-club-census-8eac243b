@@ -242,7 +242,7 @@ const ClubBanner = ({
               <div className="w-[110px] h-[110px] md:w-[120px] md:h-[120px] rounded-full bg-white flex items-center justify-center shrink-0 shadow-xl border-4 border-white/10 transition-all duration-500">
                 <ClubLogo
                   src={theme.escudo_url}
-                  alt={clubName || "Selecione seu clube"}
+                  alt={clubName}
                   className="w-[90px] h-[90px] md:w-[115px] md:h-[115px] object-contain drop-shadow-md"
                 />
               </div>
@@ -290,7 +290,7 @@ const ClubBanner = ({
                   {t("club_banner.heart_label")}
                 </span>
                 <h1 className="text-xl md:text-4xl font-black italic uppercase tracking-tighter leading-none" style={textOutlineStyle}>
-                  {clubName || "Selecione seu clube"}
+                  {clubName}
                 </h1>
               </div>
             </div>
@@ -321,7 +321,7 @@ const ClubBanner = ({
           )}
         </nav>
 
-        {enriching && clubName && (
+        {enriching && (
           <div className="px-5 py-3 bg-gradient-to-r from-[#ff6200]/10 via-[#ff6200]/5 to-transparent border-t border-[#ff6200]/20">
             <div className="flex items-start gap-3">
               <div className="mt-0.5 shrink-0">
