@@ -40,6 +40,7 @@ import { useTranslationApp } from "@/hooks/useTranslationApp";
 import { countryNameToIso2, countryNameToIso3 } from "@/lib/country-iso";
 import { useFeatureFlag } from "@/lib/feature-flags";
 import FormReasonCard from "@/components/FormReasonCard";
+import WhyWeAsk from "@/components/WhyWeAsk";
 
 /* ---------- Helpers ---------- */
 
@@ -867,6 +868,20 @@ const MapaCalor = () => {
   const [terrIntroDone, setTerrIntroDone] = useState(false);
   const showTerrIntro = terrFlag.enabled && !terrIntroDone;
 
+  const [showWhyMap, setShowWhyMap] = useState(() => {
+    try {
+      return !localStorage.getItem("heartclub_why_map_dismissed");
+    } catch {
+      return true;
+    }
+  });
+  const dismissWhyMap = () => {
+    setShowWhyMap(false);
+    try {
+      localStorage.setItem("heartclub_why_map_dismissed", "1");
+    } catch {}
+  };
+
   useEffect(() => {
     const load = async () => {
       if (!user) return;
@@ -1617,6 +1632,22 @@ const MapaCalor = () => {
             <ArrowLeft className="w-3 h-3" /> {t("heatmap.back_to_dashboard")}
           </button>
         </div>
+
+        {showWhyMap && (
+          <div className="relative mb-4">
+            <WhyWeAsk>
+              Cada voto marca país, estado, cidade e até bairro — por isso dá pra ver aqui onde sua
+              torcida é maior no mundo todo, rua por rua.
+            </WhyWeAsk>
+            <button
+              onClick={dismissWhyMap}
+              aria-label="Fechar"
+              className="absolute top-2.5 right-2.5 text-muted-foreground/50 hover:text-muted-foreground"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
           <aside className="lg:col-span-2 space-y-4">

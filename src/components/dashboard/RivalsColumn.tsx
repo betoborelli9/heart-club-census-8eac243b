@@ -97,6 +97,21 @@ export default function RivalsColumn({ clubName, refCode, primaryColor = "#ff620
             .filter((t) => t.length > 2 && !STOP.has(t))
             .sort((a, b) => b.length - a.length);
 
+        // Clube cadastrado s\u00f3 pela SIGLA (ex.: "CRAC", "ABC", "CSA") nunca bate
+        // por palavra com o nome completo ("Clube Recreativo e Atl\u00e9tico
+        // Catalano") \u2014 nenhuma palavra do nome completo aparece dentro da
+        // sigla. Monta a sigla a partir das iniciais (ignorando conectivos
+        // "e/de/da/do") e tenta achar o clube salvo exatamente por ela.
+        const CONNECTORS = new Set(["e", "de", "da", "do", "dos", "das"]);
+        const buildAcronym = (n: string) =>
+          n.replace(/\([^)]*\)/g, " ")
+            .normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase()
+            .split(/[^a-z0-9]+/)
+            .filter((w) => w.length > 0 && !CONNECTORS.has(w))
+            .map((w) => w[0])
+            .join("")
+            .toUpperCase();
+
         const missing = cachedNames.filter((n) => !resolved.has(n));
         await Promise.all(
           missing.map(async (fullName) => {
@@ -118,6 +133,22 @@ export default function RivalsColumn({ clubName, refCode, primaryColor = "#ff620
               resolved.set(fullName, best);
               return;
             }
+
+            // Tenta por sigla (CRAC, ABC, CSA...) antes de ir pra API externa.
+            const acronym = buildAcronym(fullName);
+            if (acronym.length >= 3) {
+              const { data: acroHits } = await supabase
+                .from("clubes_cache")
+                .select("nome, escudo_url, cidade, pais")
+                .or(`nome.eq.${acronym},nome_curto.eq.${acronym}`)
+                .limit(5);
+              const safeAcro = (acroHits || []).filter((h: any) => normalizeName(h.nome) !== ownNameNorm);
+              if (safeAcro.length) {
+                resolved.set(fullName, safeAcro[0]);
+                return;
+              }
+            }
+
             // FALLBACK AUTOMÁTICO: consulta search-clubs (cache + API-Football)
             // para puxar o escudo de clubes ainda não persistidos no cache.
             try {

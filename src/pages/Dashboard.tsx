@@ -228,7 +228,7 @@ const Dashboard = () => {
         </div>
 
         <ClubBanner
-          clubName={effectiveHeartName || "SELECIONE SEU CLUBE"}
+          clubName={effectiveHeartName || ""}
           clubData={effectiveHeartData}
           theme={effectiveHeartTheme}
           profileName={effectiveProfile.nome_exibicao || "TORCEDOR"}
