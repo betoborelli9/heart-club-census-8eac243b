@@ -15,6 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useUser } from "@/contexts/UserContext";
 import { useClubTheme } from "@/hooks/useClubTheme";
 import { useTranslationApp } from "@/hooks/useTranslationApp";
+import { logShare } from "@/lib/share-log";
 
 const medals = ["🥇", "🥈", "🥉"];
 
@@ -36,6 +37,7 @@ const AmbassadorSection = () => {
   });
 
   const nativeShare = async () => {
+    logShare((navigator as any).share ? "native" : "copy", "dashboard_card");
     if (typeof navigator !== "undefined" && (navigator as any).share) {
       try {
         await (navigator as any).share({
@@ -57,15 +59,18 @@ const AmbassadorSection = () => {
   };
 
   const shareWhatsApp = () => {
+    logShare("whatsapp", "dashboard_card");
     window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, "_blank");
   };
   const shareTelegram = () => {
+    logShare("telegram", "dashboard_card");
     window.open(
       `https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent(message)}`,
       "_blank"
     );
   };
   const copyLink = () => {
+    logShare("copy", "dashboard_card");
     navigator.clipboard.writeText(link);
     toast({
       title: t("feedback.success.link_copied_title"),

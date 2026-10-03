@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { MessageCircle, Send, Copy, Share2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useTranslationApp } from "@/hooks/useTranslationApp";
+import { logShare } from "@/lib/share-log";
 import logo from "@/assets/logo.png";
 
 interface Props {
@@ -34,15 +35,20 @@ export default function ShareTropaModal({ open, onOpenChange, refCode }: Props) 
     window.open(url, "_blank", "noopener,noreferrer");
   };
 
-  const handleWhats = () =>
+  const handleWhats = () => {
+    logShare("whatsapp", "tropa_modal");
     openUrl(`https://wa.me/?text=${encodeURIComponent(fullText)}`);
-  const handleTelegram = () =>
+  };
+  const handleTelegram = () => {
+    logShare("telegram", "tropa_modal");
     openUrl(
       `https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent(TEXT)}`,
     );
+  };
 
   const handleNative = async () => {
     if (!navigator.share) return handleCopy();
+    logShare("native", "tropa_modal");
 
     // Tenta anexar a imagem do banner como arquivo (Web Share Level 2)
     try {
@@ -63,6 +69,7 @@ export default function ShareTropaModal({ open, onOpenChange, refCode }: Props) 
   };
 
   const handleCopy = async () => {
+    logShare("copy", "tropa_modal");
     try {
       await navigator.clipboard.writeText(fullText);
       toast({
