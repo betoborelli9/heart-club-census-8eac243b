@@ -2,6 +2,12 @@
  * [CAMINHO]: src/components/admin/PartnerMediaKit.tsx
  * [MÓDULO]: Mídia Kit por clube — PDF pronto pra mostrar a patrocinadores,
  * com número real de torcedores, alcance geográfico e acessos (site+app).
+ *
+ * REGRA FIXA (pedido explícito do Beto): este PDF vai pra parceiros —
+ * NUNCA incluir nome, e-mail, WhatsApp ou qualquer dado de torcedor aqui,
+ * só números agregados (admin_get_club_media_kit já só devolve contagens).
+ * Se um parceiro quiser campanha com torcedores, quem aciona é o Heart
+ * Club — o parceiro nunca recebe acesso direto aos dados deles.
  */
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";

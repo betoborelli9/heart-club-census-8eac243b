@@ -44,6 +44,7 @@ export default function EmailCampaign() {
   const [segment, setSegment] = useState<Segment>("android");
   const [clubNames, setClubNames] = useState<string[]>([]);
   const [club, setClub] = useState<string>("");
+  const [incompleteOnly, setIncompleteOnly] = useState(false);
   const [subject, setSubject] = useState("🚀 Heart Club: você é peça-chave pra gente ir pro ar de vez!");
   const [message, setMessage] = useState(DEFAULT_MESSAGE);
   const [recipients, setRecipients] = useState<Recipient[]>([]);
@@ -80,11 +81,12 @@ export default function EmailCampaign() {
       const { data } = await supabase.rpc("admin_get_email_segment", {
         p_device: segment === "todos" ? null : segment,
         p_club: club || null,
+        p_incomplete_only: incompleteOnly,
       });
       setRecipients((data as unknown as Recipient[]) || []);
       setLoadingList(false);
     })();
-  }, [segment, club]);
+  }, [segment, club, incompleteOnly]);
 
   const handleSend = async () => {
     if (!subject.trim() || !message.trim() || recipients.length === 0) return;
@@ -170,6 +172,16 @@ export default function EmailCampaign() {
             ))}
           </select>
         </div>
+
+        <label className="flex items-center gap-2 text-sm cursor-pointer">
+          <input
+            type="checkbox"
+            checked={incompleteOnly}
+            onChange={(e) => setIncompleteOnly(e.target.checked)}
+            className="w-4 h-4"
+          />
+          <span>Só quem ainda não completou o cadastro (nascimento, gênero ou profissão)</span>
+        </label>
 
         <div>
           <p className="text-xs font-bold text-muted-foreground uppercase mb-2">Assunto</p>
