@@ -28,7 +28,6 @@ import SympathyCarousel from "@/components/dashboard/SympathyCarousel";
 import CompetitionsPanel from "@/components/dashboard/CompetitionsPanel";
 import SocialShareBanners from "@/components/dashboard/SocialShareBanners";
 import ClubIdentityCard from "@/components/dashboard/ClubIdentityCard";
-import ApiHealthAlert from "@/components/dashboard/ApiHealthAlert";
 import { MatchCenter } from "@/components/match/MatchCenter";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 
@@ -213,7 +212,6 @@ const Dashboard = () => {
       </header>
 
       <main className="max-w-[1440px] mx-auto px-4 md:px-6 py-6 space-y-6 pb-24">
-        {isMasterAdmin && <ApiHealthAlert />}
         {/* Mobile: pesquisa larga entre o header e o banner */}
         <div className="md:hidden">
           <ClubSearch
