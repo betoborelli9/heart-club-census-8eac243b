@@ -20,6 +20,7 @@ import { resolveColorToHex } from "@/lib/color-names";
 import RivalsCombobox from "@/components/correcao/RivalsCombobox";
 import logo from "@/assets/logo.png";
 import { useTranslationApp } from "@/hooks/useTranslationApp";
+import WhyWeAsk from "@/components/WhyWeAsk";
 
 const COLOR_FIELDS = ["cor_primaria", "cor_secundaria", "cor_terciaria", "cor_quarta"] as const;
 
@@ -205,6 +206,12 @@ export default function Correcao() {
           <p className="text-sm text-white/60 italic mt-2">
             {t("correction.intro")}
           </p>
+          <div className="mt-3">
+            <WhyWeAsk>
+              Você conhece o seu time melhor que ninguém. Cores, escudo e rivais corretos deixam o seu clube mais
+              fiel e mais bonito em todo o app — e nada do que você enviar aqui expõe os seus dados pessoais.
+            </WhyWeAsk>
+          </div>
         </div>
 
         <div className="rounded-2xl border border-white/5 bg-white/[0.02] p-5 md:p-6 space-y-5">

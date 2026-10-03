@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import FormSwitches from "@/components/admin/FormSwitches";
+import DeletionRequests from "@/components/admin/DeletionRequests";
 
 type Row = {
   user_id: string;
@@ -277,6 +278,8 @@ export default function IncompleteProfiles() {
           receberão).
         </p>
       </div>
+
+      <DeletionRequests />
     </div>
   );
 }

@@ -64,9 +64,10 @@ const Privacy = () => (
           <li>Revogação do consentimento.</li>
         </ul>
         <p>
-          Você pode solicitar a exclusão completa da sua conta e dados pessoais a qualquer momento
-          na sua área de perfil, em <strong>"Gerenciar meus Dados"</strong>. A exclusão é processada
-          em até 15 dias, conforme prazo legal.
+          Você pode solicitar a ocultação (anonimização) dos seus dados pessoais a qualquer momento
+          na sua área de perfil, em <strong>"Gerenciar meus Dados"</strong>. O pedido é processado
+          em até 15 dias, conforme prazo legal. O voto efetuado é definitivo e continua contando de
+          forma anonimizada, sem o seu nome e sem ligação com você.
         </p>
 
         <h2 className="text-lg font-bold pt-4">5. Segurança</h2>
@@ -77,9 +78,9 @@ const Privacy = () => (
 
         <h2 className="text-lg font-bold pt-4">6. Retenção</h2>
         <p>
-          Mantemos seus dados enquanto sua conta estiver ativa. Após solicitação de exclusão,
-          os dados pessoais são apagados; votos podem ser mantidos de forma anonimizada para
-          preservar a integridade estatística do censo.
+          Mantemos seus dados enquanto sua conta estiver ativa. Após a sua solicitação, os dados
+          pessoais são ocultados; o voto é mantido de forma anonimizada para preservar a
+          integridade estatística do censo.
         </p>
 
         <h2 className="text-lg font-bold pt-4">7. Encarregado (DPO) e contato</h2>
