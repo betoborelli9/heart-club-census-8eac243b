@@ -8,41 +8,32 @@
  */
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { Heart, Loader2, ShieldCheck, X } from "lucide-react";
+import { Heart, Loader2, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Input } from "@/components/ui/input";
 import { useUser } from "@/contexts/UserContext";
 import { useToast } from "@/hooks/use-toast";
 import { useTranslationApp } from "@/hooks/useTranslationApp";
 import { isMasterEmail } from "@/lib/master";
 import { NEW_ENTRY_FLOW_ENABLED, clearPendingVote, loadPendingVote } from "@/lib/entry-flow";
 import { submitVote } from "@/lib/submit-vote";
+import { setSimClub, setSimSympathies } from "@/lib/sim-fan";
 import { ClubLogo } from "@/components/ClubLogo";
-import { ResultsList, useClubSearch } from "@/components/entrar/ClubSearchBox";
-import type { ClubSearchResult } from "@/lib/search-clubs";
-import { REASON_CARDS, ReasonCard } from "@/components/entrar/reasonCards";
 import logo from "@/assets/logo.png";
-
-const MAX_SYMPATHY = 4;
 
 const ConfirmarVoto = () => {
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const { t } = useTranslationApp();
   const { toast } = useToast();
-  const { user, profile, isAuthReady, isLoading, isAuthenticated, hasVoted, refreshProfile, updateProfile } = useUser();
+  const { user, realUser, profile, isAuthReady, isLoading, isAuthenticated, hasVoted, refreshProfile, updateProfile } = useUser();
 
-  const isMaster = isMasterEmail(user?.email);
+  const isMaster = isMasterEmail((realUser ?? user)?.email);
   const sim = isMaster && params.get("sim") === "1";
   const pending = useMemo(() => loadPendingVote(), []);
 
   const [accepted, setAccepted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [simDone, setSimDone] = useState(false);
-  const [cardIdx, setCardIdx] = useState(0);
-  const [sympathies, setSympathies] = useState<ClubSearchResult[]>(() => pending?.sympathies ?? []);
-  const sympathySearch = useClubSearch();
 
   // ── Porteiro
   useEffect(() => {
@@ -82,7 +73,11 @@ const ConfirmarVoto = () => {
       return;
     }
     if (sim) {
-      setSimDone(true);
+      // Teste do Master: o torcedor novo "votou" — cai no Dashboard normal, sem gravar nada.
+      setSimClub(club.name);
+      setSimSympathies(pending.sympathies.map((x) => x.name));
+      clearPendingVote();
+      navigate("/dashboard", { replace: true });
       return;
     }
     if (!user) return;
@@ -92,7 +87,7 @@ const ConfirmarVoto = () => {
         user,
         profile,
         heartClub: club,
-        sympathyClubs: sympathies,
+        sympathyClubs: pending.sympathies,
         updateProfile,
         refreshProfile,
       });
@@ -106,49 +101,6 @@ const ConfirmarVoto = () => {
       setSubmitting(false);
     }
   };
-
-  // ── Simulação: depois do "voto", mostra os cartões um de cada vez
-  if (sim && simDone) {
-    const total = REASON_CARDS.length;
-    const card = REASON_CARDS[cardIdx];
-    const last = cardIdx === total - 1;
-    return (
-      <div className="min-h-screen bg-background text-white">
-        <div className="mx-auto w-full max-w-md space-y-5 px-4 py-8">
-          {cardIdx === 0 && (
-            <div className="space-y-1 text-center">
-              <h1 className="text-2xl font-black italic uppercase tracking-tighter">{t("entrar.sim_done_title")}</h1>
-              <p className="text-sm text-white/60">{t("entrar.sim_done_sub")}</p>
-            </div>
-          )}
-          <ReasonCard id={card.id} step={t("entrar.sim_step", { n: cardIdx + 1, total })}>
-            <div className="flex gap-2">
-              <Button
-                onClick={() => {
-                  if (last) {
-                    clearPendingVote();
-                    navigate("/dashboard");
-                  } else setCardIdx((i) => i + 1);
-                }}
-                className="btn-orange-gradient h-12 flex-1 rounded-xl font-black uppercase italic"
-              >
-                {last ? t("entrar.sim_finish") : t("entrar.sim_next")}
-              </Button>
-              {!last && (
-                <Button
-                  variant="ghost"
-                  onClick={() => setCardIdx((i) => i + 1)}
-                  className="h-12 rounded-xl text-xs font-bold uppercase text-white/50"
-                >
-                  {t("entrar.sim_skip")}
-                </Button>
-              )}
-            </div>
-          </ReasonCard>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-background text-white">
@@ -169,42 +121,18 @@ const ConfirmarVoto = () => {
           <Heart className="h-6 w-6 fill-current text-primary" />
         </div>
 
-        {/* SIMPATIAS (opcional): até 4 times que o torcedor também curte */}
-        <div className="w-full space-y-2">
-          <p className="text-sm font-bold text-white/70">{t("entrar.sympathy_intro")}</p>
-          {sympathies.map((c, idx) => (
-            <div key={c.name} className="flex items-center gap-3 rounded-xl border border-white/5 bg-card p-2.5">
-              <ClubLogo src={c.logo} alt={c.name} size="sm" />
-              <p className="flex-1 truncate text-sm font-bold uppercase italic">{c.name}</p>
-              <button onClick={() => setSympathies((p) => p.filter((_, i) => i !== idx))} aria-label="remove">
-                <X className="h-4 w-4 opacity-60" />
-              </button>
+        {pending.sympathies.length > 0 && (
+          <div className="w-full space-y-2">
+            <p className="text-xs font-black uppercase italic text-white/50">{t("entrar.sympathies_label")}</p>
+            <div className="flex flex-wrap gap-2">
+              {pending.sympathies.map((s) => (
+                <span key={s.name} className="flex items-center gap-2 rounded-full border border-white/10 bg-card px-3 py-1.5 text-xs font-bold uppercase">
+                  <ClubLogo src={s.logo} alt={s.name} size="xs" /> {s.name}
+                </span>
+              ))}
             </div>
-          ))}
-          {sympathies.length < MAX_SYMPATHY && (
-            <div className="relative">
-              <Input
-                value={sympathySearch.query}
-                onChange={(e) => sympathySearch.setQuery(e.target.value)}
-                onFocus={() => sympathySearch.setOpen(true)}
-                onBlur={() => setTimeout(() => sympathySearch.setOpen(false), 200)}
-                placeholder={t("entrar.sympathy_placeholder_n", { n: sympathies.length + 1 })}
-                className="h-12 rounded-xl border-white/10 bg-card"
-              />
-              <ResultsList
-                results={sympathySearch.results}
-                loading={sympathySearch.loading}
-                open={sympathySearch.open}
-                onPick={(c) => {
-                  if (c.name !== club.name && !sympathies.find((x) => x.name === c.name)) {
-                    setSympathies((p) => [...p, c]);
-                  }
-                  sympathySearch.reset();
-                }}
-              />
-            </div>
-          )}
-        </div>
+          </div>
+        )}
 
         {/* QUADRADINHO DOS TERMOS — no momento certo: depois do login, antes de gravar o voto */}
         <label

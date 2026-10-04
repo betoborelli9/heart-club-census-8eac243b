@@ -67,17 +67,14 @@ describe("ConfirmarVoto", () => {
     renderAt("/confirmar-voto?sim=1");
 
     const button = await screen.findByText("entrar.yes_swear");
-    // 4 espaços de simpatia visíveis (opcional) na tela de confirmação
-    expect(screen.getByText("entrar.sympathy_intro")).toBeTruthy();
-    expect(screen.getByPlaceholderText("entrar.sympathy_placeholder_n")).toBeTruthy();
     expect((button.closest("button") as HTMLButtonElement).disabled).toBe(true);
 
     fireEvent.click(screen.getByRole("checkbox"));
     await waitFor(() => expect((button.closest("button") as HTMLButtonElement).disabled).toBe(false));
     fireEvent.click(button);
 
-    await waitFor(() => expect(screen.getByText("entrar.sim_done_title")).toBeTruthy());
-    expect(screen.getByText("entrar.reason_basics_title")).toBeTruthy();
+    // teste do Master: o "torcedor novo" cai no Dashboard normal, sem gravar nada
+    await waitFor(() => expect(screen.getByTestId("where").textContent).toBe("/dashboard"));
     expect(submitVote).not.toHaveBeenCalled();
   });
 

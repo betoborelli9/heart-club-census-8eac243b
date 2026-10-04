@@ -28,8 +28,8 @@ const dismissedRecently = () => {
 export default function ProfileBasicsCard() {
   const { t } = useTranslationApp();
   const { toast } = useToast();
-  const { profile, hasVoted, updateProfile } = useUser();
-  const [hidden, setHidden] = useState(dismissedRecently);
+  const { profile, hasVoted, updateProfile, simActive } = useUser();
+  const [hidden, setHidden] = useState(() => (simActive ? false : dismissedRecently()));
   const [ano, setAno] = useState("");
   const [genero, setGenero] = useState("");
   const [saving, setSaving] = useState(false);
@@ -54,10 +54,12 @@ export default function ProfileBasicsCard() {
   };
 
   const notNow = () => {
-    try {
-      localStorage.setItem(DISMISS_KEY, String(Date.now()));
-    } catch {
-      /* ignora */
+    if (!simActive) {
+      try {
+        localStorage.setItem(DISMISS_KEY, String(Date.now()));
+      } catch {
+        /* ignora */
+      }
     }
     setHidden(true);
   };

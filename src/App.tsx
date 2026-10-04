@@ -24,6 +24,7 @@ import FeedbackWidget from "@/components/FeedbackWidget";
 import InstallAppButton from "@/components/InstallAppButton";
 import AppNavBar from "@/components/AppNavBar";
 import GlobalFooter from "@/components/GlobalFooter";
+import SimBanner from "@/components/entrar/SimBanner";
 import UsersTableSync from "@/integrations/users-table/UsersTableSync";
 import AccessTracker from "@/components/AccessTracker";
 import { useLocation } from "react-router-dom";
@@ -150,6 +151,7 @@ const App = () => (
           <InstallAppButton />
           <GlobalNav />
           <GlobalFooter />
+          <SimBanner />
         </BrowserRouter>
         </ViewedClubProvider>
       </UserProvider>

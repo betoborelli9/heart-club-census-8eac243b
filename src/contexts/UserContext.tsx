@@ -1,6 +1,9 @@
 import React, { createContext, useContext, useState, useEffect, useRef, ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Session, User } from "@supabase/supabase-js";
+import { isMasterEmail } from "@/lib/master";
+import { getSimPatch, isSimActive, mergeSimPatch, SIM_EVENT } from "@/lib/sim-fan";
+import { installSimGuard, removeSimGuard } from "@/lib/sim-guard";
 
 interface Profile {
   id: string;
@@ -35,6 +38,10 @@ interface UserContextType {
   isAuthReady: boolean;
   isAuthenticated: boolean;
   isProfileComplete: boolean;
+  /** Master está simulando "torcedor novo": perfil real oculto e gravação bloqueada. */
+  simActive: boolean;
+  /** O usuário REAL logado (durante o teste do Master, `user` é o torcedor novo de mentira). */
+  realUser: User | null;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
   updateProfile: (data: Partial<Profile>) => Promise<void>;
@@ -43,6 +50,7 @@ interface UserContextType {
 type ProfileUpdate = Partial<Profile> & { faixa_etaria?: string };
 
 const UserContext = createContext<UserContextType | null>(null);
+const SIM_FAN_ID = "00000000-0000-4000-8000-000000000001"; // id do "torcedor novo" do teste do Master
 const AUTH_DATA_TIMEOUT_MS = 3000;
 const AUTH_CALLBACK_TIMEOUT_MS = 10000;
 
@@ -85,6 +93,17 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthReady, setIsAuthReady] = useState(false);
   const userDataRequestRef = useRef(0);
+  const [simOn, setSimOn] = useState<boolean>(() => isSimActive());
+  const [, setSimTick] = useState(0);
+
+  useEffect(() => {
+    const sync = () => {
+      setSimOn(isSimActive());
+      setSimTick((n) => n + 1); // o que o "torcedor novo" preencheu mudou: redesenha
+    };
+    window.addEventListener(SIM_EVENT, sync);
+    return () => window.removeEventListener(SIM_EVENT, sync);
+  }, []);
 
   const fetchProfile = async (userId: string): Promise<Profile | null> => {
     const { data } = await supabase
@@ -106,7 +125,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
   };
 
   const refreshProfile = async () => {
-    if (user) {
+    if (user && !(isSimActive() && isMasterEmail(user.email))) {
       const [profileData, voted] = await Promise.all([
         withAuthTimeout(fetchProfile(user.id), profile),
         withAuthTimeout(checkVoted(user.id), hasVoted),
@@ -230,8 +249,34 @@ export function UserProvider({ children }: { children: ReactNode }) {
     setHasVoted(false);
   };
 
+  const simActive = simOn && isMasterEmail(user?.email);
+
+  // Durante o teste do Master toda gravação no banco vira "de mentira" (ver sim-guard.ts).
+  useEffect(() => {
+    if (simActive) installSimGuard();
+    else removeSimGuard();
+    return () => removeSimGuard();
+  }, [simActive]);
+
+  // Na simulação o app enxerga um torcedor NOVO de verdade: outro id (nada do Master existe para ele)
+  // e outro e-mail (assim as telas só de Master não aparecem).
+  const exposedUser: User | null =
+    simActive && user
+      ? ({
+          ...user,
+          id: SIM_FAN_ID,
+          email: "torcedor.novo@exemplo.com",
+          user_metadata: { full_name: "Torcedor" },
+        } as User)
+      : user;
+
   const updateProfile = async (data: Partial<Profile>) => {
     if (!user) return;
+    if (simActive) {
+      // simulação nunca grava no banco: o que o "torcedor novo" preenche fica só na memória da aba
+      mergeSimPatch(data as Record<string, any>);
+      return;
+    }
 
     // Calculate faixa_etaria if birthdate provided
     const updates: ProfileUpdate = { ...data };
@@ -253,18 +298,32 @@ export function UserProvider({ children }: { children: ReactNode }) {
   // que o ProfileSetup realmente coleta (nome, nascimento e gênero).
   // Cidade/estado/bairro são capturados depois pelo AddressModal e não
   // devem causar loop no /profile-setup.
+  // Na simulação do Master, o app enxerga um perfil "de primeira vez": só
+  // id e nome (como viria do Google). O perfil real continua intacto no banco.
+  const exposedProfile: Profile | null = simActive && user
+    ? {
+        id: SIM_FAN_ID, username: null,
+        nome_exibicao: "Torcedor",
+        data_nascimento: null, genero: null, cidade: null, estado: null, pais: null,
+        faixa_etaria: null, profissao: null, classe_social: null, device_hardware: null,
+        role: null, telefone: null, codigo_indicacao: "NOVO0001", nivel_embaixador: "BRONZE",
+        cep: null, bairro: null, latitude: null, longitude: null, address_confirmed: false,
+        ...getSimPatch(),
+      }
+    : profile;
+
   const isProfileComplete = !!(
-    profile?.nome_exibicao &&
-    profile?.data_nascimento &&
-    profile?.genero
+    exposedProfile?.nome_exibicao &&
+    exposedProfile?.data_nascimento &&
+    exposedProfile?.genero
   );
 
   const isAuthenticated = !!user;
 
   return (
     <UserContext.Provider value={{
-      user, session, profile, hasVoted, isLoading, isAuthReady, isAuthenticated,
-      isProfileComplete, signOut, refreshProfile, updateProfile,
+      user: exposedUser, session, profile: exposedProfile, hasVoted: simActive ? true : hasVoted, isLoading, isAuthReady, isAuthenticated,
+      isProfileComplete, simActive, realUser: user, signOut, refreshProfile, updateProfile,
     }}>
       {children}
     </UserContext.Provider>

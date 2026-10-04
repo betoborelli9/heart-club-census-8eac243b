@@ -13,6 +13,7 @@ import { useViewedClub } from "@/contexts/ViewedClubContext";
 import { supabase } from "@/integrations/supabase/client";
 import { CLUBS_DATA } from "@/clubes-data";
 import { isMasterEmail } from "@/lib/master";
+import { getSimSympathies, SIM_EVENT } from "@/lib/sim-fan";
 import MasterTestPanel from "@/components/MasterTestPanel";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 import { useTranslation } from "react-i18next";
@@ -42,7 +43,7 @@ import logo from "@/assets/logo.png";
 const Dashboard = () => {
   const navigate = useNavigate();
   const { t } = useTranslation();
-  const { user, profile, isLoading, isAuthReady, isAuthenticated, signOut } = useUser();
+  const { user, profile, isLoading, isAuthReady, isAuthenticated, signOut, simActive } = useUser();
   const { heartClubName, viewedClubName, setViewedClubName, isViewingHeart } = useViewedClub();
 
   const [heartClubData, setHeartClubData] = useState<any>(null);
@@ -73,6 +74,11 @@ const Dashboard = () => {
   useEffect(() => {
     const loadSympathies = async () => {
       if (!user) return;
+      // Teste do Master: as simpatias são as que o "torcedor novo" escolheu na entrada.
+      if (simActive) {
+        setSympathies(getSimSympathies());
+        return;
+      }
       const { data } = await supabase
         .from("votos")
         .select("sympathy_1, sympathy_2, sympathy_3, sympathy_4")
@@ -84,7 +90,11 @@ const Dashboard = () => {
       }
     };
     loadSympathies();
-  }, [user]);
+    if (!simActive) return;
+    const onSim = () => setSympathies(getSimSympathies());
+    window.addEventListener(SIM_EVENT, onSim);
+    return () => window.removeEventListener(SIM_EVENT, onSim);
+  }, [user, simActive]);
 
   useEffect(() => {
     if (!heartClubName) {
@@ -159,7 +169,11 @@ const Dashboard = () => {
   const effectiveHeartData = isMasterAdmin ? viewedClubData : heartClubData;
   const effectiveHeartTheme = isMasterAdmin ? viewedTheme : heartTheme;
   const masterTeamIdOverride =
-    isMasterAdmin && !isViewingHeart && viewedClubMeta?.apiId ? Number(viewedClubMeta.apiId) : undefined;
+    (isMasterAdmin && !isViewingHeart) || simActive
+      ? viewedClubMeta?.apiId
+        ? Number(viewedClubMeta.apiId)
+        : undefined
+      : undefined;
   const handleClearMasterPreview = () => {
     if (isMasterAdmin && heartClubName) handlePickClub(heartClubName);
   };

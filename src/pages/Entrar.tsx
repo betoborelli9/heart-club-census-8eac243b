@@ -9,9 +9,9 @@
  * modo teste (?sim=1), que NÃO grava nada e mostra as telas IDÊNTICAS às do torcedor.
  * O público segue no fluxo antigo.
  */
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams, Link } from "react-router-dom";
-import { Heart, Loader2, Mail, Search } from "lucide-react";
+import { Heart, Loader2, Mail, Search, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useUser } from "@/contexts/UserContext";
@@ -20,6 +20,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useTranslationApp } from "@/hooks/useTranslationApp";
 import { isMasterEmail } from "@/lib/master";
 import { NEW_ENTRY_FLOW_ENABLED, savePendingVote } from "@/lib/entry-flow";
+import { isSimActive, startSim } from "@/lib/sim-fan";
 import type { ClubSearchResult } from "@/lib/search-clubs";
 import { ClubLogo } from "@/components/ClubLogo";
 import { ResultsList, useClubSearch } from "@/components/entrar/ClubSearchBox";
@@ -28,15 +29,17 @@ import logo from "@/assets/logo.png";
 
 type Stage = "intro" | "pick" | "club" | "login";
 const INTRO_MS = 4500;
+const MAX_SYMPATHY = 4;
 
 const Entrar = () => {
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const { t } = useTranslationApp();
   const { toast } = useToast();
-  const { user, isAuthReady, isLoading, isAuthenticated, hasVoted } = useUser();
+  const { user, realUser, isAuthReady, isLoading, isAuthenticated, hasVoted } = useUser();
 
-  const isMaster = isMasterEmail(user?.email);
+  // Durante o teste do Master, user é o torcedor novo de mentira; o Master de verdade é realUser.
+  const isMaster = isMasterEmail((realUser ?? user)?.email);
   const sim = isMaster && params.get("sim") === "1";
 
   const [stage, setStage] = useState<Stage>(() => {
@@ -50,7 +53,17 @@ const Entrar = () => {
   const [fans, setFans] = useState<number | null>(null);
   const [email, setEmail] = useState("");
   const [busy, setBusy] = useState<"google" | "magic" | null>(null);
+  const [sympathies, setSympathies] = useState<ClubSearchResult[]>([]);
   const heartSearch = useClubSearch();
+  const sympathySearch = useClubSearch();
+  const simStarted = useRef(false);
+
+  // Teste do Master: começa do zero como um torcedor novo (nada do perfil/voto real aparece).
+  useEffect(() => {
+    if (!sim || simStarted.current) return;
+    simStarted.current = true;
+    if (!isSimActive() || stage === "intro") startSim();
+  }, [sim, stage]);
 
   // ── Porteiro: rota nova só abre para o Master em teste (enquanto o fluxo novo não estiver ligado).
   useEffect(() => {
@@ -105,12 +118,14 @@ const Entrar = () => {
 
   const changeClub = () => {
     setHeartClub(null);
+    setSympathies([]);
+    sympathySearch.reset();
     setStage("pick");
   };
 
   const onSwear = () => {
     if (!heartClub) return;
-    savePendingVote(heartClub, []);
+    savePendingVote(heartClub, sympathies);
     if (!sim && isAuthenticated) {
       navigate("/confirmar-voto", { replace: true });
       return;
@@ -255,6 +270,43 @@ const Entrar = () => {
                       : t("entrar.first_fan", { club: heartClub.name })}
                 </p>
               </div>
+            </div>
+
+            {/* SIMPATIAS: um campo de cada vez; ao escolher um time, abre o próximo (até 4) */}
+            <div className="space-y-2">
+              <p className="text-sm font-bold text-white/70">{t("entrar.sympathy_intro")}</p>
+              {sympathies.map((c, idx) => (
+                <div key={c.name} className="flex items-center gap-3 rounded-xl border border-white/5 bg-card p-2.5">
+                  <ClubLogo src={c.logo} alt={c.name} size="sm" />
+                  <p className="flex-1 truncate text-sm font-bold uppercase italic">{c.name}</p>
+                  <button onClick={() => setSympathies((p) => p.filter((_, i) => i !== idx))} aria-label="remove">
+                    <X className="h-4 w-4 opacity-60" />
+                  </button>
+                </div>
+              ))}
+              {sympathies.length < MAX_SYMPATHY && (
+                <div className="relative">
+                  <Input
+                    value={sympathySearch.query}
+                    onChange={(e) => sympathySearch.setQuery(e.target.value)}
+                    onFocus={() => sympathySearch.setOpen(true)}
+                    onBlur={() => setTimeout(() => sympathySearch.setOpen(false), 200)}
+                    placeholder={t("entrar.sympathy_placeholder_n", { n: sympathies.length + 1 })}
+                    className="h-12 rounded-xl border-white/10 bg-card"
+                  />
+                  <ResultsList
+                    results={sympathySearch.results}
+                    loading={sympathySearch.loading}
+                    open={sympathySearch.open}
+                    onPick={(c) => {
+                      if (c.name !== heartClub.name && !sympathies.find((x) => x.name === c.name)) {
+                        setSympathies((p) => [...p, c]);
+                      }
+                      sympathySearch.reset();
+                    }}
+                  />
+                </div>
+              )}
             </div>
 
             <Button

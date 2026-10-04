@@ -5,6 +5,7 @@
  */
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useUser } from "@/contexts/UserContext";
 
 export type FlagKey = "form_termos" | "form_territorio" | "form_socio" | "form_embaixador";
 
@@ -33,6 +34,8 @@ export async function fetchFeatureFlags(): Promise<FlagRow[] | null> {
 /** `enabled` só é true quando a leitura deu certo E a chavinha está ligada. */
 export function useFeatureFlag(key: FlagKey): { enabled: boolean; ready: boolean } {
   const [state, setState] = useState({ enabled: false, ready: false });
+  // No teste de "torcedor novo" do Master todos os cartões aparecem (para ele ver o que o torcedor verá).
+  const { simActive } = useUser();
 
   useEffect(() => {
     let alive = true;
@@ -45,5 +48,5 @@ export function useFeatureFlag(key: FlagKey): { enabled: boolean; ready: boolean
     };
   }, [key]);
 
-  return state;
+  return simActive ? { enabled: true, ready: true } : state;
 }

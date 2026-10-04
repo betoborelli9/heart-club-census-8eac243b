@@ -803,7 +803,7 @@ function FitToGeoJson({ data, deps }: { data: any | null; deps: any[] }) {
 const MapaCalor = () => {
   const navigate = useNavigate();
   const { t } = useTranslationApp();
-  const { user, signOut } = useUser();
+  const { user, signOut, simActive, profile: simProfile } = useUser();
   // Clube "em exibição" compartilhado com Dashboard e Ranking. Pesquisar um
   // clube aqui (ou em outra página) reflete em todas, até o torcedor voltar
   // pro próprio time do coração. "Mapa Geral" continua sendo uma opção só
@@ -901,7 +901,7 @@ const MapaCalor = () => {
         .select("cep, cidade, estado, bairro, latitude, longitude, address_confirmed")
         .eq("id", user.id)
         .maybeSingle();
-      const addressConfirmed = !!profileData?.address_confirmed;
+      const addressConfirmed = simActive ? !!(simProfile as any)?.address_confirmed : !!profileData?.address_confirmed;
       // [SYNC PROFILE → VOTO ORIGINAL]
       // Garantir que o voto sagrado herda os dados de território confirmados no profile.
       // Sem isso, o heatmap (que lê de votos) não pinta país/estado/cidade/bairro do torcedor.

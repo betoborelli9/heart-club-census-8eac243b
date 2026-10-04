@@ -25,6 +25,7 @@ import {
   Mail,
   Link2,
   Sparkles,
+  Megaphone,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -36,6 +37,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { useFeatureFlag } from "@/lib/feature-flags";
+import FormReasonCard from "@/components/FormReasonCard";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -165,6 +168,10 @@ const Ambassadors = () => {
   const [clubName, setClubName] = useState<string | null>(null);
   const [clubData, setClubData] = useState<ClubData | null>(null);
   const [showCensusModal, setShowCensusModal] = useState(false);
+  // Chavinha "Censo do Embaixador" (Admin): card explicativo antes do formulário.
+  const embFlag = useFeatureFlag("form_embaixador");
+  const [embIntroDone, setEmbIntroDone] = useState(false);
+  const showEmbIntro = embFlag.enabled && showCensusModal && !embIntroDone;
   const [copied, setCopied] = useState(false);
   const [ranking, setRanking] = useState<RankingEntry[]>([]);
   const [activityFeed, setActivityFeed] = useState<ActivityEntry[]>([]);
@@ -783,8 +790,38 @@ const Ambassadors = () => {
       </main>
 
       {/* [MÓDULO: MODAL DE CAPTURA (CENSO)] */}
+      {/* Card explicativo (só com a chavinha ligada) */}
+      <Dialog open={showEmbIntro}>
+        <DialogContent
+          className="max-w-md border-0 bg-transparent p-0 shadow-none [&>button]:hidden"
+          onInteractOutside={(e) => e.preventDefault()}
+          onEscapeKeyDown={(e) => e.preventDefault()}
+        >
+          <DialogTitle className="sr-only">Censo do Embaixador</DialogTitle>
+          <DialogDescription className="sr-only">Por que pedimos WhatsApp e profissão</DialogDescription>
+          <FormReasonCard
+            icon={Megaphone}
+            step="Área do Embaixador"
+            title="Vire a voz da sua torcida"
+            subtitle="Dois dados e o seu painel de embaixador abre."
+            reasons={[
+              "Seu WhatsApp nos deixa avisar você quando alguém entrar pelo seu convite.",
+              "Sua profissão mostra a força da sua torcida no mercado — e conta pontos no seu ranking de embaixador.",
+              "Quem mais convida torcedores do mesmo time vira o Embaixador oficial daquele clube.",
+            ]}
+          >
+            <Button
+              onClick={() => setEmbIntroDone(true)}
+              className="h-12 w-full rounded-xl font-black uppercase italic btn-orange-gradient"
+            >
+              Continuar
+            </Button>
+          </FormReasonCard>
+        </DialogContent>
+      </Dialog>
+
       <Dialog
-        open={showCensusModal}
+        open={showCensusModal && !showEmbIntro}
         onOpenChange={(v) => {
           // [MASTER TEST] Permite fechar o modal apenas em modo teste forçado.
           const forceOnboarding =

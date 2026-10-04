@@ -7,9 +7,10 @@
  * onde ele pesquisou — até ele voltar pro próprio time do coração. Antes,
  * cada página guardava esse estado sozinha (resetava ao trocar de página).
  */
-import { createContext, useContext, useEffect, useMemo, useState, ReactNode } from "react";
+import { createContext, useContext, useEffect, useMemo, useRef, useState, ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useUser } from "@/contexts/UserContext";
+import { getSimClub, SIM_EVENT } from "@/lib/sim-fan";
 
 interface ViewedClubContextType {
   /** Nome do time do coração de verdade do torcedor (o que ele votou). */
@@ -34,14 +35,31 @@ interface ViewedClubContextType {
 const ViewedClubContext = createContext<ViewedClubContextType | null>(null);
 
 export function ViewedClubProvider({ children }: { children: ReactNode }) {
-  const { user } = useUser();
+  const { user, simActive } = useUser();
   const [heartClubName, setHeartClubName] = useState<string | null>(null);
   const [viewedClubName, setViewedClubNameState] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
+  const [simClub, setSimClubState] = useState<string | null>(() => getSimClub());
+  const wasSimRef = useRef(false);
+
+  useEffect(() => {
+    const sync = () => setSimClubState(getSimClub());
+    window.addEventListener(SIM_EVENT, sync);
+    return () => window.removeEventListener(SIM_EVENT, sync);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
     const loadHeartClub = async () => {
+      // Simulação do Master: o time "votado" na simulação é o time do coração
+      // (nada vem do voto real, que continua intacto no banco).
+      if (simActive) {
+        wasSimRef.current = true;
+        setHeartClubName(simClub);
+        setViewedClubNameState(simClub);
+        setReady(true);
+        return;
+      }
       if (!user) {
         setHeartClubName(null);
         setReady(true);
@@ -63,8 +81,11 @@ export function ViewedClubProvider({ children }: { children: ReactNode }) {
       if (data?.clube_nome) {
         setHeartClubName(data.clube_nome);
         // Só define o clube em exibição pro time do coração automaticamente
-        // se o torcedor ainda não estiver vendo nenhum outro clube pesquisado.
-        setViewedClubNameState((prev) => prev ?? data.clube_nome);
+        // se o torcedor ainda não estiver vendo nenhum outro clube pesquisado
+        // (ou se acabou de sair da simulação do Master).
+        const leftSim = wasSimRef.current;
+        wasSimRef.current = false;
+        setViewedClubNameState((prev) => (leftSim ? data.clube_nome : prev ?? data.clube_nome));
       }
       setReady(true);
     };
@@ -72,7 +93,7 @@ export function ViewedClubProvider({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [user]);
+  }, [user, simActive, simClub]);
 
   const setViewedClubName = (name: string | null) => setViewedClubNameState(name);
   const resetToHeart = () => setViewedClubNameState(heartClubName);
