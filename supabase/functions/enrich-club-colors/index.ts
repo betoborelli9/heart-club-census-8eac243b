@@ -15,6 +15,7 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import UPNG from "npm:upng-js@2.1.0";
 
 /* ═══════════════════════════════════════════════════════════
    CONFIG / CORS
@@ -55,6 +56,83 @@ function normalizeName(value: unknown): string {
     .toLowerCase()
     .replace(/\s+/g, " ")
     .trim();
+}
+
+/* ═══════════════════════════════════════════════════════════
+   COR PELO ESCUDO (plano B quando a IA/Google não acha a cor do clube)
+   Lê o escudo (PNG), ignora fundo transparente e pega as cores que mais
+   aparecem (dominantes de matiz); branco/preto só entram se forem relevantes.
+   Funciona para clube de QUALQUER lugar do mundo. Confiança: baixa.
+═══════════════════════════════════════════════════════════ */
+function rgbToHsv(r: number, g: number, b: number) {
+  r /= 255; g /= 255; b /= 255;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b), d = max - min;
+  let h = 0;
+  if (d) {
+    if (max === r) h = ((g - b) / d) % 6;
+    else if (max === g) h = (b - r) / d + 2;
+    else h = (r - g) / d + 4;
+    h *= 60;
+    if (h < 0) h += 360;
+  }
+  return { h, s: max ? d / max : 0, v: max };
+}
+
+function colorsFromRgba(rgba: Uint8Array): string[] {
+  const bins = new Map<string, { n: number; r: number; g: number; b: number }>();
+  let opaque = 0;
+  const add = (key: string, r: number, g: number, b: number) => {
+    const e = bins.get(key) || { n: 0, r: 0, g: 0, b: 0 };
+    e.n++; e.r += r; e.g += g; e.b += b;
+    bins.set(key, e);
+  };
+  for (let i = 0; i < rgba.length; i += 4) {
+    if (rgba[i + 3] < 200) continue;
+    const r = rgba[i], g = rgba[i + 1], b = rgba[i + 2];
+    opaque++;
+    const { h, s, v } = rgbToHsv(r, g, b);
+    if (v < 0.22) add("preto", r, g, b);
+    else if (s < 0.14 && v > 0.82) add("branco", r, g, b);
+    else if (s < 0.14) add("cinza", r, g, b);
+    else add("h" + Math.floor(h / 20) + (v < 0.5 ? "d" : "l"), r, g, b);
+  }
+  if (!opaque) return [];
+  const list = [...bins.entries()].map(([k, e]) => ({
+    k, share: e.n / opaque, rgb: [e.r / e.n, e.g / e.n, e.b / e.n], h: k.startsWith("h") ? parseInt(k.slice(1)) * 20 : -1,
+  }));
+  const far = (a: number, b: number) => { const d = Math.abs(a - b); return Math.min(d, 360 - d) >= 40; };
+  const merged: { share: number; rgb: number[]; h: number }[] = [];
+  for (const c of list.filter((x) => x.k.startsWith("h")).sort((a, b) => b.share - a.share)) {
+    const m = merged.find((x) => !far(x.h, c.h));
+    if (m) {
+      const t = m.share + c.share;
+      m.rgb = m.rgb.map((v, i) => (v * m.share + c.rgb[i] * c.share) / t);
+      m.share = t;
+    } else merged.push({ share: c.share, rgb: [...c.rgb], h: c.h });
+  }
+  const white = list.find((x) => x.k === "branco");
+  const black = list.find((x) => x.k === "preto");
+  const cands: { share: number; rgb: number[] }[] = [];
+  for (const m of merged) if (m.share >= 0.06) cands.push({ share: m.share, rgb: m.rgb });
+  if (white && white.share >= 0.1) cands.push({ share: white.share, rgb: [255, 255, 255] });
+  if (black && black.share >= 0.12) cands.push({ share: black.share, rgb: [17, 17, 17] });
+  cands.sort((a, b) => b.share - a.share);
+  const hex = (c: number[]) =>
+    "#" + c.map((x) => Math.round(x).toString(16).padStart(2, "0")).join("").toUpperCase();
+  return cands.slice(0, 3).map((c) => hex(c.rgb));
+}
+
+async function colorsFromCrest(url: string | null | undefined): Promise<string[]> {
+  if (!url) return [];
+  try {
+    const res = await fetch(url);
+    if (!res.ok) return [];
+    const img = UPNG.decode(await res.arrayBuffer());
+    return colorsFromRgba(new Uint8Array(UPNG.toRGBA8(img)[0]));
+  } catch (e) {
+    console.error("[CREST] falhou:", (e as Error).message);
+    return [];
+  }
 }
 
 function isSafeClubQuery(value: unknown): boolean {
@@ -205,7 +283,15 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
 
-    const { club_name, api_id } = await req.json();
+    const { club_name, api_id, crest_only, logo_url } = await req.json();
+
+    // Diagnóstico (não grava nada): mostra as cores que o escudo daria.
+    if (crest_only && logo_url) {
+      return new Response(JSON.stringify({ crest_colors: await colorsFromCrest(String(logo_url)) }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     if (!club_name && !api_id) {
       return new Response(JSON.stringify({ success: false, error: "club_name ou api_id obrigatório" }), {
         status: 400,
@@ -238,7 +324,12 @@ serve(async (req) => {
         .or(`nome.ilike.${club_name},nome_curto.ilike.${club_name}`);
       existing = (rows || []).find((r: any) => normalizeName(r.nome) === norm || normalizeName(r.nome_curto) === norm) || null;
     }
-    if (existing && (existing.api_id || existing.escudo_url)) {
+    // Clube já salvo SEM cor volta a ser enriquecido (antes ficava "preso" sem cor para sempre).
+    // Para não gastar IA à toa, só tenta de novo se a última tentativa foi há mais de 10 minutos.
+    const semCor = !!existing && !existing.cor_primaria;
+    const tentouAgora =
+      !!existing?.atualizado_em && Date.now() - new Date(existing.atualizado_em).getTime() < 10 * 60 * 1000;
+    if (existing && (existing.api_id || existing.escudo_url) && (!semCor || tentouAgora)) {
       return new Response(JSON.stringify({ success: true, club: existing, source: "cache" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -247,7 +338,8 @@ serve(async (req) => {
     console.log(`[ENRICH 100.0] → ${club_name} (api_id=${api_id || "n/a"})`);
 
     /* 1️⃣ API-Football: dados técnicos */
-    const teamUrl = api_id ? `/teams?id=${api_id}` : `/teams?search=${encodeURIComponent(club_name)}`;
+    const idParaBusca = api_id || existing?.api_id || null;
+    const teamUrl = idParaBusca ? `/teams?id=${idParaBusca}` : `/teams?search=${encodeURIComponent(club_name)}`;
     const tJson = await apiFootball(teamUrl);
     const teamInfo = tJson?.response?.[0] || null;
     const team = teamInfo?.team || {};
@@ -282,12 +374,35 @@ serve(async (req) => {
     const ai = await callAIGrounded(finalName, country);
     console.log(`[AI GROUNDED] ${finalName} →`, ai ? Object.keys(ai).join(",") : "null");
 
-    const cores = dedupeHex([
+    let cores = dedupeHex([
       ai?.cor_primaria,
       ai?.cor_secundaria,
       ai?.cor_terciaria,
       ai?.cor_quarta,
     ]).slice(0, 4);
+    let coresFonte: string | null = cores.length ? "ia_google" : null;
+    let coresConfianca: string | null = cores.length ? "media" : null;
+
+    // Plano B: a IA/Google não achou (clube pequeno ou de mercado remoto) → cores do escudo.
+    // Também completa quando a IA devolveu só 1 cor (clube bicolor/tricolor ficaria incompleto).
+    if (cores.length < 2) {
+      const doEscudo = dedupeHex(await colorsFromCrest(team.logo));
+      const dist = (a: string, b: string) => {
+        const p = (h: string) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
+        const x = p(a), y = p(b);
+        return Math.hypot(x[0] - y[0], x[1] - y[1], x[2] - y[2]);
+      };
+      const junto = [...cores];
+      for (const c of doEscudo) {
+        if (junto.length >= 3) break;
+        if (junto.every((j) => dist(j, c) > 90)) junto.push(c);
+      }
+      if (junto.length > cores.length) {
+        coresFonte = cores.length ? "ia_google+escudo" : "escudo";
+        coresConfianca = "baixa";
+        cores = junto;
+      }
+    }
 
     /* 4️⃣ Crosscheck feminino via API */
     const femApi = await checkFemininoApi(finalName);
@@ -309,6 +424,8 @@ serve(async (req) => {
       cor_secundaria: cores[1] || null,
       cor_terciaria: cores[2] || null,
       cor_quarta: cores[3] || null,
+      cores_fonte: coresFonte,
+      cores_confianca: coresConfianca,
       division: division || ai?.division || null,
       feminino: tem_feminino,
       tem_feminino,

@@ -36,11 +36,20 @@ export function useClubTheme(clubName: string | null | undefined): TeamTheme {
       return;
     }
 
-    // Fallback imediato à lista estática
+    // Fallback imediato à lista estática. Se o clube não tem cor nenhuma ainda, usa o tema
+    // neutro — NUNCA deixa a cor do clube anterior (ex.: vermelho do Vila Nova) "grudada".
     const staticTheme = teamColors[clubName];
     if (staticTheme) {
       setTheme(staticTheme);
+    } else {
+      setTheme(chumboTheme);
     }
+
+    // Se o usuário trocar de clube antes da resposta chegar, a resposta velha é descartada.
+    let cancelled = false;
+    const applyTheme = (t: TeamTheme) => {
+      if (!cancelled) setTheme(t);
+    };
 
     // Busca no banco de dados (club_colors primeiro, depois clubes_cache)
     const fetchFromDB = async () => {
@@ -57,7 +66,7 @@ export function useClubTheme(clubName: string | null | undefined): TeamTheme {
           colorData.secondary_color || "#ffffff"
         );
         themeCache.set(clubName, dbTheme);
-        setTheme(dbTheme);
+        applyTheme(dbTheme);
         return;
       }
 
@@ -74,7 +83,7 @@ export function useClubTheme(clubName: string | null | undefined): TeamTheme {
           cacheData.cor_secundaria || "#ffffff"
         );
         themeCache.set(clubName, dbTheme);
-        setTheme(dbTheme);
+        applyTheme(dbTheme);
         return;
       }
 
@@ -97,7 +106,22 @@ export function useClubTheme(clubName: string | null | undefined): TeamTheme {
               enriched.secondary_color || "#ffffff"
             );
             themeCache.set(clubName, enrichedTheme);
-            setTheme(enrichedTheme);
+            applyTheme(enrichedTheme);
+          } else {
+            // A função grava as cores em clubes_cache — lê de lá também.
+            const { data: enrichedCache } = await supabase
+              .from("clubes_cache")
+              .select("cor_primaria, cor_secundaria")
+              .eq("nome", clubName)
+              .maybeSingle();
+            if (enrichedCache?.cor_primaria) {
+              const cacheTheme = hexToTeamTheme(
+                enrichedCache.cor_primaria,
+                enrichedCache.cor_secundaria || "#ffffff"
+              );
+              themeCache.set(clubName, cacheTheme);
+              applyTheme(cacheTheme);
+            }
           }
         } catch {
           // Silenciosamente falha — mantém fallback
@@ -111,6 +135,9 @@ export function useClubTheme(clubName: string | null | undefined): TeamTheme {
     };
 
     fetchFromDB();
+    return () => {
+      cancelled = true;
+    };
   }, [clubName]);
 
   return theme;
