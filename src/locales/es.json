@@ -602,6 +602,8 @@
   },
   "entrar": {
     "skip": "Omitir",
+    "sympathy_intro": "Si quieres, puedes añadir hasta 4 clubes de simpatía.",
+    "sympathy_placeholder_n": "Club de simpatía {{n}}",
     "optional": "opcional",
     "already_voted": "¿Ya votaste? Entrar a mi cuenta",
     "pick_title": "¿Cuál es el club de tu corazón?",

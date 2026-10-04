@@ -602,6 +602,8 @@
   },
   "entrar": {
     "skip": "Skip",
+    "sympathy_intro": "If you like, you can add up to 4 clubs you sympathize with.",
+    "sympathy_placeholder_n": "Sympathy club {{n}}",
     "optional": "optional",
     "already_voted": "Already voted? Sign in to my account",
     "pick_title": "Which club is in your heart?",

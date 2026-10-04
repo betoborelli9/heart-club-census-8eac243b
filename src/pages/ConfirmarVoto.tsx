@@ -171,9 +171,7 @@ const ConfirmarVoto = () => {
 
         {/* SIMPATIAS (opcional): até 4 times que o torcedor também curte */}
         <div className="w-full space-y-2">
-          <p className="text-xs font-black uppercase italic text-white/50">
-            {t("entrar.sympathies_label")} ({sympathies.length}/{MAX_SYMPATHY}) · {t("entrar.optional")}
-          </p>
+          <p className="text-sm font-bold text-white/70">{t("entrar.sympathy_intro")}</p>
           {sympathies.map((c, idx) => (
             <div key={c.name} className="flex items-center gap-3 rounded-xl border border-white/5 bg-card p-2.5">
               <ClubLogo src={c.logo} alt={c.name} size="sm" />
@@ -190,7 +188,7 @@ const ConfirmarVoto = () => {
                 onChange={(e) => sympathySearch.setQuery(e.target.value)}
                 onFocus={() => sympathySearch.setOpen(true)}
                 onBlur={() => setTimeout(() => sympathySearch.setOpen(false), 200)}
-                placeholder={t("entrar.sympathy_placeholder")}
+                placeholder={t("entrar.sympathy_placeholder_n", { n: sympathies.length + 1 })}
                 className="h-12 rounded-xl border-white/10 bg-card"
               />
               <ResultsList

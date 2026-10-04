@@ -602,6 +602,8 @@
   },
   "entrar": {
     "skip": "Pular",
+    "sympathy_intro": "Se você quiser, pode adicionar até 4 times de simpatia.",
+    "sympathy_placeholder_n": "Time de simpatia {{n}}",
     "optional": "opcional",
     "already_voted": "Já votou? Entrar na minha conta",
     "pick_title": "Qual é o time do seu coração?",
