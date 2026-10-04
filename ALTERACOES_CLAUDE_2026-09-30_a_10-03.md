@@ -61,3 +61,38 @@ send-email-campaign, track-email-open, get-or-create-club (busca canônica), che
 ## 7. Ainda NÃO feito (a conversar antes)
 - Votação sem parede de login e simulador de torcedor novo (mexem na entrada). Código guardado na branch `trabalho-votacao-nova`.
 - "Onde assistir": a fonte de dados (API-Football) não traz canais de TV; proposta: o Beto digitar no Admin por campeonato.
+
+---
+
+## 8. Voltas (rollbacks) e estado atual — 03/10
+
+- Rollback 2 (commit c0d22f7): site volta ao estado confirmado funcionando. Estado anterior guardado na branch `backup-main-antes-do-rollback-2`.
+- Rollback 3 (commit 3ce3d4b): site volta ao estado de 29/09 (commit 4cbc6be, "3 dias atras"), a pedido do Beto. Estado anterior guardado na branch `backup-main-antes-do-rollback-3`.
+- Hoje o site no ar tem o MESMO codigo de 29/09. Os 15 arquivos novos que existem na pasta (alertas, chavinhas, cards, aba de cadastros incompletos, robo de e-mail, convites etc.) NAO estao ligados a nenhuma tela, entao nao entram no site.
+- Mudancas no BANCO feitas desde 30/09 continuam la (nao voltam com o rollback do site): ver lista das migrations na secao 1 a 7. Ultimas 4 (03/10, 12h-16h): trava de voto, chavinhas, ocultacao a pedido, registro de convites.
+- Problema aberto: a API da Supabase (PostgREST) cai com erro 503 por sobrecarga do banco (leitura do mapa de tabelas chegou a 7,9s, limite 8s). Principal peso: limpeza do historico de chamadas automaticas (net._http_response) e rotina de jogos ao vivo a cada minuto (ja existiam antes).
+
+## 9. Fila para recolocar, um item por vez (so com a API estavel)
+
+1. Aba Cadastros Incompletos (Admin) + filtro no robo de e-mail
+2. Alertas Supabase / API-Football no Dashboard
+3. Remover banner Instalar App; corrigir texto SELECIONE SEU CLUBE
+4. Card do proximo jogo (cor, estadio, onde assistir)
+5. Chavinhas + cards "por que pedimos"
+6. Busca por apelido/sigla, aviso do Mapa de Calor, convites dos embaixadores
+7. Votacao sem parede de login + simulador (por ultimo, mexe na entrada)
+Antes e depois de cada item: teste de login.
+
+## 10. Plano combinado em 04/10 (NADA executado ainda; cada etapa so com OK do Beto)
+1. Banco: limpeza automatica das tabelas tecnicas (diaria + por tamanho) e rotina de jogos ao vivo que so dispara com partida no calendario. Botao "Limpar sujeira tecnica" no Admin mantido.
+2. Servidor: calendario mundial 1x/dia; vigia de resultados so em janela de jogo; classificacao so atualiza quando um jogo termina (primeiro torcedor atualiza, os demais veem o guardado). Noticias ficam como estao.
+3. Placar ao vivo em tempo real com todos os jogos do campeonato: vermelho piscando + minutos; encerrado = preto estatico.
+4. Favoritos (coracao) + avisos no celular em lote: DEPOIS da monetizacao.
+5. Dashboard (so Master/admin): termometro do limite da API-Football (usado/limite/saldo), termometro "hora de aumentar o servidor", termometro das tabelas tecnicas com reset automatico; fim da atualizacao a cada 60s.
+Regra: nada de admin aparece para torcedor.
+
+Ajuste 04/10: classificacao ao vivo a cada gol (tabela projetada a partir dos placares ao vivo, oficial ao fim do jogo); atualizacao do placar na maior frequencia que couber nos creditos da API-Football (provavel ~15s; confirmar).
+
+## 11. Etapa 1 executada em 04/10 (somente banco; site intacto)
+- Migration 20261004100000: hc_cleanup_technical_logs (hora a hora, minuto 7; apaga >1 dia/>3 dias; esvazia se passar de 50 MB; reinicia so o worker do pg_net se a tabela estiver trancada), tabela technical_cleanup_runs (historico), admin_run_technical_cleanup() (botao do Admin, so admin/master; tela ainda nao criada), hc_live_window_open() e rotina fixtures-live-poll-1min religada com trava: so chama a funcao se houver partida na janela.
+- Teste: site 200, REST 200, login Google 302 antes e depois; anon nao consegue chamar a limpeza.
