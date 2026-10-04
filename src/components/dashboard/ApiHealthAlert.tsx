@@ -75,12 +75,12 @@ export default function ApiHealthAlert() {
 
   const [loadFailed, setLoadFailed] = useState(false);
 
-  // Lê o status agora e de novo a cada 60s. Se a leitura falhar (ex.: Supabase
+  // Lê o status agora e de novo a cada 5 min (o banco atualiza de hora em hora). Se a leitura falhar (ex.: Supabase
   // lenta), NÃO some em silêncio — mostra aviso, senão parece que está tudo bem.
   useEffect(() => {
     let alive = true;
     const load = async () => {
-      const { data, error } = await supabase.rpc("admin_get_api_health");
+      const { data, error } = await (supabase as any).rpc("admin_get_api_health");
       if (!alive) return;
       if (error || !Array.isArray(data)) {
         setLoadFailed(true);
@@ -90,7 +90,7 @@ export default function ApiHealthAlert() {
       setRows(data as unknown as HealthRow[]);
     };
     load();
-    const id = setInterval(load, 60_000);
+    const id = setInterval(load, 5 * 60_000);
     return () => {
       alive = false;
       clearInterval(id);
@@ -100,7 +100,7 @@ export default function ApiHealthAlert() {
   if ((!rows || rows.length === 0) && loadFailed) {
     return (
       <div className="rounded-[28px] border border-yellow-500/40 bg-[#0b0b0b] p-4 text-sm font-bold text-yellow-400">
-        Não consegui ler o status dos serviços agora (a Supabase pode estar lenta). Tentando de novo a cada minuto.
+        Não consegui ler o status dos serviços agora (a Supabase pode estar lenta). Tentando de novo a cada 5 minutos.
         <span className="block text-xs font-normal text-white/50 mt-1">Enquanto isso, confira você mesmo: API-Football e Supabase.</span>
       </div>
     );
