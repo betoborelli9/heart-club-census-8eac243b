@@ -67,6 +67,9 @@ describe("ConfirmarVoto", () => {
     renderAt("/confirmar-voto?sim=1");
 
     const button = await screen.findByText("entrar.yes_swear");
+    // 4 espaços de simpatia visíveis (opcional) na tela de confirmação
+    expect(screen.getByText(/entrar\.sympathies_label \(0\/4\)/)).toBeTruthy();
+    expect(screen.getByPlaceholderText("entrar.sympathy_placeholder")).toBeTruthy();
     expect((button.closest("button") as HTMLButtonElement).disabled).toBe(true);
 
     fireEvent.click(screen.getByRole("checkbox"));

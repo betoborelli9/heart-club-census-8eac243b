@@ -602,6 +602,7 @@
   },
   "entrar": {
     "skip": "Pular",
+    "optional": "opcional",
     "already_voted": "Já votou? Entrar na minha conta",
     "pick_title": "Qual é o time do seu coração?",
     "pick_sub": "Escolha seu clube e entre para a torcida do mundo todo. Leva menos de 1 minuto.",
@@ -639,7 +640,7 @@
     "sim_banner": "MODO SIMULAÇÃO — nada é gravado. Seu voto real não é alterado.",
     "sim_login_note": "Aqui o torcedor entra com Google ou com um link por e-mail.",
     "sim_login_btn": "Simular: entrar como torcedor novo",
-    "sim_done_title": "Lealdade registrada! (simulação)",
+    "sim_done_title": "Lealdade registrada! 🏟️",
     "sim_done_sub": "Em seguida o torcedor cai direto no Dashboard. Depois, um cartão de cada vez explica por que pedimos cada dado:",
     "sim_next": "Próximo cartão",
     "sim_finish": "Concluir simulação",

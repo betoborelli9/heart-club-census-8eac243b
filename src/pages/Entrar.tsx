@@ -3,14 +3,15 @@
  * [MÓDULO]: Porta de entrada NOVA do torcedor — "mostrar primeiro, pedir login depois".
  *  1) Splash curto  2) Escolha do clube (sem login)  3) Tela do clube com a torcida
  *  4) "Juro lealdade" → só aí pede o login (Google ou link por e-mail).
- * O voto em si é gravado em /confirmar-voto (depois do login, com o quadradinho dos Termos).
+ * O voto em si é gravado em /confirmar-voto (depois do login, com simpatias e o quadradinho dos Termos).
  *
  * Segurança: enquanto NEW_ENTRY_FLOW_ENABLED for false, esta rota só abre para o Master em
- * modo simulação (?sim=1), que não grava nada. O público segue no fluxo antigo.
+ * modo teste (?sim=1), que NÃO grava nada e mostra as telas IDÊNTICAS às do torcedor.
+ * O público segue no fluxo antigo.
  */
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useSearchParams, Link } from "react-router-dom";
-import { Heart, Loader2, Mail, Search, X } from "lucide-react";
+import { Heart, Loader2, Mail, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useUser } from "@/contexts/UserContext";
@@ -19,105 +20,14 @@ import { useToast } from "@/hooks/use-toast";
 import { useTranslationApp } from "@/hooks/useTranslationApp";
 import { isMasterEmail } from "@/lib/master";
 import { NEW_ENTRY_FLOW_ENABLED, savePendingVote } from "@/lib/entry-flow";
-import { searchClubsWithFallback, type ClubSearchResult } from "@/lib/search-clubs";
+import type { ClubSearchResult } from "@/lib/search-clubs";
 import { ClubLogo } from "@/components/ClubLogo";
-import SimBanner from "@/components/entrar/SimBanner";
+import { ResultsList, useClubSearch } from "@/components/entrar/ClubSearchBox";
 import splashVideo from "@/assets/splash.mp4";
 import logo from "@/assets/logo.png";
 
 type Stage = "intro" | "pick" | "club" | "login";
-const MAX_SYMPATHY = 4;
 const INTRO_MS = 4500;
-
-/** Busca de clubes com espera (debounce) e descarte de resposta velha. */
-function useClubSearch() {
-  const [query, setQuery] = useState("");
-  const [results, setResults] = useState<ClubSearchResult[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [open, setOpen] = useState(false);
-  const reqId = useRef(0);
-
-  useEffect(() => {
-    const term = query.trim();
-    if (term.length < 3) {
-      setResults([]);
-      setOpen(false);
-      setLoading(false);
-      return;
-    }
-    const timer = setTimeout(async () => {
-      const id = ++reqId.current;
-      setLoading(true);
-      try {
-        const found = await searchClubsWithFallback(term);
-        if (id === reqId.current) {
-          setResults(found);
-          setOpen(true);
-        }
-      } catch (err) {
-        console.error("[ENTRAR] busca falhou", err);
-      } finally {
-        if (id === reqId.current) setLoading(false);
-      }
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [query]);
-
-  const reset = useCallback(() => {
-    reqId.current++;
-    setQuery("");
-    setResults([]);
-    setOpen(false);
-  }, []);
-
-  return { query, setQuery, results, loading, open, setOpen, reset };
-}
-
-function ResultsList({
-  results,
-  loading,
-  open,
-  onPick,
-}: {
-  results: ClubSearchResult[];
-  loading: boolean;
-  open: boolean;
-  onPick: (c: ClubSearchResult) => void;
-}) {
-  const { t } = useTranslationApp();
-  if (!open && !loading) return null;
-  return (
-    <div className="absolute left-0 right-0 top-full z-[100] mt-2 max-h-[340px] overflow-y-auto rounded-2xl border border-white/10 bg-[#1A1A1A] shadow-2xl">
-      {loading && results.length === 0 ? (
-        <div className="flex items-center justify-center gap-2 p-5 text-sm text-white/60">
-          <Loader2 className="h-4 w-4 animate-spin" /> {t("entrar.searching")}
-        </div>
-      ) : results.length === 0 ? (
-        <p className="p-5 text-center text-sm text-white/60">{t("entrar.no_results")}</p>
-      ) : (
-        results.map((club, i) => (
-          <button
-            key={`${club.id}-${i}`}
-            type="button"
-            onMouseDown={(e) => {
-              e.preventDefault();
-              onPick(club);
-            }}
-            className="flex w-full items-center gap-4 border-b border-white/5 px-5 py-3.5 text-left last:border-0 hover:bg-white/5"
-          >
-            <ClubLogo src={club.logo} alt={club.name} size="md" />
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-base font-black uppercase italic">{club.name}</p>
-              <p className="text-[10px] font-bold uppercase text-white/50">
-                {club.location || `${club.city}, ${club.country}`}
-              </p>
-            </div>
-          </button>
-        ))
-      )}
-    </div>
-  );
-}
 
 const Entrar = () => {
   const navigate = useNavigate();
@@ -137,15 +47,12 @@ const Entrar = () => {
     }
   });
   const [heartClub, setHeartClub] = useState<ClubSearchResult | null>(null);
-  const [sympathies, setSympathies] = useState<ClubSearchResult[]>([]);
-  const [showSympathies, setShowSympathies] = useState(false);
   const [fans, setFans] = useState<number | null>(null);
   const [email, setEmail] = useState("");
   const [busy, setBusy] = useState<"google" | "magic" | null>(null);
   const heartSearch = useClubSearch();
-  const sympathySearch = useClubSearch();
 
-  // ── Porteiro: rota nova só abre para o Master em simulação (enquanto o fluxo novo não estiver ligado).
+  // ── Porteiro: rota nova só abre para o Master em teste (enquanto o fluxo novo não estiver ligado).
   useEffect(() => {
     if (!isAuthReady || isLoading) return;
     if (isMaster && !sim) {
@@ -198,14 +105,12 @@ const Entrar = () => {
 
   const changeClub = () => {
     setHeartClub(null);
-    setSympathies([]);
-    setShowSympathies(false);
     setStage("pick");
   };
 
   const onSwear = () => {
     if (!heartClub) return;
-    savePendingVote(heartClub, sympathies);
+    savePendingVote(heartClub, []);
     if (!sim && isAuthenticated) {
       navigate("/confirmar-voto", { replace: true });
       return;
@@ -213,7 +118,12 @@ const Entrar = () => {
     setStage("login");
   };
 
+  // No teste do Master os botões de login têm o mesmo visual, mas só avançam a tela (sem login de verdade).
   const loginGoogle = async () => {
+    if (sim) {
+      navigate("/confirmar-voto?sim=1");
+      return;
+    }
     setBusy("google");
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
@@ -228,6 +138,10 @@ const Entrar = () => {
   const loginMagic = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email.trim()) return;
+    if (sim) {
+      navigate("/confirmar-voto?sim=1");
+      return;
+    }
     setBusy("magic");
     try {
       const { data, error } = await supabase.functions.invoke("heart-club-auth", {
@@ -279,7 +193,6 @@ const Entrar = () => {
 
   return (
     <div className="min-h-screen bg-background text-white">
-      {sim && <SimBanner />}
       <div className="mx-auto flex w-full max-w-lg flex-col items-center gap-6 px-4 py-8">
         <img src={logo} alt="Heart Club" className="h-20 w-20 object-contain" />
 
@@ -344,53 +257,6 @@ const Entrar = () => {
               </div>
             </div>
 
-            {/* simpatias (opcional) */}
-            <div className="space-y-2">
-              {!showSympathies && sympathies.length === 0 ? (
-                <button
-                  onClick={() => setShowSympathies(true)}
-                  className="w-full text-center text-xs font-bold uppercase text-white/50 hover:text-white/80"
-                >
-                  {t("entrar.add_sympathies")}
-                </button>
-              ) : (
-                <div className="space-y-2">
-                  {sympathies.map((c, idx) => (
-                    <div key={c.name} className="flex items-center gap-3 rounded-xl border border-white/5 bg-card p-2.5">
-                      <ClubLogo src={c.logo} alt={c.name} size="sm" />
-                      <p className="flex-1 truncate text-sm font-bold uppercase italic">{c.name}</p>
-                      <button onClick={() => setSympathies((p) => p.filter((_, i) => i !== idx))} aria-label="remove">
-                        <X className="h-4 w-4 opacity-60" />
-                      </button>
-                    </div>
-                  ))}
-                  {sympathies.length < MAX_SYMPATHY && (
-                    <div className="relative">
-                      <Input
-                        value={sympathySearch.query}
-                        onChange={(e) => sympathySearch.setQuery(e.target.value)}
-                        onFocus={() => sympathySearch.setOpen(true)}
-                        onBlur={() => setTimeout(() => sympathySearch.setOpen(false), 200)}
-                        placeholder={t("entrar.sympathy_placeholder")}
-                        className="h-12 rounded-xl border-white/10 bg-card"
-                      />
-                      <ResultsList
-                        results={sympathySearch.results}
-                        loading={sympathySearch.loading}
-                        open={sympathySearch.open}
-                        onPick={(c) => {
-                          if (c.name !== heartClub.name && !sympathies.find((x) => x.name === c.name)) {
-                            setSympathies((p) => [...p, c]);
-                          }
-                          sympathySearch.reset();
-                        }}
-                      />
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-
             <Button
               onClick={onSwear}
               className="btn-orange-gradient h-16 w-full rounded-2xl text-xl font-black italic shadow-xl shadow-primary/20 active:scale-95"
@@ -420,51 +286,39 @@ const Entrar = () => {
               <p className="text-sm text-white/60">{t("entrar.login_sub")}</p>
             </div>
 
-            {sim ? (
-              <div className="space-y-3 rounded-2xl border border-dashed border-red-500/50 p-4 text-center">
-                <p className="text-sm text-white/70">{t("entrar.sim_login_note")}</p>
-                <Button
-                  onClick={() => navigate("/confirmar-voto?sim=1")}
-                  className="btn-orange-gradient h-12 w-full rounded-xl font-black uppercase italic"
-                >
-                  {t("entrar.sim_login_btn")}
-                </Button>
+            <div className="space-y-4">
+              <Button
+                onClick={loginGoogle}
+                disabled={!!busy}
+                className="h-14 w-full gap-3 rounded-xl bg-white text-base font-bold text-black hover:bg-white/90"
+              >
+                {busy === "google" ? <Loader2 className="h-5 w-5 animate-spin" /> : null}
+                {t("entrar.google")}
+              </Button>
+              <div className="flex items-center gap-3 text-[11px] uppercase text-white/40">
+                <div className="h-px flex-1 bg-white/10" />
+                {t("entrar.or_email")}
+                <div className="h-px flex-1 bg-white/10" />
               </div>
-            ) : (
-              <div className="space-y-4">
+              <form onSubmit={loginMagic} className="space-y-3">
+                <Input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder={t("entrar.email_placeholder")}
+                  className="h-12 rounded-xl border-white/10 bg-card"
+                />
                 <Button
-                  onClick={loginGoogle}
-                  disabled={!!busy}
-                  className="h-14 w-full gap-3 rounded-xl bg-white text-base font-bold text-black hover:bg-white/90"
+                  type="submit"
+                  disabled={!!busy || !email.trim()}
+                  variant="outline"
+                  className="h-12 w-full gap-2 rounded-xl font-bold"
                 >
-                  {busy === "google" ? <Loader2 className="h-5 w-5 animate-spin" /> : null}
-                  {t("entrar.google")}
+                  {busy === "magic" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
+                  {t("entrar.send_link")}
                 </Button>
-                <div className="flex items-center gap-3 text-[11px] uppercase text-white/40">
-                  <div className="h-px flex-1 bg-white/10" />
-                  {t("entrar.or_email")}
-                  <div className="h-px flex-1 bg-white/10" />
-                </div>
-                <form onSubmit={loginMagic} className="space-y-3">
-                  <Input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder={t("entrar.email_placeholder")}
-                    className="h-12 rounded-xl border-white/10 bg-card"
-                  />
-                  <Button
-                    type="submit"
-                    disabled={!!busy || !email.trim()}
-                    variant="outline"
-                    className="h-12 w-full gap-2 rounded-xl font-bold"
-                  >
-                    {busy === "magic" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
-                    {t("entrar.send_link")}
-                  </Button>
-                </form>
-              </div>
-            )}
+              </form>
+            </div>
             <p className="text-center text-xs text-white/50">{t("entrar.privacy_line")}</p>
             <button
               onClick={() => setStage("club")}

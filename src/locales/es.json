@@ -602,6 +602,7 @@
   },
   "entrar": {
     "skip": "Omitir",
+    "optional": "opcional",
     "already_voted": "¿Ya votaste? Entrar a mi cuenta",
     "pick_title": "¿Cuál es el club de tu corazón?",
     "pick_sub": "Elige tu club y únete a la hinchada de todo el mundo. Toma menos de un minuto.",
@@ -639,7 +640,7 @@
     "sim_banner": "MODO SIMULACIÓN — no se guarda nada. Tu voto real no cambia.",
     "sim_login_note": "Aquí el hincha entra con Google o con un enlace por correo.",
     "sim_login_btn": "Simular: entrar como hincha nuevo",
-    "sim_done_title": "¡Lealtad registrada! (simulación)",
+    "sim_done_title": "¡Lealtad registrada! 🏟️",
     "sim_done_sub": "Después el hincha llega al Dashboard. Luego, una tarjeta a la vez explica por qué pedimos cada dato:",
     "sim_next": "Siguiente tarjeta",
     "sim_finish": "Terminar simulación",

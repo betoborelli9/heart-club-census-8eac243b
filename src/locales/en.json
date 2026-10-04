@@ -602,6 +602,7 @@
   },
   "entrar": {
     "skip": "Skip",
+    "optional": "optional",
     "already_voted": "Already voted? Sign in to my account",
     "pick_title": "Which club is in your heart?",
     "pick_sub": "Pick your club and join the fans from all over the world. It takes under a minute.",
@@ -639,7 +640,7 @@
     "sim_banner": "SIMULATION MODE — nothing is saved. Your real vote is not changed.",
     "sim_login_note": "Here the fan signs in with Google or an e-mail link.",
     "sim_login_btn": "Simulate: sign in as a new fan",
-    "sim_done_title": "Loyalty registered! (simulation)",
+    "sim_done_title": "Loyalty registered! 🏟️",
     "sim_done_sub": "Next the fan lands on the Dashboard. Then one card at a time explains why we ask for each piece of data:",
     "sim_next": "Next card",
     "sim_finish": "Finish simulation",
