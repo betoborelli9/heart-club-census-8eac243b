@@ -38,6 +38,9 @@ import AddressModal from "@/components/AddressModal";
 import logo from "@/assets/logo.png";
 import { useTranslationApp } from "@/hooks/useTranslationApp";
 import { countryNameToIso2, countryNameToIso3 } from "@/lib/country-iso";
+import { useFeatureFlag } from "@/lib/feature-flags";
+import FormReasonCard from "@/components/FormReasonCard";
+import WhyWeAsk from "@/components/WhyWeAsk";
 
 /* ---------- Helpers ---------- */
 
@@ -860,6 +863,24 @@ const MapaCalor = () => {
   const [addressChecked, setAddressChecked] = useState(false);
   const [addressConfirmed, setAddressConfirmed] = useState(false);
   const [addressReloadKey, setAddressReloadKey] = useState(0);
+  // Chavinha "Território" (Admin): liga o card explicativo antes do modal e o bairro opcional.
+  const terrFlag = useFeatureFlag("form_territorio");
+  const [terrIntroDone, setTerrIntroDone] = useState(false);
+  const showTerrIntro = terrFlag.enabled && !terrIntroDone;
+
+  const [showWhyMap, setShowWhyMap] = useState(() => {
+    try {
+      return !localStorage.getItem("heartclub_why_map_dismissed");
+    } catch {
+      return true;
+    }
+  });
+  const dismissWhyMap = () => {
+    setShowWhyMap(false);
+    try {
+      localStorage.setItem("heartclub_why_map_dismissed", "1");
+    } catch {}
+  };
 
   useEffect(() => {
     const load = async () => {
@@ -1612,6 +1633,22 @@ const MapaCalor = () => {
           </button>
         </div>
 
+        {showWhyMap && (
+          <div className="relative mb-4">
+            <WhyWeAsk>
+              Cada voto marca país, estado, cidade e até bairro — por isso dá pra ver aqui onde sua
+              torcida é maior no mundo todo, rua por rua.
+            </WhyWeAsk>
+            <button
+              onClick={dismissWhyMap}
+              aria-label="Fechar"
+              className="absolute top-2.5 right-2.5 text-muted-foreground/50 hover:text-muted-foreground"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
           <aside className="lg:col-span-2 space-y-4">
             <div className="relative z-[5000] rounded-[24px] bg-black/40 backdrop-blur-xl border border-white/5 p-4">
@@ -1988,7 +2025,32 @@ const MapaCalor = () => {
         </div>
       </div>
       <style>{`.war-tooltip { background: rgba(0,0,0,0.92) !important; border: 1px solid rgba(255,98,0,0.5) !important; border-radius: 8px !important; padding: 6px 10px !important; color: #fff !important; box-shadow: 0 4px 20px rgba(255,98,0,0.25) !important; }.war-tooltip::before { display: none !important; }.leaflet-container { font-family: Verdana, sans-serif; z-index: 0; }.leaflet-pane, .leaflet-top, .leaflet-bottom, .leaflet-control { z-index: 1 !important; }.leaflet-tooltip { z-index: 2 !important; }`}</style>
-      {addressChecked && !addressConfirmed && (
+      {addressChecked && !addressConfirmed && showTerrIntro && (
+        <div className="fixed inset-0 z-40 bg-black/85 backdrop-blur-md flex items-center justify-center overflow-y-auto p-4">
+          <div className="w-full max-w-md">
+            <FormReasonCard
+              icon={MapPin}
+              step="Mapa de Calor"
+              title="Pinte o mapa da sua torcida"
+              subtitle="Diga onde você mora e destrave o Mapa de Calor."
+              reasons={[
+                "Cada voto acende um ponto no mapa — do país até o bairro — e mostra onde a sua torcida é mais forte no mundo todo.",
+                "Você descobre quantos torcedores do seu time moram perto de você.",
+                "O seu clube ganha força na disputa por cidade e por bairro contra os rivais.",
+                "Leva menos de 1 minuto. O bairro é opcional.",
+              ]}
+            >
+              <Button
+                onClick={() => setTerrIntroDone(true)}
+                className="h-12 w-full rounded-xl font-black uppercase italic btn-orange-gradient"
+              >
+                Informar onde moro
+              </Button>
+            </FormReasonCard>
+          </div>
+        </div>
+      )}
+      {addressChecked && !addressConfirmed && !showTerrIntro && (
         <div className="fixed inset-0 z-40 bg-black/85 backdrop-blur-md flex items-center justify-center">
           <div className="text-center space-y-4 px-6">
             <MapPin className="w-12 h-12 text-[#ff6200] mx-auto" />
@@ -2006,7 +2068,8 @@ const MapaCalor = () => {
         </div>
       )}
       <AddressModal
-        open={addressOpen}
+        open={addressOpen && terrFlag.ready && !showTerrIntro}
+        allowSkipBairro={terrFlag.enabled}
         onOpenChange={(v: boolean) => {
           const forceOnboarding =
             new URLSearchParams(window.location.search).get("force_onboarding") === "1";
