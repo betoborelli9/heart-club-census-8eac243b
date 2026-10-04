@@ -383,25 +383,38 @@ serve(async (req) => {
     let coresFonte: string | null = cores.length ? "ia_google" : null;
     let coresConfianca: string | null = cores.length ? "media" : null;
 
-    // Plano B: a IA/Google não achou (clube pequeno ou de mercado remoto) → cores do escudo.
-    // Também completa quando a IA devolveu só 1 cor (clube bicolor/tricolor ficaria incompleto).
-    if (cores.length < 2) {
-      const doEscudo = dedupeHex(await colorsFromCrest(team.logo));
-      const dist = (a: string, b: string) => {
-        const p = (h: string) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
-        const x = p(a), y = p(b);
-        return Math.hypot(x[0] - y[0], x[1] - y[1], x[2] - y[2]);
-      };
-      const junto = [...cores];
+    // CONFERÊNCIA COM O ESCUDO: a IA/Google pode errar (clube pequeno ou de mercado remoto).
+    // O escudo é a prova visual: cor da IA que NÃO aparece no escudo é trocada pela cor que
+    // aparece nele. Sem nenhuma cor da IA, usa só as do escudo.
+    const doEscudo = dedupeHex(await colorsFromCrest(team.logo));
+    const dist = (a: string, b: string) => {
+      const p = (h: string) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
+      const x = p(a), y = p(b);
+      return Math.hypot(x[0] - y[0], x[1] - y[1], x[2] - y[2]);
+    };
+    const noEscudo = (c: string) => doEscudo.some((e) => dist(e, c) <= 110);
+    if (doEscudo.length >= 2) {
+      const batem = cores.filter(noEscudo);
+      const juntos = [...batem];
       for (const c of doEscudo) {
-        if (junto.length >= 3) break;
-        if (junto.every((j) => dist(j, c) > 90)) junto.push(c);
+        if (juntos.length >= Math.max(2, cores.length)) break;
+        if (juntos.every((j) => dist(j, c) > 90)) juntos.push(c);
       }
-      if (junto.length > cores.length) {
-        coresFonte = cores.length ? "ia_google+escudo" : "escudo";
+      if (cores.length === 0) {
+        cores = juntos.slice(0, 3);
+        coresFonte = "escudo";
         coresConfianca = "baixa";
-        cores = junto;
+      } else if (batem.length === cores.length && cores.length >= 2) {
+        coresConfianca = "alta"; // IA e escudo concordam
+      } else {
+        cores = juntos.slice(0, 4);
+        coresFonte = "ia_google+escudo";
+        coresConfianca = "baixa";
       }
+    } else if (cores.length === 0 && doEscudo.length) {
+      cores = doEscudo;
+      coresFonte = "escudo";
+      coresConfianca = "baixa";
     }
 
     /* 4️⃣ Crosscheck feminino via API */

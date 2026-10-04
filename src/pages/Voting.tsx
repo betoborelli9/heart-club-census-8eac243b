@@ -23,6 +23,7 @@ import { getFingerprint, getFastIP, runSilentAudit } from "@/lib/vote-auditor";
 import { detectDeviceModel } from "@/lib/device-detect";
 import { captureIpAudit } from "@/lib/address";
 import { useTranslationApp } from "@/hooks/useTranslationApp";
+import { NEW_ENTRY_FLOW_ENABLED, notVotedTarget } from "@/lib/entry-flow";
 import i18n from "@/i18n";
 
 type ClubResult = ClubSearchResult;
@@ -115,6 +116,13 @@ const Voting = () => {
       navigate("/dashboard", { replace: true });
     }
   }, [isAuthReady, isLoading, isAuthenticated, hasVoted, IS_MASTER_ADMIN, navigate]);
+
+  // [FLUXO NOVO] Inativo enquanto NEW_ENTRY_FLOW_ENABLED = false (src/lib/entry-flow.ts).
+  // Quando ligado, quem fez login por link de e-mail (cai aqui) segue para a confirmação do voto.
+  useEffect(() => {
+    if (!NEW_ENTRY_FLOW_ENABLED || authToken || !isAuthReady || isLoading) return;
+    if (isAuthenticated && !hasVoted && !IS_MASTER_ADMIN) navigate(notVotedTarget(), { replace: true });
+  }, [authToken, isAuthReady, isLoading, isAuthenticated, hasVoted, IS_MASTER_ADMIN, navigate]);
 
   // [IDENTIDADE - PASSO 1] Mostrada se perfil incompleto OU se master admin (sem trava p/ testes).
   const needsIdentity =

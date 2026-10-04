@@ -33,7 +33,7 @@ import { Loader2 } from "lucide-react";
 // onboarding/fluxo especial (splash, login, profile-setup, voting, convite,
 // verify) e em /debug — visível em todo o resto, inclusive /admin/*, que é
 // onde estava faltando o acesso ao painel de embaixador.
-const HIDE_NAV_ROUTES = ["/", "/splash", "/login", "/profile-setup", "/voting", "/convite", "/verify"];
+const HIDE_NAV_ROUTES = ["/", "/splash", "/login", "/profile-setup", "/voting", "/convite", "/verify", "/entrar", "/confirmar-voto"];
 const GlobalNav = () => {
   const { pathname } = useLocation();
   if (HIDE_NAV_ROUTES.includes(pathname)) return null;
@@ -52,6 +52,8 @@ const Login = lazy(() => import("./pages/Login"));
 const Verify = lazy(() => import("./pages/Verify")); // Nova página do Guardião
 const ProfileSetup = lazy(() => import("./pages/ProfileSetup"));
 const Voting = lazy(() => import("./pages/Voting"));
+const Entrar = lazy(() => import("./pages/Entrar")); // fluxo novo (escolhe o clube antes do login)
+const ConfirmarVoto = lazy(() => import("./pages/ConfirmarVoto"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const MapaCalor = lazy(() => import("./pages/MapaCalor"));
 const Stats = lazy(() => import("./pages/Stats"));
@@ -110,6 +112,8 @@ const App = () => (
 
             {/* Experiência do Torcedor */}
             <Route path="/voting" element={<Voting />} />
+            <Route path="/entrar" element={<Entrar />} />
+            <Route path="/confirmar-voto" element={<ConfirmarVoto />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/mapa-calor" element={<MapaCalor />} />
             <Route path="/stats" element={<Stats />} />

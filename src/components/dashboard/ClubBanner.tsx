@@ -308,7 +308,7 @@ const ClubBanner = ({
              ═══════════════════════════════════════════════════════════ */}
           {IS_MASTER && (
             <>
-              <NavItem icon={Vote} label={t("club_banner.nav.voting")} path="/voting" variant="orange" />
+              <NavItem icon={Vote} label={t("club_banner.nav.voting")} path="/entrar?sim=1" variant="orange" />
               <NavItem icon={FlaskConical} label={t("club_banner.nav.test_club")} path="/admin/votos-ficticios" variant="orange" />
               <NavItem
                 icon={ShieldAlert}

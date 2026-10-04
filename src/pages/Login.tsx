@@ -9,6 +9,7 @@ import { useUser } from "@/contexts/UserContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { isMasterEmail } from "@/lib/master";
+import { notVotedTarget } from "@/lib/entry-flow";
 import { useTranslationApp } from "@/hooks/useTranslationApp";
 import logo from "@/assets/logo.png";
 
@@ -28,7 +29,7 @@ const Login = () => {
         navigate("/dashboard", { replace: true });
         return;
       }
-      if (!hasVoted) navigate("/voting", { replace: true });
+      if (!hasVoted) navigate(notVotedTarget(), { replace: true });
       else navigate("/dashboard", { replace: true });
     }
   }, [user, isAuthenticated, isProfileComplete, hasVoted, isLoading, navigate]);

@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 import { useUser } from "@/contexts/UserContext";
 import { isMasterEmail } from "@/lib/master";
+import { anonymousTarget, notVotedTarget } from "@/lib/entry-flow";
 
 const Landing = () => {
   const navigate = useNavigate();
@@ -17,12 +18,12 @@ const Landing = () => {
         navigate("/dashboard", { replace: true });
         return;
       }
-      if (!hasVoted) navigate("/voting", { replace: true });
+      if (!hasVoted) navigate(notVotedTarget(), { replace: true });
       else navigate("/dashboard", { replace: true });
       return;
     }
 
-    navigate("/login", { replace: true });
+    navigate(anonymousTarget(), { replace: true });
   }, [user, isAuthReady, isLoading, isAuthenticated, hasVoted, navigate]);
 
   return (

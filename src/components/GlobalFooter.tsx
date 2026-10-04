@@ -6,7 +6,7 @@
 import { Link, useLocation } from "react-router-dom";
 import { ShieldCheck } from "lucide-react";
 
-const HIDE_ROUTES = ["/", "/splash", "/login", "/verify", "/voting", "/profile-setup", "/convite"];
+const HIDE_ROUTES = ["/", "/splash", "/login", "/verify", "/voting", "/profile-setup", "/convite", "/entrar", "/confirmar-voto"];
 
 const GlobalFooter = () => {
   const { pathname } = useLocation();
