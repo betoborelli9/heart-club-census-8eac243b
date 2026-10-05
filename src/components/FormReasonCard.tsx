@@ -19,7 +19,7 @@ interface Props {
   /** Frase de privacidade do rodapé (padrão: "Seus dados nunca são repassados a ninguém."). */
   privacyNote?: string;
   /** Imagem opcional no topo do cartão (ex.: mapa de calor). */
-  image?: { src: string; alt: string };
+  image?: { src: string; alt: string; /** Algo no canto inferior esquerdo da imagem (ex.: escudo do clube). */ overlay?: ReactNode };
   children?: ReactNode;
 }
 
@@ -37,7 +37,14 @@ export default function FormReasonCard({ icon: Icon, step, title, subtitle, reas
       <div className="relative space-y-5">
         {image && (
           <div className="-mx-6 -mt-6 overflow-hidden rounded-t-3xl border-b border-white/10">
-            <img src={image.src} alt={image.alt} className="block h-40 w-full object-cover sm:h-48" loading="eager" />
+            <div className="relative">
+              <img src={image.src} alt={image.alt} className="block h-40 w-full object-cover sm:h-48" loading="eager" />
+              {image.overlay && (
+                <div className="absolute bottom-3 left-3 flex h-16 w-16 items-center justify-center rounded-full bg-white shadow-lg ring-2 ring-primary/70">
+                  {image.overlay}
+                </div>
+              )}
+            </div>
           </div>
         )}
         <div className="flex items-start gap-4">

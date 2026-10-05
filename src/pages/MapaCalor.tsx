@@ -2027,11 +2027,17 @@ const MapaCalor = () => {
       </div>
       <style>{`.war-tooltip { background: rgba(0,0,0,0.92) !important; border: 1px solid rgba(255,98,0,0.5) !important; border-radius: 8px !important; padding: 6px 10px !important; color: #fff !important; box-shadow: 0 4px 20px rgba(255,98,0,0.25) !important; }.war-tooltip::before { display: none !important; }.leaflet-container { font-family: Verdana, sans-serif; z-index: 0; }.leaflet-pane, .leaflet-top, .leaflet-bottom, .leaflet-control { z-index: 1 !important; }.leaflet-tooltip { z-index: 2 !important; }`}</style>
       {addressChecked && !addressConfirmed && showTerrIntro && (
-        <div className="fixed inset-0 z-40 bg-black/85 backdrop-blur-md flex items-center justify-center overflow-y-auto p-4">
+        <div className="fixed inset-0 z-[9000] bg-black/90 backdrop-blur-md flex items-center justify-center overflow-y-auto p-4">
           <div className="w-full max-w-md">
             <FormReasonCard
               icon={MapPin}
-              image={{ src: heatMapBanner, alt: t("entrar.map_alt") }}
+              image={{
+                src: heatMapBanner,
+                alt: t("entrar.map_alt"),
+                overlay: heartClubName ? (
+                  <ClubLogo src={activeClubLogo || undefined} alt={heartClubName} size="lg" />
+                ) : undefined,
+              }}
               step={t("entrar.map_step")}
               title={t("entrar.map_title")}
               subtitle={t("entrar.map_sub")}
