@@ -114,7 +114,11 @@ export async function searchClubsWithFallback(query: string, limit = 20): Promis
         (c: any) =>
           isValidClubName(c.nome) &&
           !isYouthTeam(c.nome) &&
-          (stripAccents(c.nome).includes(normalized) || matchesCanon(c.nome)),
+          (stripAccents(c.nome).includes(normalized) ||
+            matchesCanon(c.nome) ||
+            // sigla/nome curto (PSG, CRAC...) e apelidos guardados (aliases) também valem
+            stripAccents(c.nome_curto || "").includes(normalized) ||
+            (Array.isArray(c.aliases) && c.aliases.some((a: string) => stripAccents(String(a)).includes(normalized)))),
       )
       .map(mapCacheRow);
 
@@ -123,7 +127,9 @@ export async function searchClubsWithFallback(query: string, limit = 20): Promis
         (t: any) =>
           isValidClubName(t.name) &&
           !isYouthTeam(t.name) &&
-          (stripAccents(t.name).includes(normalized) || matchesCanon(t.name)),
+          // Resultado que o servidor já confirmou na nossa base (inclui sigla, apelido e nome curto,
+          // ex.: "PSG" → Paris Saint Germain) não pode ser descartado aqui por não conter as letras.
+          (t.source === "cache" || stripAccents(t.name).includes(normalized) || matchesCanon(t.name)),
       )
       .map((t: any) => ({
         id: `api-${t.api_id}`,
