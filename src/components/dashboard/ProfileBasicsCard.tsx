@@ -12,6 +12,7 @@ import { useUser } from "@/contexts/UserContext";
 import { useToast } from "@/hooks/use-toast";
 import { useTranslationApp } from "@/hooks/useTranslationApp";
 import { ReasonCard } from "@/components/entrar/reasonCards";
+import YearCombobox from "@/components/YearCombobox";
 
 const DISMISS_KEY = "hc_basics_dismissed_at";
 const HIDE_MS = 24 * 60 * 60 * 1000;
@@ -36,9 +37,6 @@ export default function ProfileBasicsCard() {
 
   const missing = !!profile && (!profile.data_nascimento || !profile.genero);
   if (!hasVoted || !missing || hidden) return null;
-
-  const year = new Date().getFullYear();
-  const anos = Array.from({ length: year - 1920 + 1 }, (_, i) => String(year - i));
 
   const save = async () => {
     if (!ano || !genero) return;
@@ -78,18 +76,7 @@ export default function ProfileBasicsCard() {
               <SelectItem value="outros">{t("voting.other")}</SelectItem>
             </SelectContent>
           </Select>
-          <Select value={ano} onValueChange={setAno}>
-            <SelectTrigger className="h-12 rounded-xl border-white/10 bg-card">
-              <SelectValue placeholder={t("voting.birth_year_label")} />
-            </SelectTrigger>
-            <SelectContent className="max-h-72">
-              {anos.map((y) => (
-                <SelectItem key={y} value={y}>
-                  {y}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <YearCombobox value={ano} onChange={setAno} placeholder={t("entrar.year_placeholder")} />
         </div>
         <div className="flex gap-2">
           <Button

@@ -40,6 +40,7 @@ import { useTranslationApp } from "@/hooks/useTranslationApp";
 import { countryNameToIso2, countryNameToIso3 } from "@/lib/country-iso";
 import { useFeatureFlag } from "@/lib/feature-flags";
 import FormReasonCard from "@/components/FormReasonCard";
+import heatMapBanner from "@/assets/mapa-calor-card.svg";
 import WhyWeAsk from "@/components/WhyWeAsk";
 
 /* ---------- Helpers ---------- */
@@ -2030,21 +2031,18 @@ const MapaCalor = () => {
           <div className="w-full max-w-md">
             <FormReasonCard
               icon={MapPin}
-              step="Mapa de Calor"
-              title="Pinte o mapa da sua torcida"
-              subtitle="Diga onde você mora e destrave o Mapa de Calor."
-              reasons={[
-                "Cada voto acende um ponto no mapa — do país até o bairro — e mostra onde a sua torcida é mais forte no mundo todo.",
-                "Você descobre quantos torcedores do seu time moram perto de você.",
-                "O seu clube ganha força na disputa por cidade e por bairro contra os rivais.",
-                "Leva menos de 1 minuto. O bairro é opcional.",
-              ]}
+              image={{ src: heatMapBanner, alt: t("entrar.map_alt") }}
+              step={t("entrar.map_step")}
+              title={t("entrar.map_title")}
+              subtitle={t("entrar.map_sub")}
+              reasons={[t("entrar.map_1"), t("entrar.map_2")]}
+              privacyNote={t("entrar.map_privacy")}
             >
               <Button
                 onClick={() => setTerrIntroDone(true)}
                 className="h-12 w-full rounded-xl font-black uppercase italic btn-orange-gradient"
               >
-                Informar onde moro
+                {t("entrar.map_cta")}
               </Button>
             </FormReasonCard>
           </div>

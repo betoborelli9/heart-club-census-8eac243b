@@ -16,12 +16,16 @@ interface Props {
   subtitle?: string;
   /** Motivos curtos (o que o torcedor ganha / pra que serve). */
   reasons: string[];
+  /** Frase de privacidade do rodapé (padrão: "Seus dados nunca são repassados a ninguém."). */
+  privacyNote?: string;
+  /** Imagem opcional no topo do cartão (ex.: mapa de calor). */
+  image?: { src: string; alt: string };
   children?: ReactNode;
 }
 
 export const PRIVACY_PROMISE = "Seus dados nunca são repassados a ninguém.";
 
-export default function FormReasonCard({ icon: Icon, step, title, subtitle, reasons, children }: Props) {
+export default function FormReasonCard({ icon: Icon, step, title, subtitle, reasons, image, privacyNote, children }: Props) {
   const { t } = useTranslationApp();
   return (
     <div className="relative overflow-hidden rounded-3xl border border-primary/25 bg-gradient-to-br from-primary/15 via-[#0b0b0b] to-[#0b0b0b] p-6 text-white">
@@ -31,6 +35,11 @@ export default function FormReasonCard({ icon: Icon, step, title, subtitle, reas
       />
 
       <div className="relative space-y-5">
+        {image && (
+          <div className="-mx-6 -mt-6 overflow-hidden rounded-t-3xl border-b border-white/10">
+            <img src={image.src} alt={image.alt} className="block h-40 w-full object-cover sm:h-48" loading="eager" />
+          </div>
+        )}
         <div className="flex items-start gap-4">
           <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-primary/15 ring-1 ring-primary/40 shadow-[0_0_30px_-8px_hsl(var(--primary))]">
             <Icon className="h-7 w-7 text-primary" />
@@ -57,7 +66,7 @@ export default function FormReasonCard({ icon: Icon, step, title, subtitle, reas
 
         <div className="flex items-start gap-2.5 rounded-2xl border border-white/10 bg-white/[0.04] px-3.5 py-3">
           <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-          <p className="text-[12px] leading-snug text-white/65">{t("entrar.privacy_footer", { defaultValue: PRIVACY_PROMISE })}</p>
+          <p className="text-[12px] leading-snug text-white/65">{privacyNote ?? t("entrar.privacy_footer", { defaultValue: PRIVACY_PROMISE })}</p>
         </div>
       </div>
     </div>
