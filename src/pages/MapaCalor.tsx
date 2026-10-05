@@ -1591,7 +1591,7 @@ const MapaCalor = () => {
     (heartCompareData?.info?.logoUrl ? heartCompareData.info : activeClubInfo || heartCompareData?.info)?.logoUrl || "";
 
   return (
-    <div className="min-h-screen bg-background text-foreground" style={{ fontFamily: "Verdana, Geneva, sans-serif" }}>
+    <div className="isolate min-h-screen bg-background text-foreground" style={{ fontFamily: "Verdana, Geneva, sans-serif" }}>
       <header className="h-14 border-b border-white/5 bg-black/80 backdrop-blur-xl sticky top-0 z-50">
         <div className="max-w-[1600px] mx-auto px-4 h-full flex items-center justify-between gap-4">
           <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate("/dashboard")}>

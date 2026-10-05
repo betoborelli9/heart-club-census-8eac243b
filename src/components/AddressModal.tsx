@@ -42,8 +42,14 @@ function normalize(v: string = "") {
     .toLowerCase()
     .trim();
 }
+// Entradas do cadastro oficial que NÃO são bairro: começam com símbolo ("(LOTEADO...)", "+ UMA GLEBA...") ou
+// descrevem lote/gleba/área irregular/unidade militar ("11 BTC"). Bairros que começam com número ("13 de Maio") ficam.
+const NOT_A_NEIGHBORHOOD = /\b(loteado|gleba|remanescente|irregular|desmembramento|btc|bgp|batalhao)\b/;
 function isStreetTrash(name: string) {
+  const raw = String(name || "").trim();
+  if (!/^[\p{L}\p{N}]/u.test(raw)) return true; // começa com símbolo: "(…)", "+ …"
   const n = normalize(name);
+  if (NOT_A_NEIGHBORHOOD.test(n)) return true;
   return STREET_BLACKLIST.some((word) => n.includes(word));
 }
 
