@@ -2035,7 +2035,15 @@ const MapaCalor = () => {
                 src: heatMapBanner,
                 alt: t("entrar.map_alt"),
                 overlay: heartClubName ? (
-                  <ClubLogo src={activeClubLogo || undefined} alt={heartClubName} size="lg" />
+                  <div className="flex items-center gap-2 rounded-2xl border border-white/10 bg-black/70 px-2.5 py-1.5 backdrop-blur">
+                    <ClubLogo src={activeClubLogo || undefined} alt={heartClubName} size="sm" />
+                    <div className="leading-tight">
+                      <p className="flex items-center gap-1 text-[8px] font-black uppercase tracking-widest text-primary">
+                        <span aria-hidden>♥</span> {t("heatmap.heart_label")}
+                      </p>
+                      <p className="max-w-[120px] truncate text-xs font-black italic uppercase text-white">{heartClubName}</p>
+                    </div>
+                  </div>
                 ) : undefined,
               }}
               step={t("entrar.map_step")}
