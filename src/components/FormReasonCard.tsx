@@ -18,6 +18,8 @@ interface Props {
   reasons: string[];
   /** Frase de privacidade do rodapé (padrão: "Seus dados nunca são repassados a ninguém."). */
   privacyNote?: string;
+  /** Etiqueta no canto direito da linha do passo (ex.: clube do coração, ao lado de "Mapa de Calor"). */
+  stepRight?: ReactNode;
   /** Imagem opcional no topo do cartão (ex.: mapa de calor). */
   image?: { src: string; alt: string; /** Algo no canto superior direito da imagem (ex.: etiqueta do clube do coração). */ overlay?: ReactNode };
   children?: ReactNode;
@@ -25,7 +27,7 @@ interface Props {
 
 export const PRIVACY_PROMISE = "Seus dados nunca são repassados a ninguém.";
 
-export default function FormReasonCard({ icon: Icon, step, title, subtitle, reasons, image, privacyNote, children }: Props) {
+export default function FormReasonCard({ icon: Icon, step, title, subtitle, reasons, image, privacyNote, stepRight, children }: Props) {
   const { t } = useTranslationApp();
   return (
     <div className="relative overflow-hidden rounded-3xl border border-primary/25 bg-gradient-to-br from-primary/15 via-[#0b0b0b] to-[#0b0b0b] p-6 text-white">
@@ -49,9 +51,16 @@ export default function FormReasonCard({ icon: Icon, step, title, subtitle, reas
           <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-primary/15 ring-1 ring-primary/40 shadow-[0_0_30px_-8px_hsl(var(--primary))]">
             <Icon className="h-7 w-7 text-primary" />
           </div>
-          <div className="min-w-0">
-            {step && (
-              <p className="mb-1 text-[10px] font-black uppercase tracking-[0.25em] text-primary/80">{step}</p>
+          <div className="min-w-0 flex-1">
+            {(step || stepRight) && (
+              <div className="mb-1 flex items-center justify-between gap-2">
+                {step ? (
+                  <p className="text-[10px] font-black uppercase tracking-[0.25em] text-primary/80">{step}</p>
+                ) : (
+                  <span />
+                )}
+                {stepRight}
+              </div>
             )}
             <h2 className="text-xl font-black italic leading-tight tracking-tight">{title}</h2>
             {subtitle && <p className="mt-1 text-sm leading-snug text-white/60">{subtitle}</p>}

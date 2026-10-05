@@ -220,7 +220,7 @@ const Ambassadors = () => {
       return;
     }
     if (!profile) return;
-    const needsCensus = !profile.profissao || !profile.telefone;
+    const needsCensus = !profile.telefone; // só o WhatsApp (profissão agora é perguntada no cartão do Ranking)
     setShowCensusModal(needsCensus);
   }, [profile, isLoading]);
 
@@ -327,16 +327,11 @@ const Ambassadors = () => {
       toast({ title: t("ambassadors.whatsapp_invalid_title"), description: t("ambassadors.whatsapp_invalid_desc", { country: phoneCountry.name }), variant: "destructive" });
       return;
     }
-    if (!professionInput.trim()) {
-      toast({ title: t("ambassadors.profession_required_title"), description: t("ambassadors.profession_required_desc"), variant: "destructive" });
-      return;
-    }
 
     setIsSubmitting(true);
     try {
       await updateProfile({
         telefone: `${phoneCountry.dial}${phoneInput.replace(/\D/g, "")}`,
-        profissao: professionInput.trim(),
       });
       await refreshProfile();
       setShowCensusModal(false);
@@ -801,20 +796,17 @@ const Ambassadors = () => {
           <DialogDescription className="sr-only">Por que pedimos WhatsApp e profissão</DialogDescription>
           <FormReasonCard
             icon={Megaphone}
-            step="Área do Embaixador"
-            title="Vire a voz da sua torcida"
-            subtitle="Dois dados e o seu painel de embaixador abre."
-            reasons={[
-              "Aviso de convite: seu WhatsApp nos deixa avisar você quando alguém entrar pelo seu convite.",
-              "Ranking de Embaixador: sua profissão conta pontos e mostra a força da sua torcida.",
-              "Quem mais convida torcedores do mesmo time vira o Embaixador oficial daquele clube.",
-            ]}
+            step={t("entrar.amb_step")}
+            title={t("entrar.amb_title")}
+            subtitle={t("entrar.amb_sub")}
+            reasons={[t("entrar.amb_1"), t("entrar.amb_2"), t("entrar.amb_3")]}
+            privacyNote={t("entrar.amb_privacy")}
           >
             <Button
               onClick={() => setEmbIntroDone(true)}
               className="h-12 w-full rounded-xl font-black uppercase italic btn-orange-gradient"
             >
-              Continuar
+              {t("entrar.amb_cta")}
             </Button>
           </FormReasonCard>
         </DialogContent>
@@ -886,27 +878,6 @@ const Ambassadors = () => {
                   {t("ambassadors.phone_digits_error", { digits: phoneCountry.digits[0] === phoneCountry.digits[1] ? phoneCountry.digits[0] : `${phoneCountry.digits[0]}-${phoneCountry.digits[1]}`, country: phoneCountry.name })}
                 </p>
               )}
-            </div>
-
-            {/* Profissão — Autocomplete com entrada livre */}
-            <div className="space-y-2">
-              <Label className="text-xs font-bold uppercase tracking-wider text-white/60">{t("ambassadors.profession_label")}</Label>
-              <p className="text-[10px] text-white/40 italic">
-                {t("ambassadors.profession_hint")}
-              </p>
-              <Input
-                value={professionInput}
-                onChange={(e) => setProfessionInput(e.target.value)}
-                placeholder={t("ambassadors.profession_placeholder")}
-                className="bg-white/5 border-white/10 text-white placeholder:text-white/20"
-                list="professions-list"
-                autoComplete="off"
-              />
-              <datalist id="professions-list">
-                {professions.map((prof) => (
-                  <option key={prof} value={prof} />
-                ))}
-              </datalist>
             </div>
 
             <Button

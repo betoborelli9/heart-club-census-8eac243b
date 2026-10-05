@@ -291,7 +291,7 @@ export default function AddressModal({ open, onOpenChange, clubName, onSuccess, 
     if (step === "searching_bairro") {
       const q = normalize(val);
       if (!q) {
-        setSuggestions(bairrosCache.slice(0, 50));
+        setSuggestions([]); // lista de bairros só abre quando o torcedor começa a digitar
         return;
       }
       const filtered = bairrosCache.filter((b) => normalize(b.text).includes(q));
@@ -321,7 +321,7 @@ export default function AddressModal({ open, onOpenChange, clubName, onSuccess, 
   };
 
   useEffect(() => {
-    if (step === "searching_bairro" && !searchQuery && bairrosCache.length) setSuggestions(bairrosCache.slice(0, 50));
+    if (step === "searching_bairro" && !searchQuery) setSuggestions([]);
   }, [bairrosCache, step, searchQuery]);
 
   // [SAVE COM FORCE RELOAD PARA QUEBRAR O LOOP]

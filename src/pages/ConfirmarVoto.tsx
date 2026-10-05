@@ -34,6 +34,9 @@ const ConfirmarVoto = () => {
   const sim = isMaster && params.get("sim") === "1";
   const pending = useMemo(() => loadPendingVote(), []);
 
+  const needsTerms = !!profile && !(profile as any).terms_accepted_at;
+  // Voltou depois (já tinha voto, sem escolha pendente) e ainda não aceitou os Termos: só aceita e entra.
+  const termsOnly = !sim && !pending && hasVoted && needsTerms;
   const [accepted, setAccepted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [recording, setRecording] = useState(false);
@@ -57,12 +60,12 @@ const ConfirmarVoto = () => {
       return;
     }
     // Já tinha votado antes de chegar aqui → Dashboard. (Se o voto foi gravado NESTA tela, fica: falta o aceite.)
-    if (!sim && hasVoted && !startedRef.current) {
+    if (!sim && hasVoted && !startedRef.current && !needsTerms) {
       navigate("/dashboard", { replace: true });
       return;
     }
-    if (!pending) navigate(sim ? "/entrar?sim=1" : "/entrar", { replace: true });
-  }, [isAuthReady, isLoading, isMaster, sim, isAuthenticated, hasVoted, pending, navigate]);
+    if (!pending && !termsOnly) navigate(sim ? "/entrar?sim=1" : "/entrar", { replace: true });
+  }, [isAuthReady, isLoading, isMaster, sim, isAuthenticated, hasVoted, pending, needsTerms, termsOnly, navigate]);
 
   // ── Grava o voto assim que o torcedor chega logado (fluxo real; o teste do Master nunca grava)
   const record = async () => {
@@ -103,7 +106,7 @@ const ConfirmarVoto = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sim, isAuthReady, isLoading, isAuthenticated, user, isMaster, hasVoted, pending]);
 
-  if (!isAuthReady || isLoading || !pending) {
+  if (!isAuthReady || isLoading || (!pending && !termsOnly)) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -111,7 +114,8 @@ const ConfirmarVoto = () => {
     );
   }
 
-  const club = pending.club;
+  const club = pending?.club;
+  const pendingSympathies = pending?.sympathies ?? [];
 
   const confirm = async () => {
     if (!sim && recordError && !recorded) {
@@ -125,8 +129,9 @@ const ConfirmarVoto = () => {
     }
     if (sim) {
       // Teste do Master: o torcedor novo "votou" — cai no Dashboard normal, sem gravar nada.
+      if (!club) return;
       setSimClub(club.name);
-      setSimSympathies(pending.sympathies.map((x) => x.name));
+      setSimSympathies(pendingSympathies.map((x) => x.name));
       clearPendingVote();
       navigate("/dashboard", { replace: true });
       return;
@@ -137,7 +142,7 @@ const ConfirmarVoto = () => {
       await record();
       return;
     }
-    if (!recorded) return; // ainda gravando
+    if (!recorded && !termsOnly) return; // ainda gravando
     setSubmitting(true);
     try {
       // Aceite dos Termos (LGPD) — o torcedor marcou o quadradinho
@@ -145,7 +150,8 @@ const ConfirmarVoto = () => {
     } catch (err) {
       console.warn("[LGPD] accept_terms falhou (não-crítico):", err);
     }
-    toast({ title: t("entrar.vote_ok") });
+    await refreshProfile().catch(() => {}); // o app precisa saber que os Termos foram aceitos
+    if (!termsOnly) toast({ title: t("entrar.vote_ok") });
     navigate("/dashboard", { replace: true });
     setSubmitting(false);
   };
@@ -156,32 +162,34 @@ const ConfirmarVoto = () => {
         <img src={logo} alt="Heart Club" className="h-20 w-20 object-contain" />
 
         <div className="space-y-2 text-center">
-          <h1 className="text-3xl font-black italic uppercase tracking-tighter">{t("entrar.confirm_title")}</h1>
-          <p className="text-base text-white/70">{t("entrar.confirm_sub", { club: club.name })}</p>
-        </div>
-
-        <div className="flex w-full items-center gap-3 rounded-2xl border-2 border-primary bg-card p-4">
-          <ClubLogo src={club.logo} alt={club.name} size="lg" />
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-xl font-black uppercase italic tracking-tighter">{club.name}</p>
-            <p className="text-[10px] font-bold uppercase text-white/50">{club.location}</p>
-          </div>
-          <Heart className="h-6 w-6 fill-current text-primary" />
-        </div>
-
-        {!sim && (recording || recorded || recordError) && (
-          <p
-            className={`w-full text-center text-sm font-bold ${recordError ? "text-red-400" : recorded ? "text-green-400" : "text-white/60"}`}
-          >
-            {recordError ? t("entrar.vote_error") : recorded ? t("entrar.vote_recorded") : t("entrar.vote_recording")}
+          <h1 className="text-3xl font-black italic uppercase tracking-tighter">
+            {termsOnly ? t("entrar.terms_only_title") : t("entrar.confirm_title")}
+          </h1>
+          <p className="text-base text-white/70">
+            {termsOnly ? t("entrar.terms_only_sub") : t("entrar.confirm_sub", { club: club?.name })}
           </p>
+        </div>
+
+        {club && (
+          <div className="flex w-full items-center gap-3 rounded-2xl border-2 border-primary bg-card p-4">
+            <ClubLogo src={club.logo} alt={club.name} size="lg" />
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-xl font-black uppercase italic tracking-tighter">{club.name}</p>
+              <p className="text-[10px] font-bold uppercase text-white/50">{club.location}</p>
+            </div>
+            <Heart className="h-6 w-6 fill-current text-primary" />
+          </div>
         )}
 
-        {pending.sympathies.length > 0 && (
+        {!sim && recordError && (
+          <p className="w-full text-center text-sm font-bold text-red-400">{t("entrar.vote_error")}</p>
+        )}
+
+        {pendingSympathies.length > 0 && (
           <div className="w-full space-y-2">
             <p className="text-xs font-black uppercase italic text-white/50">{t("entrar.sympathies_label")}</p>
             <div className="flex flex-wrap gap-2">
-              {pending.sympathies.map((s) => (
+              {pendingSympathies.map((s) => (
                 <span key={s.name} className="flex items-center gap-2 rounded-full border border-white/10 bg-card px-3 py-1.5 text-xs font-bold uppercase">
                   <ClubLogo src={s.logo} alt={s.name} size="xs" /> {s.name}
                 </span>
@@ -221,7 +229,7 @@ const ConfirmarVoto = () => {
 
         <Button
           onClick={confirm}
-          disabled={sim ? !accepted : recordError ? false : !accepted || !recorded || submitting}
+          disabled={sim ? !accepted : recordError ? false : !accepted || !(recorded || termsOnly) || submitting}
           className="btn-orange-gradient h-16 w-full rounded-2xl text-xl font-black italic shadow-xl shadow-primary/20 active:scale-95 disabled:opacity-40"
         >
           {submitting || (!sim && recording) ? (
@@ -229,13 +237,13 @@ const ConfirmarVoto = () => {
           ) : recordError ? (
             t("entrar.retry")
           ) : (
-            t("entrar.yes_swear")
+            t(termsOnly ? "entrar.enter_cta" : "entrar.yes_swear")
           )}
         </Button>
         <button
           onClick={() => navigate(sim ? "/entrar?sim=1" : "/entrar")}
           disabled={submitting}
-          hidden={!sim && (recording || recorded)}
+          hidden={!sim && (recording || recorded || termsOnly)}
           className="text-xs font-bold uppercase text-white/40 hover:text-white/70"
         >
           {t("entrar.back")}

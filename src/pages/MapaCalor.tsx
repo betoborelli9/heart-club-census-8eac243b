@@ -2034,18 +2034,20 @@ const MapaCalor = () => {
               image={{
                 src: heatMapBanner,
                 alt: t("entrar.map_alt"),
-                overlay: heartClubName ? (
-                  <div className="flex items-center gap-2 rounded-2xl border border-white/10 bg-black/70 px-2.5 py-1.5 backdrop-blur">
-                    <ClubLogo src={activeClubLogo || undefined} alt={heartClubName} size="sm" />
-                    <div className="leading-tight">
-                      <p className="flex items-center gap-1 text-[8px] font-black uppercase tracking-widest text-primary">
+              }}
+              stepRight={
+                heartClubName ? (
+                  <div className="flex shrink-0 items-center gap-1.5 rounded-xl border border-white/10 bg-black/60 px-2 py-1">
+                    <ClubLogo src={activeClubLogo || undefined} alt={heartClubName} size="xs" />
+                    <div className="leading-none">
+                      <p className="flex items-center gap-0.5 text-[7px] font-black uppercase tracking-widest text-primary">
                         <span aria-hidden>♥</span> {t("heatmap.heart_label")}
                       </p>
-                      <p className="max-w-[120px] truncate text-xs font-black italic uppercase text-white">{heartClubName}</p>
+                      <p className="mt-0.5 max-w-[104px] truncate text-[10px] font-black italic uppercase text-white">{heartClubName}</p>
                     </div>
                   </div>
-                ) : undefined,
-              }}
+                ) : undefined
+              }
               step={t("entrar.map_step")}
               title={t("entrar.map_title")}
               subtitle={t("entrar.map_sub")}

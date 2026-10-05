@@ -4,7 +4,8 @@ import { act, fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 
 // Fluxo REAL (não é o teste do Master): o voto deve ser gravado assim que o torcedor chega logado.
-const state = { hasVoted: false, user: { id: "fan-1", email: "fan@exemplo.com" } as any };
+const state = { hasVoted: false, user: { id: "fan-1", email: "fan@exemplo.com" } as any, profile: null as any };
+const refreshProfile = vi.fn(() => Promise.resolve());
 const submitVote = vi.fn(async () => {
   state.hasVoted = true; // depois de gravar, o app passa a saber que o torcedor votou
 });
@@ -17,12 +18,12 @@ vi.mock("@/contexts/UserContext", () => ({
   useUser: () => ({
     user: state.user,
     realUser: state.user,
-    profile: null,
+    profile: state.profile,
     isAuthReady: true,
     isLoading: false,
     isAuthenticated: true,
     hasVoted: state.hasVoted,
-    refreshProfile: vi.fn(),
+    refreshProfile,
     updateProfile: vi.fn(),
   }),
 }));
@@ -56,23 +57,28 @@ describe("ConfirmarVoto — voto gravado ao chegar logado", () => {
   beforeEach(() => {
     localStorage.clear();
     state.hasVoted = false;
+    state.profile = null;
     submitVote.mockClear();
     rpc.mockClear();
+    refreshProfile.mockClear();
   });
 
   it("grava o voto UMA vez assim que a tela abre, antes de qualquer clique", async () => {
     savePendingVote(club, []);
     renderPage();
     await waitFor(() => expect(submitVote).toHaveBeenCalledTimes(1));
-    await waitFor(() => expect(screen.getByText("entrar.vote_recorded")).toBeTruthy());
-    expect(loadPendingVote()).toBeNull(); // escolha guardada já foi usada
+    await waitFor(() => expect(loadPendingVote()).toBeNull()); // escolha guardada já foi usada
+    // nada de aviso verde: o torcedor só vê a tela normal
+    expect(screen.queryByText("entrar.vote_recorded")).toBeNull();
+    expect(screen.queryByText("entrar.vote_recording")).toBeNull();
     expect(rpc).not.toHaveBeenCalled(); // o aceite dos Termos só vem no botão
   });
 
   it("depois de gravar, NÃO pula a tela: o torcedor ainda marca os Termos e toca em SIM, EU JURO!", async () => {
     savePendingVote(club, []);
+    state.profile = { id: "fan-1", terms_accepted_at: null };
     const { rerender } = renderPage();
-    await waitFor(() => expect(screen.getByText("entrar.vote_recorded")).toBeTruthy());
+    await waitFor(() => expect(submitVote).toHaveBeenCalledTimes(1));
     rerender(
       <MemoryRouter initialEntries={["/confirmar-voto"]}>
         <Routes>
@@ -84,11 +90,12 @@ describe("ConfirmarVoto — voto gravado ao chegar logado", () => {
     const button = screen.getByText("entrar.yes_swear").closest("button") as HTMLButtonElement;
     expect(button.disabled).toBe(true); // falta o quadradinho
     fireEvent.click(screen.getByRole("checkbox"));
-    await waitFor(() => expect(button.disabled).toBe(false));
+    await waitFor(() => expect((screen.getByText("entrar.yes_swear").closest("button") as HTMLButtonElement).disabled).toBe(false));
     await act(async () => {
       fireEvent.click(button);
     });
     await waitFor(() => expect(rpc).toHaveBeenCalledWith("accept_terms", { p_version: "1.0" }));
+    expect(refreshProfile).toHaveBeenCalled(); // o app passa a saber que os Termos foram aceitos
     await waitFor(() => expect(screen.getByTestId("where").textContent).toBe("/dashboard"));
     expect(submitVote).toHaveBeenCalledTimes(1); // nunca grava duas vezes
   });
@@ -114,6 +121,31 @@ describe("ConfirmarVoto — voto gravado ao chegar logado", () => {
       fireEvent.click(retry);
     });
     await waitFor(() => expect(submitVote).toHaveBeenCalledTimes(2));
-    await waitFor(() => expect(screen.getByText("entrar.vote_recorded")).toBeTruthy());
+    await waitFor(() => expect(screen.getByText("entrar.yes_swear")).toBeTruthy()); // voltou ao botão normal
+    expect(screen.queryByText("entrar.vote_error")).toBeNull();
+  });
+
+  it("quem já votou mas NÃO aceitou os Termos só entra depois de aceitar (volta e vê só o aceite)", async () => {
+    state.hasVoted = true;
+    state.profile = { id: "fan-1", terms_accepted_at: null };
+    renderPage(); // sem escolha pendente: é alguém voltando
+    expect(await screen.findByText("entrar.terms_only_title")).toBeTruthy();
+    const button = screen.getByText("entrar.enter_cta").closest("button") as HTMLButtonElement;
+    expect(button.disabled).toBe(true);
+    fireEvent.click(screen.getByRole("checkbox"));
+    await waitFor(() => expect((screen.getByText("entrar.enter_cta").closest("button") as HTMLButtonElement).disabled).toBe(false));
+    await act(async () => {
+      fireEvent.click(screen.getByText("entrar.enter_cta"));
+    });
+    await waitFor(() => expect(rpc).toHaveBeenCalledWith("accept_terms", { p_version: "1.0" }));
+    await waitFor(() => expect(screen.getByTestId("where").textContent).toBe("/dashboard"));
+    expect(submitVote).not.toHaveBeenCalled(); // nunca grava voto de novo
+  });
+
+  it("quem já aceitou os Termos entra direto no Dashboard", async () => {
+    state.hasVoted = true;
+    state.profile = { id: "fan-1", terms_accepted_at: "2026-10-01T10:00:00Z" };
+    renderPage();
+    await waitFor(() => expect(screen.getByTestId("where").textContent).toBe("/dashboard"));
   });
 });
