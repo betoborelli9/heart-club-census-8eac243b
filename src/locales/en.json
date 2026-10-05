@@ -602,6 +602,9 @@
   },
   "entrar": {
     "skip": "Skip",
+    "vote_recording": "Registering your vote…",
+    "vote_recorded": "✓ Your vote has been registered!",
+    "retry": "Try again",
     "rank_step": "Ranking and Statistics",
     "rank_title": "Discover your fan base's profile",
     "rank_sub": "One quick answer to unlock the full ranking.",

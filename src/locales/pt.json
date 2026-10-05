@@ -602,6 +602,9 @@
   },
   "entrar": {
     "skip": "Pular",
+    "vote_recording": "Registrando seu voto…",
+    "vote_recorded": "✓ Seu voto já foi registrado!",
+    "retry": "Tentar de novo",
     "rank_step": "Ranking e Estatísticas",
     "rank_title": "Descubra o perfil da sua torcida",
     "rank_sub": "Uma única resposta rápida para acessar o ranking completo.",

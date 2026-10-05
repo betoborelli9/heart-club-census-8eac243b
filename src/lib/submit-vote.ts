@@ -102,13 +102,6 @@ export async function submitVote({
   const { data: newVote, error: voteError } = await supabase.from("votos").insert([mainVote]).select("id").single();
   if (voteError) throw voteError;
 
-  // Aceite dos Termos (LGPD) — o torcedor marcou o quadradinho antes de chegar aqui.
-  try {
-    await supabase.rpc("accept_terms" as any, { p_version: "1.0" });
-  } catch (err) {
-    console.warn("[LGPD] accept_terms falhou (não-crítico):", err);
-  }
-
   runSilentAudit(supabase, newVote.id, heartClub.name, ip, fp);
 
   const toSave = [heartClub, ...sympathyClubs]

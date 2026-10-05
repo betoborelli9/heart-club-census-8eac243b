@@ -1,12 +1,13 @@
 /**
  * [CAMINHO]: src/pages/ConfirmarVoto.tsx
- * [MÓDULO]: Último passo do fluxo novo: o torcedor JÁ fez o login, marca o quadradinho dos
- * Termos e confirma ("SIM, EU JURO!"). Só então o voto é gravado (src/lib/submit-vote.ts).
+ * [MÓDULO]: Último passo do fluxo novo. Assim que o torcedor chega aqui já logado, o VOTO É GRAVADO
+ * na hora (src/lib/submit-vote.ts) — para o sistema ele já votou. A tela então pede o quadradinho dos
+ * Termos e o "SIM, EU JURO!", que registra o aceite e leva o torcedor ao Dashboard.
  *
  * Modo simulação do Master (?sim=1): faz tudo igual, MAS NÃO GRAVA NADA — e depois mostra os
  * cartões "por que pedimos" que o torcedor vê no Dashboard, um de cada vez.
  */
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Heart, Loader2, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -17,6 +18,7 @@ import { useTranslationApp } from "@/hooks/useTranslationApp";
 import { isMasterEmail } from "@/lib/master";
 import { NEW_ENTRY_FLOW_ENABLED, clearPendingVote, loadPendingVote } from "@/lib/entry-flow";
 import { submitVote } from "@/lib/submit-vote";
+import { supabase } from "@/integrations/supabase/client";
 import { setSimClub, setSimSympathies } from "@/lib/sim-fan";
 import { ClubLogo } from "@/components/ClubLogo";
 import logo from "@/assets/logo.png";
@@ -34,6 +36,10 @@ const ConfirmarVoto = () => {
 
   const [accepted, setAccepted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [recording, setRecording] = useState(false);
+  const [recorded, setRecorded] = useState(false);
+  const [recordError, setRecordError] = useState(false);
+  const startedRef = useRef(false); // o voto só é gravado UMA vez por visita a esta tela
 
   // ── Porteiro
   useEffect(() => {
@@ -50,12 +56,52 @@ const ConfirmarVoto = () => {
       navigate("/entrar", { replace: true });
       return;
     }
-    if (!sim && hasVoted) {
+    // Já tinha votado antes de chegar aqui → Dashboard. (Se o voto foi gravado NESTA tela, fica: falta o aceite.)
+    if (!sim && hasVoted && !startedRef.current) {
       navigate("/dashboard", { replace: true });
       return;
     }
     if (!pending) navigate(sim ? "/entrar?sim=1" : "/entrar", { replace: true });
   }, [isAuthReady, isLoading, isMaster, sim, isAuthenticated, hasVoted, pending, navigate]);
+
+  // ── Grava o voto assim que o torcedor chega logado (fluxo real; o teste do Master nunca grava)
+  const record = async () => {
+    if (!user || !pending) return;
+    startedRef.current = true;
+    setRecording(true);
+    setRecordError(false);
+    try {
+      await submitVote({
+        user,
+        profile,
+        heartClub: pending.club,
+        sympathyClubs: pending.sympathies,
+        updateProfile,
+        refreshProfile,
+      });
+      setRecorded(true);
+      clearPendingVote();
+    } catch (err: any) {
+      if (err?.code === "23505") {
+        // já existe voto original deste torcedor → conta como registrado
+        setRecorded(true);
+        clearPendingVote();
+      } else {
+        console.error("[CONFIRMAR_VOTO] erro ao gravar:", err);
+        setRecordError(true);
+        toast({ variant: "destructive", title: t("entrar.vote_error") });
+      }
+    } finally {
+      setRecording(false);
+    }
+  };
+
+  useEffect(() => {
+    if (sim || !NEW_ENTRY_FLOW_ENABLED || startedRef.current) return;
+    if (!isAuthReady || isLoading || !isAuthenticated || !user || isMaster || hasVoted || !pending) return;
+    void record();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sim, isAuthReady, isLoading, isAuthenticated, user, isMaster, hasVoted, pending]);
 
   if (!isAuthReady || isLoading || !pending) {
     return (
@@ -68,6 +114,11 @@ const ConfirmarVoto = () => {
   const club = pending.club;
 
   const confirm = async () => {
+    if (!sim && recordError && !recorded) {
+      // a gravação falhou antes: "Tentar de novo" não exige o quadradinho
+      await record();
+      return;
+    }
     if (!accepted) {
       toast({ variant: "destructive", title: t("entrar.terms_required") });
       return;
@@ -81,25 +132,22 @@ const ConfirmarVoto = () => {
       return;
     }
     if (!user) return;
+    if (recordError && !recorded) {
+      // a gravação falhou antes: tenta de novo
+      await record();
+      return;
+    }
+    if (!recorded) return; // ainda gravando
     setSubmitting(true);
     try {
-      await submitVote({
-        user,
-        profile,
-        heartClub: club,
-        sympathyClubs: pending.sympathies,
-        updateProfile,
-        refreshProfile,
-      });
-      clearPendingVote();
-      toast({ title: t("entrar.vote_ok") });
-      navigate("/dashboard", { replace: true });
+      // Aceite dos Termos (LGPD) — o torcedor marcou o quadradinho
+      await supabase.rpc("accept_terms" as any, { p_version: "1.0" });
     } catch (err) {
-      console.error("[CONFIRMAR_VOTO] erro:", err);
-      toast({ variant: "destructive", title: t("entrar.vote_error") });
-    } finally {
-      setSubmitting(false);
+      console.warn("[LGPD] accept_terms falhou (não-crítico):", err);
     }
+    toast({ title: t("entrar.vote_ok") });
+    navigate("/dashboard", { replace: true });
+    setSubmitting(false);
   };
 
   return (
@@ -120,6 +168,14 @@ const ConfirmarVoto = () => {
           </div>
           <Heart className="h-6 w-6 fill-current text-primary" />
         </div>
+
+        {!sim && (recording || recorded || recordError) && (
+          <p
+            className={`w-full text-center text-sm font-bold ${recordError ? "text-red-400" : recorded ? "text-green-400" : "text-white/60"}`}
+          >
+            {recordError ? t("entrar.vote_error") : recorded ? t("entrar.vote_recorded") : t("entrar.vote_recording")}
+          </p>
+        )}
 
         {pending.sympathies.length > 0 && (
           <div className="w-full space-y-2">
@@ -165,14 +221,21 @@ const ConfirmarVoto = () => {
 
         <Button
           onClick={confirm}
-          disabled={!accepted || submitting}
+          disabled={sim ? !accepted : recordError ? false : !accepted || !recorded || submitting}
           className="btn-orange-gradient h-16 w-full rounded-2xl text-xl font-black italic shadow-xl shadow-primary/20 active:scale-95 disabled:opacity-40"
         >
-          {submitting ? <Loader2 className="h-6 w-6 animate-spin" /> : t("entrar.yes_swear")}
+          {submitting || (!sim && recording) ? (
+            <Loader2 className="h-6 w-6 animate-spin" />
+          ) : recordError ? (
+            t("entrar.retry")
+          ) : (
+            t("entrar.yes_swear")
+          )}
         </Button>
         <button
           onClick={() => navigate(sim ? "/entrar?sim=1" : "/entrar")}
           disabled={submitting}
+          hidden={!sim && (recording || recorded)}
           className="text-xs font-bold uppercase text-white/40 hover:text-white/70"
         >
           {t("entrar.back")}

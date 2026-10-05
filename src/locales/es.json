@@ -602,6 +602,9 @@
   },
   "entrar": {
     "skip": "Omitir",
+    "vote_recording": "Registrando tu voto…",
+    "vote_recorded": "✓ ¡Tu voto ya fue registrado!",
+    "retry": "Intentar de nuevo",
     "rank_step": "Ranking y Estadísticas",
     "rank_title": "Descubre el perfil de tu hinchada",
     "rank_sub": "Una sola respuesta rápida para acceder al ranking completo.",
