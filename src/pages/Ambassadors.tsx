@@ -805,8 +805,8 @@ const Ambassadors = () => {
             title="Vire a voz da sua torcida"
             subtitle="Dois dados e o seu painel de embaixador abre."
             reasons={[
-              "Seu WhatsApp nos deixa avisar você quando alguém entrar pelo seu convite.",
-              "Sua profissão mostra a força da sua torcida no mercado — e conta pontos no seu ranking de embaixador.",
+              "Aviso de convite: seu WhatsApp nos deixa avisar você quando alguém entrar pelo seu convite.",
+              "Ranking de Embaixador: sua profissão conta pontos e mostra a força da sua torcida.",
               "Quem mais convida torcedores do mesmo time vira o Embaixador oficial daquele clube.",
             ]}
           >

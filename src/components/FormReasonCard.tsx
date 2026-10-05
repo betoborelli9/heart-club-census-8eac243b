@@ -6,6 +6,7 @@
 import type { ReactNode } from "react";
 import type { LucideIcon } from "lucide-react";
 import { CheckCircle2, ShieldCheck } from "lucide-react";
+import { useTranslationApp } from "@/hooks/useTranslationApp";
 
 interface Props {
   icon: LucideIcon;
@@ -18,10 +19,10 @@ interface Props {
   children?: ReactNode;
 }
 
-export const PRIVACY_PROMISE =
-  "Seus dados nunca são repassados a ninguém. Parceiros só recebem números somados, nunca informações de uma pessoa.";
+export const PRIVACY_PROMISE = "Seus dados nunca são repassados a ninguém.";
 
 export default function FormReasonCard({ icon: Icon, step, title, subtitle, reasons, children }: Props) {
+  const { t } = useTranslationApp();
   return (
     <div className="relative overflow-hidden rounded-3xl border border-primary/25 bg-gradient-to-br from-primary/15 via-[#0b0b0b] to-[#0b0b0b] p-6 text-white">
       <div
@@ -56,7 +57,7 @@ export default function FormReasonCard({ icon: Icon, step, title, subtitle, reas
 
         <div className="flex items-start gap-2.5 rounded-2xl border border-white/10 bg-white/[0.04] px-3.5 py-3">
           <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-          <p className="text-[12px] leading-snug text-white/65">{PRIVACY_PROMISE}</p>
+          <p className="text-[12px] leading-snug text-white/65">{t("entrar.privacy_footer", { defaultValue: PRIVACY_PROMISE })}</p>
         </div>
       </div>
     </div>

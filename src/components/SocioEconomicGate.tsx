@@ -74,8 +74,8 @@ export default function SocioEconomicGate() {
           title="Descubra quanto vale a sua torcida"
           subtitle="Duas respostas rápidas e o ranking completo é seu."
           reasons={[
-            "Mostra em qual faixa econômica o seu clube está, em comparação aos rivais.",
-            "Dá força de verdade ao seu time diante de patrocinadores e marcas.",
+            "Perfil da Torcida: veja que profissões e realidades formam a torcida do seu clube.",
+            "Libera o Ranking e as Estatísticas completas.",
             "Leva uns 20 segundos.",
           ]}
         >
