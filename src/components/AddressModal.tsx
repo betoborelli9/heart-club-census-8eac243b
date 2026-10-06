@@ -15,6 +15,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { captureIpAudit } from "@/lib/address";
 import { fetchOfficialGoianiaNeighborhoodGeoJson } from "@/lib/official-neighborhoods";
+import heatMapBanner from "@/assets/mapa-calor-card.svg";
 import { useTranslationApp } from "@/hooks/useTranslationApp";
 
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_PUBLIC_TOKEN;
@@ -325,19 +326,20 @@ export default function AddressModal({ open, onOpenChange, clubName, onSuccess, 
   }, [bairrosCache, step, searchQuery]);
 
   // [SAVE COM FORCE RELOAD PARA QUEBRAR O LOOP]
-  const handleFinalSave = async (feature: any) => {
+  const handleFinalSave = async (feature: any, cityOverride?: any) => {
+    const city = cityOverride ?? selectedCity;
     setLoading(true);
     try {
       const {
         data: { user },
       } = await supabase.auth.getUser();
       if (!user) return;
-      const longitude = feature.center?.[0] ?? selectedCity?.center?.[0] ?? null;
-      const latitude = feature.center?.[1] ?? selectedCity?.center?.[1] ?? null;
-      const resolvedCity = await enrichDetectedCity({ ...selectedCity, center: selectedCity?.center || feature.center });
-      const cityName = resolvedCity?.name || selectedCity?.name;
-      const stateName = resolvedCity?.state || selectedCity?.state || "";
-      const countryName = resolvedCity?.country || selectedCity?.country || "Brasil";
+      const longitude = feature.center?.[0] ?? city?.center?.[0] ?? null;
+      const latitude = feature.center?.[1] ?? city?.center?.[1] ?? null;
+      const resolvedCity = await enrichDetectedCity({ ...city, center: city?.center || feature.center });
+      const cityName = resolvedCity?.name || city?.name;
+      const stateName = resolvedCity?.state || city?.state || "";
+      const countryName = resolvedCity?.country || city?.country || "Brasil";
 
       const { error } = await supabase
         .from("profiles")
@@ -388,8 +390,11 @@ export default function AddressModal({ open, onOpenChange, clubName, onSuccess, 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md border-white/10 bg-black text-white rounded-[32px] p-0 overflow-hidden shadow-[0_0_60px_rgba(255,98,0,0.25)]">
-        <div className="p-8 space-y-6">
-          <header className="flex flex-col items-center text-center space-y-4">
+        <div className="h-32 w-full overflow-hidden border-b border-white/10">
+          <img src={heatMapBanner} alt={t("entrar.map_alt")} className="h-full w-full object-cover" loading="eager" />
+        </div>
+        <div className="p-8 pt-6 space-y-6">
+          <header className="flex flex-col items-center text-center space-y-3">
             <div className="w-16 h-16 bg-[#ff6200]/10 border border-[#ff6200]/30 rounded-2xl flex items-center justify-center">
               <Heart className="text-[#ff6200] w-8 h-8 fill-[#ff6200]/20" />
             </div>
@@ -409,15 +414,11 @@ export default function AddressModal({ open, onOpenChange, clubName, onSuccess, 
               </div>
               <div className="flex flex-col gap-3">
                 <Button
-                  onClick={() => {
-                    setSelectedCity(detectedLocation);
-                    setStep("searching_bairro");
-                    setSearchQuery("");
-                    setSuggestions([]);
-                  }}
+                  disabled={loading}
+                  onClick={() => handleFinalSave({ text: null, center: null }, detectedLocation)}
                   className="bg-[#ff6200] hover:bg-[#ff8230] text-white font-black italic uppercase h-14 rounded-2xl"
                 >
-                  {t("components.address_modal.yes_live")}
+                  {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : t("components.address_modal.yes_live")}
                 </Button>
                 <Button
                   variant="outline"
@@ -566,12 +567,7 @@ export default function AddressModal({ open, onOpenChange, clubName, onSuccess, 
             </div>
           )}
 
-          <footer className="flex items-start gap-3 bg-[#ff6200]/5 p-4 rounded-2xl border border-[#ff6200]/10">
-            <Navigation className="w-4 h-4 text-[#ff6200] shrink-0 mt-0.5" />
-            <p className="text-[10px] text-zinc-400 italic leading-tight">
-              {t("components.address_modal.privacy")}
-            </p>
-          </footer>
+          <p className="text-center text-[11px] text-zinc-500">🔒 {t("entrar.map_privacy")}</p>
         </div>
       </DialogContent>
     </Dialog>

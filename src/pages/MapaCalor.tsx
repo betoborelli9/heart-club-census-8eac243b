@@ -38,9 +38,6 @@ import AddressModal from "@/components/AddressModal";
 import logo from "@/assets/logo.png";
 import { useTranslationApp } from "@/hooks/useTranslationApp";
 import { countryNameToIso2, countryNameToIso3 } from "@/lib/country-iso";
-import { useFeatureFlag } from "@/lib/feature-flags";
-import FormReasonCard from "@/components/FormReasonCard";
-import heatMapBanner from "@/assets/mapa-calor-card.svg";
 import WhyWeAsk from "@/components/WhyWeAsk";
 
 /* ---------- Helpers ---------- */
@@ -865,9 +862,6 @@ const MapaCalor = () => {
   const [addressConfirmed, setAddressConfirmed] = useState(false);
   const [addressReloadKey, setAddressReloadKey] = useState(0);
   // Chavinha "Território" (Admin): liga o card explicativo antes do modal e o bairro opcional.
-  const terrFlag = useFeatureFlag("form_territorio");
-  const [terrIntroDone, setTerrIntroDone] = useState(false);
-  const showTerrIntro = terrFlag.enabled && !terrIntroDone;
 
   const [showWhyMap, setShowWhyMap] = useState(() => {
     try {
@@ -2026,45 +2020,7 @@ const MapaCalor = () => {
         </div>
       </div>
       <style>{`.war-tooltip { background: rgba(0,0,0,0.92) !important; border: 1px solid rgba(255,98,0,0.5) !important; border-radius: 8px !important; padding: 6px 10px !important; color: #fff !important; box-shadow: 0 4px 20px rgba(255,98,0,0.25) !important; }.war-tooltip::before { display: none !important; }.leaflet-container { font-family: Verdana, sans-serif; z-index: 0; }.leaflet-pane, .leaflet-top, .leaflet-bottom, .leaflet-control { z-index: 1 !important; }.leaflet-tooltip { z-index: 2 !important; }`}</style>
-      {addressChecked && !addressConfirmed && showTerrIntro && (
-        <div className="fixed inset-0 z-[9000] bg-black/90 backdrop-blur-md flex items-center justify-center overflow-y-auto p-4">
-          <div className="w-full max-w-md">
-            <FormReasonCard
-              icon={MapPin}
-              image={{
-                src: heatMapBanner,
-                alt: t("entrar.map_alt"),
-              }}
-              stepRight={
-                heartClubName ? (
-                  <div className="flex shrink-0 items-center gap-1.5 rounded-xl border border-white/10 bg-black/60 px-2 py-1">
-                    <ClubLogo src={activeClubLogo || undefined} alt={heartClubName} size="xs" />
-                    <div className="leading-none">
-                      <p className="flex items-center gap-0.5 text-[7px] font-black uppercase tracking-widest text-primary">
-                        <span aria-hidden>♥</span> {t("heatmap.heart_label")}
-                      </p>
-                      <p className="mt-0.5 max-w-[104px] truncate text-[10px] font-black italic uppercase text-white">{heartClubName}</p>
-                    </div>
-                  </div>
-                ) : undefined
-              }
-              step={t("entrar.map_step")}
-              title={t("entrar.map_title")}
-              subtitle={t("entrar.map_sub")}
-              reasons={[t("entrar.map_1"), t("entrar.map_2")]}
-              privacyNote={t("entrar.map_privacy")}
-            >
-              <Button
-                onClick={() => setTerrIntroDone(true)}
-                className="h-12 w-full rounded-xl font-black uppercase italic btn-orange-gradient"
-              >
-                {t("entrar.map_cta")}
-              </Button>
-            </FormReasonCard>
-          </div>
-        </div>
-      )}
-      {addressChecked && !addressConfirmed && !showTerrIntro && (
+      {addressChecked && !addressConfirmed && (
         <div className="fixed inset-0 z-40 bg-black/85 backdrop-blur-md flex items-center justify-center">
           <div className="text-center space-y-4 px-6">
             <MapPin className="w-12 h-12 text-[#ff6200] mx-auto" />
@@ -2082,8 +2038,8 @@ const MapaCalor = () => {
         </div>
       )}
       <AddressModal
-        open={addressOpen && terrFlag.ready && !showTerrIntro}
-        allowSkipBairro={terrFlag.enabled}
+        open={addressOpen}
+        allowSkipBairro
         onOpenChange={(v: boolean) => {
           const forceOnboarding =
             new URLSearchParams(window.location.search).get("force_onboarding") === "1";
