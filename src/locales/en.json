@@ -602,6 +602,9 @@
   },
   "entrar": {
     "skip": "Skip",
+    "bairro_title": "Want to show up in your neighborhood?",
+    "bairro_sub": "Type your neighborhood name — it's optional.",
+    "bairro_skip": "Not now",
     "amb_step": "Ambassador Area",
     "amb_title": "Become your fan base's Ambassador",
     "amb_sub": "Bring your friends, climb the ranking and lead your club's fan base.",

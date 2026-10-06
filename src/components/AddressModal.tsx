@@ -205,7 +205,7 @@ function useTerritoryEngine() {
   return { searchCities, searchNeighborhoods };
 }
 
-export default function AddressModal({ open, onOpenChange, clubName, onSuccess, allowSkipBairro }: any) {
+export default function AddressModal({ open, onOpenChange, clubName, onSuccess, allowSkipBairro, bairroOnly, onSkip }: any) {
   const { toast } = useToast();
   const { t } = useTranslationApp();
   const { searchCities, searchNeighborhoods } = useTerritoryEngine();
@@ -222,7 +222,16 @@ export default function AddressModal({ open, onOpenChange, clubName, onSuccess, 
 
   // [RESET DE STEP AO ABRIR — A PORTARIA AGORA É RESPONSABILIDADE DO COMPONENTE PAI]
   useEffect(() => {
-    if (open) setStep("detecting");
+    if (!open) return;
+    if (bairroOnly) {
+      // Modo "só o bairro": a cidade já está confirmada (vem do perfil); vai direto para digitar o bairro.
+      setSelectedCity(bairroOnly);
+      setSearchQuery("");
+      setSuggestions([]);
+      setStep("searching_bairro");
+    } else {
+      setStep("detecting");
+    }
   }, [open]);
 
   useEffect(() => {
@@ -284,7 +293,7 @@ export default function AddressModal({ open, onOpenChange, clubName, onSuccess, 
   }, []);
 
   useEffect(() => {
-    if (open) handleDetection();
+    if (open && !bairroOnly) handleDetection();
   }, [open, handleDetection]);
 
   const onTypeSearch = (val: string) => {
@@ -324,6 +333,39 @@ export default function AddressModal({ open, onOpenChange, clubName, onSuccess, 
   useEffect(() => {
     if (step === "searching_bairro" && !searchQuery) setSuggestions([]);
   }, [bairrosCache, step, searchQuery]);
+
+  // Modo "só o bairro": grava APENAS o bairro (e o ponto dele no mapa); cidade/estado/país continuam como estão.
+  const handleBairroOnlySave = async (feature: any) => {
+    setLoading(true);
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) return;
+      const longitude = feature.center?.[0] ?? null;
+      const latitude = feature.center?.[1] ?? null;
+      const { error } = await supabase
+        .from("profiles")
+        .update({ bairro: feature.text, ...(latitude != null && longitude != null ? { latitude, longitude } : {}) })
+        .eq("id", user.id);
+      if (error) throw error;
+      await supabase
+        .from("votos")
+        .update({ bairro: feature.text, ...(latitude != null && longitude != null ? { latitude, longitude, voto_lat: latitude, voto_lng: longitude } : {}) })
+        .eq("user_id", user.id)
+        .eq("is_original_vote", true);
+      toast({
+        title: t("feedback.success.territory_confirmed_title"),
+        description: t("feedback.success.territory_confirmed_desc"),
+      });
+      onOpenChange(false);
+      onSuccess?.(feature.text);
+    } catch (e) {
+      toast({ variant: "destructive", title: t("feedback.error.territory_save_error") });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // [SAVE COM FORCE RELOAD PARA QUEBRAR O LOOP]
   const handleFinalSave = async (feature: any, cityOverride?: any) => {
@@ -398,10 +440,18 @@ export default function AddressModal({ open, onOpenChange, clubName, onSuccess, 
             <div className="w-16 h-16 bg-[#ff6200]/10 border border-[#ff6200]/30 rounded-2xl flex items-center justify-center">
               <Heart className="text-[#ff6200] w-8 h-8 fill-[#ff6200]/20" />
             </div>
-            <h2 className="text-2xl font-black italic uppercase">{t("components.address_modal.title")}</h2>
+            <h2 className="text-2xl font-black italic uppercase">
+              {bairroOnly ? t("entrar.bairro_title") : t("components.address_modal.title")}
+            </h2>
             <p className="text-zinc-500 text-sm italic">
-              {t("components.address_modal.subtitle_prefix")}{" "}
-              <span className="text-[#ff6200] font-bold uppercase">{clubName}</span>
+              {bairroOnly ? (
+                t("entrar.bairro_sub")
+              ) : (
+                <>
+                  {t("components.address_modal.subtitle_prefix")}{" "}
+                  <span className="text-[#ff6200] font-bold uppercase">{clubName}</span>
+                </>
+              )}
             </p>
           </header>
 
@@ -533,7 +583,8 @@ export default function AddressModal({ open, onOpenChange, clubName, onSuccess, 
                   <button
                     key={item.id}
                     onClick={() => {
-                      handleFinalSave(item);
+                      if (bairroOnly) handleBairroOnlySave(item);
+                      else handleFinalSave(item);
                     }}
                     className="w-full flex items-center justify-between p-4 bg-zinc-900/40 border border-white/5 hover:border-[#ff6200]/50 hover:bg-[#ff6200]/5 rounded-xl transition-all group text-left"
                   >
@@ -554,15 +605,26 @@ export default function AddressModal({ open, onOpenChange, clubName, onSuccess, 
                   </div>
                 )}
               </div>
-              {allowSkipBairro && (
+              {bairroOnly ? (
                 <Button
                   variant="ghost"
                   disabled={loading}
-                  onClick={() => handleFinalSave({ text: null, center: null })}
+                  onClick={() => onSkip?.()}
                   className="text-zinc-400 hover:text-white uppercase font-bold text-xs h-10 w-full"
                 >
-                  Prefiro não informar o bairro
+                  {t("entrar.bairro_skip")}
                 </Button>
+              ) : (
+                allowSkipBairro && (
+                  <Button
+                    variant="ghost"
+                    disabled={loading}
+                    onClick={() => handleFinalSave({ text: null, center: null })}
+                    className="text-zinc-400 hover:text-white uppercase font-bold text-xs h-10 w-full"
+                  >
+                    Prefiro não informar o bairro
+                  </Button>
+                )
               )}
             </div>
           )}

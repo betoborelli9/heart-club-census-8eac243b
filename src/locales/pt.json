@@ -602,6 +602,9 @@
   },
   "entrar": {
     "skip": "Pular",
+    "bairro_title": "Quer aparecer no seu bairro?",
+    "bairro_sub": "Digite o nome do seu bairro — é opcional.",
+    "bairro_skip": "Agora não",
     "amb_step": "Área do Embaixador",
     "amb_title": "Vire o Embaixador da sua torcida",
     "amb_sub": "Traga seus amigos, suba no ranking e lidere a torcida do seu clube.",

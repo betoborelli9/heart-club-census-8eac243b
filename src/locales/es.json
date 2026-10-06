@@ -602,6 +602,9 @@
   },
   "entrar": {
     "skip": "Omitir",
+    "bairro_title": "¿Quieres aparecer en tu barrio?",
+    "bairro_sub": "Escribe el nombre de tu barrio — es opcional.",
+    "bairro_skip": "Ahora no",
     "amb_step": "Área del Embajador",
     "amb_title": "Sé el Embajador de tu hinchada",
     "amb_sub": "Trae a tus amigos, sube en el ranking y lidera la hinchada de tu club.",

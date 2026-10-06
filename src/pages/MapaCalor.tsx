@@ -801,7 +801,7 @@ function FitToGeoJson({ data, deps }: { data: any | null; deps: any[] }) {
 const MapaCalor = () => {
   const navigate = useNavigate();
   const { t } = useTranslationApp();
-  const { user, signOut, simActive, profile: simProfile } = useUser();
+  const { user, signOut, simActive, profile: simProfile, refreshProfile } = useUser();
   // Clube "em exibição" compartilhado com Dashboard e Ranking. Pesquisar um
   // clube aqui (ou em outra página) reflete em todas, até o torcedor voltar
   // pro próprio time do coração. "Mapa Geral" continua sendo uma opção só
@@ -861,6 +861,40 @@ const MapaCalor = () => {
   const [addressChecked, setAddressChecked] = useState(false);
   const [addressConfirmed, setAddressConfirmed] = useState(false);
   const [addressReloadKey, setAddressReloadKey] = useState(0);
+
+  // ── Pedido do bairro "em outra ocasião" (opcional): a partir da 2ª visita ao Mapa, para quem confirmou só a cidade.
+  // "Agora não" volta depois de 7 dias e para de vez depois de 3 recusas. Quem informou o bairro nunca mais vê.
+  const [bairroOpen, setBairroOpen] = useState(false);
+  const bairroCheckedRef = useRef(false);
+  useEffect(() => {
+    const p: any = simProfile;
+    if (bairroCheckedRef.current || !user || !p) return;
+    if (!p.address_confirmed || !p.cidade) return;
+    bairroCheckedRef.current = true;
+    if (p.bairro && String(p.bairro).trim()) return;
+    try {
+      const visitsKey = `hc_map_visits_${user.id}`;
+      const dismissKey = `hc_bairro_dismiss_${user.id}`;
+      const visits = Number(localStorage.getItem(visitsKey) || 0) + 1;
+      localStorage.setItem(visitsKey, String(visits));
+      const dismiss = JSON.parse(localStorage.getItem(dismissKey) || '{"count":0,"at":0}');
+      const waited = !dismiss.at || Date.now() - dismiss.at >= 7 * 24 * 60 * 60 * 1000;
+      if ((simActive || visits >= 2) && dismiss.count < 3 && waited) setBairroOpen(true);
+    } catch {
+      /* sem armazenamento: não pergunta */
+    }
+  }, [user, simProfile, simActive]);
+  const dismissBairro = () => {
+    setBairroOpen(false);
+    if (!user) return;
+    try {
+      const key = `hc_bairro_dismiss_${user.id}`;
+      const cur = JSON.parse(localStorage.getItem(key) || '{"count":0,"at":0}');
+      localStorage.setItem(key, JSON.stringify({ count: (cur.count || 0) + 1, at: Date.now() }));
+    } catch {
+      /* ignora */
+    }
+  };
   // Chavinha "Território" (Admin): liga o card explicativo antes do modal e o bairro opcional.
 
   const [showWhyMap, setShowWhyMap] = useState(() => {
@@ -2049,6 +2083,33 @@ const MapaCalor = () => {
         }}
         clubName={heartClubName}
         onSuccess={() => setAddressReloadKey((k) => k + 1)}
+      />
+      {/* Pedido opcional do bairro (2ª visita em diante) */}
+      <AddressModal
+        open={bairroOpen}
+        bairroOnly={
+          bairroOpen && simProfile
+            ? {
+                name: (simProfile as any).cidade,
+                state: (simProfile as any).estado,
+                country: (simProfile as any).pais || "Brasil",
+                center:
+                  (simProfile as any).longitude != null && (simProfile as any).latitude != null
+                    ? [Number((simProfile as any).longitude), Number((simProfile as any).latitude)]
+                    : null,
+              }
+            : null
+        }
+        onSkip={dismissBairro}
+        onOpenChange={(v: boolean) => {
+          if (!v && bairroOpen) dismissBairro();
+        }}
+        clubName={heartClubName}
+        onSuccess={() => {
+          setBairroOpen(false);
+          void refreshProfile?.().catch?.(() => {});
+          setAddressReloadKey((k) => k + 1);
+        }}
       />
     </div>
   );
