@@ -19,6 +19,7 @@ import {
 import ShareTropaModal from "@/components/dashboard/ShareTropaModal";
 import RivalsColumn from "@/components/dashboard/RivalsColumn";
 import SocioEconomicGate from "@/components/SocioEconomicGate";
+import RaioXTorcida from "@/components/stats/RaioXTorcida";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -494,6 +495,9 @@ const Stats = () => {
         {clubName && (
           <RivalsColumn clubName={clubName} refCode={user?.id} primaryColor="#ff6200" />
         )}
+
+        {/* RAIO-X DA TORCIDA — números somados do clube em exibição (o do coração ou o pesquisado) */}
+        <RaioXTorcida clubName={clubName} onRally={() => setShareOpen(true)} />
 
         {/* PRÓXIMO ALVO (proximidade) */}
         {aboveRow && myRow && (

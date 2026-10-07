@@ -716,5 +716,28 @@
     "reason_amb_1": "Panel de Embajador: desbloquea tu panel y tu código de invitación.",
     "reason_amb_2": "Aviso de invitación: te avisamos cuando alguien entre con tu invitación.",
     "reason_amb_3": "Confirmamos que eres una persona real."
+  },
+  "raiox": {
+    "title": "Rayos X de la hinchada",
+    "note": "Solo números agregados — nadie es identificado.",
+    "total": "{{n}} hinchas en el censo",
+    "gender": "Género",
+    "age": "Rango de edad",
+    "jobs": "Top profesiones",
+    "cities": "Principales bastiones",
+    "men": "Hombres",
+    "women": "Mujeres",
+    "others": "Otros",
+    "age_20": "Hasta 20",
+    "age_21_35": "21 a 35",
+    "age_36_50": "36 a 50",
+    "age_51": "51 o más",
+    "dominant": "Rango dominante",
+    "building": "Armando este cuadro de la hinchada…",
+    "missing": "Faltan {{n}} respuestas para liberar.",
+    "rally": "Convocar a la tropa",
+    "jobs_none": "Aún no hay una profesión compartida por al menos 3 hinchas.",
+    "cities_none": "Aún no hay una ciudad con al menos 3 hinchas.",
+    "other_label": "Otras"
   }
 }

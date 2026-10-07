@@ -716,5 +716,28 @@
     "reason_amb_1": "Ambassador Panel: unlocks your panel and your invitation code.",
     "reason_amb_2": "Invite alert: we let you know when someone joins through your invitation.",
     "reason_amb_3": "We confirm you are a real person."
+  },
+  "raiox": {
+    "title": "Fan base X-ray",
+    "note": "Aggregate numbers only — nobody is identified.",
+    "total": "{{n}} fans in the census",
+    "gender": "Gender",
+    "age": "Age range",
+    "jobs": "Top professions",
+    "cities": "Main strongholds",
+    "men": "Men",
+    "women": "Women",
+    "others": "Other",
+    "age_20": "Up to 20",
+    "age_21_35": "21 to 35",
+    "age_36_50": "36 to 50",
+    "age_51": "51 and over",
+    "dominant": "Dominant range",
+    "building": "Building this picture of the fan base…",
+    "missing": "{{n}} more answers needed to unlock.",
+    "rally": "Rally the troops",
+    "jobs_none": "No profession is shared by at least 3 fans yet.",
+    "cities_none": "No city has at least 3 fans yet.",
+    "other_label": "Others"
   }
 }

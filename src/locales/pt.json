@@ -716,5 +716,28 @@
     "reason_amb_1": "Painel de Embaixador: libera seu painel e seu código de convite.",
     "reason_amb_2": "Aviso de convite: avisamos você quando alguém entrar pelo seu convite.",
     "reason_amb_3": "Confirmamos que você é uma pessoa real."
+  },
+  "raiox": {
+    "title": "Raio-X da torcida",
+    "note": "Só números somados — ninguém é identificado.",
+    "total": "{{n}} torcedores no censo",
+    "gender": "Gênero",
+    "age": "Faixa etária",
+    "jobs": "Top profissões",
+    "cities": "Principais redutos",
+    "men": "Homens",
+    "women": "Mulheres",
+    "others": "Outros",
+    "age_20": "Até 20 anos",
+    "age_21_35": "21 a 35",
+    "age_36_50": "36 a 50",
+    "age_51": "51 ou mais",
+    "dominant": "Faixa dominante",
+    "building": "Montando este quadro da torcida…",
+    "missing": "Faltam {{n}} respostas para liberar.",
+    "rally": "Convocar a tropa",
+    "jobs_none": "Ainda não há uma profissão repetida por pelo menos 3 torcedores.",
+    "cities_none": "Ainda não há uma cidade com pelo menos 3 torcedores.",
+    "other_label": "Outras"
   }
 }
