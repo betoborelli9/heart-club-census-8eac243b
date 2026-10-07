@@ -68,7 +68,7 @@ describe("Painel do parceiro", () => {
     renderPage();
     await waitFor(() => expect(calls).toContain("partner_get_overview"));
     expect(await screen.findByText("partner.k_fans")).toBeTruthy();
-    expect(screen.getByText("partner.top_clubs")).toBeTruthy();
+    expect(screen.getAllByText("partner.top_clubs").length).toBeGreaterThan(0);
     expect(screen.getByText("Vila Nova")).toBeTruthy();
     expect(screen.getByText("Goiânia")).toBeTruthy();
     expect(navigateMock).not.toHaveBeenCalled();

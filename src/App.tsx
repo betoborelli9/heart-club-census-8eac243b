@@ -61,6 +61,7 @@ const MapaCalor = lazy(() => import("./pages/MapaCalor"));
 const Stats = lazy(() => import("./pages/Stats"));
 const Ambassadors = lazy(() => import("./pages/Ambassadors"));
 const Parceiro = lazy(() => import("./pages/Parceiro"));
+const ParceiroRelatorio = lazy(() => import("./pages/ParceiroRelatorio"));
 const AmbassadorCenter = lazy(() => import("./pages/AmbassadorCenter"));
 const Correcao = lazy(() => import("./pages/Correcao"));
 const NotFound = lazy(() => import("./pages/NotFound"));
@@ -124,6 +125,7 @@ const App = () => (
             <Route path="/ranking" element={<Stats />} />
             <Route path="/embaixadores" element={<Ambassadors />} />
             <Route path="/parceiro" element={<Parceiro />} />
+            <Route path="/parceiro/relatorio" element={<ParceiroRelatorio />} />
             <Route path="/embaixador" element={<AmbassadorCenter />} />
             <Route path="/painel-embaixador" element={<AmbassadorCenter />} />
             <Route path="/correcao" element={<Correcao />} />

@@ -789,5 +789,25 @@
     "referrals": "Accepted invitations",
     "shares": "Shares",
     "footer_note": "Aggregated numbers only. No personal data is shown; groups with fewer than 3 people are hidden."
+  },
+  "report": {
+    "footer": "Heart Club · Aggregated numbers only, no personal data",
+    "admin_only": "This report is for administration only.",
+    "visits_title": "Visits by page",
+    "period": "Last {{d}} days",
+    "total_visits": "Visits",
+    "unique_visitors": "Unique visitors",
+    "visits_by_day": "Visits per day",
+    "visits_by_page": "Most visited pages",
+    "visits_by_platform": "By platform",
+    "geo": "Where the fans are",
+    "based_on": "Base: {{n}} answers",
+    "cover_kicker": "Worldwide fan census",
+    "cover_title": "Fan Base Report",
+    "cover_sub": "Who they are, where they are and how fast Heart Club fans grow — in aggregated numbers, identifying no one.",
+    "save_pdf": "Save PDF",
+    "pdf_panel": "PDF reports",
+    "pdf_full": "Complete report",
+    "pdf_hint": "Open it and use \"Save PDF\"."
   }
 }

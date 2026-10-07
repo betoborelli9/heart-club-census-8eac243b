@@ -789,5 +789,25 @@
     "referrals": "Invitaciones aceptadas",
     "shares": "Compartidos",
     "footer_note": "Solo números agregados. No se muestra ningún dato personal; los grupos con menos de 3 personas no aparecen."
+  },
+  "report": {
+    "footer": "Heart Club · Solo números agregados, sin datos personales",
+    "admin_only": "Este informe es exclusivo de la administración.",
+    "visits_title": "Visitas por página",
+    "period": "Últimos {{d}} días",
+    "total_visits": "Visitas",
+    "unique_visitors": "Visitantes únicos",
+    "visits_by_day": "Visitas por día",
+    "visits_by_page": "Páginas más visitadas",
+    "visits_by_platform": "Por plataforma",
+    "geo": "Dónde está la hinchada",
+    "based_on": "Base: {{n}} respuestas",
+    "cover_kicker": "Censo mundial de hinchas",
+    "cover_title": "Informe de la Hinchada",
+    "cover_sub": "Quiénes son, dónde están y cuánto crecen los hinchas de Heart Club — en números agregados, sin identificar a nadie.",
+    "save_pdf": "Guardar PDF",
+    "pdf_panel": "Informes en PDF",
+    "pdf_full": "Informe completo",
+    "pdf_hint": "Ábrelo y usa \"Guardar PDF\"."
   }
 }

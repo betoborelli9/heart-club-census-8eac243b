@@ -789,5 +789,25 @@
     "referrals": "Convites aceitos",
     "shares": "Compartilhamentos",
     "footer_note": "Apenas números somados. Nenhum dado pessoal é exibido; grupos com menos de 3 pessoas não aparecem."
+  },
+  "report": {
+    "footer": "Heart Club · Apenas números somados, sem dados pessoais",
+    "admin_only": "Este relatório é exclusivo da administração.",
+    "visits_title": "Visitas por página",
+    "period": "Últimos {{d}} dias",
+    "total_visits": "Visitas",
+    "unique_visitors": "Visitantes únicos",
+    "visits_by_day": "Visitas por dia",
+    "visits_by_page": "Páginas mais visitadas",
+    "visits_by_platform": "Por plataforma",
+    "geo": "Onde está a torcida",
+    "based_on": "Base: {{n}} respostas",
+    "cover_kicker": "Censo mundial de torcedores",
+    "cover_title": "Relatório da Torcida",
+    "cover_sub": "Quem são, onde estão e quanto crescem os torcedores do Heart Club — em números somados, sem identificar ninguém.",
+    "save_pdf": "Salvar PDF",
+    "pdf_panel": "Relatórios em PDF",
+    "pdf_full": "Relatório completo",
+    "pdf_hint": "Abra e use \"Salvar PDF\"."
   }
 }

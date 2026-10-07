@@ -7,7 +7,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { animate, motion } from "framer-motion";
-import { ArrowLeft, Briefcase, Globe2, Loader2, MapPin, Megaphone, Radio, Trophy, Users } from "lucide-react";
+import { ArrowLeft, Briefcase, FileDown, Globe2, Loader2, MapPin, Megaphone, Radio, Trophy, Users } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useUser } from "@/contexts/UserContext";
 import { useTranslationApp } from "@/hooks/useTranslationApp";
@@ -359,6 +359,35 @@ const Parceiro = () => {
                   <p className="text-[11px] font-black uppercase tracking-widest text-white/50">{t("partner.shares")}</p>
                 </div>
               </div>
+            </Panel>
+
+            <Panel icon={FileDown} title={t("report.pdf_panel")}>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={() => navigate("/parceiro/relatorio?s=completo")}
+                  className="rounded-full bg-primary px-5 py-2.5 text-xs font-black uppercase italic text-white shadow-[0_0_18px_rgba(255,98,0,0.35)] hover:brightness-110"
+                >
+                  {t("report.pdf_full")}
+                </button>
+                {[
+                  ["crescimento", t("partner.growth")],
+                  ["clubes", t("partner.top_clubs")],
+                  ["geografia", t("report.geo")],
+                  ["genero", t("raiox.gender")],
+                  ["idade", t("raiox.age")],
+                  ["profissoes", t("raiox.jobs")],
+                  ["embaixadores", t("partner.ambassadors")],
+                ].map(([k, label]) => (
+                  <button
+                    key={k}
+                    onClick={() => navigate(`/parceiro/relatorio?s=${k}`)}
+                    className="rounded-full border border-white/15 px-4 py-2.5 text-xs font-bold text-white/80 hover:border-primary hover:text-white"
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+              <p className="mt-3 text-[11px] text-white/40">{t("report.pdf_hint")}</p>
             </Panel>
 
             <p className="pt-2 text-center text-[11px] text-white/35">{t("partner.footer_note")}</p>

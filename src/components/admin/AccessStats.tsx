@@ -171,6 +171,13 @@ export default function AccessStats() {
         </h2>
         <Button
           size="sm"
+          className="ml-auto"
+          onClick={() => window.open("/parceiro/relatorio?s=visitas&d=30", "_blank")}
+        >
+          <FileDown className="w-4 h-4 mr-1" /> Relatório premium de visitas (PDF)
+        </Button>
+        <Button
+          size="sm"
           variant="outline"
           onClick={() =>
             exportBrandedPdf({

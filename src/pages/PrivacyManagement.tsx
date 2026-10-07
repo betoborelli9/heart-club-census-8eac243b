@@ -43,7 +43,7 @@ const PrivacyManagement = () => {
       if (error) throw error;
       toast({
         title: "Solicitação registrada",
-        description: (data as any)?.message ?? "Seus dados serão excluídos em até 15 dias.",
+        description: (data as any)?.message ?? "Seus dados pessoais serão ocultados em até 15 dias.",
       });
     } catch (e: any) {
       toast({ variant: "destructive", title: "Erro", description: e?.message ?? "Tente novamente." });
@@ -72,7 +72,7 @@ const PrivacyManagement = () => {
         <section className="glass-card rounded-xl p-5 space-y-3">
           <h2 className="font-bold">Seus direitos (LGPD)</h2>
           <p className="text-sm text-muted-foreground">
-            Você pode solicitar acesso, correção, portabilidade ou exclusão dos seus dados pessoais
+            Você pode solicitar acesso, correção, portabilidade ou ocultação dos seus dados pessoais
             a qualquer momento.
           </p>
 
@@ -95,13 +95,12 @@ const PrivacyManagement = () => {
         {/* Exclusão de conta */}
         <section className="glass-card rounded-xl p-5 space-y-3 border border-red-500/30">
           <h2 className="font-bold flex items-center gap-2 text-red-400">
-            <AlertTriangle className="w-5 h-5" /> Exclusão de Conta e Dados
+            <AlertTriangle className="w-5 h-5" /> Ocultar meus dados pessoais
           </h2>
           <p className="text-sm text-muted-foreground">
-            Ao solicitar a exclusão, sua conta entra em status <strong>"pending_deletion"</strong> e
-            seus dados pessoais (nome, e-mail, localização, perfil socioeconômico) são apagados em até
-            <strong> 15 dias</strong>, conforme prazo legal. O voto pode ser mantido de forma
-            anonimizada para preservar a integridade estatística do censo.
+            O seu voto é definitivo e continua contando no censo. Ao pedir a ocultação, seus dados
+            pessoais (nome, data de nascimento, telefone, endereço, IP e dispositivo) são ocultados em até
+            <strong> 15 dias</strong>. O voto segue contado apenas como número, sem o seu nome.
           </p>
 
           {alreadyRequested ? (
@@ -117,22 +116,21 @@ const PrivacyManagement = () => {
               <AlertDialogTrigger asChild>
                 <Button variant="destructive" className="w-full sm:w-auto" disabled={loading}>
                   {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-                  Solicitar Exclusão de Conta e Dados
+                  Solicitar ocultação dos meus dados
                 </Button>
               </AlertDialogTrigger>
               <AlertDialogContent>
                 <AlertDialogHeader>
                   <AlertDialogTitle>Tem certeza?</AlertDialogTitle>
                   <AlertDialogDescription>
-                    Esta ação é <strong>irreversível</strong>. Após confirmar, sua conta será marcada
-                    para exclusão e processada em até 15 dias. Você perderá acesso ao dashboard e ao
-                    seu Voto Sagrado.
+                    Seus dados pessoais serão ocultados em até 15 dias e isso não pode ser desfeito.
+                    O seu voto continua contando, sem o seu nome.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
                   <AlertDialogCancel>Cancelar</AlertDialogCancel>
                   <AlertDialogAction onClick={handleRequestDeletion}>
-                    Sim, solicitar exclusão
+                    Sim, ocultar meus dados
                   </AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>
