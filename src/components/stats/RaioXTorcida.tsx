@@ -7,7 +7,7 @@
  */
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { Briefcase, CalendarRange, MapPin, Megaphone, ScanLine, Users } from "lucide-react";
+import { Briefcase, CalendarRange, MapPin, ScanLine, Users } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useTranslationApp } from "@/hooks/useTranslationApp";
 
@@ -41,8 +41,8 @@ function Bar({ value, tone = "bg-primary" }: { value: number; tone?: string }) {
 
 function Card({ icon: Icon, title, children }: { icon: typeof Users; title: string; children: React.ReactNode }) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-zinc-950 p-4">
-      <p className="mb-3 flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-primary">
+    <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-zinc-950 p-4">
+      <p className="relative mb-3 flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-primary">
         <Icon className="h-3.5 w-3.5" /> {title}
       </p>
       {children}
@@ -50,28 +50,57 @@ function Card({ icon: Icon, title, children }: { icon: typeof Users; title: stri
   );
 }
 
-function Building({ resp, min, onRally }: { resp: number; min: number; onRally?: () => void }) {
-  const { t } = useTranslationApp();
+type Skeleton = "split" | "bands" | "list" | "cities";
+
+/** Gráfico "esqueleto" borrado e apagado: dá a pista do que será liberado, sem mostrar número nenhum. */
+function SkeletonChart({ kind }: { kind: Skeleton }) {
+  const bar = (w: number, key: number, label = false) => (
+    <div key={key} className="flex items-center gap-2">
+      {label && <span className="h-2 w-5 rounded bg-white/40" />}
+      <span className="h-2 w-16 shrink-0 rounded bg-white/50" />
+      <span className="h-2 rounded-full bg-primary/70" style={{ width: `${w}%` }} />
+    </div>
+  );
   return (
-    <div className="space-y-2.5">
-      <p className="text-sm font-bold text-white/80">{t("raiox.building")}</p>
-      <div className="flex items-center gap-2">
-        <Bar value={pct(resp, min)} />
-        <span className="text-[11px] font-black tabular-nums text-white/60">
-          {resp}/{min}
-        </span>
-      </div>
-      <p className="text-xs text-white/50">{t("raiox.missing", { n: Math.max(0, min - resp) })}</p>
-      {onRally && (
-        <button
-          onClick={onRally}
-          className="inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-[11px] font-black uppercase italic text-black transition hover:brightness-110 active:scale-95"
-          style={{ background: "linear-gradient(135deg, #f5c252 0%, #ff6200 100%)" }}
-        >
-          <Megaphone className="h-3.5 w-3.5" /> {t("raiox.rally")}
-        </button>
+    <div aria-hidden className="pointer-events-none absolute inset-0 select-none p-4 pt-10 opacity-25 blur-[3px]" data-testid="raiox-skeleton">
+      {kind === "split" ? (
+        <div className="space-y-3 pt-2">
+          <div className="flex h-3 overflow-hidden rounded-full">
+            <span className="w-[58%] bg-primary" />
+            <span className="w-[36%] bg-amber-300" />
+            <span className="w-[6%] bg-white/40" />
+          </div>
+          <div className="flex gap-4">
+            <span className="h-2 w-16 rounded bg-white/50" />
+            <span className="h-2 w-16 rounded bg-white/50" />
+          </div>
+        </div>
+      ) : (
+        <div className="space-y-2.5">
+          {(kind === "bands" ? [25, 70, 55, 30] : kind === "cities" ? [80, 50, 30] : [65, 45, 25]).map((w, i) => bar(w, i, kind === "cities"))}
+        </div>
       )}
     </div>
+  );
+}
+
+function Locked({ total, min, kind }: { total: number; min: number; kind: Skeleton }) {
+  const { t } = useTranslationApp();
+  const enough = total >= min;
+  return (
+    <>
+      <SkeletonChart kind={kind} />
+      <div className="relative space-y-2.5">
+        <p className="text-sm font-bold text-white/85">{t("raiox.building")}</p>
+        <div className="flex items-center gap-2">
+          <Bar value={pct(total, min)} />
+          <span className="text-[11px] font-black tabular-nums text-white/70">
+            {Math.min(total, min)}/{min}
+          </span>
+        </div>
+        <p className="text-xs text-white/55">{enough ? t("raiox.need_answers") : t("raiox.missing", { n: Math.max(0, min - total) })}</p>
+      </div>
+    </>
   );
 }
 
@@ -110,6 +139,7 @@ export default function RaioXTorcida({ clubName, onRally }: { clubName: string |
   if (!clubName || failed) return null;
 
   const min = data?.minimo ?? 30;
+  const total = data?.total_votos ?? 0; // meta única: torcedores do clube (a mesma para os 4 quadros)
 
   const gender = data?.genero;
   const genderReady = !!gender && gender.homens !== undefined;
@@ -128,6 +158,7 @@ export default function RaioXTorcida({ clubName, onRally }: { clubName: string |
         { key: "age_51", n: age!.f51 ?? 0 },
       ]
     : [];
+  const anyLocked = !!data && !(genderReady && ageReady && jobsReady && citiesReady);
   const dominant = bands.reduce((a, b) => (b.n > a.n ? b : a), bands[0] ?? { key: "", n: -1 });
 
   return (
@@ -179,7 +210,7 @@ export default function RaioXTorcida({ clubName, onRally }: { clubName: string |
                 </div>
               </div>
             ) : (
-              <Building resp={gender?.resp ?? 0} min={min} onRally={onRally} />
+              <Locked total={total} min={min} kind="split" />
             )}
           </Card>
 
@@ -201,7 +232,7 @@ export default function RaioXTorcida({ clubName, onRally }: { clubName: string |
                 </p>
               </div>
             ) : (
-              <Building resp={age?.resp ?? 0} min={min} onRally={onRally} />
+              <Locked total={total} min={min} kind="bands" />
             )}
           </Card>
 
@@ -229,7 +260,7 @@ export default function RaioXTorcida({ clubName, onRally }: { clubName: string |
                 <p className="text-xs text-white/50">{t("raiox.jobs_none")}</p>
               )
             ) : (
-              <Building resp={jobs?.resp ?? 0} min={min} onRally={onRally} />
+              <Locked total={total} min={min} kind="list" />
             )}
           </Card>
 
@@ -258,10 +289,19 @@ export default function RaioXTorcida({ clubName, onRally }: { clubName: string |
                 <p className="text-xs text-white/50">{t("raiox.cities_none")}</p>
               )
             ) : (
-              <Building resp={cities?.resp ?? 0} min={min} onRally={onRally} />
+              <Locked total={total} min={min} kind="cities" />
             )}
           </Card>
         </div>
+      )}
+
+      {anyLocked && onRally && (
+        <button
+          onClick={onRally}
+          className="w-full rounded-2xl bg-[#ff6200] px-4 py-3.5 text-sm font-black uppercase italic tracking-wide text-white shadow-[0_0_24px_rgba(255,98,0,0.45)] transition hover:brightness-110 active:scale-[0.98]"
+        >
+          {t("raiox.rally_unlock")}
+        </button>
       )}
     </section>
   );

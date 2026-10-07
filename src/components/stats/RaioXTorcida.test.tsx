@@ -40,15 +40,29 @@ describe("RaioXTorcida", () => {
     answer = () => poucas;
   });
 
-  it("clube com poucas respostas: mostra barra de progresso e 'Convocar a tropa', sem nenhum detalhe", async () => {
+  it("clube com poucos torcedores: 4 quadros bloqueados com esqueleto borrado, meta única e UM só botão", async () => {
     const onRally = vi.fn();
     render(<RaioXTorcida clubName="Clube Pequeno" onRally={onRally} />);
     await waitFor(() => expect(screen.getAllByText("raiox.building").length).toBe(4));
-    expect(screen.getAllByText("raiox.missing:20").length).toBeGreaterThan(0); // 30 - 10
-    expect(screen.getAllByText("raiox.missing:29").length).toBeGreaterThan(0); // 30 - 1 (profissão)
-    fireEvent.click(screen.getAllByText("raiox.rally")[0]);
-    expect(onRally).toHaveBeenCalled();
+    expect(screen.getAllByTestId("raiox-skeleton").length).toBe(4);
+    // mesma meta nos 4 quadros: torcedores do clube (10) / 30
+    expect(screen.getAllByText("10/30").length).toBe(4);
+    expect(screen.getAllByText("raiox.missing:20").length).toBe(4);
+    // um único botão, fora dos cards
+    const botoes = screen.getAllByText("raiox.rally_unlock");
+    expect(botoes.length).toBe(1);
+    expect(screen.queryByText("raiox.rally")).toBeNull();
+    fireEvent.click(botoes[0]);
+    expect(onRally).toHaveBeenCalledTimes(1);
     expect(screen.queryByText("raiox.men")).toBeNull();
+  });
+
+  it("já há 30+ torcedores mas faltam respostas do perfil: barra cheia e aviso certo", async () => {
+    answer = () => ({ ...poucas, total_votos: 45, genero: { resp: 12 }, idade: { resp: 12 }, profissoes: { resp: 1 }, cidades: { resp: 45, top: [], outras: 0 } });
+    render(<RaioXTorcida clubName="Clube Médio" onRally={vi.fn()} />);
+    await waitFor(() => expect(screen.getAllByText("30/30").length).toBe(3));
+    expect(screen.getAllByText("raiox.need_answers").length).toBe(3);
+    expect(screen.getAllByText("raiox.rally_unlock").length).toBe(1);
   });
 
   it("clube com respostas suficientes: mostra porcentagens de gênero, idade, profissões e cidades", async () => {
@@ -62,6 +76,7 @@ describe("RaioXTorcida", () => {
     expect(screen.getByText("55%")).toBeTruthy();
     expect(screen.getAllByText("raiox.age_21_35").length).toBe(2); // na lista e em "faixa dominante"
     expect(screen.queryByText("raiox.building")).toBeNull();
+    expect(screen.queryByText("raiox.rally_unlock")).toBeNull(); // tudo liberado: sem botão
   });
 
   it("não quebra a página se o banco falhar: some sem erro", async () => {

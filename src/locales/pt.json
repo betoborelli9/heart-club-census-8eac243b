@@ -747,11 +747,13 @@
     "age_51": "51 ou mais",
     "dominant": "Faixa dominante",
     "building": "Montando este quadro da torcida…",
-    "missing": "Faltam {{n}} respostas para liberar.",
+    "missing": "Faltam {{n}} torcedores para liberar.",
     "rally": "Convocar a tropa",
     "jobs_none": "Ainda não há uma profissão repetida por pelo menos 3 torcedores.",
     "cities_none": "Ainda não há uma cidade com pelo menos 3 torcedores.",
-    "other_label": "Outras"
+    "other_label": "Outras",
+    "rally_unlock": "📢 CONVOCAR A TROPA PARA DESTRAVAR",
+    "need_answers": "Já somos torcedores suficientes! Faltam respostas do perfil para liberar este quadro."
   },
   "partner": {
     "footer_link": "Sou parceiro",

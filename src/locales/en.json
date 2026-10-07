@@ -747,11 +747,13 @@
     "age_51": "51 and over",
     "dominant": "Dominant range",
     "building": "Building this picture of the fan base…",
-    "missing": "{{n}} more answers needed to unlock.",
+    "missing": "{{n}} more fans needed to unlock.",
     "rally": "Rally the troops",
     "jobs_none": "No profession is shared by at least 3 fans yet.",
     "cities_none": "No city has at least 3 fans yet.",
-    "other_label": "Others"
+    "other_label": "Others",
+    "rally_unlock": "📢 CALL THE FANS TO UNLOCK",
+    "need_answers": "We already have enough fans! More profile answers are needed to unlock this panel."
   },
   "partner": {
     "footer_link": "I'm a partner",

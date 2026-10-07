@@ -747,11 +747,13 @@
     "age_51": "51 o más",
     "dominant": "Rango dominante",
     "building": "Armando este cuadro de la hinchada…",
-    "missing": "Faltan {{n}} respuestas para liberar.",
+    "missing": "Faltan {{n}} hinchas para liberar.",
     "rally": "Convocar a la tropa",
     "jobs_none": "Aún no hay una profesión compartida por al menos 3 hinchas.",
     "cities_none": "Aún no hay una ciudad con al menos 3 hinchas.",
-    "other_label": "Otras"
+    "other_label": "Otras",
+    "rally_unlock": "📢 CONVOCA A LA HINCHADA PARA DESBLOQUEAR",
+    "need_answers": "¡Ya somos suficientes hinchas! Faltan respuestas del perfil para liberar este cuadro."
   },
   "partner": {
     "footer_link": "Soy socio",
