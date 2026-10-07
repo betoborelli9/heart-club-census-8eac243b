@@ -205,7 +205,7 @@ function useTerritoryEngine() {
   return { searchCities, searchNeighborhoods };
 }
 
-export default function AddressModal({ open, onOpenChange, clubName, onSuccess, allowSkipBairro, bairroOnly, onSkip }: any) {
+export default function AddressModal({ open, onOpenChange, clubName, onSuccess, allowSkipBairro, bairroOnly, onSkip, onSkipBairro }: any) {
   const { toast } = useToast();
   const { t } = useTranslationApp();
   const { searchCities, searchNeighborhoods } = useTerritoryEngine();
@@ -465,7 +465,17 @@ export default function AddressModal({ open, onOpenChange, clubName, onSuccess, 
               <div className="flex flex-col gap-3">
                 <Button
                   disabled={loading}
-                  onClick={() => handleFinalSave({ text: null, center: null }, detectedLocation)}
+                  onClick={() => {
+                    // Quem mora na cidade detectada também informa o bairro (com a opção de pular, quando permitido).
+                    if (allowSkipBairro) {
+                      setSelectedCity(detectedLocation);
+                      setSearchQuery("");
+                      setSuggestions([]);
+                      setStep("searching_bairro");
+                    } else {
+                      handleFinalSave({ text: null, center: null }, detectedLocation);
+                    }
+                  }}
                   className="bg-[#ff6200] hover:bg-[#ff8230] text-white font-black italic uppercase h-14 rounded-2xl"
                 >
                   {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : t("components.address_modal.yes_live")}
@@ -619,7 +629,10 @@ export default function AddressModal({ open, onOpenChange, clubName, onSuccess, 
                   <Button
                     variant="ghost"
                     disabled={loading}
-                    onClick={() => handleFinalSave({ text: null, center: null })}
+                    onClick={() => {
+                      onSkipBairro?.();
+                      handleFinalSave({ text: null, center: null });
+                    }}
                     className="text-zinc-400 hover:text-white uppercase font-bold text-xs h-10 w-full"
                   >
                     Prefiro não informar o bairro

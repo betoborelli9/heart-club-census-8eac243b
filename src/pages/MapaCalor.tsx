@@ -886,6 +886,10 @@ const MapaCalor = () => {
   }, [user, simProfile, simActive]);
   const dismissBairro = () => {
     setBairroOpen(false);
+    recordBairroDismiss();
+  };
+  // Registra um "agora não" (também usado quando o torcedor pula o bairro ao confirmar a cidade).
+  const recordBairroDismiss = () => {
     if (!user) return;
     try {
       const key = `hc_bairro_dismiss_${user.id}`;
@@ -2074,6 +2078,7 @@ const MapaCalor = () => {
       <AddressModal
         open={addressOpen}
         allowSkipBairro
+        onSkipBairro={recordBairroDismiss}
         onOpenChange={(v: boolean) => {
           const forceOnboarding =
             new URLSearchParams(window.location.search).get("force_onboarding") === "1";

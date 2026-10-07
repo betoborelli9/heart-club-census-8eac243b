@@ -44,7 +44,7 @@ describe("AddressModal — cartão único de localização", () => {
     });
   });
 
-  it("mostra a cidade detectada e 'SIM, MORO AQUI!' confirma a cidade na hora (1 clique, sem pedir bairro)", async () => {
+  it("mostra a cidade detectada; 'SIM, MORO AQUI!' leva ao bairro (nada é salvo ainda)", async () => {
     const onOpenChange = vi.fn();
     render(<AddressModal open onOpenChange={onOpenChange} clubName="Palmeiras" allowSkipBairro />);
 
@@ -53,19 +53,39 @@ describe("AddressModal — cartão único de localização", () => {
     expect(screen.getByText("components.address_modal.no_other_city")).toBeTruthy();
     expect(screen.getByText("components.address_modal.detect_again")).toBeTruthy();
     // linha simples de privacidade (sem a caixa escura antiga)
-    expect(screen.getByText(/entrar\.map_privacy/)).toBeTruthy();
+    expect(screen.getByText(/entrar.map_privacy/)).toBeTruthy();
     expect(screen.queryByText("components.address_modal.privacy")).toBeNull();
 
     fireEvent.click(screen.getByText("components.address_modal.yes_live"));
 
-    await waitFor(() => expect(window.location.reload).toHaveBeenCalled()); // recarrega e o mapa abre
-    const profileUpdate = calls.find((c) => c.table === "profiles");
-    expect(profileUpdate?.payload).toMatchObject({
+    // pede o bairro da cidade confirmada
+    expect(await screen.findByPlaceholderText("components.address_modal.neighborhood_placeholder:Goiânia")).toBeTruthy();
+    expect(calls.find((c) => c.table === "profiles")).toBeUndefined();
+  });
+
+  it("no bairro, 'Prefiro não informar' confirma só a cidade e avisa que o torcedor pulou", async () => {
+    const onOpenChange = vi.fn();
+    const onSkipBairro = vi.fn();
+    render(<AddressModal open onOpenChange={onOpenChange} clubName="Palmeiras" allowSkipBairro onSkipBairro={onSkipBairro} />);
+
+    fireEvent.click(await screen.findByText("components.address_modal.yes_live"));
+    fireEvent.click(await screen.findByText("Prefiro não informar o bairro"));
+
+    await waitFor(() => expect(window.location.reload).toHaveBeenCalled());
+    expect(onSkipBairro).toHaveBeenCalledTimes(1);
+    expect(calls.find((c) => c.table === "profiles")?.payload).toMatchObject({
       cidade: "Goiânia",
       estado: "Goiás",
       address_confirmed: true,
       bairro: null,
     });
     expect(onOpenChange).toHaveBeenCalledWith(false);
+  });
+
+  it("sem permissão de pular (outro uso da janela), 'SIM, MORO AQUI!' continua confirmando na hora", async () => {
+    render(<AddressModal open onOpenChange={vi.fn()} clubName="Palmeiras" />);
+    fireEvent.click(await screen.findByText("components.address_modal.yes_live"));
+    await waitFor(() => expect(window.location.reload).toHaveBeenCalled());
+    expect(calls.find((c) => c.table === "profiles")?.payload).toMatchObject({ cidade: "Goiânia", address_confirmed: true, bairro: null });
   });
 });
