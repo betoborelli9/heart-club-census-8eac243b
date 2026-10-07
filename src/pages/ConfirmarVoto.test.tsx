@@ -3,6 +3,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 
+// Estes testes cobrem o modo simulação e o botão de emergência (chave desligada); o fluxo ligado está em ConfirmarVoto.real.test.tsx.
+vi.mock("@/lib/entry-flow", async (orig) => ({ ...(await orig<typeof import("@/lib/entry-flow")>()), NEW_ENTRY_FLOW_ENABLED: false }));
+
 const submitVote = vi.fn(() => Promise.resolve());
 const mockUser: { value: any } = { value: null };
 

@@ -3,7 +3,8 @@ import { describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 
-// Fluxo novo DESLIGADO (como está no ar hoje para o público): o porteiro dos Termos não pode fazer nada.
+// Fluxo novo DESLIGADO (botão de emergência: se a chave voltar a false, o porteiro dos Termos não pode fazer nada).
+vi.mock("@/lib/entry-flow", async (orig) => ({ ...(await orig<typeof import("@/lib/entry-flow")>()), NEW_ENTRY_FLOW_ENABLED: false }));
 vi.mock("@/contexts/UserContext", () => ({
   useUser: () => ({
     user: { id: "f1", email: "fan@exemplo.com" },
