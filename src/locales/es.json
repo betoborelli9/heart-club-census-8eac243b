@@ -14,10 +14,22 @@
     "settings": "Preferencias",
     "page_title": "Centro de Notificaciones",
     "page_subtitle": "Elige qué alertas quieres recibir de tu equipo.",
-    "alert_kickoff": { "label": "Inicio del partido", "desc": "Aviso cuando empiece." },
-    "alert_lineup": { "label": "Alineación confirmada", "desc": "Cuando se anuncie el once." },
-    "alert_goal": { "label": "Goles", "desc": "Cada gol con el autor." },
-    "alert_fulltime": { "label": "Final del partido", "desc": "Resultado final." },
+    "alert_kickoff": {
+      "label": "Inicio del partido",
+      "desc": "Aviso cuando empiece."
+    },
+    "alert_lineup": {
+      "label": "Alineación confirmada",
+      "desc": "Cuando se anuncie el once."
+    },
+    "alert_goal": {
+      "label": "Goles",
+      "desc": "Cada gol con el autor."
+    },
+    "alert_fulltime": {
+      "label": "Final del partido",
+      "desc": "Resultado final."
+    },
     "browser_push_title": "Notificaciones en el navegador",
     "browser_push_desc": "Activa para recibir alertas incluso con el sitio cerrado.",
     "enable_browser_push": "Activar en el navegador",
@@ -546,7 +558,8 @@
       "ambassadors": "Embajadores",
       "voting": "Votación",
       "test_club": "Probar Club",
-      "master_panel": "Panel Master"
+      "master_panel": "Panel Master",
+      "partner": "Socio"
     }
   },
   "rivals": {
@@ -754,6 +767,27 @@
     "approved": "¡Ya eres socio! Tu acceso está activo.",
     "rejected": "Tu solicitud no fue aprobada esta vez.",
     "revoked": "Tu acceso de socio ha terminado.",
-    "error": "No pudimos enviarla ahora. Inténtalo de nuevo en un momento."
+    "error": "No pudimos enviarla ahora. Inténtalo de nuevo en un momento.",
+    "p_title": "Panel del Socio",
+    "others": "Otros",
+    "reconnecting": "Reconectando…",
+    "live": "En vivo",
+    "updated": "actualizado hace {{s}}s",
+    "back": "Volver",
+    "k_fans": "Hinchas",
+    "k_clubs": "Clubes",
+    "k_countries": "Países",
+    "k_cities": "Ciudades",
+    "growth": "Crecimiento — últimos 30 días",
+    "new_24h": "últimas 24 h",
+    "new_7d": "7 días",
+    "new_30d": "30 días",
+    "top_clubs": "Clubes con más hinchas",
+    "countries": "Países",
+    "cities": "Principales ciudades",
+    "ambassadors": "Embajadores",
+    "referrals": "Invitaciones aceptadas",
+    "shares": "Compartidos",
+    "footer_note": "Solo números agregados. No se muestra ningún dato personal; los grupos con menos de 3 personas no aparecen."
   }
 }

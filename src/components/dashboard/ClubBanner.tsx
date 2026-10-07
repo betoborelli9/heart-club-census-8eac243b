@@ -12,11 +12,12 @@
    ═══════════════════════════════════════════════════════════ */
 import { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { Flame, BarChart3, Crown, Users, MapPin, Trophy, ShieldAlert, Vote, FlaskConical, Sparkles } from "lucide-react";
+import { Flame, BarChart3, Crown, Users, MapPin, Trophy, ShieldAlert, Vote, FlaskConical, Sparkles, Handshake } from "lucide-react";
 import { ClubLogo } from "@/components/ClubLogo";
 import { useUser } from "@/contexts/UserContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useTranslationApp } from "@/hooks/useTranslationApp";
+import { usePartnerStatus } from "@/hooks/usePartnerStatus";
 
 /* ═══════════════════════════════════════════════════════════
     MÓDULO: INTERFACE DE PROPS
@@ -61,6 +62,7 @@ const ClubBanner = ({
   const location = useLocation();
   const { user } = useUser();
   const { t } = useTranslationApp();
+  const { isPartner } = usePartnerStatus();
 
   const CHUMBO_PRIMARY = "#111111";
   const CHUMBO_SECONDARY = "#2a2a2a";
@@ -301,6 +303,7 @@ const ClubBanner = ({
           <NavItem icon={Flame} label={t("club_banner.nav.heatmap")} path="/mapa-calor" active={isActive("/mapa-calor")} />
           <NavItem icon={BarChart3} label={t("club_banner.nav.ranking")} path="/ranking" active={isActive("/ranking")} />
           <NavItem icon={Users} label={t("club_banner.nav.ambassadors")} path="/embaixadores" active={isActive("/embaixadores")} />
+          {isPartner && <NavItem icon={Handshake} label={t("club_banner.nav.partner")} path="/parceiro" active={isActive("/parceiro")} />}
           <div className="w-[1px] h-6 bg-white/10 mx-2 hidden md:block" />
           
           {/* ═══════════════════════════════════════════════════════════

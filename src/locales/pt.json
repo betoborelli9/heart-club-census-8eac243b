@@ -14,10 +14,22 @@
     "settings": "Preferências",
     "page_title": "Central de Notificações",
     "page_subtitle": "Escolha quais alertas você quer receber do seu time do coração.",
-    "alert_kickoff": { "label": "Início do jogo", "desc": "Aviso quando a bola rolar." },
-    "alert_lineup": { "label": "Escalação confirmada", "desc": "Quando o time titular for divulgado." },
-    "alert_goal": { "label": "Gols", "desc": "Cada gol da partida, com o autor." },
-    "alert_fulltime": { "label": "Fim de jogo", "desc": "Placar final e resultado." },
+    "alert_kickoff": {
+      "label": "Início do jogo",
+      "desc": "Aviso quando a bola rolar."
+    },
+    "alert_lineup": {
+      "label": "Escalação confirmada",
+      "desc": "Quando o time titular for divulgado."
+    },
+    "alert_goal": {
+      "label": "Gols",
+      "desc": "Cada gol da partida, com o autor."
+    },
+    "alert_fulltime": {
+      "label": "Fim de jogo",
+      "desc": "Placar final e resultado."
+    },
     "browser_push_title": "Notificações no navegador",
     "browser_push_desc": "Ative para receber alertas mesmo com o site fechado.",
     "enable_browser_push": "Ativar no navegador",
@@ -546,7 +558,8 @@
       "ambassadors": "Embaixadores",
       "voting": "Votação",
       "test_club": "Testar Clube",
-      "master_panel": "Painel Master"
+      "master_panel": "Painel Master",
+      "partner": "Parceiro"
     }
   },
   "rivals": {
@@ -754,6 +767,27 @@
     "approved": "Você já é parceiro! Seu acesso está liberado.",
     "rejected": "Seu pedido não foi aprovado desta vez.",
     "revoked": "Seu acesso de parceiro foi encerrado.",
-    "error": "Não foi possível enviar agora. Tente de novo em instantes."
+    "error": "Não foi possível enviar agora. Tente de novo em instantes.",
+    "p_title": "Painel do Parceiro",
+    "others": "Demais",
+    "reconnecting": "Reconectando…",
+    "live": "Ao vivo",
+    "updated": "atualizado há {{s}}s",
+    "back": "Voltar",
+    "k_fans": "Torcedores",
+    "k_clubs": "Clubes",
+    "k_countries": "Países",
+    "k_cities": "Cidades",
+    "growth": "Crescimento — últimos 30 dias",
+    "new_24h": "últimas 24 h",
+    "new_7d": "7 dias",
+    "new_30d": "30 dias",
+    "top_clubs": "Clubes com mais torcedores",
+    "countries": "Países",
+    "cities": "Principais cidades",
+    "ambassadors": "Embaixadores",
+    "referrals": "Convites aceitos",
+    "shares": "Compartilhamentos",
+    "footer_note": "Apenas números somados. Nenhum dado pessoal é exibido; grupos com menos de 3 pessoas não aparecem."
   }
 }

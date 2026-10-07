@@ -14,10 +14,22 @@
     "settings": "Preferences",
     "page_title": "Notification Center",
     "page_subtitle": "Choose which alerts you want from your favorite team.",
-    "alert_kickoff": { "label": "Kick-off", "desc": "Ping when the match begins." },
-    "alert_lineup": { "label": "Line-up confirmed", "desc": "When the starting XI is announced." },
-    "alert_goal": { "label": "Goals", "desc": "Each goal with the scorer's name." },
-    "alert_fulltime": { "label": "Full time", "desc": "Final score and result." },
+    "alert_kickoff": {
+      "label": "Kick-off",
+      "desc": "Ping when the match begins."
+    },
+    "alert_lineup": {
+      "label": "Line-up confirmed",
+      "desc": "When the starting XI is announced."
+    },
+    "alert_goal": {
+      "label": "Goals",
+      "desc": "Each goal with the scorer's name."
+    },
+    "alert_fulltime": {
+      "label": "Full time",
+      "desc": "Final score and result."
+    },
     "browser_push_title": "Browser notifications",
     "browser_push_desc": "Enable to receive alerts even when the site is closed.",
     "enable_browser_push": "Enable in browser",
@@ -546,7 +558,8 @@
       "ambassadors": "Ambassadors",
       "voting": "Voting",
       "test_club": "Test Club",
-      "master_panel": "Master Panel"
+      "master_panel": "Master Panel",
+      "partner": "Partner"
     }
   },
   "rivals": {
@@ -754,6 +767,27 @@
     "approved": "You are already a partner! Your access is active.",
     "rejected": "Your request was not approved this time.",
     "revoked": "Your partner access has ended.",
-    "error": "We couldn't send it right now. Please try again in a moment."
+    "error": "We couldn't send it right now. Please try again in a moment.",
+    "p_title": "Partner Dashboard",
+    "others": "Others",
+    "reconnecting": "Reconnecting…",
+    "live": "Live",
+    "updated": "updated {{s}}s ago",
+    "back": "Back",
+    "k_fans": "Fans",
+    "k_clubs": "Clubs",
+    "k_countries": "Countries",
+    "k_cities": "Cities",
+    "growth": "Growth — last 30 days",
+    "new_24h": "last 24 h",
+    "new_7d": "7 days",
+    "new_30d": "30 days",
+    "top_clubs": "Clubs with the most fans",
+    "countries": "Countries",
+    "cities": "Top cities",
+    "ambassadors": "Ambassadors",
+    "referrals": "Accepted invitations",
+    "shares": "Shares",
+    "footer_note": "Aggregated numbers only. No personal data is shown; groups with fewer than 3 people are hidden."
   }
 }
