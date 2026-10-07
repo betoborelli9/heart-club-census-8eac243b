@@ -37,7 +37,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { useFeatureFlag } from "@/lib/feature-flags";
 import FormReasonCard from "@/components/FormReasonCard";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -58,6 +57,7 @@ import { toast } from "@/hooks/use-toast";
 import { useClubLogos, normalizeClubName } from "@/lib/club-logo-resolver";
 import logo from "@/assets/logo.png";
 import { useTranslationApp } from "@/hooks/useTranslationApp";
+import { getCountryDials, COUNTRY_DIALS, type CountryDial } from "@/data/country-dials";
 
 /* [MÓDULO: HELPERS] */
 const normalize = (v: string) =>
@@ -69,44 +69,6 @@ const resolveClub = (name: string | null): ClubData | null => {
 };
 
 /* [MÓDULO: PAÍSES / DDI WHATSAPP] */
-export interface CountryDial {
-  code: string;        // ISO ex: BR
-  name: string;        // Nome em PT
-  dial: string;        // ex: +55
-  flag: string;        // emoji
-  digits: [number, number]; // min/max digitos do numero local
-}
-
-export const COUNTRY_DIALS: CountryDial[] = [
-  { code: "BR", name: "Brasil", dial: "+55", flag: "🇧🇷", digits: [10, 11] },
-  { code: "PT", name: "Portugal", dial: "+351", flag: "🇵🇹", digits: [9, 9] },
-  { code: "US", name: "Estados Unidos", dial: "+1", flag: "🇺🇸", digits: [10, 10] },
-  { code: "AR", name: "Argentina", dial: "+54", flag: "🇦🇷", digits: [10, 11] },
-  { code: "UY", name: "Uruguai", dial: "+598", flag: "🇺🇾", digits: [8, 9] },
-  { code: "PY", name: "Paraguai", dial: "+595", flag: "🇵🇾", digits: [9, 9] },
-  { code: "CL", name: "Chile", dial: "+56", flag: "🇨🇱", digits: [9, 9] },
-  { code: "CO", name: "Colômbia", dial: "+57", flag: "🇨🇴", digits: [10, 10] },
-  { code: "PE", name: "Peru", dial: "+51", flag: "🇵🇪", digits: [9, 9] },
-  { code: "VE", name: "Venezuela", dial: "+58", flag: "🇻🇪", digits: [10, 10] },
-  { code: "BO", name: "Bolívia", dial: "+591", flag: "🇧🇴", digits: [8, 8] },
-  { code: "EC", name: "Equador", dial: "+593", flag: "🇪🇨", digits: [9, 9] },
-  { code: "MX", name: "México", dial: "+52", flag: "🇲🇽", digits: [10, 10] },
-  { code: "ES", name: "Espanha", dial: "+34", flag: "🇪🇸", digits: [9, 9] },
-  { code: "IT", name: "Itália", dial: "+39", flag: "🇮🇹", digits: [9, 11] },
-  { code: "FR", name: "França", dial: "+33", flag: "🇫🇷", digits: [9, 9] },
-  { code: "DE", name: "Alemanha", dial: "+49", flag: "🇩🇪", digits: [10, 11] },
-  { code: "GB", name: "Reino Unido", dial: "+44", flag: "🇬🇧", digits: [10, 10] },
-  { code: "NL", name: "Holanda", dial: "+31", flag: "🇳🇱", digits: [9, 9] },
-  { code: "BE", name: "Bélgica", dial: "+32", flag: "🇧🇪", digits: [9, 9] },
-  { code: "CH", name: "Suíça", dial: "+41", flag: "🇨🇭", digits: [9, 9] },
-  { code: "IE", name: "Irlanda", dial: "+353", flag: "🇮🇪", digits: [9, 9] },
-  { code: "CA", name: "Canadá", dial: "+1", flag: "🇨🇦", digits: [10, 10] },
-  { code: "JP", name: "Japão", dial: "+81", flag: "🇯🇵", digits: [10, 11] },
-  { code: "AU", name: "Austrália", dial: "+61", flag: "🇦🇺", digits: [9, 9] },
-  { code: "AO", name: "Angola", dial: "+244", flag: "🇦🇴", digits: [9, 9] },
-  { code: "MZ", name: "Moçambique", dial: "+258", flag: "🇲🇿", digits: [9, 9] },
-];
-
 const formatPhoneBR = (digits: string): string => {
   const d = digits.slice(0, 11);
   if (d.length <= 2) return `(${d}`;
@@ -161,17 +123,15 @@ const BUILD_SYNC_TAG = "2026-03-23-ambassadors-sync-01";
 /* ============================================== */
 const Ambassadors = () => {
   const navigate = useNavigate();
-  const { t } = useTranslationApp();
+  const { t, language } = useTranslationApp();
   const { user, profile, isLoading, signOut, updateProfile, refreshProfile } = useUser();
+  // Países do mundo todo, com o nome no idioma do torcedor
+  const countryDials = useMemo(() => getCountryDials(language), [language]);
 
   /* [MÓDULO: ESTADO LOCAL] */
   const [clubName, setClubName] = useState<string | null>(null);
   const [clubData, setClubData] = useState<ClubData | null>(null);
   const [showCensusModal, setShowCensusModal] = useState(false);
-  // Chavinha "Censo do Embaixador" (Admin): card explicativo antes do formulário.
-  const embFlag = useFeatureFlag("form_embaixador");
-  const [embIntroDone, setEmbIntroDone] = useState(false);
-  const showEmbIntro = embFlag.enabled && showCensusModal && !embIntroDone;
   const [copied, setCopied] = useState(false);
   const [ranking, setRanking] = useState<RankingEntry[]>([]);
   const [activityFeed, setActivityFeed] = useState<ActivityEntry[]>([]);
@@ -784,36 +744,9 @@ const Ambassadors = () => {
         </div>
       </main>
 
-      {/* [MÓDULO: MODAL DE CAPTURA (CENSO)] */}
-      {/* Card explicativo (só com a chavinha ligada) */}
-      <Dialog open={showEmbIntro}>
-        <DialogContent
-          className="max-w-md border-0 bg-transparent p-0 shadow-none [&>button]:hidden"
-          onInteractOutside={(e) => e.preventDefault()}
-          onEscapeKeyDown={(e) => e.preventDefault()}
-        >
-          <DialogTitle className="sr-only">Censo do Embaixador</DialogTitle>
-          <DialogDescription className="sr-only">Por que pedimos WhatsApp e profissão</DialogDescription>
-          <FormReasonCard
-            icon={Megaphone}
-            step={t("entrar.amb_step")}
-            title={t("entrar.amb_title")}
-            subtitle={t("entrar.amb_sub")}
-            reasons={[t("entrar.amb_1"), t("entrar.amb_2"), t("entrar.amb_3")]}
-            privacyNote={t("entrar.amb_privacy")}
-          >
-            <Button
-              onClick={() => setEmbIntroDone(true)}
-              className="h-12 w-full rounded-xl font-black uppercase italic btn-orange-gradient"
-            >
-              {t("entrar.amb_cta")}
-            </Button>
-          </FormReasonCard>
-        </DialogContent>
-      </Dialog>
-
+      {/* [MÓDULO: CARTÃO ÚNICO DO EMBAIXADOR — explica e já pede o WhatsApp] */}
       <Dialog
-        open={showCensusModal && !showEmbIntro}
+        open={showCensusModal}
         onOpenChange={(v) => {
           // [MASTER TEST] Permite fechar o modal apenas em modo teste forçado.
           const forceOnboarding =
@@ -822,30 +755,33 @@ const Ambassadors = () => {
           if (!v && forceOnboarding) setShowCensusModal(false);
         }}
       >
-        <DialogContent className="bg-[#0a0a0a] border-white/10 text-white sm:max-w-md [&>button]:hidden">
-          <DialogHeader>
-            <DialogTitle className="text-xl font-black italic uppercase text-center">
-              {t("ambassadors.census_title")}
-            </DialogTitle>
-            <DialogDescription className="text-white/50 text-center text-sm">
-              {t("ambassadors.census_desc")}
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-5 pt-2">
-            {/* WhatsApp */}
+        <DialogContent
+          className="max-w-md border-0 bg-transparent p-0 shadow-none [&>button]:hidden"
+          onInteractOutside={(e) => e.preventDefault()}
+          onEscapeKeyDown={(e) => e.preventDefault()}
+        >
+          <DialogTitle className="sr-only">{t("entrar.amb2_title")}</DialogTitle>
+          <DialogDescription className="sr-only">{t("entrar.amb2_sub")}</DialogDescription>
+          <FormReasonCard
+            icon={Megaphone}
+            step={t("entrar.amb_step")}
+            title={t("entrar.amb2_title")}
+            subtitle={t("entrar.amb2_sub")}
+            reasons={[t("entrar.amb2_1"), t("entrar.amb2_2"), t("entrar.amb2_3")]}
+            privacyNote={t("entrar.amb2_privacy")}
+          >
             <div className="space-y-2">
-              <Label className="text-xs font-bold uppercase tracking-wider text-white/60">{t("ambassadors.whatsapp_label")}</Label>
+              <Label className="text-xs font-bold uppercase tracking-wider text-white/60">{t("entrar.amb2_label")}</Label>
               <div className="flex gap-2">
                 <Select
                   value={phoneCountry.code}
                   onValueChange={(code) => {
-                    const c = COUNTRY_DIALS.find((x) => x.code === code) ?? COUNTRY_DIALS[0];
+                    const c = countryDials.find((x) => x.code === code) ?? countryDials[0];
                     setPhoneCountry(c);
                     setPhoneInput("");
                   }}
                 >
-                  <SelectTrigger className="w-[140px] bg-white/5 border-white/10 text-white">
+                  <SelectTrigger className="w-[130px] shrink-0 bg-white/5 border-white/10 text-white">
                     <SelectValue>
                       <span className="flex items-center gap-1.5">
                         <span>{phoneCountry.flag}</span>
@@ -854,7 +790,7 @@ const Ambassadors = () => {
                     </SelectValue>
                   </SelectTrigger>
                   <SelectContent className="bg-[#1a1a1a] border-white/10 text-white max-h-72">
-                    {COUNTRY_DIALS.map((c) => (
+                    {countryDials.map((c) => (
                       <SelectItem key={c.code} value={c.code} className="text-white focus:bg-white/10 focus:text-white">
                         <span className="flex items-center gap-2">
                           <span>{c.flag}</span>
@@ -869,26 +805,31 @@ const Ambassadors = () => {
                   placeholder={phoneCountry.code === "BR" ? "(99) 99999-9999" : t("ambassadors.phone_generic")}
                   value={phoneInput}
                   onChange={(e) => setPhoneInput(formatPhoneByCountry(e.target.value, phoneCountry))}
-                  className="flex-1 bg-white/5 border-white/10 text-white placeholder:text-white/20"
+                  className="min-w-0 flex-1 bg-white/5 border-white/10 text-white placeholder:text-white/20"
                   inputMode="tel"
                 />
               </div>
               {phoneInput && !isValidPhoneByCountry(phoneInput, phoneCountry) && (
                 <p className="text-[10px] text-red-400">
-                  {t("ambassadors.phone_digits_error", { digits: phoneCountry.digits[0] === phoneCountry.digits[1] ? phoneCountry.digits[0] : `${phoneCountry.digits[0]}-${phoneCountry.digits[1]}`, country: phoneCountry.name })}
+                  {t("ambassadors.phone_digits_error", {
+                    country: phoneCountry.name,
+                    digits:
+                      phoneCountry.digits[0] === phoneCountry.digits[1]
+                        ? phoneCountry.digits[0]
+                        : `${phoneCountry.digits[0]}-${phoneCountry.digits[1]}`,
+                  })}
                 </p>
               )}
             </div>
-
             <Button
               onClick={handleCensusSubmit}
               disabled={isSubmitting}
-              className="w-full bg-[#ff6200] hover:bg-[#e55800] font-black uppercase tracking-wider text-sm py-5"
+              className="h-12 w-full rounded-xl font-black uppercase italic btn-orange-gradient"
             >
               {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-              {t("ambassadors.unlock_panel")}
+              {t("entrar.amb2_cta")}
             </Button>
-          </div>
+          </FormReasonCard>
         </DialogContent>
       </Dialog>
     </div>
