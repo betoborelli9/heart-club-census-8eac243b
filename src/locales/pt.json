@@ -739,5 +739,21 @@
     "jobs_none": "Ainda não há uma profissão repetida por pelo menos 3 torcedores.",
     "cities_none": "Ainda não há uma cidade com pelo menos 3 torcedores.",
     "other_label": "Outras"
+  },
+  "partner": {
+    "footer_link": "Sou parceiro",
+    "title": "Seja parceiro do Heart Club",
+    "sub": "Conte quem é você. Se for aprovado, você ganha uma página exclusiva com os números da torcida.",
+    "company": "Empresa ou marca",
+    "contact": "WhatsApp ou e-mail para contato",
+    "message": "Quer nos contar mais? (opcional)",
+    "send": "Enviar pedido",
+    "login_needed": "Para pedir acesso, primeiro entre e vote no seu time. Depois é só voltar aqui.",
+    "go_vote": "Entrar e votar",
+    "pending": "Seu pedido foi enviado e está em análise. Entraremos em contato pelo contato informado.",
+    "approved": "Você já é parceiro! Seu acesso está liberado.",
+    "rejected": "Seu pedido não foi aprovado desta vez.",
+    "revoked": "Seu acesso de parceiro foi encerrado.",
+    "error": "Não foi possível enviar agora. Tente de novo em instantes."
   }
 }

@@ -3,13 +3,18 @@
  * [DESCRIÇÃO]: Rodapé global com links LGPD (Privacidade, Termos, Gerenciar dados).
  * Oculto nas mesmas rotas de fluxo crítico (splash/login/voting).
  */
+import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { ShieldCheck } from "lucide-react";
+import PartnerRequestDialog from "@/components/partner/PartnerRequestDialog";
+import { useTranslationApp } from "@/hooks/useTranslationApp";
 
 const HIDE_ROUTES = ["/", "/splash", "/login", "/verify", "/voting", "/profile-setup", "/convite", "/entrar", "/confirmar-voto"];
 
 const GlobalFooter = () => {
   const { pathname } = useLocation();
+  const { t } = useTranslationApp();
+  const [partnerOpen, setPartnerOpen] = useState(false);
   if (HIDE_ROUTES.includes(pathname)) return null;
   if (pathname.startsWith("/admin") || pathname.startsWith("/debug")) return null;
 
@@ -28,7 +33,11 @@ const GlobalFooter = () => {
         <Link to="/gerenciar-dados" className="hover:text-primary transition-colors">
           Gerenciar meus Dados
         </Link>
+        <button type="button" onClick={() => setPartnerOpen(true)} className="hover:text-primary transition-colors">
+          {t("partner.footer_link")}
+        </button>
       </div>
+      <PartnerRequestDialog open={partnerOpen} onOpenChange={setPartnerOpen} />
       <p className="mt-2 opacity-60">Em conformidade com a LGPD (Lei 13.709/2018).</p>
     </footer>
   );

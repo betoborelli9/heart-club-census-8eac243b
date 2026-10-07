@@ -13,6 +13,7 @@ import AccessStats from "@/components/admin/AccessStats";
 import PartnerMediaKit from "@/components/admin/PartnerMediaKit";
 import WhatsAppCampaign from "@/components/admin/WhatsAppCampaign";
 import IncompleteProfiles from "@/components/admin/IncompleteProfiles";
+import PartnerRequests from "@/components/admin/PartnerRequests";
 import NeighborhoodDominance from "@/components/admin/NeighborhoodDominance";
 import SocioeconomicProfile from "@/components/admin/SocioeconomicProfile";
 import AffinityEcosystem from "@/components/admin/AffinityEcosystem";
@@ -158,6 +159,9 @@ const Admin = () => {
             <TabsTrigger value="whatsapp" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               📣 WhatsApp
             </TabsTrigger>
+            <TabsTrigger value="partners" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              🤝 Parceiros
+            </TabsTrigger>
             <TabsTrigger value="incomplete" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               📋 Cadastros Incompletos
             </TabsTrigger>
@@ -214,6 +218,10 @@ const Admin = () => {
 
           <TabsContent value="whatsapp">
             <WhatsAppCampaign />
+          </TabsContent>
+
+          <TabsContent value="partners">
+            <PartnerRequests />
           </TabsContent>
 
           <TabsContent value="incomplete">

@@ -739,5 +739,21 @@
     "jobs_none": "No profession is shared by at least 3 fans yet.",
     "cities_none": "No city has at least 3 fans yet.",
     "other_label": "Others"
+  },
+  "partner": {
+    "footer_link": "I'm a partner",
+    "title": "Become a Heart Club partner",
+    "sub": "Tell us who you are. If approved, you get an exclusive page with the fan base numbers.",
+    "company": "Company or brand",
+    "contact": "WhatsApp or e-mail for contact",
+    "message": "Want to tell us more? (optional)",
+    "send": "Send request",
+    "login_needed": "To request access, first sign in and vote for your club. Then come back here.",
+    "go_vote": "Sign in and vote",
+    "pending": "Your request was sent and is under review. We will contact you using the details provided.",
+    "approved": "You are already a partner! Your access is active.",
+    "rejected": "Your request was not approved this time.",
+    "revoked": "Your partner access has ended.",
+    "error": "We couldn't send it right now. Please try again in a moment."
   }
 }

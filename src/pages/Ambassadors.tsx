@@ -57,6 +57,7 @@ import { toast } from "@/hooks/use-toast";
 import { useClubLogos, normalizeClubName } from "@/lib/club-logo-resolver";
 import logo from "@/assets/logo.png";
 import { useTranslationApp } from "@/hooks/useTranslationApp";
+import PartnerRequestDialog from "@/components/partner/PartnerRequestDialog";
 import { getCountryDials, COUNTRY_DIALS, type CountryDial } from "@/data/country-dials";
 
 /* [MÓDULO: HELPERS] */
@@ -132,6 +133,7 @@ const Ambassadors = () => {
   const [clubName, setClubName] = useState<string | null>(null);
   const [clubData, setClubData] = useState<ClubData | null>(null);
   const [showCensusModal, setShowCensusModal] = useState(false);
+  const [partnerOpen, setPartnerOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const [ranking, setRanking] = useState<RankingEntry[]>([]);
   const [activityFeed, setActivityFeed] = useState<ActivityEntry[]>([]);
@@ -434,12 +436,14 @@ const Ambassadors = () => {
               {t("ambassadors.sponsor_text")}
             </span>
           </div>
-          <a
-            href="mailto:admin@heartclubapp.com?subject=Quero%20ser%20Parceiro%20Heart%20Club"
+          <button
+            type="button"
+            onClick={() => setPartnerOpen(true)}
             className="text-[10px] font-black uppercase tracking-wider text-[#ff6200] hover:underline shrink-0"
           >
             {t("ambassadors.sponsor_cta")}
-          </a>
+          </button>
+          <PartnerRequestDialog open={partnerOpen} onOpenChange={setPartnerOpen} />
         </div>
 
         {/* [MÓDULO: BANNER REUTILIZÁVEL] */}

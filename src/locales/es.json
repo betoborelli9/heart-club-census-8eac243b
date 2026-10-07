@@ -739,5 +739,21 @@
     "jobs_none": "Aún no hay una profesión compartida por al menos 3 hinchas.",
     "cities_none": "Aún no hay una ciudad con al menos 3 hinchas.",
     "other_label": "Otras"
+  },
+  "partner": {
+    "footer_link": "Soy socio",
+    "title": "Sé socio de Heart Club",
+    "sub": "Cuéntanos quién eres. Si te aprobamos, tendrás una página exclusiva con los números de la hinchada.",
+    "company": "Empresa o marca",
+    "contact": "WhatsApp o correo de contacto",
+    "message": "¿Quieres contarnos más? (opcional)",
+    "send": "Enviar solicitud",
+    "login_needed": "Para pedir acceso, primero entra y vota por tu club. Luego vuelve aquí.",
+    "go_vote": "Entrar y votar",
+    "pending": "Tu solicitud fue enviada y está en revisión. Te contactaremos con los datos indicados.",
+    "approved": "¡Ya eres socio! Tu acceso está activo.",
+    "rejected": "Tu solicitud no fue aprobada esta vez.",
+    "revoked": "Tu acceso de socio ha terminado.",
+    "error": "No pudimos enviarla ahora. Inténtalo de nuevo en un momento."
   }
 }
