@@ -613,7 +613,9 @@
       "playoff_semi": "Promotion Semifinals:",
       "playoff_advantage": "Advantage: the better-ranked sides (3rd and 4th) host the return leg.",
       "playoff_outcome": "Outcome: the two winners earn promotion to Série A. There is no final between them — the playoff only defines the last two promoted clubs."
-    }
+    },
+    "league_today": "Today's league matches",
+    "halftime": "Half-time"
   },
   "entrar": {
     "skip": "Skip",

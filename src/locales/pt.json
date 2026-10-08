@@ -613,7 +613,9 @@
       "playoff_semi": "Semifinais do Acesso:",
       "playoff_advantage": "Vantagem: os times de melhor campanha (3º e 4º) decidem a segunda partida em casa.",
       "playoff_outcome": "Desfecho: os dois vencedores conquistam o acesso à Série A. Não há final entre eles — o objetivo do playoff é apenas definir os dois últimos promovidos."
-    }
+    },
+    "league_today": "Jogos do campeonato hoje",
+    "halftime": "Intervalo"
   },
   "entrar": {
     "skip": "Pular",

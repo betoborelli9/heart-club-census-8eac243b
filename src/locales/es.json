@@ -613,7 +613,9 @@
       "playoff_semi": "Semifinales de Ascenso:",
       "playoff_advantage": "Ventaja: los equipos con mejor campaña (3º y 4º) definen la vuelta en casa.",
       "playoff_outcome": "Desenlace: los dos ganadores logran el ascenso a la Serie A. No hay final entre ellos — el playoff solo define los dos últimos ascendidos."
-    }
+    },
+    "league_today": "Partidos de hoy del campeonato",
+    "halftime": "Descanso"
   },
   "entrar": {
     "skip": "Omitir",

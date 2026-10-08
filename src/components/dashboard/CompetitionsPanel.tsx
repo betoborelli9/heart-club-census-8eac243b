@@ -9,6 +9,7 @@ import { toPng } from "html-to-image";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { ClubLogo } from "@/components/ClubLogo";
+import LeagueLiveStrip from "@/components/dashboard/LeagueLiveStrip";
 import { supabase } from "@/integrations/supabase/client";
 import { useTranslationApp } from "@/hooks/useTranslationApp";
 import { useToast } from "@/hooks/use-toast";
@@ -274,6 +275,7 @@ export default function CompetitionsPanel({ clubName, primaryColor = "#ff6200" }
                 className="space-y-4 bg-[#0b0b0b] p-2 rounded-xl"
               >
                 <MatchCard match={focusMatch} live={!!c.liveMatch} primaryColor={primaryColor} />
+                <LeagueLiveStrip leagueId={c.leagueId} teamId={team?.id} primaryColor={primaryColor} />
                 <StandingsTable
                   rows={c.standings}
                   meTeamId={team?.id}
