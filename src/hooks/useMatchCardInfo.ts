@@ -27,6 +27,7 @@ export function useMatchCardInfo(fixture: Fixture, teamId?: number | null) {
   const nameTheme = useClubTheme(ours.name);
   const [club, setClub] = useState<ClubRow | null>(null);
   const [canais, setCanais] = useState<string[] | null>(null);
+  const [removedByAdmin, setRemovedByAdmin] = useState(false);
 
   useEffect(() => {
     let alive = true;
@@ -47,9 +48,14 @@ export function useMatchCardInfo(fixture: Fixture, teamId?: number | null) {
   useEffect(() => {
     let alive = true;
     setCanais(null);
+    setRemovedByAdmin(false);
     (async () => {
-      const { data } = await (supabase as any).from("fixture_watch").select("canais").eq("fixture_id", fixture.id).maybeSingle();
-      if (alive) setCanais(Array.isArray(data?.canais) ? data.canais : []);
+      const { data } = await (supabase as any).from("fixture_watch").select("canais, fonte").eq("fixture_id", fixture.id).maybeSingle();
+      if (!alive) return;
+      const list: string[] = Array.isArray(data?.canais) ? data.canais : [];
+      setCanais(list);
+      // Beto removeu o "onde assistir" deste jogo: a linha some para todos (a IA não volta a preencher).
+      setRemovedByAdmin(data?.fonte === "admin" && list.length === 0);
     })();
     return () => {
       alive = false;
@@ -66,6 +72,11 @@ export function useMatchCardInfo(fixture: Fixture, teamId?: number | null) {
     textColor: light ? "#111111" : "#ffffff",
     stadium: fixture.venue || (isHome ? club?.estadio_nome || null : null),
     canais, // null = carregando; [] = ainda a confirmar
+    hideWatch: removedByAdmin,
+    markRemoved: () => {
+      setCanais([]);
+      setRemovedByAdmin(true);
+    },
     ourName: ours.name,
   };
 }

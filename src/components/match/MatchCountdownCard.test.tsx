@@ -3,9 +3,14 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 
 const db: { club: any; watch: any } = { club: null, watch: null };
+const rpcSpy: { calls: any[] } = { calls: [] };
 
 vi.mock("@/integrations/supabase/client", () => ({
   supabase: {
+    rpc: (fn: string, args: any) => {
+      rpcSpy.calls.push({ fn, args });
+      return Promise.resolve({ data: null, error: null });
+    },
     from: (table: string) => {
       const q: any = {
         select: () => q,
@@ -23,6 +28,9 @@ vi.mock("@/hooks/useClubTheme", () => ({
   useClubTheme: () => ({ primaryHex: "#111111", secondaryHex: "#2a2a2a" }),
 }));
 vi.mock("@/components/ClubLogo", () => ({ ClubLogo: () => null }));
+const who: { email: string; sim: boolean } = { email: "fan@x.com", sim: false };
+vi.mock("@/contexts/UserContext", () => ({ useUser: () => ({ realUser: { email: who.email }, simActive: who.sim }) }));
+vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 
 import { MatchCountdownCard } from "./MatchCountdownCard";
 
@@ -39,7 +47,10 @@ const fixture: any = {
 describe("Card do próximo jogo", () => {
   beforeEach(() => {
     db.club = { cor_primaria: "#E30613", cor_secundaria: "#000000", estadio_nome: "OBA" };
-    db.watch = { canais: ["Premiere", "Globoplay"] };
+    db.watch = { canais: ["Premiere", "Globoplay"], fonte: "ia" };
+    who.email = "fan@x.com";
+    who.sim = false;
+    rpcSpy.calls = [];
   });
 
   it("usa as cores do clube do torcedor, mostra o estádio e onde assistir", async () => {
@@ -68,5 +79,36 @@ describe("Card do próximo jogo", () => {
     render(<MatchCountdownCard fixture={fixture} diffMs={1000} teamId={10} />);
     await screen.findByText("Premiere");
     expect((screen.getByTestId("match-card") as HTMLElement).style.color).toBe("rgb(17, 17, 17)");
+  });
+
+  it("torcedor comum NÃO vê o botão de remover; o Master vê e remove (some a linha)", async () => {
+    const { fireEvent, waitFor } = await import("@testing-library/react");
+    const { unmount } = render(<MatchCountdownCard fixture={fixture} diffMs={1000} teamId={10} />);
+    await screen.findByText("Premiere");
+    expect(screen.queryByLabelText("Remover onde assistir")).toBeNull();
+    unmount();
+
+    who.email = "betoborelli9@gmail.com";
+    render(<MatchCountdownCard fixture={fixture} diffMs={1000} teamId={10} />);
+    await screen.findByText("Premiere");
+    fireEvent.click(screen.getByLabelText("Remover onde assistir"));
+    await waitFor(() => expect(rpcSpy.calls[0]).toEqual({ fn: "admin_set_fixture_watch", args: { p_fixture: 77, p_canais: [] } }));
+    await waitFor(() => expect(screen.queryByTestId("match-watch")).toBeNull());
+  });
+
+  it("Master em simulação de torcedor novo também não vê o botão", async () => {
+    who.email = "betoborelli9@gmail.com";
+    who.sim = true;
+    render(<MatchCountdownCard fixture={fixture} diffMs={1000} teamId={10} />);
+    await screen.findByText("Premiere");
+    expect(screen.queryByLabelText("Remover onde assistir")).toBeNull();
+  });
+
+  it("jogo cujo 'onde assistir' o Beto removeu: a linha não aparece para ninguém", async () => {
+    db.watch = { canais: [], fonte: "admin" };
+    render(<MatchCountdownCard fixture={fixture} diffMs={1000} teamId={10} />);
+    await screen.findByTestId("match-stadium");
+    await new Promise((r) => setTimeout(r, 30));
+    expect(screen.queryByTestId("match-watch")).toBeNull();
   });
 });

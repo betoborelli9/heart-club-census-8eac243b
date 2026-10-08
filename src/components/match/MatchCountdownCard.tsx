@@ -1,5 +1,9 @@
 import { useTranslation } from "react-i18next";
-import { Tv, Landmark } from "lucide-react";
+import { Tv, Landmark, Trash2 } from "lucide-react";
+import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { useUser } from "@/contexts/UserContext";
+import { isMasterEmail } from "@/lib/master";
 import type { Fixture } from "@/hooks/useHeartClubFixture";
 import { useMatchCardInfo } from "@/hooks/useMatchCardInfo";
 import { ClubLogo } from "@/components/ClubLogo";
@@ -19,6 +23,19 @@ function fmt(ms: number) {
 export function MatchCountdownCard({ fixture, diffMs, teamId }: { fixture: Fixture; diffMs: number; teamId?: number | null }) {
   const { t, i18n } = useTranslation();
   const info = useMatchCardInfo(fixture, teamId);
+  const { realUser, simActive } = useUser();
+  // Botão só para o Beto (Master) e nunca na simulação de torcedor novo: o torcedor comum jamais vê.
+  const canRemoveWatch = isMasterEmail(realUser?.email) && !simActive;
+
+  const removeWatch = async () => {
+    const { error } = await (supabase as any).rpc("admin_set_fixture_watch", { p_fixture: fixture.id, p_canais: [] });
+    if (error) {
+      toast.error("Não foi possível remover agora.");
+      return;
+    }
+    info.markRemoved();
+    toast.success("Onde assistir removido deste jogo.");
+  };
   const dt = new Intl.DateTimeFormat(i18n.language, {
     weekday: "short", day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit",
   }).format(new Date(fixture.date));
@@ -59,6 +76,7 @@ export function MatchCountdownCard({ fixture, diffMs, teamId }: { fixture: Fixtu
             <span className="min-w-0 truncate">{info.stadium}</span>
           </p>
         )}
+        {!info.hideWatch && (
         <div className="flex flex-wrap items-center gap-1.5" data-testid="match-watch">
           <Tv className="h-3.5 w-3.5 shrink-0" />
           <span className="font-semibold">{t("match.where_to_watch")}:</span>
@@ -71,7 +89,19 @@ export function MatchCountdownCard({ fixture, diffMs, teamId }: { fixture: Fixtu
           ) : (
             <span className="opacity-70">{t("match.tbc")}</span>
           )}
+          {canRemoveWatch && info.canais && info.canais.length > 0 && (
+            <button
+              onClick={removeWatch}
+              title="Remover o onde assistir deste jogo (só você vê este botão)"
+              aria-label="Remover onde assistir"
+              className="ml-1 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold"
+              style={{ background: soft }}
+            >
+              <Trash2 className="h-3 w-3" /> remover
+            </button>
+          )}
         </div>
+        )}
       </div>
 
       <div className="mt-3 text-center">

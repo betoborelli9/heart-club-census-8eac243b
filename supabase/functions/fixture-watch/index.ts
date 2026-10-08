@@ -1,7 +1,8 @@
 /**
  * [CAMINHO]: supabase/functions/fixture-watch/index.ts
  * [MÓDULO]: ONDE ASSISTIR — descobre os canais de TV/streaming dos jogos dos próximos dias.
- * Roda 2x/dia pelo cron (sem parâmetros: não dá para mandar o robô pesquisar "o que quiser").
+ * Roda de hora em hora pelo cron (sem parâmetros: não dá para mandar o robô pesquisar "o que quiser").
+ * Cada jogo é pesquisado de novo só depois de 20 h (≈ 1x/dia); a fila inicial esvazia em poucas horas.
  * Só pesquisa jogos de clubes que já estão no team_fixtures_cache, nos próximos 8 dias,
  * pula o que foi buscado há menos de 20 h e NUNCA sobrescreve o que o Beto definiu (fonte = 'admin').
  * Se a pesquisa não confirmar o canal, grava lista vazia (o card mostra "a confirmar") — não inventa.
@@ -15,7 +16,8 @@ const corsHeaders = {
 };
 
 const LOVABLE_KEY = Deno.env.get("LOVABLE_API_KEY") || "";
-const MAX_PER_RUN = 25;
+const MAX_PER_RUN = 9; // lotes pequenos (a IA rigorosa demora); o cron roda de hora em hora
+const PARALLEL = 3;
 const WINDOW_DAYS = 8;
 const FRESH_MS = 20 * 60 * 60 * 1000;
 
@@ -50,17 +52,22 @@ function cleanChannels(list: unknown): string[] {
 }
 
 async function askChannels(fx: Fx): Promise<{ ok: boolean; canais: string[] }> {
-  const when = new Date(fx.date).toISOString();
-  const prompt = `Pesquise na web onde assistir ao jogo ${fx.home?.name} x ${fx.away?.name}, pelo campeonato "${fx.league?.name}" (${fx.league?.round || ""}), data/hora ${when} (UTC).
-Liste SOMENTE os canais de TV e serviços de streaming que as fontes confiáveis confirmam para ESTE jogo específico (ex.: nome do canal ou do streaming, como aparece na programação oficial).
-Se não houver confirmação clara, devolva a lista vazia. NÃO invente e NÃO deduza pelo campeonato.
-Responda APENAS com JSON, sem texto extra: {"canais": ["Canal 1", "Canal 2"], "confirmado": true}`;
+  const when = new Date(fx.date);
+  const brt = new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Sao_Paulo", dateStyle: "full", timeStyle: "short" }).format(when);
+  const prompt = `Pesquise na web onde assistir ao jogo ${fx.home?.name} x ${fx.away?.name}, pelo campeonato "${fx.league?.name}" (${fx.league?.round || ""}), em ${brt} (horário de Brasília) — ${when.toISOString()} (UTC).
+REGRAS (todas obrigatórias):
+1. Só vale transmissão confirmada para ESTA partida (mesmos dois times e mesma data), em página de programação, notícia, site oficial do clube, da liga ou da emissora.
+2. Liste apenas canais de TV e serviços de streaming, com o nome oficial.
+3. NUNCA deduza pelo campeonato, pelo país ou por jogos anteriores.
+4. Se houver qualquer dúvida, devolva a lista vazia e confirmado=false.
+5. Em "fontes", coloque as URLs (https) das páginas que confirmam este jogo.
+Responda APENAS com JSON, sem texto extra: {"canais": ["Canal 1"], "confirmado": true, "fontes": ["https://..."]}`;
 
   const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
     headers: { Authorization: `Bearer ${LOVABLE_KEY}`, "Content-Type": "application/json" },
     body: JSON.stringify({
-      model: "google/gemini-2.5-flash",
+      model: "google/gemini-2.5-pro",
       messages: [{ role: "user", content: prompt }],
       tools: [{ type: "google_search" }],
       temperature: 0,
@@ -73,7 +80,10 @@ Responda APENAS com JSON, sem texto extra: {"canais": ["Canal 1", "Canal 2"], "c
   const data = await res.json();
   const parsed = extractJson(data?.choices?.[0]?.message?.content || "");
   if (!parsed) return { ok: false, canais: [] };
-  return { ok: true, canais: parsed.confirmado === false ? [] : cleanChannels(parsed.canais) };
+  // Só aceita se a IA marcou como confirmado E apontou pelo menos uma fonte https. Senão: "a confirmar".
+  const fontes = Array.isArray(parsed.fontes) ? parsed.fontes.filter((u: unknown) => typeof u === "string" && u.startsWith("https://")) : [];
+  const confirmado = parsed.confirmado === true && fontes.length > 0;
+  return { ok: true, canais: confirmado ? cleanChannels(parsed.canais) : [] };
 }
 
 serve(async (req) => {
@@ -104,11 +114,11 @@ serve(async (req) => {
   const ids = [...fixtures.keys()];
   if (!ids.length) return json({ ok: true, buscados: 0, motivo: "sem jogos nos próximos dias" });
 
-  const { data: existing } = await supabase.from("fixture_watch").select("fixture_id, fonte, buscado_em").in("fixture_id", ids);
+  const { data: existing } = await supabase.from("fixture_watch").select("fixture_id, fonte, buscado_em, versao").in("fixture_id", ids);
   const skip = new Set<number>();
   for (const e of existing || []) {
     const fresh = now - new Date((e as any).buscado_em).getTime() < FRESH_MS;
-    if ((e as any).fonte === "admin" || fresh) skip.add(Number((e as any).fixture_id));
+    if ((e as any).fonte === "admin" || (fresh && Number((e as any).versao) >= 2)) skip.add(Number((e as any).fixture_id));
   }
 
   const todo = ids
@@ -118,22 +128,25 @@ serve(async (req) => {
 
   let gravados = 0;
   let falhas = 0;
-  for (const id of todo) {
+  const work = async (id: number) => {
     try {
       const r = await askChannels(fixtures.get(id)!);
       if (!r.ok) {
         falhas++;
-        continue;
+        return;
       }
       const { error: upErr } = await supabase
         .from("fixture_watch")
-        .upsert({ fixture_id: id, canais: r.canais, fonte: "ia", buscado_em: new Date().toISOString() });
+        .upsert({ fixture_id: id, canais: r.canais, fonte: "ia", versao: 2, buscado_em: new Date().toISOString() });
       if (upErr) falhas++;
       else gravados++;
     } catch (e) {
       console.error("[fixture-watch] falhou", id, e);
       falhas++;
     }
+  };
+  for (let i = 0; i < todo.length; i += PARALLEL) {
+    await Promise.all(todo.slice(i, i + PARALLEL).map(work));
   }
 
   // Limpeza: some o que tem mais de 30 dias (nunca o que o Beto definiu para jogos futuros).
