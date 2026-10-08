@@ -42,8 +42,7 @@ const FORMS: { key: FormKey; label: string; hint: string; counts: boolean }[] = 
   { key: "falta_termos", label: "Termos", hint: "Aceite dos Termos e da Privacidade (LGPD)", counts: true },
   { key: "falta_territorio", label: "Território", hint: "Onde mora — libera o Mapa de Calor", counts: true },
   { key: "falta_basico", label: "Nascimento e gênero", hint: "Idade e gênero da torcida", counts: true },
-  { key: "falta_renda", label: "Renda", hint: "Faixa de renda — perfil socioeconômico", counts: true },
-  { key: "falta_profissao", label: "Profissão", hint: "Área profissional — perfil socioeconômico", counts: true },
+  { key: "falta_profissao", label: "Profissão", hint: "Área profissional — perguntada ao entrar no Ranking", counts: true },
   { key: "falta_embaixador", label: "WhatsApp", hint: "Censo do Embaixador (só informativo)", counts: false },
 ];
 
@@ -159,7 +158,7 @@ export default function IncompleteProfiles() {
         missing={{
           form_termos: rows.filter((r) => r.falta_termos).length,
           form_territorio: rows.filter((r) => r.falta_territorio).length,
-          form_socio: rows.filter((r) => r.falta_renda || r.falta_profissao).length,
+          form_socio: rows.filter((r) => r.falta_profissao).length,
           form_embaixador: rows.filter((r) => r.falta_embaixador).length,
         }}
       />
