@@ -4,7 +4,9 @@
     "starts_in": "Empieza en",
     "lineups_title": "Alineaciones confirmadas",
     "substitutes": "Suplentes",
-    "live": "EN VIVO"
+    "live": "EN VIVO",
+    "where_to_watch": "Dónde verlo",
+    "tbc": "por confirmar"
   },
   "notifications": {
     "title": "Notificaciones",

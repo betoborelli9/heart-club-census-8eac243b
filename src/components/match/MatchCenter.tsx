@@ -15,7 +15,7 @@ const LIVE = new Set(["1H", "2H", "HT", "ET", "BT", "P", "LIVE"]);
 
 export function MatchCenter({ userId, teamIdOverride }: { userId?: string; teamIdOverride?: number | null }) {
   const { t } = useTranslation();
-  const { upcoming, liveState, lineups, loading } = useHeartClubFixture(userId, teamIdOverride);
+  const { teamId, upcoming, liveState, lineups, loading } = useHeartClubFixture(userId, teamIdOverride);
   const [now, setNow] = useState(Date.now());
 
   useEffect(() => {
@@ -50,5 +50,5 @@ export function MatchCenter({ userId, teamIdOverride }: { userId?: string; teamI
   if (diff <= 40 * 60 * 1000 && lineups?.ready) {
     return <MatchLineupsCard fixture={upcoming} lineups={lineups.data || []} />;
   }
-  return <MatchCountdownCard fixture={upcoming} diffMs={diff} />;
+  return <MatchCountdownCard fixture={upcoming} diffMs={diff} teamId={teamId} />;
 }

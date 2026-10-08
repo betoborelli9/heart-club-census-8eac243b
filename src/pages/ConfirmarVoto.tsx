@@ -158,23 +158,23 @@ const ConfirmarVoto = () => {
 
   return (
     <div className="min-h-screen bg-background text-white">
-      <div className="mx-auto flex w-full max-w-md flex-col items-center gap-6 px-4 py-8">
-        <img src={logo} alt="Heart Club" className="h-20 w-20 object-contain" />
+      <div className="mx-auto flex w-full max-w-sm flex-col items-center gap-3 px-4 py-4 sm:gap-4 sm:py-6">
+        <img src={logo} alt="Heart Club" className="h-12 w-12 object-contain sm:h-14 sm:w-14" />
 
         <div className="space-y-2 text-center">
-          <h1 className="text-3xl font-black italic uppercase tracking-tighter">
+          <h1 className="text-2xl font-black italic uppercase tracking-tighter sm:text-[26px]">
             {termsOnly ? t("entrar.terms_only_title") : t("entrar.confirm_title")}
           </h1>
-          <p className="text-base text-white/70">
+          <p className="text-sm text-white/70">
             {termsOnly ? t("entrar.terms_only_sub") : t("entrar.confirm_sub", { club: club?.name })}
           </p>
         </div>
 
         {club && (
-          <div className="flex w-full items-center gap-3 rounded-2xl border-2 border-primary bg-card p-4">
+          <div className="flex w-full items-center gap-3 rounded-2xl border-2 border-primary bg-card p-3">
             <ClubLogo src={club.logo} alt={club.name} size="lg" />
             <div className="min-w-0 flex-1">
-              <p className="truncate text-xl font-black uppercase italic tracking-tighter">{club.name}</p>
+              <p className="truncate text-lg font-black uppercase italic tracking-tighter">{club.name}</p>
               <p className="text-[10px] font-bold uppercase text-white/50">{club.location}</p>
             </div>
             <Heart className="h-6 w-6 fill-current text-primary" />
@@ -201,7 +201,7 @@ const ConfirmarVoto = () => {
         {/* QUADRADINHO DOS TERMOS — no momento certo: depois do login, antes de gravar o voto */}
         <label
           htmlFor="accept-terms-vote"
-          className="flex w-full cursor-pointer items-start gap-3 rounded-2xl border border-white/10 bg-white/[0.03] p-4"
+          className="flex w-full cursor-pointer items-start gap-3 rounded-2xl border border-white/10 bg-white/[0.03] p-3"
         >
           <Checkbox
             id="accept-terms-vote"
@@ -230,7 +230,7 @@ const ConfirmarVoto = () => {
         <Button
           onClick={confirm}
           disabled={sim ? !accepted : recordError ? false : !accepted || !(recorded || termsOnly) || submitting}
-          className="btn-orange-gradient h-16 w-full rounded-2xl text-xl font-black italic shadow-xl shadow-primary/20 active:scale-95 disabled:opacity-40"
+          className="btn-orange-gradient h-12 w-full rounded-2xl text-lg font-black italic shadow-xl shadow-primary/20 active:scale-95 disabled:opacity-40"
         >
           {submitting || (!sim && recording) ? (
             <Loader2 className="h-6 w-6 animate-spin" />

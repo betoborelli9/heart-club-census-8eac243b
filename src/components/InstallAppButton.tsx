@@ -4,11 +4,13 @@
  * - Android/Chrome: usa beforeinstallprompt + modal de alertas de dia de jogo.
  * - iOS: força exibição; Safari mostra passo a passo curto, outros navegadores
  *   redirecionam para x-web-search:// com o site pronto.
+ * - Nunca aparece nas telas de entrada/voto/login/termos (QUIET_ROUTES): não pode cobrir o aceite dos termos.
  * - Nunca aparece na 1ª visita (não atrapalha o cadastro/voto inicial) — só
  *   a partir da 2ª vez que o torcedor voltar. Some por 7 dias se ele fechar
  *   sem instalar. Se instalar, nunca mais aparece pra ele.
  */
 import { useEffect, useState, useMemo } from "react";
+import { useLocation } from "react-router-dom";
 import { Download, X, Share, Plus } from "lucide-react";
 import {
   Dialog,
@@ -31,6 +33,8 @@ const ALERTS_PREF_KEY = "hc_gameday_alerts_pref";
 const VISITED_KEY = "hc_visited_before";
 const INSTALLED_KEY = "hc_app_installed";
 const SITE_URL = "votenoseuclube.com.br";
+// Telas em que o torcedor está entrando/votando: o aviso de instalar fica escondido (o evento continua sendo ouvido).
+const QUIET_ROUTES = ["/entrar", "/confirmar-voto", "/login", "/voting", "/termos", "/privacidade"];
 
 const isIOSDevice = () => {
   if (typeof window === "undefined") return false;
@@ -67,6 +71,9 @@ const InstallAppButton = () => {
   const [askAlerts, setAskAlerts] = useState(false);
   const [showIOSGuide, setShowIOSGuide] = useState(false);
   const [busy, setBusy] = useState(false);
+
+  const { pathname } = useLocation();
+  const quiet = QUIET_ROUTES.some((r) => pathname === r || pathname.startsWith(r + "/"));
 
   const safariIOS = useMemo(() => isSafariIOS(), []);
 
@@ -204,7 +211,7 @@ const InstallAppButton = () => {
     setVisible(false);
   };
 
-  if (!visible) return null;
+  if (quiet || !visible) return null;
   // Android exige o evento diferido; iOS ignora essa checagem
   if (!isIOS && !deferred) return null;
 

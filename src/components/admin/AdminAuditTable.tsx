@@ -12,7 +12,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Trash2, RefreshCw, Check, Heart, XOctagon, MapPin, UserCheck, Sparkles, Globe2 } from "lucide-react";
+import { Trash2, RefreshCw, Check, Heart, XOctagon, MapPin, UserCheck, Sparkles, Globe2, UserX, Users } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 /* ═══════════════════════════════════════════════════════════
@@ -109,6 +109,30 @@ const AdminAuditTable = () => {
     setActingId(null);
   };
 
+  // Apaga o torcedor POR COMPLETO (voto, perfil, histórico e login). Se voltar, entra como novato.
+  const handleDeleteFan = async (v: VoteRow) => {
+    const quem = `${v.user_nome || "Torcedor"} (${v.user_email || "sem e-mail"})`;
+    if (!confirm(`APAGAR ${quem} POR COMPLETO?
+
+Sai tudo: voto, simpatias, perfil, indicações e histórico.
+Se essa pessoa voltar, entra como novata, como se nunca tivesse votado.
+
+Não dá para desfazer.`)) return;
+    setActingId(v.voto_id);
+    const { error } = await (supabase as any).rpc("admin_delete_fan_by_vote", { p_voto_id: v.voto_id });
+    if (error) {
+      toast({ title: "Não foi possível apagar", description: error.message, variant: "destructive" });
+    } else {
+      setVotes(prev => prev.filter(o => o.voto_id !== v.voto_id && !(v.user_email && o.user_email === v.user_email)));
+      toast({ title: "Torcedor apagado por completo.", description: "Se voltar, entra como novato." });
+    }
+    setActingId(null);
+  };
+
+  // Quem mais votou do MESMO IP (ajuda a achar de onde vem o voto suspeito).
+  const sameIpOthers = (v: VoteRow) =>
+    v.ip_address ? votes.filter(o => o.voto_id !== v.voto_id && o.ip_address === v.ip_address) : [];
+
   const handleToggleSympathy = async (votoId: string) => {
     if (openSympathyId === votoId) { setOpenSympathyId(null); return; }
     if (!sympathyCache[votoId]) {
@@ -191,6 +215,18 @@ const AdminAuditTable = () => {
                              <span className="text-[8px] text-red-500 font-bold uppercase leading-none">{v.motivo_suspicao}</span>
                            </>
                          ) : <Badge className="bg-green-600 font-black italic">OK</Badge>}
+                        {sameIpOthers(v).length > 0 && (
+                          <div className="mt-1 rounded-md border border-amber-500/40 bg-amber-500/10 p-1.5" data-testid="same-ip-box">
+                            <p className="flex items-center gap-1 text-[8px] font-black uppercase text-amber-400 leading-tight">
+                              <Users className="w-2.5 h-2.5" /> Mesmo IP de:
+                            </p>
+                            {sameIpOthers(v).map(o => (
+                              <p key={o.voto_id} className="text-[9px] font-bold leading-tight text-amber-200">
+                                {o.user_nome || "—"} <span className="opacity-70">({o.user_email || "sem e-mail"})</span> • {o.clube_nome}
+                              </p>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     </TableCell>
                     <TableCell>
@@ -242,7 +278,8 @@ const AdminAuditTable = () => {
                         <Button size="sm" variant="outline" className="h-8 w-8 p-0" onClick={() => handleToggleSympathy(v.voto_id)}><Heart className="w-3.5 h-3.5" /></Button>
                         <Button size="sm" variant="outline" className="h-8 w-8 p-0 border-green-600 text-green-500 hover:bg-green-600/10" disabled={actingId === v.voto_id || isApproved} onClick={() => handleApprove(v.voto_id)}><Check className="w-4 h-4" /></Button>
                         <Button size="sm" variant="outline" className="h-8 w-8 p-0 border-red-600 text-red-500 hover:bg-red-600/10" disabled={actingId === v.voto_id || isRejected} onClick={() => handleReject(v.voto_id)}><XOctagon className="w-4 h-4" /></Button>
-                        <Button size="sm" variant="outline" className="h-8 w-8 p-0 border-destructive text-destructive hover:bg-destructive/10" disabled={actingId === v.voto_id} onClick={() => handleDelete(v.voto_id)}><Trash2 className="w-3.5 h-3.5" /></Button>
+                        <Button size="sm" variant="outline" className="h-8 w-8 p-0 border-destructive text-destructive hover:bg-destructive/10" disabled={actingId === v.voto_id} title="Apagar só este voto" onClick={() => handleDelete(v.voto_id)}><Trash2 className="w-3.5 h-3.5" /></Button>
+                        <Button size="sm" variant="outline" className="h-8 w-8 p-0 border-red-700 bg-red-950/40 text-red-400 hover:bg-red-900/50" disabled={actingId === v.voto_id} title="Apagar o torcedor POR COMPLETO (volta como novato)" aria-label="Apagar torcedor por completo" onClick={() => handleDeleteFan(v)}><UserX className="w-3.5 h-3.5" /></Button>
                       </div>
                     </TableCell>
                   </TableRow>
