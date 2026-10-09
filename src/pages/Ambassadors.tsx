@@ -38,6 +38,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import FormReasonCard from "@/components/FormReasonCard";
+import { useFeatureFlag } from "@/lib/feature-flags";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -133,6 +134,8 @@ const Ambassadors = () => {
   const [clubName, setClubName] = useState<string | null>(null);
   const [clubData, setClubData] = useState<ClubData | null>(null);
   const [showCensusModal, setShowCensusModal] = useState(false);
+  // Chavinha "Censo do Embaixador" (Admin): desligada = o cartão do WhatsApp não aparece.
+  const embaixadorFlag = useFeatureFlag("form_embaixador");
   const [partnerOpen, setPartnerOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const [ranking, setRanking] = useState<RankingEntry[]>([]);
@@ -182,9 +185,9 @@ const Ambassadors = () => {
       return;
     }
     if (!profile) return;
-    const needsCensus = !profile.telefone; // só o WhatsApp (profissão agora é perguntada no cartão do Ranking)
+    const needsCensus = !profile.telefone && embaixadorFlag.enabled; // só o WhatsApp (profissão é perguntada no cartão do Ranking)
     setShowCensusModal(needsCensus);
-  }, [profile, isLoading]);
+  }, [profile, isLoading, embaixadorFlag.enabled]);
 
   /* [MÓDULO: CARREGA PROFISSÕES — DB + base ampla embutida] */
   useEffect(() => {
@@ -833,6 +836,12 @@ const Ambassadors = () => {
               {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
               {t("entrar.amb2_cta")}
             </Button>
+            <button
+              onClick={() => navigate("/dashboard")}
+              className="w-full text-center text-xs text-white/40 underline underline-offset-2 hover:text-white/70"
+            >
+              {t("entrar.rank_back")}
+            </button>
           </FormReasonCard>
         </DialogContent>
       </Dialog>
