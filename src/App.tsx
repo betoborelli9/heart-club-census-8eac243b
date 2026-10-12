@@ -63,6 +63,7 @@ const Stats = lazy(() => import("./pages/Stats"));
 const Ambassadors = lazy(() => import("./pages/Ambassadors"));
 const Parceiro = lazy(() => import("./pages/Parceiro"));
 const ParceiroRelatorio = lazy(() => import("./pages/ParceiroRelatorio"));
+const Clube = lazy(() => import("./pages/Clube"));
 const AmbassadorCenter = lazy(() => import("./pages/AmbassadorCenter"));
 const Correcao = lazy(() => import("./pages/Correcao"));
 const NotFound = lazy(() => import("./pages/NotFound"));
@@ -127,6 +128,7 @@ const App = () => (
             <Route path="/embaixadores" element={<Ambassadors />} />
             <Route path="/parceiro" element={<Parceiro />} />
             <Route path="/parceiro/relatorio" element={<ParceiroRelatorio />} />
+            <Route path="/clube/:teamId" element={<Clube />} />
             <Route path="/embaixador" element={<AmbassadorCenter />} />
             <Route path="/painel-embaixador" element={<AmbassadorCenter />} />
             <Route path="/correcao" element={<Correcao />} />

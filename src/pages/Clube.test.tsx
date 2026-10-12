@@ -1,0 +1,119 @@
+// @vitest-environment jsdom
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { MemoryRouter, Route, Routes } from "react-router-dom";
+
+const state: { payload: any; error: any; invokes: any[] } = { payload: null, error: null, invokes: [] };
+
+vi.mock("@/integrations/supabase/client", () => ({
+  supabase: {
+    functions: {
+      invoke: (name: string, opts: any) => {
+        state.invokes.push({ name, body: opts?.body });
+        return Promise.resolve({ data: state.payload, error: state.error });
+      },
+    },
+    from: () => {
+      const q: any = {
+        select: () => q,
+        eq: () => q,
+        maybeSingle: () => Promise.resolve({ data: { cor_primaria: "#E30613", cor_secundaria: "#000000", estadio_nome: "Estádio OBA" }, error: null }),
+      };
+      return q;
+    },
+  },
+}));
+vi.mock("@/hooks/useTranslationApp", () => ({ useTranslationApp: () => ({ t: (k: string) => k, language: "pt" }) }));
+vi.mock("@/hooks/useClubTheme", () => ({ useClubTheme: () => ({ primaryHex: "#111111", secondaryHex: "#2a2a2a" }) }));
+vi.mock("@/components/ClubLogo", () => ({ ClubLogo: () => null }));
+
+import Clube, { resultFor, roundLabel } from "./Clube";
+
+const g = (id: number, r: number, h: number, a: number, gh: number | null, ga: number | null, st: string, day: number, extra: any = {}) => ({
+  id, date: new Date(2026, 3, day, 16, 0).toISOString(), st, r: `Regular Season - ${r}`, h, hn: h === 142 ? "Vila Nova" : `Time ${h}`, hl: null, a, an: a === 142 ? "Vila Nova" : `Time ${a}`, al: null, gh, ga, ...extra,
+});
+
+const payload = () => ({
+  team: { id: 142, name: "Vila Nova", logo: null },
+  league: { id: 72, season: 2026, name: "Serie B", logo: "", country: "Brazil" },
+  summary: { played: 3, win: 1, draw: 1, lose: 1, goalsFor: 4, goalsAgainst: 4, goalsDiff: 0, points: 4, pct: 44, form: ["V", "E", "D"] },
+  games: [
+    g(1, 1, 142, 10, 2, 0, "FT", 1), // vitória
+    g(2, 2, 11, 142, 1, 1, "FT", 8), // empate fora
+    g(3, 3, 142, 12, 0, 2, "FT", 15), // derrota
+    g(4, 4, 142, 13, 1, 0, "2H", 22, { el: 63, upd: new Date().toISOString() }), // ao vivo
+    g(5, 5, 14, 142, null, null, "NS", 29),
+  ],
+});
+
+const renderAt = (url = "/clube/142?liga=72&temp=2026") => {
+  Element.prototype.scrollIntoView = vi.fn();
+  return render(
+    <MemoryRouter initialEntries={[url]}>
+      <Routes>
+        <Route path="/clube/:teamId" element={<Clube />} />
+      </Routes>
+    </MemoryRouter>,
+  );
+};
+
+describe("Página do clube — temporada completa", () => {
+  beforeEach(() => {
+    state.payload = payload();
+    state.error = null;
+    state.invokes = [];
+  });
+
+  it("pede ao servidor os jogos do time no campeonato certo e mostra resumo, cores e todos os jogos", async () => {
+    renderAt();
+    await screen.findByTestId("club-summary");
+    expect(state.invokes[0]).toEqual({ name: "club-season", body: { teamId: 142, leagueId: 72, season: 2026 } });
+    expect(screen.getAllByText("Vila Nova").length).toBeGreaterThan(0);
+    await waitFor(() => expect(screen.getByTestId("club-hero").getAttribute("data-primary")).toBe("#E30613")); // cor do clube no cabeçalho
+    expect(screen.getAllByTestId("game-row").length + screen.getAllByTestId("game-next").length).toBe(5);
+    // resultado do ponto de vista do Vila: V, E, D
+    expect(screen.getAllByTestId("game-result").map((e) => e.textContent)).toEqual(["V", "E", "D"]);
+  });
+
+  it("o jogo ao vivo é o destaque, com minutos do próprio jogo; jogo encerrado mostra só o placar", async () => {
+    renderAt();
+    await screen.findByTestId("game-next");
+    expect(screen.getByTestId("game-minute").textContent).toBe("63'");
+    expect(screen.getAllByTestId("game-score").map((e) => e.textContent)).toEqual(["2 - 0", "1 - 1", "0 - 2"]);
+  });
+
+  it("filtros: Jogados e Próximos", async () => {
+    renderAt();
+    await screen.findByTestId("game-next");
+    fireEvent.click(screen.getByText("clube.f_done"));
+    await waitFor(() => expect(screen.getAllByTestId("game-score").length).toBe(3));
+    expect(screen.queryByTestId("game-next")).toBeNull();
+    fireEvent.click(screen.getByText("clube.f_next"));
+    await waitFor(() => expect(screen.queryAllByTestId("game-score").length).toBe(0));
+    expect(screen.getByTestId("game-next")).toBeTruthy();
+  });
+
+  it("endereço sem campeonato ou erro do servidor: mostra mensagem amigável e não quebra", async () => {
+    state.payload = { error: "campeonato não encontrado" };
+    renderAt();
+    expect(await screen.findByText("clube.error")).toBeTruthy();
+    expect(screen.queryByTestId("club-summary")).toBeNull();
+  });
+
+  it("endereço malformado (sem liga/temporada) não chama o servidor", async () => {
+    renderAt("/clube/142");
+    expect(await screen.findByText("clube.error")).toBeTruthy();
+    expect(state.invokes.length).toBe(0);
+  });
+
+  it("utilitários: rodada curta e resultado pelo ponto de vista do time", () => {
+    expect(roundLabel("Regular Season - 33")).toBe("R33");
+    expect(roundLabel("Round of 16")).toBe("Round of 16");
+    expect(roundLabel("Quarter-finals of the competition")).toBe("Quarter-final…");
+    expect(roundLabel(null)).toBe("");
+    const game: any = g(1, 1, 142, 10, 1, 3, "FT", 1);
+    expect(resultFor(game, 142)).toBe("D");
+    expect(resultFor(game, 10)).toBe("V");
+    expect(resultFor(g(2, 2, 1, 2, null, null, "NS", 2) as any, 1)).toBeNull();
+  });
+});

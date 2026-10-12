@@ -816,5 +816,25 @@
     "pdf_panel": "PDF reports",
     "pdf_full": "Complete report",
     "pdf_hint": "Open it and use \"Save PDF\"."
+  },
+  "clube": {
+    "back": "Back",
+    "games": "Season matches",
+    "pts": "Pts",
+    "j": "P",
+    "v": "W",
+    "e": "D",
+    "d": "L",
+    "sg": "GD",
+    "aprov": "Points won",
+    "form": "Recent form",
+    "f_all": "All",
+    "f_done": "Played",
+    "f_next": "Upcoming",
+    "home": "Home",
+    "away": "Away",
+    "no_games": "No matches here.",
+    "error": "Couldn't load this club right now. Please try again shortly.",
+    "open_season": "All season matches →"
   }
 }

@@ -73,7 +73,7 @@ export function liveMinute(f: LeagueFixture, now: number): number {
   return cap ? Math.min(cap, base + extra) : base + extra;
 }
 
-export default function LeagueLiveStrip({ leagueId, teamId, primaryColor = "#ff6200", onChange }: { leagueId: number; teamId?: number | null; primaryColor?: string; onChange?: () => void }) {
+export default function LeagueLiveStrip({ leagueId, teamId, primaryColor = "#ff6200", onChange, onOpenTeam }: { leagueId: number; teamId?: number | null; primaryColor?: string; onChange?: () => void; onOpenTeam?: (teamId: number) => void }) {
   const { t } = useTranslationApp();
   const [rows, setRows] = useState<Record<number, LeagueFixture>>({});
   const [now, setNow] = useState(() => Date.now());
@@ -159,7 +159,7 @@ export default function LeagueLiveStrip({ leagueId, teamId, primaryColor = "#ff6
               style={mine ? { backgroundColor: `${primaryColor}1f`, boxShadow: `inset 2px 0 0 ${primaryColor}` } : undefined}
             >
               <div className="flex min-w-0 flex-1 items-center justify-end gap-1.5">
-                <span className={`truncate text-right ${mine && f.home_id === teamId ? "font-black text-white" : "text-white/80"}`}>{f.home_name}</span>
+                <span onClick={() => f.home_id && onOpenTeam?.(f.home_id)} className={`truncate text-right ${onOpenTeam ? "cursor-pointer" : ""} ${mine && f.home_id === teamId ? "font-black text-white" : "text-white/80"}`}>{f.home_name}</span>
                 <ClubLogo src={f.home_logo || undefined} alt={f.home_name || ""} size="xs" className="h-3.5 w-3.5 shrink-0" />
               </div>
 
@@ -188,7 +188,7 @@ export default function LeagueLiveStrip({ leagueId, teamId, primaryColor = "#ff6
 
               <div className="flex min-w-0 flex-1 items-center gap-1.5">
                 <ClubLogo src={f.away_logo || undefined} alt={f.away_name || ""} size="xs" className="h-3.5 w-3.5 shrink-0" />
-                <span className={`truncate ${mine && f.away_id === teamId ? "font-black text-white" : "text-white/80"}`}>{f.away_name}</span>
+                <span onClick={() => f.away_id && onOpenTeam?.(f.away_id)} className={`truncate ${onOpenTeam ? "cursor-pointer" : ""} ${mine && f.away_id === teamId ? "font-black text-white" : "text-white/80"}`}>{f.away_name}</span>
               </div>
             </li>
           );

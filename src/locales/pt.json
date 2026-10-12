@@ -816,5 +816,25 @@
     "pdf_panel": "Relatórios em PDF",
     "pdf_full": "Relatório completo",
     "pdf_hint": "Abra e use \"Salvar PDF\"."
+  },
+  "clube": {
+    "back": "Voltar",
+    "games": "Jogos da temporada",
+    "pts": "Pts",
+    "j": "J",
+    "v": "V",
+    "e": "E",
+    "d": "D",
+    "sg": "SG",
+    "aprov": "Aproveitamento",
+    "form": "Últimos jogos",
+    "f_all": "Todos",
+    "f_done": "Jogados",
+    "f_next": "Próximos",
+    "home": "Casa",
+    "away": "Fora",
+    "no_games": "Nenhum jogo aqui.",
+    "error": "Não foi possível carregar este clube agora. Tente de novo em instantes.",
+    "open_season": "Todos os jogos da temporada →"
   }
 }

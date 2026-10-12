@@ -816,5 +816,25 @@
     "pdf_panel": "Informes en PDF",
     "pdf_full": "Informe completo",
     "pdf_hint": "Ábrelo y usa \"Guardar PDF\"."
+  },
+  "clube": {
+    "back": "Volver",
+    "games": "Partidos de la temporada",
+    "pts": "Pts",
+    "j": "PJ",
+    "v": "G",
+    "e": "E",
+    "d": "P",
+    "sg": "DG",
+    "aprov": "Rendimiento",
+    "form": "Últimos partidos",
+    "f_all": "Todos",
+    "f_done": "Jugados",
+    "f_next": "Próximos",
+    "home": "Local",
+    "away": "Visita",
+    "no_games": "No hay partidos aquí.",
+    "error": "No se pudo cargar este club ahora. Inténtalo de nuevo en unos instantes.",
+    "open_season": "Todos los partidos de la temporada →"
   }
 }

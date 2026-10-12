@@ -4,6 +4,7 @@
  * próximo jogo e modo AO VIVO. Dados via edge function league-standings (API-Football).
  */
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Trophy, Radio, Calendar, MapPin, Share2, Loader2 } from "lucide-react";
 import { toPng } from "html-to-image";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -80,6 +81,11 @@ const PULSE_CSS = `
 export default function CompetitionsPanel({ clubName, primaryColor = "#ff6200" }: Props) {
   const { t, language } = useTranslationApp();
   const { toast } = useToast();
+  const navigate = useNavigate();
+  // Abre a página do clube (jogos da temporada desde a 1ª rodada) no campeonato certo
+  const openTeam = (teamId: number | undefined, leagueId: number, season: number) => {
+    if (teamId) navigate(`/clube/${teamId}?liga=${leagueId}&temp=${season}`);
+  };
   const [loading, setLoading] = useState(true);
   const [team, setTeam] = useState<{ id: number; name: string; logo: string } | null>(null);
   const [competitions, setCompetitions] = useState<Competition[]>([]);
@@ -288,7 +294,7 @@ export default function CompetitionsPanel({ clubName, primaryColor = "#ff6200" }
                 className="space-y-4 bg-[#0b0b0b] p-2 rounded-xl"
               >
                 <MatchCard match={focusMatch} live={!!c.liveMatch} primaryColor={primaryColor} />
-                <LeagueLiveStrip leagueId={c.leagueId} teamId={team?.id} primaryColor={primaryColor} onChange={refreshSoon} />
+                <LeagueLiveStrip leagueId={c.leagueId} teamId={team?.id} primaryColor={primaryColor} onChange={refreshSoon} onOpenTeam={(id) => openTeam(id, c.leagueId, c.season)} />
                 <StandingsTable
                   rows={c.standings}
                   meTeamId={team?.id}
@@ -298,12 +304,22 @@ export default function CompetitionsPanel({ clubName, primaryColor = "#ff6200" }
                   primaryColor={primaryColor}
                   leagueId={c.leagueId}
                   leagueName={c.leagueName}
+                  onOpenTeam={(id) => openTeam(id, c.leagueId, c.season)}
                 />
                 <div className="flex items-center justify-center gap-1.5 pt-1">
                   <span className="text-[9px] font-black uppercase italic text-white">Heart Club</span>
                   <span className="text-[9px] text-white/40">· heartclubapp.com</span>
                 </div>
               </div>
+              {team?.id && (
+                <button
+                  type="button"
+                  onClick={() => openTeam(team.id, c.leagueId, c.season)}
+                  className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-[11px] font-black uppercase italic tracking-wide text-white hover:border-white/30"
+                >
+                  {t("clube.open_season")}
+                </button>
+              )}
               <LeagueRulesPanel leagueId={c.leagueId} />
             </TabsContent>
           );
@@ -474,6 +490,7 @@ function StandingsTable({
   heartClubName,
   primaryColor,
   leagueId,
+  onOpenTeam,
 }: {
   rows: StandingRow[];
   meTeamId?: number;
@@ -483,6 +500,7 @@ function StandingsTable({
   primaryColor: string;
   leagueId?: number;
   leagueName?: string;
+  onOpenTeam?: (teamId: number) => void;
 }) {
   const { t } = useTranslationApp();
   const headerBg = "bg-[#141414]";
@@ -654,7 +672,8 @@ function StandingsTable({
                         </span>
                         <ClubLogo src={r.logo} alt={r.name} size="xs" className="w-3.5 h-3.5 shrink-0" />
                         <span
-                          className={`truncate text-[10px] ${
+                          onClick={() => r.teamId && onOpenTeam?.(r.teamId)}
+                          className={`truncate text-[10px] ${onOpenTeam ? "cursor-pointer" : ""} ${
                             isMe ? "font-black text-white" : isOpponent ? "font-bold" : isRival ? "font-semibold text-white/90" : "text-white/85"
                           }`}
                           style={isOpponent ? { color: opponentColor } : undefined}
