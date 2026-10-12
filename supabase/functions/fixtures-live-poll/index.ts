@@ -57,6 +57,48 @@ async function pushToFans(teamId: number, type: string, title: string, body: str
 const LIVE_STATUSES = new Set(["1H", "2H", "HT", "ET", "BT", "P", "LIVE"]);
 const DONE_STATUSES = new Set(["FT", "AET", "PEN"]);
 
+type Snap = { status: string; elapsed: number | null; goalsHome: number; goalsAway: number; homeName: string; awayName: string };
+
+/**
+ * Placar do jogo: lê da nossa tabela league_fixtures (alimentada UMA vez para o mundo todo por fixtures-live-scores,
+ * zero chamada à API). Só consulta a API-Football se o jogo não estiver lá ou se o dado estiver velho —
+ * isso evita gastar a cota diária com 1 chamada por jogo por minuto.
+ */
+async function readSnap(fixtureId: number, countCall: () => void): Promise<Snap | null> {
+  const { data: lf } = await supabase
+    .from("league_fixtures")
+    .select("status, elapsed, goals_home, goals_away, home_name, away_name, updated_at")
+    .eq("fixture_id", fixtureId)
+    .maybeSingle();
+  if (lf) {
+    const age = Date.now() - new Date((lf as any).updated_at).getTime();
+    const st = (lf as any).status as string;
+    const usable = DONE_STATUSES.has(st) || (st === "HT" && age < 25 * 60 * 1000) || age < 3 * 60 * 1000;
+    if (usable) {
+      return {
+        status: st,
+        elapsed: (lf as any).elapsed ?? null,
+        goalsHome: (lf as any).goals_home ?? 0,
+        goalsAway: (lf as any).goals_away ?? 0,
+        homeName: (lf as any).home_name || "",
+        awayName: (lf as any).away_name || "",
+      };
+    }
+  }
+  countCall();
+  const j = await af(`/fixtures?id=${fixtureId}`);
+  const f = j?.response?.[0];
+  if (!f) return null;
+  return {
+    status: f.fixture.status?.short,
+    elapsed: f.fixture.status?.elapsed ?? null,
+    goalsHome: f.goals?.home ?? 0,
+    goalsAway: f.goals?.away ?? 0,
+    homeName: f.teams.home.name,
+    awayName: f.teams.away.name,
+  };
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
   try {
@@ -94,15 +136,10 @@ serve(async (req) => {
     const updatedRows = new Map<number, any>();
 
     for (const [fixtureId, c] of uniqueFixtures) {
-      apiCalls++;
-      const j = await af(`/fixtures?id=${fixtureId}`);
-      const f = j?.response?.[0];
-      if (!f) continue;
-
-      const status = f.fixture.status?.short;
-      const elapsed = f.fixture.status?.elapsed ?? null;
-      const goalsHome = f.goals?.home ?? 0;
-      const goalsAway = f.goals?.away ?? 0;
+      const snap = await readSnap(fixtureId, () => apiCalls++);
+      if (!snap) continue;
+      const { status, elapsed, goalsHome, goalsAway } = snap;
+      const f = { teams: { home: { name: snap.homeName }, away: { name: snap.awayName } } };
       const prev = c.liveState || { status: "NS", goalsHome: 0, goalsAway: 0, finished: false };
 
       // KICKOFF

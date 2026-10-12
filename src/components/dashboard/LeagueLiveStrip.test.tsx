@@ -26,7 +26,7 @@ vi.mock("@/integrations/supabase/client", () => {
 vi.mock("@/hooks/useTranslationApp", () => ({ useTranslationApp: () => ({ t: (k: string) => k }) }));
 vi.mock("@/components/ClubLogo", () => ({ ClubLogo: () => null }));
 
-import LeagueLiveStrip, { liveMinute } from "./LeagueLiveStrip";
+import LeagueLiveStrip, { liveMinute, liveMinuteLabel } from "./LeagueLiveStrip";
 
 const iso = (minAgo: number) => new Date(Date.now() - minAgo * 60_000).toISOString();
 const row = (over: any) => ({
@@ -102,5 +102,38 @@ describe("Jogos do dia do campeonato (strip)", () => {
     expect(liveMinute(f, Date.now())).toBe(52);
     const old: any = row({ elapsed: 50, updated_at: new Date(Date.now() - 20 * 60_000).toISOString() });
     expect(liveMinute(old, Date.now())).toBe(53);
+  });
+
+  it("dado velho NUNCA aparece como ao vivo: sem minutos, sem piscar, placar apagado", async () => {
+    db.rows = [row({ fixture_id: 1, status: "2H", elapsed: 90, kickoff: iso(110), updated_at: iso(20), goals_home: 1, goals_away: 1 })];
+    render(<LeagueLiveStrip leagueId={72} />);
+    await screen.findByText("Casa FC");
+    expect(screen.queryByTestId("live-minute")).toBeNull();
+    expect(screen.getByTestId("stale-score").textContent).toBe("1 - 1");
+    expect(document.querySelector(".hc-live-blink")).toBeNull();
+  });
+
+  it("jogo que 'continua ao vivo' 3 horas depois do início é tratado como encerrado (preto, sem minutos)", async () => {
+    db.rows = [row({ fixture_id: 1, status: "2H", elapsed: 90, kickoff: iso(200), updated_at: iso(60), goals_home: 0, goals_away: 2 })];
+    render(<LeagueLiveStrip leagueId={72} />);
+    await screen.findByText("Casa FC");
+    expect(screen.queryByTestId("live-minute")).toBeNull();
+    expect(screen.getByTestId("final-score").textContent).toBe("0 - 2");
+  });
+
+  it("intervalo recente continua como 'Intervalo' (não é dado velho)", async () => {
+    db.rows = [row({ fixture_id: 1, status: "HT", elapsed: 45, kickoff: iso(55), updated_at: iso(8), goals_home: 0, goals_away: 1 })];
+    render(<LeagueLiveStrip leagueId={72} />);
+    await screen.findByText("Casa FC");
+    expect(screen.getByTestId("live-minute").textContent).toBe("competitions.halftime");
+  });
+
+  it("minutos exatos: acréscimo vira 45+2', e o relógio local nunca passa de 45' no 1º tempo nem de 90' no 2º", () => {
+    const now = Date.now();
+    expect(liveMinuteLabel(row({ status: "1H", elapsed: 45, extra: 2, updated_at: new Date(now - 90_000).toISOString() }) as any, now)).toBe("45+2'");
+    expect(liveMinuteLabel(row({ status: "2H", elapsed: 90, extra: 5, updated_at: new Date(now).toISOString() }) as any, now)).toBe("90+5'");
+    expect(liveMinuteLabel(row({ status: "1H", elapsed: 44, extra: null, updated_at: new Date(now - 3 * 60_000).toISOString() }) as any, now)).toBe("45'");
+    expect(liveMinuteLabel(row({ status: "2H", elapsed: 89, extra: null, updated_at: new Date(now - 3 * 60_000).toISOString() }) as any, now)).toBe("90'");
+    expect(liveMinuteLabel(row({ status: "2H", elapsed: 63, extra: null, updated_at: new Date(now - 60_000).toISOString() }) as any, now)).toBe("64'");
   });
 });

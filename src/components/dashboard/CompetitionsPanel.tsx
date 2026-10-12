@@ -145,6 +145,8 @@ export default function CompetitionsPanel({ clubName, primaryColor = "#ff6200" }
     let cancelled = false;
     let firstLoad = true;
     const tick = async () => {
+      // Aba escondida: não gasta consulta (os placares do dia vêm ao vivo do nosso banco, na faixa LeagueLiveStrip).
+      if (!firstLoad && typeof document !== "undefined" && document.hidden) return;
       if (!clubName) {
         setCompetitions([]);
         setLoading(false);
@@ -191,7 +193,8 @@ export default function CompetitionsPanel({ clubName, primaryColor = "#ff6200" }
     };
     setLoading(true);
     tick();
-    const id = setInterval(tick, 60_000);
+    // 5 min (era 1 min): o placar ao vivo já chega em tempo real pelo nosso banco; isto só renova a tabela/próximo jogo.
+    const id = setInterval(tick, 5 * 60_000);
     return () => {
       cancelled = true;
       clearInterval(id);

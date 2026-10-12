@@ -13,6 +13,7 @@ export type LeagueFixtureRow = {
   kickoff: string;
   status: string;
   elapsed: number | null;
+  extra: number | null;
   home_id: number | null;
   home_name: string | null;
   home_logo: string | null;
@@ -40,6 +41,7 @@ export function toRow(f: any): LeagueFixtureRow | null {
     kickoff: date,
     status: f.fixture?.status?.short || "NS",
     elapsed: f.fixture?.status?.elapsed ?? null,
+    extra: f.fixture?.status?.extra ?? null,
     home_id: f.teams?.home?.id ?? null,
     home_name: f.teams?.home?.name ?? null,
     home_logo: f.teams?.home?.logo ?? null,

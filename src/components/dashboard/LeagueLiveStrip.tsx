@@ -19,6 +19,7 @@ export type LeagueFixture = {
   kickoff: string;
   status: string;
   elapsed: number | null;
+  extra?: number | null;
   home_id: number | null;
   home_name: string | null;
   home_logo: string | null;
@@ -34,14 +35,42 @@ const LIVE = new Set(["1H", "2H", "ET", "LIVE"]);
 const BREAK = new Set(["HT", "BT"]);
 const DONE = new Set(["FT", "AET", "PEN"]);
 const HOUR = 3600_000;
+// Dado velho nunca aparece como "ao vivo": jogo rolando sem atualização há mais de 6 min (ou intervalo há mais de 25 min)
+// vira placar apagado, sem minutos e sem piscar; passadas 3 h do início, é tratado como encerrado.
+const STALE_LIVE_MS = 6 * 60_000;
+const STALE_BREAK_MS = 25 * 60_000;
+
+export function isStale(f: LeagueFixture, now: number): boolean {
+  const age = now - new Date(f.updated_at).getTime();
+  if (LIVE.has(f.status)) return age > STALE_LIVE_MS;
+  if (BREAK.has(f.status)) return age > STALE_BREAK_MS;
+  return false;
+}
+const treatedAsDone = (f: LeagueFixture, now: number) => (LIVE.has(f.status) || BREAK.has(f.status)) && now - new Date(f.kickoff).getTime() > 3 * HOUR;
 
 const sameLocalDay = (a: Date, b: Date) => a.toDateString() === b.toDateString();
 
-/** Minutos do jogo: o último valor da API + o tempo que passou desde que ele foi gravado (até +3 min de folga). */
+/** Teto do relógio local por fase: o tempo regulamentar não passa de 45'/90' sem o acréscimo vindo da API. */
+const CAP: Record<string, number> = { "1H": 45, "2H": 90, ET: 120 };
+
+/**
+ * Minuto do jogo para mostrar: com acréscimo informado pela API vira "45+2'" (parado, sem relógio local);
+ * sem acréscimo, soma o tempo desde a última gravação (até +3 min) respeitando o teto da fase.
+ */
+export function liveMinuteLabel(f: LeagueFixture, now: number): string {
+  const base = f.elapsed ?? 0;
+  if (f.extra && f.extra > 0) return `${base}+${f.extra}'`;
+  const extra = Math.min(3, Math.max(0, Math.floor((now - new Date(f.updated_at).getTime()) / 60_000)));
+  const cap = CAP[f.status];
+  return `${cap ? Math.min(cap, base + extra) : base + extra}'`;
+}
+
+/** Minutos (número) — mantido para compatibilidade e testes. */
 export function liveMinute(f: LeagueFixture, now: number): number {
   const base = f.elapsed ?? 0;
   const extra = Math.min(3, Math.max(0, Math.floor((now - new Date(f.updated_at).getTime()) / 60_000)));
-  return base + extra;
+  const cap = CAP[f.status];
+  return cap ? Math.min(cap, base + extra) : base + extra;
 }
 
 export default function LeagueLiveStrip({ leagueId, teamId, primaryColor = "#ff6200" }: { leagueId: number; teamId?: number | null; primaryColor?: string }) {
@@ -106,9 +135,12 @@ export default function LeagueLiveStrip({ leagueId, teamId, primaryColor = "#ff6
       <ul className="space-y-0.5">
         {list.map((f) => {
           const mine = !!teamId && (f.home_id === teamId || f.away_id === teamId);
-          const live = LIVE.has(f.status);
-          const brk = BREAK.has(f.status);
-          const done = DONE.has(f.status);
+          const stale = isStale(f, now);
+          const fin = treatedAsDone(f, now);
+          const live = LIVE.has(f.status) && !stale && !fin;
+          const brk = BREAK.has(f.status) && !stale && !fin;
+          const done = DONE.has(f.status) || fin;
+          const dim = stale && !fin;
           const hasScore = f.goals_home != null && f.goals_away != null;
           const time = new Date(f.kickoff).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
           return (
@@ -127,12 +159,16 @@ export default function LeagueLiveStrip({ leagueId, teamId, primaryColor = "#ff6
                 {live || brk ? (
                   <>
                     <span className="hc-live-blink text-[8px] font-bold tabular-nums text-red-500" data-testid="live-minute">
-                      {brk ? t("competitions.halftime") : `${liveMinute(f, now)}'`}
+                      {brk ? t("competitions.halftime") : liveMinuteLabel(f, now)}
                     </span>
                     <span className="hc-live-blink mt-0.5 rounded bg-red-500/15 px-1.5 py-0.5 text-[11px] font-black tabular-nums text-red-500">
                       {f.goals_home ?? 0} - {f.goals_away ?? 0}
                     </span>
                   </>
+                ) : dim && hasScore ? (
+                  <span className="rounded bg-white/5 px-1.5 py-0.5 text-[11px] font-black tabular-nums text-white/40" data-testid="stale-score">
+                    {f.goals_home} - {f.goals_away}
+                  </span>
                 ) : done && hasScore ? (
                   <span className="rounded bg-black px-1.5 py-0.5 text-[11px] font-black tabular-nums text-white/70" data-testid="final-score">
                     {f.goals_home} - {f.goals_away}

@@ -18,10 +18,10 @@ const corsHeaders = {
 const API_KEY = Deno.env.get("API_FOOTBALL_KEY") || Deno.env.get("FOOTBALL_API_KEY") || "";
 const API_BASE = "https://v3.football.api-sports.io";
 
-const ROUND_SECONDS = 20; // intervalo entre rodadas dentro de uma execução
+const ROUND_SECONDS = 30; // intervalo entre rodadas dentro de uma execução (saldo folgado)
 const RUN_SECONDS = 52; // cada execução dura menos de 1 minuto (o cron dispara a próxima)
-const SLOW_BELOW = 1500; // saldo diário abaixo disso: 1 rodada por minuto
-const STOP_BELOW = 300; // saldo diário abaixo disso: para (reserva para o resto do site)
+const SLOW_BELOW = 5000; // saldo diário abaixo disso: 1 rodada por minuto (cota é gasta também por outras partes do site)
+const STOP_BELOW = 150; // saldo diário abaixo disso: para (reserva mínima para fechar jogos)
 const OPEN = ["NS", "TBD", "1H", "HT", "2H", "ET", "BT", "P", "LIVE", "INT"];
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -56,13 +56,13 @@ serve(async (req) => {
       if (!rows.length) return;
       // Só grava o que mudou (placar/status) — o relógio dos minutos o site calcula sozinho.
       const ids = rows.map((r) => r.fixture_id);
-      const { data: old } = await supabase.from("league_fixtures").select("fixture_id, status, goals_home, goals_away, elapsed, updated_at").in("fixture_id", ids);
+      const { data: old } = await supabase.from("league_fixtures").select("fixture_id, status, goals_home, goals_away, elapsed, extra, updated_at").in("fixture_id", ids);
       const prev = new Map<number, any>((old || []).map((o: any) => [Number(o.fixture_id), o]));
       const now = Date.now();
       const changed = rows.filter((r) => {
         const o = prev.get(r.fixture_id);
         if (!o) return true;
-        if (o.status !== r.status || o.goals_home !== r.goals_home || o.goals_away !== r.goals_away) return true;
+        if (o.status !== r.status || o.goals_home !== r.goals_home || o.goals_away !== r.goals_away || o.extra !== r.extra) return true;
         // reancora o relógio de minutos pelo menos 1x por minuto
         return r.elapsed !== o.elapsed && now - new Date(o.updated_at).getTime() > 55_000;
       });
