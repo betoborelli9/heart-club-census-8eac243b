@@ -13,6 +13,7 @@ import { useTranslationApp } from "@/hooks/useTranslationApp";
 import { useClubTheme } from "@/hooks/useClubTheme";
 import { isLightColor } from "@/hooks/useMatchCardInfo";
 import { ClubLogo } from "@/components/ClubLogo";
+import ClubSquad from "@/components/clube/ClubSquad";
 
 type Game = {
   id: number;
@@ -96,6 +97,7 @@ const Clube = () => {
   const [data, setData] = useState<Payload | null>(null);
   const [error, setError] = useState(false);
   const [filter, setFilter] = useState<"all" | "done" | "next">("all");
+  const [tab, setTab] = useState<"jogos" | "elenco">(sp.get("aba") === "elenco" ? "elenco" : "jogos");
   const [now, setNow] = useState(() => Date.now());
   const nextRef = useRef<HTMLLIElement | null>(null);
   const scrolled = useRef(false);
@@ -234,8 +236,31 @@ const Clube = () => {
         )}
       </header>
 
+      {/* Abas */}
+      <nav className="sticky top-0 z-20 border-b border-white/10 bg-black/90 backdrop-blur" aria-label="clube">
+        <div className="mx-auto flex max-w-xl gap-1 overflow-x-auto px-3 py-2">
+          {([["jogos", t("clube.tab_games")], ["elenco", t("clube.tab_squad")]] as const).map(([k, label]) => (
+            <button
+              key={k}
+              onClick={() => setTab(k)}
+              aria-pressed={tab === k}
+              className={`h-11 shrink-0 rounded-full px-5 text-[12px] font-black uppercase tracking-wide ${tab === k ? "bg-white text-black" : "bg-white/10 text-white/70"}`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </nav>
+
+      {/* Elenco (carrega só quando a aba é aberta) */}
+      {tab === "elenco" && (
+        <main className="mx-auto max-w-xl px-3 pt-4" data-testid="tab-elenco">
+          <ClubSquad teamId={teamId} accent={primary === "#1a1a1a" ? "#ff6200" : isLightColor(primary) ? secondary : primary} />
+        </main>
+      )}
+
       {/* Jogos */}
-      <main className="mx-auto max-w-xl px-3 pt-4">
+      <main className="mx-auto max-w-xl px-3 pt-4" hidden={tab !== "jogos"}>
         <div className="mb-3 flex items-center gap-2">
           <CalendarDays className="h-4 w-4" style={{ color: primary === "#1a1a1a" ? "#ff6200" : primary }} />
           <h2 className="flex-1 text-[11px] font-black uppercase tracking-widest text-white/80">{t("clube.games")}</h2>
@@ -287,7 +312,7 @@ const Clube = () => {
                   </div>
 
                   <div className="flex min-w-0 flex-1 items-center justify-end gap-1.5">
-                    <span className={`truncate text-right text-[12px] ${g.h === teamId ? "font-black text-white" : "text-white/75"}`}>{g.hn}</span>
+                    <span className={`line-clamp-2 break-words text-right text-[11px] leading-tight ${g.h === teamId ? "font-black text-white" : "text-white/75"}`}>{g.hn}</span>
                     <ClubLogo src={g.hl || undefined} alt={g.hn} clubName={g.hn} size="xs" className="h-5 w-5 shrink-0" />
                   </div>
 
@@ -313,7 +338,7 @@ const Clube = () => {
 
                   <div className="flex min-w-0 flex-1 items-center gap-1.5">
                     <ClubLogo src={g.al || undefined} alt={g.an} clubName={g.an} size="xs" className="h-5 w-5 shrink-0" />
-                    <span className={`truncate text-[12px] ${g.a === teamId ? "font-black text-white" : "text-white/75"}`}>{g.an}</span>
+                    <span className={`line-clamp-2 break-words text-[11px] leading-tight ${g.a === teamId ? "font-black text-white" : "text-white/75"}`}>{g.an}</span>
                   </div>
 
                   <div className="flex w-6 shrink-0 justify-center">

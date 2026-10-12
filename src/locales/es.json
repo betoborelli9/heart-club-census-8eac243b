@@ -835,6 +835,25 @@
     "away": "Visita",
     "no_games": "No hay partidos aquí.",
     "error": "No se pudo cargar este club ahora. Inténtalo de nuevo en unos instantes.",
-    "open_season": "Todos los partidos de la temporada →"
+    "open_season": "Todos los partidos de la temporada →",
+    "tab_games": "Partidos",
+    "tab_squad": "Plantilla"
+  },
+  "squad": {
+    "error": "No se pudo cargar la plantilla ahora. Inténtalo de nuevo en unos instantes.",
+    "coach": "Entrenador",
+    "moves": "Altas y bajas",
+    "in": "Llegó",
+    "out": "Salió",
+    "kind_loan": "cesión",
+    "kind_return": "fin de cesión",
+    "kind_signing": "fichaje",
+    "pos_Goalkeeper": "Porteros",
+    "pos_Defender": "Defensas",
+    "pos_Midfielder": "Centrocampistas",
+    "pos_Attacker": "Delanteros",
+    "pos_Other": "Otros",
+    "age": "{{n}} años",
+    "new": "Nuevo"
   }
 }

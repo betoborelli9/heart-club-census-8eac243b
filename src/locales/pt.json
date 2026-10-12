@@ -835,6 +835,25 @@
     "away": "Fora",
     "no_games": "Nenhum jogo aqui.",
     "error": "Não foi possível carregar este clube agora. Tente de novo em instantes.",
-    "open_season": "Todos os jogos da temporada →"
+    "open_season": "Todos os jogos da temporada →",
+    "tab_games": "Jogos",
+    "tab_squad": "Elenco"
+  },
+  "squad": {
+    "error": "Não foi possível carregar o elenco agora. Tente de novo em instantes.",
+    "coach": "Técnico",
+    "moves": "Chegadas e saídas",
+    "in": "Chegou",
+    "out": "Saiu",
+    "kind_loan": "empréstimo",
+    "kind_return": "fim de empréstimo",
+    "kind_signing": "contratação",
+    "pos_Goalkeeper": "Goleiros",
+    "pos_Defender": "Defensores",
+    "pos_Midfielder": "Meio-campistas",
+    "pos_Attacker": "Atacantes",
+    "pos_Other": "Outros",
+    "age": "{{n}} anos",
+    "new": "Novo"
   }
 }

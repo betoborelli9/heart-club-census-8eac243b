@@ -835,6 +835,25 @@
     "away": "Away",
     "no_games": "No matches here.",
     "error": "Couldn't load this club right now. Please try again shortly.",
-    "open_season": "All season matches →"
+    "open_season": "All season matches →",
+    "tab_games": "Matches",
+    "tab_squad": "Squad"
+  },
+  "squad": {
+    "error": "Couldn't load the squad right now. Please try again shortly.",
+    "coach": "Head coach",
+    "moves": "Arrivals and departures",
+    "in": "Joined",
+    "out": "Left",
+    "kind_loan": "loan",
+    "kind_return": "loan ended",
+    "kind_signing": "signing",
+    "pos_Goalkeeper": "Goalkeepers",
+    "pos_Defender": "Defenders",
+    "pos_Midfielder": "Midfielders",
+    "pos_Attacker": "Forwards",
+    "pos_Other": "Others",
+    "age": "{{n}} years old",
+    "new": "New"
   }
 }

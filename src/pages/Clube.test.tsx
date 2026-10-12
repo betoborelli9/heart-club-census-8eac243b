@@ -4,13 +4,14 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 
 const state: { payload: any; error: any; invokes: any[] } = { payload: null, error: null, invokes: [] };
+const squadPayload = { teamId: 142, updatedAt: new Date().toISOString(), coach: null, players: [{ id: 1, name: "Goleiro Um", pos: "Goalkeeper", number: 1, age: 30, photo: null }], moves: [] };
 
 vi.mock("@/integrations/supabase/client", () => ({
   supabase: {
     functions: {
       invoke: (name: string, opts: any) => {
         state.invokes.push({ name, body: opts?.body });
-        return Promise.resolve({ data: state.payload, error: state.error });
+        return Promise.resolve({ data: name === "club-squad" ? squadPayload : state.payload, error: state.error });
       },
     },
     from: () => {
@@ -115,5 +116,21 @@ describe("Página do clube — temporada completa", () => {
     expect(resultFor(game, 142)).toBe("D");
     expect(resultFor(game, 10)).toBe("V");
     expect(resultFor(g(2, 2, 1, 2, null, null, "NS", 2) as any, 1)).toBeNull();
+  });
+
+  it("abas: Jogos e Elenco; o elenco só é buscado quando a aba é aberta", async () => {
+    renderAt();
+    await screen.findByTestId("club-summary");
+    expect(state.invokes.map((i) => i.name)).toEqual(["club-season"]); // elenco ainda não foi pedido
+    fireEvent.click(screen.getByText("clube.tab_squad"));
+    expect(await screen.findByTestId("squad")).toBeTruthy();
+    expect(state.invokes.map((i) => i.name)).toEqual(["club-season", "club-squad"]);
+    fireEvent.click(screen.getByText("clube.tab_games"));
+    await waitFor(() => expect(screen.queryByTestId("tab-elenco")).toBeNull());
+  });
+
+  it("endereço com ?aba=elenco já abre no elenco", async () => {
+    renderAt("/clube/142?liga=72&temp=2026&aba=elenco");
+    expect(await screen.findByTestId("squad")).toBeTruthy();
   });
 });
