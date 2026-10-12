@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 
@@ -75,7 +75,11 @@ const renderPage = () =>
   );
 
 describe("Aba Jogos — só o clube em exibição e os campeonatos dele", () => {
+  afterEach(() => vi.useRealTimers());
+  // Relógio fixo (15h de uma segunda): o teste não pode depender da hora em que roda
   beforeEach(() => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date(2026, 9, 12, 15, 0, 0));
     clearCompetitionsCache();
     state.viewed = "Vila Nova";
     state.heart = "Vila Nova";
@@ -86,8 +90,8 @@ describe("Aba Jogos — só o clube em exibição e os campeonatos dele", () => 
     state.setViewed = vi.fn();
     state.reset = vi.fn();
     state.games = [
-      g(1, 72, [142, "Vila Nova"], [77, "Novorizontino"], { status: "2H", elapsed: 63, goals_home: 2, goals_away: 1, kickoff: day(0, 15) }),
-      g(2, 72, [10, "Time A"], [11, "Time B"], { status: "FT", elapsed: 90, goals_home: 0, goals_away: 3, kickoff: day(0, 13) }),
+      g(1, 72, [142, "Vila Nova"], [77, "Novorizontino"], { status: "2H", elapsed: 63, goals_home: 2, goals_away: 1, kickoff: day(0, 14) }),
+      g(2, 72, [10, "Time A"], [11, "Time B"], { status: "FT", elapsed: 90, goals_home: 0, goals_away: 3, kickoff: day(0, 12) }),
       g(3, 72, [12, "Time C"], [13, "Time D"], { kickoff: day(0, 21) }),
       g(4, 72, [142, "Vila Nova"], [14, "Time E"], { kickoff: day(5) }),
     ];
