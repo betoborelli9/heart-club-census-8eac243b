@@ -835,9 +835,10 @@
     "away": "Visita",
     "no_games": "No hay partidos aquí.",
     "error": "No se pudo cargar este club ahora. Inténtalo de nuevo en unos instantes.",
-    "open_season": "Todos los partidos de la temporada →",
+    "open_season": "Partidos, probabilidades y plantilla →",
     "tab_games": "Partidos",
-    "tab_squad": "Plantilla"
+    "tab_squad": "Plantilla",
+    "tab_chances": "Probabilidades"
   },
   "squad": {
     "error": "No se pudo cargar la plantilla ahora. Inténtalo de nuevo en unos instantes.",
@@ -855,5 +856,37 @@
     "pos_Other": "Otros",
     "age": "{{n}} años",
     "new": "Nuevo"
+  },
+  "chances": {
+    "error": "No se pudieron calcular las probabilidades ahora. Inténtalo de nuevo en unos instantes.",
+    "unsupported": "Las probabilidades se muestran en campeonatos de liga. Este campeonato tiene otro formato (eliminatorias, fases o grupos especiales).",
+    "few": "Pocos partidos jugados: estimación inicial, aún muy incierta. Mejora en cada jornada.",
+    "projected": "Puntos proyectados",
+    "likely_pos": "Posición probable",
+    "now": "hoy",
+    "left": "Faltan",
+    "games": "partidos",
+    "goals": "Probabilidades por objetivo",
+    "first": "Terminar 1º",
+    "cut": "Suele cerrar con ~{{pts}} puntos",
+    "cut_safe": "Para salvarse: ~{{pts}} puntos",
+    "safe_now": "ya está sobre el corte",
+    "reached": "ya está sobre el corte",
+    "need": "necesita {{n}}% de los puntos",
+    "hard_goal": "difícil",
+    "where": "Dónde puede terminar",
+    "next_games": "Próximos partidos",
+    "vs": "vs",
+    "at": "en",
+    "win": "Victoria",
+    "draw": "Empate",
+    "lose": "Derrota",
+    "schedule": "Dificultad de los partidos restantes",
+    "hard": "alta",
+    "medium": "media",
+    "easy": "baja",
+    "all": "Todos los clubes",
+    "legend": "Columnas: puntos · probabilidad del 1º puesto · probabilidad del último objetivo de la tabla",
+    "method": "Estimación estadística: el modelo mide el ataque y la defensa de cada equipo con los resultados de la temporada y simula {{sims}} veces los partidos restantes. Es una probabilidad, no una garantía."
   }
 }

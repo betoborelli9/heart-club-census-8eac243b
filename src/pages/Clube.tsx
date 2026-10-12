@@ -14,6 +14,7 @@ import { useClubTheme } from "@/hooks/useClubTheme";
 import { isLightColor } from "@/hooks/useMatchCardInfo";
 import { ClubLogo } from "@/components/ClubLogo";
 import ClubSquad from "@/components/clube/ClubSquad";
+import ClubChances from "@/components/clube/ClubChances";
 
 type Game = {
   id: number;
@@ -97,7 +98,7 @@ const Clube = () => {
   const [data, setData] = useState<Payload | null>(null);
   const [error, setError] = useState(false);
   const [filter, setFilter] = useState<"all" | "done" | "next">("all");
-  const [tab, setTab] = useState<"jogos" | "elenco">(sp.get("aba") === "elenco" ? "elenco" : "jogos");
+  const [tab, setTab] = useState<"jogos" | "chances" | "elenco">(sp.get("aba") === "elenco" ? "elenco" : sp.get("aba") === "chances" ? "chances" : "jogos");
   const [now, setNow] = useState(() => Date.now());
   const nextRef = useRef<HTMLLIElement | null>(null);
   const scrolled = useRef(false);
@@ -239,7 +240,7 @@ const Clube = () => {
       {/* Abas */}
       <nav className="sticky top-0 z-20 border-b border-white/10 bg-black/90 backdrop-blur" aria-label="clube">
         <div className="mx-auto flex max-w-xl gap-1 overflow-x-auto px-3 py-2">
-          {([["jogos", t("clube.tab_games")], ["elenco", t("clube.tab_squad")]] as const).map(([k, label]) => (
+          {([["jogos", t("clube.tab_games")], ["chances", t("clube.tab_chances")], ["elenco", t("clube.tab_squad")]] as const).map(([k, label]) => (
             <button
               key={k}
               onClick={() => setTab(k)}
@@ -251,6 +252,13 @@ const Clube = () => {
           ))}
         </div>
       </nav>
+
+      {/* Chances (carrega só quando a aba é aberta) */}
+      {tab === "chances" && (
+        <main className="mx-auto max-w-xl px-3 pt-4" data-testid="tab-chances">
+          <ClubChances teamId={teamId} leagueId={leagueId} season={season} accent={primary === "#1a1a1a" ? "#ff6200" : isLightColor(primary) ? secondary : primary} />
+        </main>
+      )}
 
       {/* Elenco (carrega só quando a aba é aberta) */}
       {tab === "elenco" && (

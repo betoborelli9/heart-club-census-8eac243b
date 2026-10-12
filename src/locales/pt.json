@@ -835,9 +835,10 @@
     "away": "Fora",
     "no_games": "Nenhum jogo aqui.",
     "error": "Não foi possível carregar este clube agora. Tente de novo em instantes.",
-    "open_season": "Todos os jogos da temporada →",
+    "open_season": "Jogos, chances e elenco do clube →",
     "tab_games": "Jogos",
-    "tab_squad": "Elenco"
+    "tab_squad": "Elenco",
+    "tab_chances": "Chances"
   },
   "squad": {
     "error": "Não foi possível carregar o elenco agora. Tente de novo em instantes.",
@@ -855,5 +856,37 @@
     "pos_Other": "Outros",
     "age": "{{n}} anos",
     "new": "Novo"
+  },
+  "chances": {
+    "error": "Não foi possível calcular as chances agora. Tente de novo em instantes.",
+    "unsupported": "As chances aparecem em campeonatos de pontos corridos. Este campeonato tem outro formato (mata-mata, fases ou grupos especiais).",
+    "few": "Poucos jogos disputados: estimativa inicial, ainda muito incerta. Ela melhora a cada rodada.",
+    "projected": "Pontos projetados",
+    "likely_pos": "Posição provável",
+    "now": "hoje",
+    "left": "Faltam",
+    "games": "jogos",
+    "goals": "Chances por objetivo",
+    "first": "Ficar em 1º lugar",
+    "cut": "Costuma fechar com ~{{pts}} pontos",
+    "cut_safe": "Para escapar: ~{{pts}} pontos",
+    "safe_now": "já está acima do corte",
+    "reached": "já está acima do corte",
+    "need": "precisa de {{n}}% de aproveitamento",
+    "hard_goal": "difícil",
+    "where": "Onde pode terminar",
+    "next_games": "Próximos jogos",
+    "vs": "x",
+    "at": "em",
+    "win": "Vitória",
+    "draw": "Empate",
+    "lose": "Derrota",
+    "schedule": "Dificuldade dos jogos que faltam",
+    "hard": "alta",
+    "medium": "média",
+    "easy": "baixa",
+    "all": "Todos os clubes",
+    "legend": "Colunas: pontos · chance do 1º lugar · chance do último objetivo da tabela",
+    "method": "Estimativa estatística: o modelo mede o ataque e a defesa de cada time pelos resultados do campeonato e simula {{sims}} vezes os jogos que faltam. É uma probabilidade, não uma garantia."
   }
 }

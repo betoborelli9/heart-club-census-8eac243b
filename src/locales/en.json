@@ -835,9 +835,10 @@
     "away": "Away",
     "no_games": "No matches here.",
     "error": "Couldn't load this club right now. Please try again shortly.",
-    "open_season": "All season matches →",
+    "open_season": "Matches, chances and squad →",
     "tab_games": "Matches",
-    "tab_squad": "Squad"
+    "tab_squad": "Squad",
+    "tab_chances": "Chances"
   },
   "squad": {
     "error": "Couldn't load the squad right now. Please try again shortly.",
@@ -855,5 +856,37 @@
     "pos_Other": "Others",
     "age": "{{n}} years old",
     "new": "New"
+  },
+  "chances": {
+    "error": "Couldn't calculate the chances right now. Please try again shortly.",
+    "unsupported": "Chances are shown for league-format competitions. This competition has a different format (knockout, stages or special groups).",
+    "few": "Few matches played: early estimate, still very uncertain. It improves every round.",
+    "projected": "Projected points",
+    "likely_pos": "Likely position",
+    "now": "now",
+    "left": "Left",
+    "games": "matches",
+    "goals": "Chances by goal",
+    "first": "Finish 1st",
+    "cut": "Usually ends around ~{{pts}} points",
+    "cut_safe": "To stay up: ~{{pts}} points",
+    "safe_now": "already above the cut",
+    "reached": "already above the cut",
+    "need": "needs {{n}}% of the points",
+    "hard_goal": "hard",
+    "where": "Where it could finish",
+    "next_games": "Upcoming matches",
+    "vs": "vs",
+    "at": "at",
+    "win": "Win",
+    "draw": "Draw",
+    "lose": "Loss",
+    "schedule": "Difficulty of remaining matches",
+    "hard": "high",
+    "medium": "medium",
+    "easy": "low",
+    "all": "All clubs",
+    "legend": "Columns: points · chance of 1st place · chance of the table's last goal",
+    "method": "Statistical estimate: the model measures each team's attack and defence from the season's results and simulates the remaining matches {{sims}} times. It is a probability, not a guarantee."
   }
 }
