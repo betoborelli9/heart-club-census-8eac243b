@@ -4,7 +4,7 @@
  */
 
 import { NavLink } from "react-router-dom";
-import { Home, Trophy, Map, Users, Megaphone, LayoutDashboard } from "lucide-react";
+import { Home, Trophy, Map, Users, Megaphone, LayoutDashboard, CalendarDays } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTranslationApp } from "@/hooks/useTranslationApp";
 import { useUser } from "@/contexts/UserContext";
@@ -16,6 +16,7 @@ export default function AppNavBar() {
   const isMasterAdmin = isMasterEmail(user?.email);
   const ITEMS = [
     { to: "/dashboard", label: t("navbar.home"), shortLabel: t("navbar.home"), icon: Home },
+    { to: "/jogos", label: t("navbar.games"), shortLabel: t("navbar.games"), icon: CalendarDays },
     { to: "/stats", label: t("navbar.ranking"), shortLabel: t("navbar.ranking"), icon: Trophy },
     { to: "/mapa-calor", label: t("navbar.map_long"), shortLabel: t("navbar.map"), icon: Map },
     { to: "/embaixadores", label: t("navbar.ambassadors_long"), shortLabel: t("navbar.ambassadors_short"), icon: Users },
@@ -27,6 +28,7 @@ export default function AppNavBar() {
   return (
     <nav
       className="fixed bottom-0 inset-x-0 z-40 bg-black/95 backdrop-blur border-t border-primary/30"
+      style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
       aria-label={t("navbar.aria")}
     >
       <ul className="max-w-6xl mx-auto flex justify-around items-stretch">
@@ -37,9 +39,9 @@ export default function AppNavBar() {
               end
               className={({ isActive }) =>
                 cn(
-                  "flex flex-col items-center justify-center gap-0.5 py-2 px-0.5 text-[9px] sm:text-[10px] font-black italic transition leading-tight",
+                  "flex min-h-[52px] flex-col items-center justify-center gap-0.5 py-2 px-0.5 text-[9px] sm:text-[10px] font-black italic transition leading-tight",
                   isActive
-                    ? "text-primary"
+                    ? "text-primary shadow-[inset_0_2px_0_0_hsl(var(--primary))]"
                     : "text-white/70 hover:text-white"
                 )
               }

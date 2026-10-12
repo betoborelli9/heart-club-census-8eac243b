@@ -430,7 +430,8 @@
     "voting": "Votación",
     "admin": "Admin",
     "back_to_heart": "Volver al Corazón",
-    "aria": "Navegación principal"
+    "aria": "Navegación principal",
+    "games": "Partidos"
   },
   "ambassadors": {
     "login_title": "Embajadores",
@@ -888,5 +889,26 @@
     "all": "Todos los clubes",
     "legend": "Columnas: puntos · probabilidad del 1º puesto · probabilidad del último objetivo de la tabla",
     "method": "Estimación estadística: el modelo mide el ataque y la defensa de cada equipo con los resultados de la temporada y simula {{sims}} veces los partidos restantes. Es una probabilidad, no una garantía."
+  },
+  "jogos": {
+    "title": "Partidos",
+    "today": "Hoy",
+    "tomorrow": "Mañana",
+    "yesterday": "Ayer",
+    "live": "En vivo",
+    "my_teams": "Mis equipos",
+    "more": "Más competiciones",
+    "games_n": "{{n}} partidos",
+    "empty": "No hay partidos este día en las competiciones principales. Abre \"Más competiciones\" para ver el resto del mundo.",
+    "empty_live": "No hay partidos en vivo ahora.",
+    "error": "No se pudieron cargar los partidos. Revisa tu conexión.",
+    "retry": "Reintentar",
+    "ht": "Desc.",
+    "ft": "Fin",
+    "postponed": "Aplaz.",
+    "cancelled": "Susp.",
+    "pull": "Desliza para actualizar",
+    "release": "Suelta para actualizar",
+    "live_elsewhere": "{{n}} partidos en vivo ahora en otras competiciones — toca \"En vivo\"."
   }
 }

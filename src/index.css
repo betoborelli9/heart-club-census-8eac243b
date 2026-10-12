@@ -151,3 +151,10 @@ html {
   scrollbar-width: thin;
   scrollbar-color: rgba(255, 98, 0, 0.55) transparent;
 }
+
+/* App instalado (tela cheia): respeita o notch / barra de status do celular */
+@media (display-mode: standalone) {
+  body {
+    padding-top: env(safe-area-inset-top);
+  }
+}

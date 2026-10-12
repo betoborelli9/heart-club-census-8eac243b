@@ -430,7 +430,8 @@
     "voting": "Votação",
     "admin": "Admin",
     "back_to_heart": "Voltar ao Coração",
-    "aria": "Navegação principal"
+    "aria": "Navegação principal",
+    "games": "Jogos"
   },
   "ambassadors": {
     "login_title": "Embaixadores",
@@ -888,5 +889,26 @@
     "all": "Todos os clubes",
     "legend": "Colunas: pontos · chance do 1º lugar · chance do último objetivo da tabela",
     "method": "Estimativa estatística: o modelo mede o ataque e a defesa de cada time pelos resultados do campeonato e simula {{sims}} vezes os jogos que faltam. É uma probabilidade, não uma garantia."
+  },
+  "jogos": {
+    "title": "Jogos",
+    "today": "Hoje",
+    "tomorrow": "Amanhã",
+    "yesterday": "Ontem",
+    "live": "Ao vivo",
+    "my_teams": "Meus times",
+    "more": "Mais campeonatos",
+    "games_n": "{{n}} jogos",
+    "empty": "Sem jogos neste dia nos campeonatos principais. Abra \"Mais campeonatos\" para ver o resto do mundo.",
+    "empty_live": "Nenhum jogo ao vivo agora.",
+    "error": "Não foi possível carregar os jogos. Verifique a conexão.",
+    "retry": "Tentar de novo",
+    "ht": "Int.",
+    "ft": "Fim",
+    "postponed": "Adiado",
+    "cancelled": "Cancel.",
+    "pull": "Puxe para atualizar",
+    "release": "Solte para atualizar",
+    "live_elsewhere": "{{n}} jogos ao vivo agora em outros campeonatos — toque em \"Ao vivo\"."
   }
 }

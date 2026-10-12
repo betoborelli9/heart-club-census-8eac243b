@@ -430,7 +430,8 @@
     "voting": "Voting",
     "admin": "Admin",
     "back_to_heart": "Back to Heart",
-    "aria": "Main navigation"
+    "aria": "Main navigation",
+    "games": "Matches"
   },
   "ambassadors": {
     "login_title": "Ambassadors",
@@ -888,5 +889,26 @@
     "all": "All clubs",
     "legend": "Columns: points · chance of 1st place · chance of the table's last goal",
     "method": "Statistical estimate: the model measures each team's attack and defence from the season's results and simulates the remaining matches {{sims}} times. It is a probability, not a guarantee."
+  },
+  "jogos": {
+    "title": "Matches",
+    "today": "Today",
+    "tomorrow": "Tomorrow",
+    "yesterday": "Yesterday",
+    "live": "Live",
+    "my_teams": "My teams",
+    "more": "More competitions",
+    "games_n": "{{n}} matches",
+    "empty": "No matches on this day in the main competitions. Open \"More competitions\" to see the rest of the world.",
+    "empty_live": "No live matches right now.",
+    "error": "Couldn't load matches. Check your connection.",
+    "retry": "Try again",
+    "ht": "HT",
+    "ft": "FT",
+    "postponed": "Postp.",
+    "cancelled": "Canc.",
+    "pull": "Pull to refresh",
+    "release": "Release to refresh",
+    "live_elsewhere": "{{n}} matches live right now in other competitions — tap \"Live\"."
   }
 }
