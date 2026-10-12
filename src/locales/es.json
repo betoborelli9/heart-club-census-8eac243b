@@ -615,7 +615,8 @@
       "playoff_outcome": "Desenlace: los dos ganadores logran el ascenso a la Serie A. No hay final entre ellos — el playoff solo define los dos últimos ascendidos."
     },
     "league_today": "Partidos de hoy del campeonato",
-    "halftime": "Descanso"
+    "halftime": "Descanso",
+    "live_table": "Clasificación en vivo (proyección)"
   },
   "entrar": {
     "skip": "Omitir",

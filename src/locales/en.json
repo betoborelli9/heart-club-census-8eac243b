@@ -615,7 +615,8 @@
       "playoff_outcome": "Outcome: the two winners earn promotion to Série A. There is no final between them — the playoff only defines the last two promoted clubs."
     },
     "league_today": "Today's league matches",
-    "halftime": "Half-time"
+    "halftime": "Half-time",
+    "live_table": "Live table (projection)"
   },
   "entrar": {
     "skip": "Skip",

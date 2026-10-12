@@ -615,7 +615,8 @@
       "playoff_outcome": "Desfecho: os dois vencedores conquistam o acesso à Série A. Não há final entre eles — o objetivo do playoff é apenas definir os dois últimos promovidos."
     },
     "league_today": "Jogos do campeonato hoje",
-    "halftime": "Intervalo"
+    "halftime": "Intervalo",
+    "live_table": "Classificação ao vivo (projeção)"
   },
   "entrar": {
     "skip": "Pular",

@@ -2,12 +2,15 @@
  * [EDGE FUNCTION]: league-standings
  * Engine global de competições via API-Football.
  * - /leagues?team=X&current=true (24h cache em team_leagues_mapping)
- * - /standings (15min cache em competition_standings_cache)
- * - /fixtures next + live (1min cache em team_fixtures_cache)
+ * - /standings (10min cache em competition_standings_cache)
+ * - /fixtures next (5min cache em team_fixtures_cache)
+ * - AO VIVO: jogos ao vivo/recém-encerrados vêm do NOSSO banco (league_fixtures); a tabela é projetada em
+ *   _shared/standings-projection.ts (sem contar jogo 2x, desempate validado). Nenhuma chamada à API por torcedor.
  * Mantém shape legado { league, standings, me, fixtures } para ObjectivesPanel/Z4Infographic.
  */
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { projectStandings, LIVE_NOW, FINISHED, type StRow, type SeasonGame, type LiveGame } from "../_shared/standings-projection.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -123,7 +126,7 @@ async function getCurrentLeagues(teamId: number, teamName: string, teamLogo: str
 
 
 async function getStandings(leagueId: number, season: number, bypassCache = false) {
-  const TTL_2M = 2 * 60 * 1000;
+  const TTL_2M = 10 * 60 * 1000; // (nome antigo) tabela oficial: 10 min; o ao vivo é somado por cima, do nosso banco
   const { data: cached } = await supabase
     .from("competition_standings_cache")
     .select("standings_json, updated_at")
@@ -163,8 +166,63 @@ async function getStandings(leagueId: number, season: number, bypassCache = fals
   }
 }
 
+const LIVE_LIST = ["1H", "2H", "HT", "ET", "BT", "P", "LIVE"];
+
+/** Jogos ao vivo do time, lidos do nosso banco (alimentado uma vez para o mundo todo). */
+async function liveFromDb(teamId: number): Promise<any[]> {
+  const { data } = await supabase
+    .from("league_fixtures")
+    .select("*")
+    .or(`home_id.eq.${teamId},away_id.eq.${teamId}`)
+    .in("status", LIVE_LIST)
+    .gte("updated_at", new Date(Date.now() - 15 * 60 * 1000).toISOString());
+  return ((data || []) as any[]).map((f) => ({
+    id: f.fixture_id,
+    date: f.kickoff,
+    status: f.status,
+    elapsed: f.elapsed,
+    venue: undefined,
+    league: { id: f.league_id, name: f.league_name, logo: f.league_logo, round: f.round },
+    home: { id: f.home_id, name: f.home_name, logo: f.home_logo },
+    away: { id: f.away_id, name: f.away_name, logo: f.away_logo },
+    goals: { home: f.goals_home, away: f.goals_away },
+    broadcasters: [],
+  }));
+}
+
+/** Jogos encerrados da temporada (compactos). 15 min de cache com jogo recente na liga, 6 h sem. */
+async function getSeasonGames(leagueId: number, season: number, hot: boolean): Promise<SeasonGame[]> {
+  const ttl = hot ? 15 * 60 * 1000 : 6 * 60 * 60 * 1000;
+  const { data: cached } = await supabase
+    .from("league_season_cache")
+    .select("games, updated_at")
+    .eq("league_id", leagueId)
+    .eq("season", season)
+    .maybeSingle();
+  if (cached && Date.now() - new Date((cached as any).updated_at).getTime() < ttl) return ((cached as any).games || []) as SeasonGame[];
+  try {
+    const j = await af(`/fixtures?league=${leagueId}&season=${season}`);
+    const games: SeasonGame[] = ((j?.response || []) as any[])
+      .filter((f) => FINISHED.has(f?.fixture?.status?.short))
+      .map((f) => ({
+        id: f.fixture.id,
+        date: f.fixture.date,
+        st: f.fixture.status.short,
+        h: f.teams?.home?.id,
+        a: f.teams?.away?.id,
+        gh: f.goals?.home ?? null,
+        ga: f.goals?.away ?? null,
+      }));
+    await supabase.from("league_season_cache").upsert({ league_id: leagueId, season, games, updated_at: new Date().toISOString() });
+    return games;
+  } catch (e) {
+    console.warn("[getSeasonGames] falhou, usando cache anterior:", e);
+    return ((cached as any)?.games || []) as SeasonGame[];
+  }
+}
+
 async function getFixtures(teamId: number) {
-  const TTL_1M = 60 * 1000;
+  const TTL_1M = 5 * 60 * 1000; // (nome antigo) próximos jogos: 5 min
   const { data: cached } = await supabase
     .from("team_fixtures_cache")
     .select("payload, updated_at")
@@ -173,10 +231,8 @@ async function getFixtures(teamId: number) {
   if (cached && Date.now() - new Date(cached.updated_at as any).getTime() < TTL_1M) {
     return cached.payload as any;
   }
-  const [next, live] = await Promise.all([
-    af(`/fixtures?team=${teamId}&next=15`).catch(() => ({ response: [] })),
-    af(`/fixtures?team=${teamId}&live=all`).catch(() => ({ response: [] })),
-  ]);
+  const next = await af(`/fixtures?team=${teamId}&next=15`).catch(() => ({ response: [] }));
+  const live = { response: [] as any[] }; // ao vivo vem de liveFromDb() (nosso banco), não da API
   const mapFx = (f: any) => ({
     id: f.fixture.id,
     date: f.fixture.date,
@@ -239,95 +295,80 @@ serve(async (req) => {
     const leagues = await getCurrentLeagues(team.id, team.name, team.logo);
 
 
-    // Para classificação AO VIVO: buscar todas as partidas em curso de cada liga ativa
-    // e aplicar deltas (pontos / J / V / E / D / SG) provisórios em cima do standings oficial.
-    const liveByLeague = new Map<number, any[]>();
-    await Promise.all(
-      leagues.map(async (lg: any) => {
-        try {
-          const j = await af(`/fixtures?league=${lg.id}&season=${lg.season}&live=all`);
-          const arr = (j?.response || []).filter((f: any) => f?.fixture?.status?.short && f.fixture.status.short !== "NS");
-          if (arr.length) liveByLeague.set(lg.id, arr);
-        } catch {
-          // silencioso — segue com standings oficiais
-        }
-      }),
-    );
+    // Jogos ao vivo e recém-encerrados vêm do NOSSO banco (league_fixtures): nenhuma chamada à API por torcedor.
+    const leagueIds = leagues.map((l: any) => l.id);
+    const { data: lfRows } = leagueIds.length
+      ? await supabase
+          .from("league_fixtures")
+          .select("fixture_id, league_id, status, goals_home, goals_away, home_id, away_id, kickoff, updated_at")
+          .in("league_id", leagueIds)
+          .gte("kickoff", new Date(Date.now() - 10 * 60 * 60 * 1000).toISOString())
+      : { data: [] as any[] };
+    const FRESH_LIVE_MS = 15 * 60 * 1000;
+    const liveByLeague = new Map<number, LiveGame[]>();
+    const recentFinished = new Map<number, SeasonGame[]>();
+    const hotLeagues = new Set<number>();
+    for (const r of (lfRows || []) as any[]) {
+      if (LIVE_NOW.has(r.status) && Date.now() - new Date(r.updated_at).getTime() < FRESH_LIVE_MS) {
+        hotLeagues.add(r.league_id);
+        const arr = liveByLeague.get(r.league_id) || [];
+        arr.push({ id: r.fixture_id, h: r.home_id, a: r.away_id, gh: r.goals_home, ga: r.goals_away });
+        liveByLeague.set(r.league_id, arr);
+      } else if (FINISHED.has(r.status)) {
+        hotLeagues.add(r.league_id);
+        const arr = recentFinished.get(r.league_id) || [];
+        arr.push({ id: r.fixture_id, date: r.kickoff, st: r.status, h: r.home_id, a: r.away_id, gh: r.goals_home, ga: r.goals_away });
+        recentFinished.set(r.league_id, arr);
+      }
+    }
 
-    // Standings em paralelo (bypass cache quando há jogo ao vivo na liga)
     const standingsResults = await Promise.all(
       leagues.map(async (lg: any) => {
         try {
-          const hasLive = liveByLeague.has(lg.id);
-          const s = await getStandings(lg.id, lg.season, hasLive);
+          const st = await getStandings(lg.id, lg.season, false);
           // Achatar groups (pega o primeiro grupo do time, ou todos se for liga única)
           const flatRows: any[] = [];
-          (s.groups || []).forEach((grp: any[], gi: number) => {
+          (st.groups || []).forEach((grp: any[], gi: number) => {
             grp.forEach((row: any) =>
               flatRows.push({
-                group: s.groups.length > 1 ? `Grupo ${gi + 1}` : null,
+                group: st.groups.length > 1 ? `Grupo ${gi + 1}` : null,
                 position: row.rank,
                 name: row.team?.name,
                 logo: row.team?.logo,
                 teamId: row.team?.id,
-                points: row.points,
-                played: row.all?.played,
-                win: row.all?.win,
-                draw: row.all?.draw,
-                lose: row.all?.lose,
-                goalsDiff: row.goalsDiff,
+                points: row.points ?? 0,
+                played: row.all?.played ?? 0,
+                win: row.all?.win ?? 0,
+                draw: row.all?.draw ?? 0,
+                lose: row.all?.lose ?? 0,
+                goalsFor: row.all?.goals?.for ?? 0,
+                goalsAgainst: row.all?.goals?.against ?? 0,
+                goalsDiff: row.goalsDiff ?? 0,
                 form: row.form,
               }),
             );
           });
-          // Aplica deltas ao vivo
-          const liveFx = liveByLeague.get(lg.id) || [];
-          if (liveFx.length && flatRows.length) {
-            const byId = new Map<number, any>();
-            flatRows.forEach((r) => r.teamId && byId.set(r.teamId, r));
-            for (const f of liveFx) {
-              const hId = f.teams?.home?.id;
-              const aId = f.teams?.away?.id;
-              const hG = f.goals?.home ?? 0;
-              const aG = f.goals?.away ?? 0;
-              const rh = hId ? byId.get(hId) : null;
-              const ra = aId ? byId.get(aId) : null;
-              const apply = (row: any, gf: number, ga: number, result: "W" | "D" | "L") => {
-                if (!row) return;
-                row.played = (row.played ?? 0) + 1;
-                row.goalsDiff = (row.goalsDiff ?? 0) + (gf - ga);
-                if (result === "W") {
-                  row.points = (row.points ?? 0) + 3;
-                  row.win = (row.win ?? 0) + 1;
-                } else if (result === "D") {
-                  row.points = (row.points ?? 0) + 1;
-                  row.draw = (row.draw ?? 0) + 1;
-                } else {
-                  row.lose = (row.lose ?? 0) + 1;
-                }
-                row.isLive = true;
-              };
-              const homeRes = hG > aG ? "W" : hG === aG ? "D" : "L";
-              const awayRes = aG > hG ? "W" : aG === hG ? "D" : "L";
-              apply(rh, hG, aG, homeRes);
-              apply(ra, aG, hG, awayRes);
-            }
-            // Reordena e recalcula posição (provisória)
-            flatRows.sort((a, b) =>
-              (b.points ?? 0) - (a.points ?? 0) ||
-              (b.goalsDiff ?? 0) - (a.goalsDiff ?? 0) ||
-              (b.win ?? 0) - (a.win ?? 0),
-            );
-            flatRows.forEach((r, i) => (r.position = i + 1));
+          let rows = flatRows;
+          // Liga com jogo rolando ou recém-encerrado: projeta a tabela (sem contar jogo 2x; desempate validado).
+          if (hotLeagues.has(lg.id) && flatRows.length) {
+            const season = await getSeasonGames(lg.id, lg.season, true);
+            const byId = new Map<number, SeasonGame>(season.map((g) => [g.id, g]));
+            for (const g of recentFinished.get(lg.id) || []) byId.set(g.id, g); // o nosso banco é mais fresco
+            rows = projectStandings(flatRows as StRow[], {
+              leagueId: lg.id,
+              seasonGames: [...byId.values()],
+              liveGames: liveByLeague.get(lg.id) || [],
+            }).rows;
           }
-          return { league: lg, standings: flatRows };
+          return { league: lg, standings: rows };
         } catch {
           return { league: lg, standings: [] };
         }
       }),
     );
 
-    const fixtures = await getFixtures(team.id);
+    // "Ao vivo" do time vem do nosso banco (nunca guardado no cache de 5 min)
+    const fixtures = { ...(await getFixtures(team.id)), live: await liveFromDb(team.id) };
 
 
     // VERDADE DE CAMPO: competição só está ativa se o time tem jogo futuro ou ao vivo nela.

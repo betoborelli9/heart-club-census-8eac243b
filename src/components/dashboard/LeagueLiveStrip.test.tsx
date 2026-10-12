@@ -136,4 +136,20 @@ describe("Jogos do dia do campeonato (strip)", () => {
     expect(liveMinuteLabel(row({ status: "2H", elapsed: 89, extra: null, updated_at: new Date(now - 3 * 60_000).toISOString() }) as any, now)).toBe("90'");
     expect(liveMinuteLabel(row({ status: "2H", elapsed: 63, extra: null, updated_at: new Date(now - 60_000).toISOString() }) as any, now)).toBe("64'");
   });
+
+  it("avisa a classificação para renovar quando sai gol ou o jogo muda de fase — e só nesses casos", async () => {
+    db.rows = [row({ fixture_id: 1, status: "1H", elapsed: 30, kickoff: iso(32), goals_home: 0, goals_away: 0, updated_at: new Date().toISOString() })];
+    const onChange = vi.fn();
+    render(<LeagueLiveStrip leagueId={72} onChange={onChange} />);
+    await screen.findByText("Casa FC");
+    // mesma coisa (só o relógio): não avisa
+    act(() => db.handler!({ new: { ...db.rows[0], elapsed: 31, updated_at: new Date().toISOString() } }));
+    expect(onChange).not.toHaveBeenCalled();
+    // gol: avisa
+    act(() => db.handler!({ new: { ...db.rows[0], goals_home: 1, updated_at: new Date().toISOString() } }));
+    expect(onChange).toHaveBeenCalledTimes(1);
+    // fim de jogo: avisa
+    act(() => db.handler!({ new: { ...db.rows[0], goals_home: 1, status: "FT", updated_at: new Date().toISOString() } }));
+    expect(onChange).toHaveBeenCalledTimes(2);
+  });
 });

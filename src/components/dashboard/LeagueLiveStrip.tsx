@@ -8,7 +8,7 @@
  *  • ENCERRADO: placar PRETO, parado, sem minutos
  *  • AINDA NÃO COMEÇOU: só o horário, apagado
  */
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { ClubLogo } from "@/components/ClubLogo";
 import { useTranslationApp } from "@/hooks/useTranslationApp";
@@ -73,10 +73,14 @@ export function liveMinute(f: LeagueFixture, now: number): number {
   return cap ? Math.min(cap, base + extra) : base + extra;
 }
 
-export default function LeagueLiveStrip({ leagueId, teamId, primaryColor = "#ff6200" }: { leagueId: number; teamId?: number | null; primaryColor?: string }) {
+export default function LeagueLiveStrip({ leagueId, teamId, primaryColor = "#ff6200", onChange }: { leagueId: number; teamId?: number | null; primaryColor?: string; onChange?: () => void }) {
   const { t } = useTranslationApp();
   const [rows, setRows] = useState<Record<number, LeagueFixture>>({});
   const [now, setNow] = useState(() => Date.now());
+  const rowsRef = useRef<Record<number, LeagueFixture>>({});
+  rowsRef.current = rows;
+  const onChangeRef = useRef(onChange);
+  onChangeRef.current = onChange;
 
   useEffect(() => {
     let alive = true;
@@ -99,7 +103,11 @@ export default function LeagueLiveStrip({ leagueId, teamId, primaryColor = "#ff6
       .channel(`lf-${leagueId}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "league_fixtures", filter: `league_id=eq.${leagueId}` }, (p: any) => {
         const r = p?.new as LeagueFixture | undefined;
-        if (r?.fixture_id) setRows((prev) => ({ ...prev, [r.fixture_id]: r }));
+        if (!r?.fixture_id) return;
+        const old = rowsRef.current[r.fixture_id];
+        // Gol ou mudança de fase (início, intervalo, fim): avisa quem mostra a classificação para renovar.
+        if (old && (old.goals_home !== r.goals_home || old.goals_away !== r.goals_away || old.status !== r.status)) onChangeRef.current?.();
+        setRows((prev) => ({ ...prev, [r.fixture_id]: r }));
       })
       .subscribe();
 

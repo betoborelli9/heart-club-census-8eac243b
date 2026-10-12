@@ -34,6 +34,8 @@ interface StandingRow {
   lose?: number;
   goalsDiff?: number;
   group?: string | null;
+  isLive?: boolean; // o time está jogando agora (a classificação já soma o placar atual)
+  provisional?: boolean;
 }
 
 interface Match {
@@ -84,6 +86,13 @@ export default function CompetitionsPanel({ clubName, primaryColor = "#ff6200" }
   const [activeTab, setActiveTab] = useState<string>("");
   const [sharing, setSharing] = useState(false);
   const shareRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const tickRef = useRef<(() => void) | null>(null);
+  const refreshTimer = useRef<ReturnType<typeof setTimeout>>();
+  // Gol ou fim de jogo no campeonato: renova a tabela em ~4 s (lê do nosso banco, não gasta a API).
+  const refreshSoon = () => {
+    if (refreshTimer.current) clearTimeout(refreshTimer.current);
+    refreshTimer.current = setTimeout(() => tickRef.current?.(), 4000);
+  };
 
   // Captura a tabela + próximo jogo REAIS da tela (com todas as cores, o
   // destaque do adversário, as zonas etc.) como imagem, e abre o menu de
@@ -191,6 +200,7 @@ export default function CompetitionsPanel({ clubName, primaryColor = "#ff6200" }
         }
       }
     };
+    tickRef.current = tick;
     setLoading(true);
     tick();
     // 5 min (era 1 min): o placar ao vivo já chega em tempo real pelo nosso banco; isto só renova a tabela/próximo jogo.
@@ -278,7 +288,7 @@ export default function CompetitionsPanel({ clubName, primaryColor = "#ff6200" }
                 className="space-y-4 bg-[#0b0b0b] p-2 rounded-xl"
               >
                 <MatchCard match={focusMatch} live={!!c.liveMatch} primaryColor={primaryColor} />
-                <LeagueLiveStrip leagueId={c.leagueId} teamId={team?.id} primaryColor={primaryColor} />
+                <LeagueLiveStrip leagueId={c.leagueId} teamId={team?.id} primaryColor={primaryColor} onChange={refreshSoon} />
                 <StandingsTable
                   rows={c.standings}
                   meTeamId={team?.id}
@@ -542,6 +552,11 @@ function StandingsTable({
 
   return (
     <div className="space-y-2">
+      {displayRows.some((r) => r.isLive) && (
+        <p className="flex items-center gap-1.5 px-1 text-[9px] font-black uppercase tracking-widest text-red-500" data-testid="live-table-note">
+          <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-red-500" /> {t("competitions.live_table")}
+        </p>
+      )}
       <div className="overflow-x-auto md:overflow-x-visible -mx-4 px-4 md:mx-0 md:px-0 thin-orange-scroll rounded-lg">
         <table className="w-full text-[10px] min-w-[360px] md:min-w-0 border-separate border-spacing-0">
           <thead>
@@ -645,6 +660,7 @@ function StandingsTable({
                           style={isOpponent ? { color: opponentColor } : undefined}
                         >
                           {r.name}
+                          {r.isLive && <span className="ml-1 inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-red-500 align-middle" title={t("competitions.live")} />}
                           {isOpponent && (
                             <span className="ml-1 text-[8px] font-mono uppercase" style={{ color: opponentColor, opacity: 0.85 }}>
                               · {t("competitions.target")}
