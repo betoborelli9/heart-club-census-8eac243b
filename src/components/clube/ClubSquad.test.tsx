@@ -37,6 +37,7 @@ const payload = () => ({
   moves: [
     { dir: "in", player: "Meia Três", playerId: 3, date: "2026-09-01T00:00:00Z", type: "loan", club: { id: 9, name: "Guarani", logo: null } },
     { dir: "out", player: "Caique", playerId: 99, date: "2026-08-31T00:00:00Z", type: "signing", club: { id: 8, name: "Bashundhara", logo: null } },
+    { dir: "out", player: "Caique", playerId: 99, date: "2026-08-30T00:00:00Z", type: "signing", club: { id: 8, name: "Bashundhara", logo: null } },
   ],
 });
 
@@ -83,5 +84,15 @@ describe("Elenco do clube", () => {
     expect(groupKey("Attacker")).toBe("Attacker");
     expect(groupKey(null)).toBe("Other");
     expect(groupKey("Coach")).toBe("Other");
+  });
+
+  it("movimentação repetida em dias seguidos aparece uma vez só, e o elenco vem antes das movimentações", async () => {
+    render(<ClubSquad teamId={142} />);
+    await screen.findByTestId("squad");
+    const lis = within(screen.getByTestId("squad-moves")).getAllByRole("listitem");
+    expect(lis.filter((li) => li.textContent?.includes("Caique")).length).toBe(1);
+    const root = screen.getByTestId("squad");
+    const order = [...root.children].map((c) => c.getAttribute("data-testid"));
+    expect(order.indexOf("squad-group-Goalkeeper")).toBeLessThan(order.indexOf("squad-moves"));
   });
 });

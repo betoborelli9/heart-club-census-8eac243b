@@ -93,6 +93,14 @@ async function refreshTeam(teamId: number) {
     }
   }
   moves.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  // A API costuma registrar a mesma movimentação em dois dias seguidos: mantém só a mais recente de cada grupo
+  const distinct: Move[] = [];
+  for (const m of moves) {
+    const dup = distinct.some((k) => k.playerId === m.playerId && k.dir === m.dir && Math.abs(new Date(k.date).getTime() - new Date(m.date).getTime()) < 7 * 24 * 3600 * 1000);
+    if (!dup) distinct.push(m);
+  }
+  moves.length = 0;
+  moves.push(...distinct);
 
   // "Visto pela 1ª vez": pega quem entrou no elenco mesmo antes da API registrar a transferência
   const seen: Record<string, string> = { ...(prev?.seen || {}) };

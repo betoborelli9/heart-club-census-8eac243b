@@ -56,7 +56,14 @@ export default function ClubSquad({ teamId, accent = "#ff6200" }: { teamId: numb
   }, [data]);
 
   const dateFmt = (iso: string) => new Date(iso).toLocaleDateString(language, { day: "2-digit", month: "short", year: "2-digit" }).replace(".", "");
-  const moves = (data?.moves ?? []).slice(0, 12);
+  const moves = useMemo(() => {
+    const out: Move[] = [];
+    for (const m of data?.moves ?? []) {
+      const dup = out.some((k) => k.playerId === m.playerId && k.dir === m.dir && Math.abs(new Date(k.date).getTime() - new Date(m.date).getTime()) < 7 * 24 * 3600 * 1000);
+      if (!dup) out.push(m);
+    }
+    return out.slice(0, 12);
+  }, [data]);
 
   if (error) return <p className="py-10 text-center text-sm text-white/50">{t("squad.error")}</p>;
   if (!data)
@@ -80,29 +87,6 @@ export default function ClubSquad({ teamId, accent = "#ff6200" }: { teamId: numb
             <p className="truncate text-base font-extrabold">{data.coach.name}</p>
             {data.coach.nationality && <p className="text-[11px] text-white/50">{data.coach.nationality}</p>}
           </div>
-        </section>
-      )}
-
-      {moves.length > 0 && (
-        <section data-testid="squad-moves">
-          <h3 className="mb-2 text-[11px] font-black uppercase tracking-widest text-white/70">{t("squad.moves")}</h3>
-          <ul className="space-y-1.5">
-            {moves.map((m, i) => (
-              <li key={`${m.playerId}-${m.date}-${i}`} className="flex items-center gap-2 rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-2" style={{ minHeight: 48 }}>
-                <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full ${m.dir === "in" ? "bg-green-600/25 text-green-400" : "bg-red-600/25 text-red-400"}`}>
-                  {m.dir === "in" ? <ArrowDownLeft className="h-4 w-4" /> : <ArrowUpRight className="h-4 w-4" />}
-                </span>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-[13px] font-bold">{m.player}</p>
-                  <p className="truncate text-[11px] text-white/50">
-                    {m.dir === "in" ? t("squad.in") : t("squad.out")} · {t(`squad.kind_${m.type}`)}
-                    {m.club ? ` · ${m.club.name}` : ""}
-                  </p>
-                </div>
-                <span className="shrink-0 text-[10px] text-white/40">{dateFmt(m.date)}</span>
-              </li>
-            ))}
-          </ul>
         </section>
       )}
 
@@ -132,6 +116,29 @@ export default function ClubSquad({ teamId, accent = "#ff6200" }: { teamId: numb
           </section>
         ) : null,
       )}
+      {moves.length > 0 && (
+        <section data-testid="squad-moves">
+          <h3 className="mb-2 text-[11px] font-black uppercase tracking-widest text-white/70">{t("squad.moves")}</h3>
+          <ul className="space-y-1.5">
+            {moves.map((m, i) => (
+              <li key={`${m.playerId}-${m.date}-${i}`} className="flex items-center gap-2 rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-2" style={{ minHeight: 48 }}>
+                <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full ${m.dir === "in" ? "bg-green-600/25 text-green-400" : "bg-red-600/25 text-red-400"}`}>
+                  {m.dir === "in" ? <ArrowDownLeft className="h-4 w-4" /> : <ArrowUpRight className="h-4 w-4" />}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-[13px] font-bold">{m.player}</p>
+                  <p className="truncate text-[11px] text-white/50">
+                    {m.dir === "in" ? t("squad.in") : t("squad.out")} · {t(`squad.kind_${m.type}`)}
+                    {m.club ? ` · ${m.club.name}` : ""}
+                  </p>
+                </div>
+                <span className="shrink-0 text-[10px] text-white/40">{dateFmt(m.date)}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
     </div>
   );
 }
