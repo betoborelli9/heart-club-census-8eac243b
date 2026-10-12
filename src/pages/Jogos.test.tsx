@@ -3,35 +3,60 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 
-const db: { games: any[]; leagues: any[]; extra: Record<number, any[]>; queries: any[] } = { games: [], leagues: [], extra: {}, queries: [] };
-const mine: { ids: number[] } = { ids: [] };
+const state: {
+  games: any[]; comps: any[]; team: any; inIds: number[][]; invokes: any[];
+  viewed: string | null; heart: string | null; setViewed: any; reset: any;
+} = { games: [], comps: [], team: null, inIds: [], invokes: [], viewed: "Vila Nova", heart: "Vila Nova", setViewed: vi.fn(), reset: vi.fn() };
 
 vi.mock("@/integrations/supabase/client", () => ({
   supabase: {
+    functions: {
+      invoke: (name: string, opts: any) => {
+        state.invokes.push({ name, body: opts?.body });
+        return Promise.resolve({ data: { team: state.team, competitions: state.comps }, error: null });
+      },
+    },
     from: () => {
-      const q: any = { f: {} };
+      const q: any = {};
       q.select = () => q;
+      q.in = (_c: string, ids: number[]) => (state.inIds.push(ids), q);
       q.gte = () => q;
       q.lt = () => q;
       q.order = () => q;
-      q.limit = () => Promise.resolve({ data: q.f.league != null ? db.extra[q.f.league] || [] : db.games, error: null });
-      q.eq = (c: string, v: any) => ((q.f[c === "league_id" ? "league" : c] = v), q);
-      q.or = (s: string) => (db.queries.push(s), q);
+      q.limit = () => Promise.resolve({ data: state.games, error: null });
       return q;
     },
-    rpc: () => Promise.resolve({ data: db.leagues, error: null }),
   },
 }));
-vi.mock("@/hooks/useMyTeamIds", () => ({ useMyTeamIds: () => mine.ids }));
-vi.mock("@/hooks/useTranslationApp", () => ({ useTranslationApp: () => ({ t: (k: string, o?: any) => (o?.n !== undefined ? `${k}:${o.n}` : k), language: "pt" }) }));
+vi.mock("@/contexts/ViewedClubContext", () => ({
+  useViewedClub: () => ({
+    viewedClubName: state.viewed,
+    heartClubName: state.heart,
+    setViewedClubName: state.setViewed,
+    resetToHeart: state.reset,
+    isViewingHeart: state.viewed === state.heart,
+  }),
+}));
+vi.mock("@/components/dashboard/ClubSearch", () => ({
+  ClubSearch: ({ onSelect }: any) => <button data-testid="fake-search" onClick={() => onSelect({ name: "Newcastle" })}>buscar</button>,
+}));
+vi.mock("@/hooks/useTranslationApp", () => ({
+  useTranslationApp: () => ({ t: (k: string, o?: any) => (o ? `${k}:${JSON.stringify(o)}` : k), language: "pt" }),
+}));
 vi.mock("@/components/ClubLogo", () => ({ ClubLogo: () => null }));
 
 import Jogos from "./Jogos";
+import { clearCompetitionsCache } from "@/hooks/useDayGames";
 
-const iso = (minAgo: number) => new Date(Date.now() - minAgo * 60_000).toISOString();
+const day = (offset: number, hour = 16) => {
+  const d = new Date();
+  d.setHours(hour, 0, 0, 0);
+  d.setDate(d.getDate() + offset);
+  return d.toISOString();
+};
 const g = (id: number, league: number, h: [number, string], a: [number, string], over: any = {}) => ({
-  fixture_id: id, league_id: league, league_name: league === 72 ? "Serie B" : league === 39 ? "Premier League" : "Liga Estranha", league_logo: null, country: league === 72 ? "Brazil" : "England", season: 2026,
-  round: "R1", kickoff: iso(30), status: "NS", elapsed: null, extra: null, home_id: h[0], home_name: h[1], home_logo: null, away_id: a[0], away_name: a[1], away_logo: null,
+  fixture_id: id, league_id: league, league_name: "Serie B", league_logo: null, country: "Brazil", season: 2026,
+  round: "R1", kickoff: day(0), status: "NS", elapsed: null, extra: null, home_id: h[0], home_name: h[1], home_logo: null, away_id: a[0], away_name: a[1], away_logo: null,
   goals_home: null, goals_away: null, updated_at: new Date().toISOString(), ...over,
 });
 
@@ -49,88 +74,116 @@ const renderPage = () =>
     </MemoryRouter>,
   );
 
-describe("Aba Jogos", () => {
+describe("Aba Jogos — só o clube em exibição e os campeonatos dele", () => {
   beforeEach(() => {
-    mine.ids = [];
-    db.queries = [];
-    db.extra = {};
-    db.games = [
-      g(1, 72, [142, "Vila Nova"], [77, "Novorizontino"], { status: "2H", elapsed: 63, goals_home: 2, goals_away: 1, kickoff: iso(70) }),
-      g(2, 72, [10, "Time A"], [11, "Time B"], { status: "FT", elapsed: 90, goals_home: 0, goals_away: 3, kickoff: iso(200) }),
-      g(3, 39, [33, "Arsenal"], [34, "Chelsea"], { kickoff: new Date(Date.now() + 3 * 3600_000).toISOString() }),
-    ];
-    db.leagues = [
-      { league_id: 72, league_name: "Serie B", league_logo: null, country: "Brazil", jogos: 2, ao_vivo: 1 },
-      { league_id: 39, league_name: "Premier League", league_logo: null, country: "England", jogos: 1, ao_vivo: 0 },
-      { league_id: 9001, league_name: "Liga Estranha", league_logo: null, country: "Andorra", jogos: 3, ao_vivo: 1 },
+    clearCompetitionsCache();
+    state.viewed = "Vila Nova";
+    state.heart = "Vila Nova";
+    state.team = { id: 142, name: "Vila Nova", logo: "x" };
+    state.comps = [{ leagueId: 72, leagueName: "Serie B", leagueLogo: null, country: "Brazil", season: 2026 }];
+    state.inIds = [];
+    state.invokes = [];
+    state.setViewed = vi.fn();
+    state.reset = vi.fn();
+    state.games = [
+      g(1, 72, [142, "Vila Nova"], [77, "Novorizontino"], { status: "2H", elapsed: 63, goals_home: 2, goals_away: 1, kickoff: day(0, 15) }),
+      g(2, 72, [10, "Time A"], [11, "Time B"], { status: "FT", elapsed: 90, goals_home: 0, goals_away: 3, kickoff: day(0, 13) }),
+      g(3, 72, [12, "Time C"], [13, "Time D"], { kickoff: day(0, 21) }),
+      g(4, 72, [142, "Vila Nova"], [14, "Time E"], { kickoff: day(5) }),
     ];
   });
 
-  it("mostra os campeonatos principais agrupados, ao vivo em vermelho com minutos, encerrado com 'Fim' e o placar", async () => {
-    renderPage();
-    const secs = await screen.findAllByTestId("sec-league");
-    expect(secs.length).toBe(2);
-    expect(secs[0].textContent).toContain("Serie B"); // Brasil vem antes da Premier na ordem de destaque
-    expect(secs[1].textContent).toContain("Premier League");
-    expect(screen.getByTestId("row-minute").textContent).toBe("63'");
-    const rows = within(secs[0]).getAllByTestId("match-row");
-    expect(rows.length).toBe(2);
-    expect(rows[0].textContent).toContain("Vila Nova"); // ao vivo vem primeiro
-    expect(rows[1].textContent).toContain("jogos.ft");
-    expect(within(rows[1]).getByTestId("row-score").textContent).toBe("03");
-  });
-
-  it("contador 'Ao vivo' é do mundo todo (vem da lista de campeonatos) e o filtro mostra só os ao vivo", async () => {
-    db.extra[9001] = [g(9, 9001, [90, "Andorra FC"], [91, "Escaldes"], { status: "1H", elapsed: 12, goals_home: 0, goals_away: 0, kickoff: iso(14) })];
+  it("consulta os campeonatos do clube em exibição e busca SÓ os jogos desses campeonatos", async () => {
     renderPage();
     await screen.findAllByTestId("sec-league");
-    expect(screen.getByTestId("live-count").textContent).toBe("2");
-    fireEvent.click(screen.getByTestId("live-toggle"));
-    await waitFor(() => expect(screen.getAllByTestId("match-row").length).toBe(2)); // Vila x Novorizontino + Andorra (outro campeonato, aberto sozinho)
-    expect(screen.queryByText("Arsenal")).toBeNull(); // não começou: some no filtro
-    expect(document.body.textContent).toContain("Andorra FC");
+    expect(state.invokes[0]).toEqual({ name: "league-standings", body: { clubName: "Vila Nova" } });
+    expect(state.inIds[0]).toEqual([72]); // nenhum outro campeonato do mundo é pedido
+    const secs = screen.getAllByTestId("sec-league");
+    expect(secs.length).toBe(1);
+    expect(secs[0].textContent).toContain("Serie B");
+    expect(secs[0].textContent).toContain("Vila Nova");
+    expect(secs[0].textContent).toContain("Time A"); // os concorrentes do mesmo campeonato aparecem
   });
 
-  it("'Meus times' vem primeiro e destaca os jogos dos times do torcedor", async () => {
-    mine.ids = [33];
+  it("jogo ao vivo em vermelho com minutos, encerrado com 'Fim', e o jogo do clube vem destacado", async () => {
     renderPage();
-    const mineSec = await screen.findByTestId("sec-mine");
-    expect(mineSec.textContent).toContain("Arsenal");
-    expect(mineSec.textContent).not.toContain("Vila Nova");
-    expect(db.queries.some((q) => q.includes("home_id.in.(33)"))).toBe(true); // busca os jogos dos times do torcedor
+    const rows = await screen.findAllByTestId("match-row");
+    expect(rows[0].textContent).toContain("Vila Nova"); // ao vivo primeiro
+    expect(within(rows[0]).getByTestId("row-minute").textContent).toBe("63'");
+    expect(rows[1].textContent).toContain("jogos.ft");
+    expect((rows[0] as HTMLElement).style.boxShadow).toContain("inset"); // destaque do clube
   });
 
-  it("toque no time abre a página do clube com campeonato e temporada", async () => {
+  it("sem jogo hoje: abre sozinho no próximo dia com jogos, com pontinho nos dias que têm jogo", async () => {
+    state.games = [g(4, 72, [142, "Vila Nova"], [14, "Time E"], { kickoff: day(3) }), g(5, 72, [20, "X"], [21, "Y"], { kickoff: day(3, 19) })];
+    renderPage();
+    await screen.findAllByTestId("sec-league");
+    const strip = screen.getByTestId("day-strip");
+    expect(within(strip).getAllByRole("tab").find((b) => b.getAttribute("aria-selected") === "true")!.textContent).toContain(
+      new Date(Date.now() + 3 * 86400000).toLocaleDateString("pt", { day: "2-digit", month: "2-digit" }),
+    );
+    expect(screen.getByTestId("mark-3")).toBeTruthy();
+    expect(screen.queryByTestId("mark-0")).toBeNull();
+  });
+
+  it("dia vazio mostra mensagem com o nome do clube e botão para o próximo dia com jogos", async () => {
+    renderPage();
+    await screen.findAllByTestId("sec-league");
+    fireEvent.click(within(screen.getByTestId("day-strip")).getByText("jogos.tomorrow")); // amanhã: sem jogo
+    const empty = await screen.findByTestId("jogos-empty");
+    expect(empty.textContent).toContain("Vila Nova");
+    fireEvent.click(screen.getByTestId("go-next-day"));
+    await waitFor(() => expect(screen.getAllByTestId("match-row").length).toBe(1)); // o jogo de daqui a 5 dias
+  });
+
+  it("'Ao vivo' conta e mostra só os jogos ao vivo dos campeonatos do clube", async () => {
+    renderPage();
+    await screen.findAllByTestId("sec-league");
+    expect(screen.getByTestId("live-count").textContent).toBe("1");
+    fireEvent.click(screen.getByTestId("live-toggle"));
+    await waitFor(() => expect(screen.getAllByTestId("match-row").length).toBe(1));
+    expect(screen.getByTestId("match-row").textContent).toContain("Novorizontino");
+  });
+
+  it("clube consultado (outro): mostra o aviso, o botão 'Meu clube' volta ao coração, e a busca troca o clube", async () => {
+    state.viewed = "Newcastle";
+    renderPage();
+    await screen.findAllByTestId("sec-league");
+    expect(screen.getByTestId("club-chip").textContent).toContain("jogos.consulting");
+    fireEvent.click(screen.getByTestId("back-to-mine"));
+    expect(state.reset).toHaveBeenCalled();
+    fireEvent.click(screen.getByTestId("search-toggle"));
+    fireEvent.click(await screen.findByTestId("fake-search"));
+    expect(state.setViewed).toHaveBeenCalledWith("Newcastle");
+  });
+
+  it("toque no time abre a página do clube; 'Tabela e chances' abre a aba Chances no campeonato certo", async () => {
     renderPage();
     const rows = await screen.findAllByTestId("match-row");
     fireEvent.click(within(rows[0]).getByLabelText("Vila Nova"));
     expect((await screen.findByTestId("where")).textContent).toBe("/clube/142?liga=72&temp=2026");
   });
 
-  it("'Mais campeonatos' lista os outros do mundo e abrir um carrega os jogos dele", async () => {
-    db.extra[9001] = [g(9, 9001, [90, "Andorra FC"], [91, "Escaldes"], { kickoff: new Date(Date.now() + 2 * 3600_000).toISOString() })];
+  it("link 'Tabela e chances' leva à aba de probabilidades do campeonato", async () => {
     renderPage();
     await screen.findAllByTestId("sec-league");
-    fireEvent.click(screen.getByText("jogos.more", { exact: false }));
-    const more = await screen.findAllByTestId("more-league");
-    expect(more.length).toBe(1);
-    fireEvent.click(more[0]);
-    await waitFor(() => expect(document.body.textContent).toContain("Andorra FC"));
-    expect(screen.queryAllByTestId("more-league").length).toBe(0); // saiu da lista e virou seção
+    fireEvent.click(screen.getByTestId("table-link"));
+    expect((await screen.findByTestId("where")).textContent).toBe("/clube/142?liga=72&temp=2026&aba=chances");
   });
 
-  it("dia sem jogos mostra mensagem amigável", async () => {
-    db.games = [];
-    db.leagues = [];
+  it("sem clube escolhido: pede para escolher e não consulta nada", async () => {
+    state.viewed = null;
+    state.heart = null;
     renderPage();
-    expect(await screen.findByTestId("jogos-empty")).toBeTruthy();
+    expect(await screen.findByTestId("jogos-pick")).toBeTruthy();
+    expect(state.invokes.length).toBe(0);
+    expect(state.inIds.length).toBe(0);
   });
 
-  it("faixa de dias: trocar de dia refaz a busca", async () => {
+  it("clube sem campeonato em andamento: mensagem clara", async () => {
+    state.comps = [];
+    state.games = [];
     renderPage();
-    await screen.findAllByTestId("sec-league");
-    const before = db.queries.length;
-    fireEvent.click(within(screen.getByTestId("day-strip")).getByText("jogos.tomorrow"));
-    await waitFor(() => expect(db.queries.length).toBeGreaterThan(before));
+    expect(await screen.findByTestId("jogos-no-comp")).toBeTruthy();
   });
 });

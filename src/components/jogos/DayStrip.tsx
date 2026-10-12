@@ -1,13 +1,14 @@
 /**
  * [CAMINHO]: src/components/jogos/DayStrip.tsx
  * [MÓDULO]: Faixa de dias rolável (3 dias atrás até 7 à frente), com o dia escolhido sempre visível no centro.
+ * Os dias em que o clube (ou os concorrentes) têm jogo ganham um pontinho.
  */
 import { useEffect, useRef } from "react";
 import { useTranslationApp } from "@/hooks/useTranslationApp";
 
 export const DAY_OFFSETS = [-3, -2, -1, 0, 1, 2, 3, 4, 5, 6, 7];
 
-export default function DayStrip({ offset, onChange }: { offset: number; onChange: (o: number) => void }) {
+export default function DayStrip({ offset, onChange, marks }: { offset: number; onChange: (o: number) => void; marks?: Set<number> }) {
   const { t, language } = useTranslationApp();
   const refs = useRef<Record<number, HTMLButtonElement | null>>({});
 
@@ -38,12 +39,15 @@ export default function DayStrip({ offset, onChange }: { offset: number; onChang
           role="tab"
           aria-selected={offset === o}
           onClick={() => onChange(o)}
-          className={`flex h-14 min-w-[58px] shrink-0 flex-col items-center justify-center rounded-xl text-[11px] font-black uppercase leading-tight transition ${
+          className={`relative flex h-14 min-w-[58px] shrink-0 flex-col items-center justify-center rounded-xl text-[11px] font-black uppercase leading-tight transition ${
             offset === o ? "bg-primary text-white shadow-[0_0_14px_rgba(255,98,0,0.4)]" : "bg-white/[0.06] text-white/60"
           }`}
         >
           <span>{label(o)}</span>
           <span className={`text-[11px] font-semibold tabular-nums ${offset === o ? "text-white/90" : "text-white/40"}`}>{num(o)}</span>
+          {marks?.has(o) && (
+            <span data-testid={`mark-${o}`} className={`absolute bottom-1 h-1 w-1 rounded-full ${offset === o ? "bg-white" : "bg-primary"}`} />
+          )}
         </button>
       ))}
     </div>

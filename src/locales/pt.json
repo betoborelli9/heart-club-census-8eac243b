@@ -839,7 +839,12 @@
     "open_season": "Jogos, chances e elenco do clube →",
     "tab_games": "Jogos",
     "tab_squad": "Elenco",
-    "tab_chances": "Chances"
+    "tab_chances": "Chances",
+    "view_stats": "Estatísticas",
+    "view_chances": "Chances %",
+    "chances_loading": "Calculando…",
+    "chances_unsupported": "Chances indisponíveis para este formato de campeonato.",
+    "chances_caption": "Chance de terminar em cada objetivo (simulação). Toque no clube para ver o detalhe."
   },
   "squad": {
     "error": "Não foi possível carregar o elenco agora. Tente de novo em instantes.",
@@ -909,6 +914,15 @@
     "cancelled": "Cancel.",
     "pull": "Puxe para atualizar",
     "release": "Solte para atualizar",
-    "live_elsewhere": "{{n}} jogos ao vivo agora em outros campeonatos — toque em \"Ao vivo\"."
+    "live_elsewhere": "{{n}} jogos ao vivo agora em outros campeonatos — toque em \"Ao vivo\".",
+    "search_club": "Buscar outro clube",
+    "back_to_mine": "Meu clube",
+    "consulting": "· consultando",
+    "pick_club": "Escolha um clube para ver os jogos do campeonato dele.",
+    "pick_club_short": "Escolha um clube",
+    "no_games_day": "Sem jogos neste dia nos campeonatos do {{club}}.",
+    "next_day": "Ir para o próximo dia com jogos",
+    "table_chances": "Tabela e chances",
+    "no_competitions": "Não encontramos campeonato em andamento para o {{club}}."
   }
 }

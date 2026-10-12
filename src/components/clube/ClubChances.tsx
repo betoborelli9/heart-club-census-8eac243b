@@ -23,7 +23,7 @@ type Zone = { label: string; positions: number[] };
 type GroupP = { group: string | null; unsupported?: string; teams?: TeamP[]; zones?: Zone[]; cutMedian?: number[]; remaining?: RemGame[]; meta?: { sims: number; finishedGames: number; remainingGames: number; minPlayed: number } };
 type Payload = { supported: boolean; reason?: string | null; league?: { id: number; season: number; name?: string }; groups: GroupP[] };
 
-const pctText = (p: number) => {
+export const pctText = (p: number) => {
   const v = p * 100;
   if (v > 0 && v < 0.5) return "<1%";
   if (v > 99.5 && v < 100) return ">99%";
@@ -66,6 +66,20 @@ export function zoneLabel(leagueId: number | undefined, zone: Zone, total: numbe
   const dict = lang === "pt" ? DICT_PT : lang === "es" ? DICT_ES : [];
   for (const [re, to] of dict) s = s.replace(re, to);
   return s.replace(/\s{2,}/g, " ").replace(/^[\s-]+|[\s-]+$/g, "") || zone.label;
+}
+
+/** Sigla curta da zona para cabeçalho de coluna (ACESSO, PO, REB, UCL…). */
+export function zoneShort(name: string): string {
+  const n = name.toLowerCase();
+  if (/rebaix|relegat|descenso/.test(n)) return "REB";
+  if (/play-?off|playoff/.test(n)) return "PO";
+  if (/champions/.test(n)) return "UCL";
+  if (/libertadores/.test(n)) return "LIB";
+  if (/europa/.test(n)) return "UEL";
+  if (/conference/.test(n)) return "UECL";
+  if (/sudamericana/.test(n)) return "SUL";
+  if (/acesso|promotion|ascenso|promo/.test(n)) return "ACESSO";
+  return name.slice(0, 4).toUpperCase();
 }
 
 export function zoneColor(label: string): string {

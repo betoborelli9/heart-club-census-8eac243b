@@ -1,20 +1,31 @@
 /**
  * [CAMINHO]: src/pages/Jogos.tsx
- * [MÓDULO]: ABA "JOGOS" — todos os jogos do mundo por dia, estilo app de futebol (Sofascore):
- * faixa de dias, "Ao vivo" em destaque, "Meus times" primeiro, campeonatos principais em seguida e "Mais campeonatos"
- * (qualquer campeonato do mundo). Mobile-first: puxar para atualizar, deslizar para trocar de dia, esqueletos de
- * carregamento, atualização sozinha enquanto há jogo rolando. Tudo lido do nosso banco (nenhuma consulta à API).
+ * [MÓDULO]: ABA "JOGOS" — os jogos do CLUBE EM EXIBIÇÃO e dos concorrentes dele, estilo app de futebol (Sofascore).
+ * Mostra só os campeonatos em que o clube joga (ex.: Vila Nova → Série B; se estiver na Libertadores, ela também) e
+ * nada que não tenha relação com ele. O clube é o do coração do torcedor, ou outro que ele consultar (busca aqui ou
+ * no Dashboard — o mesmo "clube em exibição" vale em todas as telas). Faixa de dias, "Ao vivo", puxar para atualizar,
+ * deslizar para trocar de dia. Tudo lido do nosso banco (nenhuma consulta à API de jogos por torcedor).
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ChevronDown, Loader2, Radio, WifiOff } from "lucide-react";
+import { ChevronRight, Loader2, Radio, Search, WifiOff, X } from "lucide-react";
 import { useTranslationApp } from "@/hooks/useTranslationApp";
-import { useMyTeamIds } from "@/hooks/useMyTeamIds";
-import { useDayGames, LIVE_STATUSES, type DayGame } from "@/hooks/useDayGames";
+import { useViewedClub } from "@/contexts/ViewedClubContext";
+import { useClubCompetitions, useCompetitionGames, LIVE_STATUSES, type DayGame } from "@/hooks/useDayGames";
 import { usePullToRefresh } from "@/hooks/usePullToRefresh";
-import { isTopLeague, leagueRank } from "@/data/topLeagues";
+import { ClubSearch } from "@/components/dashboard/ClubSearch";
+import { ClubLogo } from "@/components/ClubLogo";
 import DayStrip, { DAY_OFFSETS } from "@/components/jogos/DayStrip";
 import MatchRow from "@/components/jogos/MatchRow";
+
+const DAY_MS = 24 * 3600 * 1000;
+const startOfDay = (d: Date) => {
+  const x = new Date(d);
+  x.setHours(0, 0, 0, 0);
+  return x.getTime();
+};
+/** Em qual "dia relativo a hoje" (−3…+7) o jogo cai, no fuso do torcedor. */
+const offsetOf = (iso: string) => Math.round((startOfDay(new Date(iso)) - startOfDay(new Date())) / DAY_MS);
 
 const sortGames = (a: DayGame, b: DayGame) => {
   const la = LIVE_STATUSES.has(a.status) ? 0 : 1;
@@ -22,64 +33,55 @@ const sortGames = (a: DayGame, b: DayGame) => {
   return la - lb || new Date(a.kickoff).getTime() - new Date(b.kickoff).getTime();
 };
 
-function LeagueHeader({ logo, country, name, count }: { logo: string | null; country: string | null; name: string | null; count: number }) {
-  const { t } = useTranslationApp();
-  return (
-    <div className="flex items-center gap-2 border-b border-white/[0.06] bg-white/[0.03] px-3 py-2.5">
-      {logo ? <img src={logo} alt="" className="h-5 w-5 rounded bg-white/90 object-contain p-0.5" /> : <span className="h-5 w-5" />}
-      <p className="min-w-0 flex-1 truncate text-[12px] font-black uppercase tracking-wide">
-        {country && <span className="font-semibold normal-case text-white/45">{country} · </span>}
-        {name}
-      </p>
-      <span className="text-[10px] font-semibold text-white/40">{t("jogos.games_n", { n: count })}</span>
-    </div>
-  );
-}
-
 export default function Jogos() {
   const { t } = useTranslationApp();
   const navigate = useNavigate();
-  const myIds = useMyTeamIds();
+  const { viewedClubName, heartClubName, setViewedClubName, resetToHeart, isViewingHeart } = useViewedClub();
   const [offset, setOffset] = useState(0);
   const [onlyLive, setOnlyLive] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
   const [now, setNow] = useState(() => Date.now());
-  const [showMore, setShowMore] = useState(false);
+  const autoFor = useRef<string>("");
 
-  const dayStart = useMemo(() => {
-    const d = new Date();
-    d.setHours(0, 0, 0, 0);
-    d.setDate(d.getDate() + offset);
-    return d;
-  }, [offset]);
+  const { team, competitions, loading: loadingComps, failed: compsFailed } = useClubCompetitions(viewedClubName);
+  const leagueIds = useMemo(() => competitions.map((c) => c.leagueId), [competitions]);
+  const { games, loading: loadingGames, failed, reload, reloadLoud } = useCompetitionGames(leagueIds);
+  const loading = loadingComps || loadingGames;
 
-  const { games, leagues, extra, loading, failed, reload, reloadLoud, openLeague } = useDayGames(dayStart, myIds);
+  // Dia com jogos: escolhe sozinho o mais próximo (hoje; senão o próximo; senão o último) — uma vez por clube
+  const byOffset = useMemo(() => {
+    const m = new Map<number, DayGame[]>();
+    for (const g of games) {
+      const o = offsetOf(g.kickoff);
+      if (!m.has(o)) m.set(o, []);
+      m.get(o)!.push(g);
+    }
+    return m;
+  }, [games]);
+  const marks = useMemo(() => new Set([...byOffset.keys()].filter((o) => DAY_OFFSETS.includes(o))), [byOffset]);
 
-  const liveWorld = leagues.reduce((a, l) => a + (l.ao_vivo || 0), 0);
-  const liveInView = games.filter((g) => LIVE_STATUSES.has(g.status)).length;
+  useEffect(() => {
+    const key = `${viewedClubName}|${leagueIds.join(",")}`;
+    if (loading || !games.length || autoFor.current === key) return;
+    autoFor.current = key;
+    const days = [...marks].sort((a, b) => a - b);
+    const pick = marks.has(0) ? 0 : days.find((d) => d > 0) ?? [...days].reverse().find((d) => d < 0) ?? 0;
+    setOffset(pick);
+  }, [loading, games.length, marks, viewedClubName, leagueIds]);
 
-  // Relógio dos minutos e atualização automática (só com a aba visível e quando faz sentido)
+  const liveCount = games.filter((g) => LIVE_STATUSES.has(g.status)).length;
+
+  // Relógio dos minutos e atualização sozinha (só com a aba visível)
   useEffect(() => {
     const clock = setInterval(() => setNow(Date.now()), 15_000);
-    const poll = setInterval(
-      () => {
-        if (!document.hidden && offset === 0) void reload();
-      },
-      liveWorld > 0 ? 30_000 : 180_000,
-    );
+    const poll = setInterval(() => {
+      if (!document.hidden) void reload();
+    }, liveCount > 0 ? 45_000 : 5 * 60_000);
     return () => {
       clearInterval(clock);
       clearInterval(poll);
     };
-  }, [offset, liveWorld, reload]);
-
-  // "Ao vivo" mostra também campeonatos fora da lista principal que tenham jogo rolando
-  useEffect(() => {
-    if (!onlyLive) return;
-    leagues
-      .filter((l) => l.ao_vivo > 0 && !isTopLeague(l.league_id) && !extra[l.league_id])
-      .slice(0, 12)
-      .forEach((l) => void openLeague(l.league_id));
-  }, [onlyLive, leagues, extra, openLeague]);
+  }, [liveCount, reload]);
 
   const { pull, refreshing, ready } = usePullToRefresh(reloadLoud);
 
@@ -89,7 +91,7 @@ export default function Jogos() {
   const onTouchEnd = (e: React.TouchEvent) => {
     const s = touch.current;
     touch.current = null;
-    if (!s) return;
+    if (!s || onlyLive) return;
     const dx = e.changedTouches[0].clientX - s.x;
     const dy = e.changedTouches[0].clientY - s.y;
     if (Math.abs(dx) > 70 && Math.abs(dx) > Math.abs(dy) * 1.8) {
@@ -100,42 +102,20 @@ export default function Jogos() {
   };
 
   const openTeam = useCallback(
-    (teamId: number, leagueId: number, season: number | null) => {
-      navigate(`/clube/${teamId}?liga=${leagueId}&temp=${season ?? new Date().getFullYear()}`);
-    },
+    (teamId: number, leagueId: number, season: number | null) => navigate(`/clube/${teamId}?liga=${leagueId}&temp=${season ?? new Date().getFullYear()}`),
     [navigate],
   );
 
-  const mySet = useMemo(() => new Set(myIds), [myIds]);
-  const isMine = (g: DayGame) => (g.home_id != null && mySet.has(g.home_id)) || (g.away_id != null && mySet.has(g.away_id));
-
-  const all = useMemo(() => {
-    const map = new Map<number, DayGame>();
-    for (const g of games) map.set(g.fixture_id, g);
-    for (const arr of Object.values(extra)) for (const g of arr) map.set(g.fixture_id, g);
-    return [...map.values()];
-  }, [games, extra]);
-
-  const visible = useMemo(() => (onlyLive ? all.filter((g) => LIVE_STATUSES.has(g.status)) : all), [all, onlyLive]);
-  const mineRows = useMemo(() => visible.filter(isMine).sort(sortGames), [visible, mySet]);
-
-  const sections = useMemo(() => {
-    const by = new Map<number, DayGame[]>();
-    for (const g of visible) {
-      if (!by.has(g.league_id)) by.set(g.league_id, []);
-      by.get(g.league_id)!.push(g);
-    }
-    return [...by.entries()]
-      .map(([id, rows]) => ({ id, rows: rows.sort(sortGames), head: rows[0] }))
-      .sort((a, b) => {
-        const la = a.rows.some((r) => LIVE_STATUSES.has(r.status)) ? 0 : 1;
-        const lb = b.rows.some((r) => LIVE_STATUSES.has(r.status)) ? 0 : 1;
-        return (onlyLive ? la - lb : 0) || leagueRank(a.id) - leagueRank(b.id) || (a.head.league_name || "").localeCompare(b.head.league_name || "");
-      });
-  }, [visible, onlyLive]);
-
-  const loadedIds = useMemo(() => new Set(all.map((g) => g.league_id)), [all]);
-  const moreLeagues = leagues.filter((l) => !isTopLeague(l.league_id) && !extra[l.league_id] && !loadedIds.has(l.league_id));
+  const shown = useMemo(() => (onlyLive ? games.filter((g) => LIVE_STATUSES.has(g.status)) : byOffset.get(offset) ?? []), [onlyLive, games, byOffset, offset]);
+  const sections = useMemo(
+    () =>
+      competitions
+        .map((c) => ({ c, rows: shown.filter((g) => g.league_id === c.leagueId).sort(sortGames) }))
+        .filter((s) => s.rows.length > 0),
+    [competitions, shown],
+  );
+  const nextDay = useMemo(() => [...marks].sort((a, b) => a - b).find((d) => d > offset), [marks, offset]);
+  const clubLabel = team?.name || viewedClubName || "";
 
   return (
     <div className="min-h-screen bg-black pb-28 text-white" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
@@ -148,18 +128,57 @@ export default function Jogos() {
           <button
             onClick={() => setOnlyLive((v) => !v)}
             aria-pressed={onlyLive}
-            disabled={liveWorld === 0 && !onlyLive}
+            disabled={liveCount === 0 && !onlyLive}
             data-testid="live-toggle"
             className={`flex h-10 items-center gap-1.5 rounded-full px-4 text-[12px] font-black uppercase tracking-wide transition disabled:opacity-40 ${
               onlyLive ? "bg-red-600 text-white" : "bg-red-600/15 text-red-400"
             }`}
           >
-            <Radio className={`h-4 w-4 ${liveWorld > 0 ? "hc-blink" : ""}`} /> {t("jogos.live")}
-            <span className="tabular-nums" data-testid="live-count">{liveWorld}</span>
+            <Radio className={`h-4 w-4 ${liveCount > 0 ? "hc-blink" : ""}`} /> {t("jogos.live")}
+            <span className="tabular-nums" data-testid="live-count">{liveCount}</span>
           </button>
         </div>
+
+        {/* Clube em exibição + buscar outro clube */}
+        <div className="mx-auto max-w-xl px-3 pb-2">
+          <div className="flex items-center gap-2" data-testid="club-chip">
+            {team?.logo ? (
+              <ClubLogo src={team.logo} alt={clubLabel} clubName={clubLabel} size="xs" className="h-7 w-7 shrink-0" />
+            ) : null}
+            <p className="min-w-0 flex-1 truncate text-[13px] font-black uppercase">
+              {clubLabel || t("jogos.pick_club_short")}
+              {!isViewingHeart && heartClubName && <span className="ml-2 text-[10px] font-semibold normal-case text-primary">{t("jogos.consulting")}</span>}
+            </p>
+            {!isViewingHeart && heartClubName && (
+              <button onClick={resetToHeart} data-testid="back-to-mine" className="h-10 rounded-full bg-white/10 px-3 text-[11px] font-bold">
+                {t("jogos.back_to_mine")}
+              </button>
+            )}
+            <button
+              onClick={() => setSearchOpen((v) => !v)}
+              aria-label={t("jogos.search_club")}
+              aria-expanded={searchOpen}
+              data-testid="search-toggle"
+              className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10"
+            >
+              {searchOpen ? <X className="h-4 w-4" /> : <Search className="h-4 w-4" />}
+            </button>
+          </div>
+          {(searchOpen || !viewedClubName) && (
+            <div className="mt-2" data-testid="club-search">
+              <ClubSearch
+                onSelect={(c) => {
+                  setViewedClubName(c.name);
+                  setOnlyLive(false);
+                  setSearchOpen(false);
+                }}
+              />
+            </div>
+          )}
+        </div>
+
         <div className="mx-auto max-w-xl">
-          <DayStrip offset={offset} onChange={setOffset} />
+          <DayStrip offset={offset} onChange={(o) => { setOnlyLive(false); setOffset(o); }} marks={marks} />
         </div>
       </header>
 
@@ -173,7 +192,7 @@ export default function Jogos() {
       </div>
 
       <main className="mx-auto max-w-xl px-3 pt-3" data-testid="jogos-main">
-        {failed && (
+        {(failed || compsFailed) && (
           <div className="mb-3 flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.04] p-3 text-sm text-white/70" data-testid="jogos-error">
             <WifiOff className="h-5 w-5 shrink-0" />
             <span className="flex-1">{t("jogos.error")}</span>
@@ -183,81 +202,62 @@ export default function Jogos() {
           </div>
         )}
 
-        {loading && !games.length && (
+        {!viewedClubName && (
+          <p className="py-10 text-center text-sm text-white/50" data-testid="jogos-pick">
+            {t("jogos.pick_club")}
+          </p>
+        )}
+
+        {viewedClubName && loading && !games.length && (
           <div className="space-y-2" data-testid="jogos-loading">
-            {[0, 1, 2, 3, 4, 5].map((i) => (
+            {[0, 1, 2, 3].map((i) => (
               <div key={i} className="h-16 animate-pulse rounded-xl bg-white/[0.05]" />
             ))}
           </div>
         )}
 
-        {/* Meus times */}
-        {mineRows.length > 0 && (
-          <section className="mb-3 overflow-hidden rounded-2xl border border-primary/40 bg-primary/[0.06]" data-testid="sec-mine">
-            <div className="flex items-center gap-2 border-b border-primary/30 px-3 py-2.5">
-              <span className="text-[12px] font-black uppercase tracking-wide text-primary">★ {t("jogos.my_teams")}</span>
+        {/* Campeonatos do clube (só eles) */}
+        {sections.map(({ c, rows }) => (
+          <section key={c.leagueId} className="mb-3 overflow-hidden rounded-2xl border border-white/10 bg-white/[0.02]" data-testid="sec-league">
+            <div className="flex items-center gap-2 border-b border-white/[0.06] bg-white/[0.03] px-3 py-2.5">
+              {c.leagueLogo ? <img src={c.leagueLogo} alt="" className="h-5 w-5 rounded bg-white/90 object-contain p-0.5" /> : <span className="h-5 w-5" />}
+              <p className="min-w-0 flex-1 truncate text-[12px] font-black uppercase tracking-wide">
+                {c.country && <span className="font-semibold normal-case text-white/45">{c.country} · </span>}
+                {c.leagueName}
+              </p>
+              {team && (
+                <button
+                  onClick={() => navigate(`/clube/${team.id}?liga=${c.leagueId}&temp=${c.season}&aba=chances`)}
+                  data-testid="table-link"
+                  className="flex h-8 items-center gap-0.5 rounded-full bg-white/10 pl-3 pr-2 text-[10px] font-bold text-white/80"
+                >
+                  {t("jogos.table_chances")} <ChevronRight className="h-3.5 w-3.5" />
+                </button>
+              )}
             </div>
             <ul>
-              {mineRows.map((g) => (
-                <MatchRow key={`m-${g.fixture_id}`} g={g} now={now} accent onOpenTeam={openTeam} />
-              ))}
-            </ul>
-          </section>
-        )}
-
-        {/* Campeonatos */}
-        {sections.map((s) => (
-          <section key={s.id} className="mb-3 overflow-hidden rounded-2xl border border-white/10 bg-white/[0.02]" data-testid="sec-league">
-            <LeagueHeader logo={s.head.league_logo} country={s.head.country} name={s.head.league_name} count={s.rows.length} />
-            <ul>
-              {s.rows.map((g) => (
-                <MatchRow key={g.fixture_id} g={g} now={now} accent={isMine(g)} onOpenTeam={openTeam} />
+              {rows.map((g) => (
+                <MatchRow key={g.fixture_id} g={g} now={now} accent={!!team && (g.home_id === team.id || g.away_id === team.id)} onOpenTeam={openTeam} />
               ))}
             </ul>
           </section>
         ))}
 
-        {!loading && !failed && !sections.length && (
-          <p className="py-12 text-center text-sm text-white/45" data-testid="jogos-empty">
-            {onlyLive ? t("jogos.empty_live") : t("jogos.empty")}
+        {viewedClubName && !loading && !failed && !compsFailed && competitions.length === 0 && (
+          <p className="py-12 text-center text-sm text-white/45" data-testid="jogos-no-comp">
+            {t("jogos.no_competitions", { club: clubLabel })}
           </p>
         )}
 
-        {/* Mais campeonatos (qualquer campeonato do mundo) */}
-        {!onlyLive && moreLeagues.length > 0 && (
-          <section className="mb-6" data-testid="sec-more">
-            <button
-              onClick={() => setShowMore((v) => !v)}
-              aria-expanded={showMore}
-              className="flex min-h-[48px] w-full items-center justify-between rounded-xl border border-white/10 bg-white/[0.04] px-4 text-[12px] font-black uppercase tracking-wide"
-            >
-              <span>
-                {t("jogos.more")} <span className="font-semibold text-white/40">({moreLeagues.length})</span>
-              </span>
-              <ChevronDown className={`h-4 w-4 transition ${showMore ? "rotate-180" : ""}`} />
-            </button>
-            {showMore && (
-              <ul className="mt-2 overflow-hidden rounded-2xl border border-white/10">
-                {moreLeagues.slice(0, 150).map((l) => (
-                  <li key={l.league_id}>
-                    <button onClick={() => void openLeague(l.league_id)} className="flex min-h-[48px] w-full items-center gap-2 border-b border-white/[0.06] px-3 text-left last:border-b-0" data-testid="more-league">
-                      {l.league_logo ? <img src={l.league_logo} alt="" className="h-5 w-5 rounded bg-white/90 object-contain p-0.5" loading="lazy" /> : <span className="h-5 w-5" />}
-                      <span className="min-w-0 flex-1 truncate text-[12px] font-semibold">
-                        <span className="text-white/45">{l.country} · </span>
-                        {l.league_name}
-                      </span>
-                      {l.ao_vivo > 0 && <span className="hc-blink rounded-full bg-red-600/20 px-2 py-0.5 text-[10px] font-black text-red-400">{l.ao_vivo}</span>}
-                      <span className="text-[10px] text-white/40">{t("jogos.games_n", { n: l.jogos })}</span>
-                    </button>
-                  </li>
-                ))}
-              </ul>
+        {viewedClubName && !loading && competitions.length > 0 && sections.length === 0 && (
+          <div className="py-12 text-center" data-testid="jogos-empty">
+            <p className="text-sm text-white/45">{onlyLive ? t("jogos.empty_live") : t("jogos.no_games_day", { club: clubLabel })}</p>
+            {!onlyLive && nextDay !== undefined && (
+              <button onClick={() => setOffset(nextDay)} data-testid="go-next-day" className="mt-4 h-11 rounded-full bg-primary px-5 text-xs font-black uppercase text-white">
+                {t("jogos.next_day")}
+              </button>
             )}
-          </section>
-        )}
-
-        {liveInView === 0 && liveWorld > 0 && !onlyLive && !loading && offset === 0 && (
-          <p className="mb-3 text-center text-[11px] text-white/40">{t("jogos.live_elsewhere", { n: liveWorld })}</p>
+          </div>
         )}
       </main>
     </div>

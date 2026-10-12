@@ -839,7 +839,12 @@
     "open_season": "Matches, chances and squad →",
     "tab_games": "Matches",
     "tab_squad": "Squad",
-    "tab_chances": "Chances"
+    "tab_chances": "Chances",
+    "view_stats": "Stats",
+    "view_chances": "Chances %",
+    "chances_loading": "Calculating…",
+    "chances_unsupported": "Chances unavailable for this competition format.",
+    "chances_caption": "Chance of finishing in each goal (simulation). Tap a club for details."
   },
   "squad": {
     "error": "Couldn't load the squad right now. Please try again shortly.",
@@ -909,6 +914,15 @@
     "cancelled": "Canc.",
     "pull": "Pull to refresh",
     "release": "Release to refresh",
-    "live_elsewhere": "{{n}} matches live right now in other competitions — tap \"Live\"."
+    "live_elsewhere": "{{n}} matches live right now in other competitions — tap \"Live\".",
+    "search_club": "Search another club",
+    "back_to_mine": "My club",
+    "consulting": "· viewing",
+    "pick_club": "Pick a club to see the matches of its competitions.",
+    "pick_club_short": "Pick a club",
+    "no_games_day": "No matches on this day in {{club}}'s competitions.",
+    "next_day": "Go to the next day with matches",
+    "table_chances": "Table & chances",
+    "no_competitions": "No ongoing competition found for {{club}}."
   }
 }

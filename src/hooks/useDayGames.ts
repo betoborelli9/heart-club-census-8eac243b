@@ -1,12 +1,13 @@
 /**
  * [CAMINHO]: src/hooks/useDayGames.ts
- * [MÓDULO]: Jogos de um dia para a aba "Jogos": campeonatos principais + jogos dos times do torcedor, lidos do nosso
- * banco (league_fixtures — o servidor busca o mundo todo; nenhum torcedor consulta a API). A lista completa de
- * campeonatos do dia vem de public_day_leagues; um campeonato fora da lista principal carrega só quando é aberto.
+ * [MÓDULO]: Dados da aba "Jogos", sempre do CLUBE EM EXIBIÇÃO (coração do torcedor ou o que ele consultou):
+ *  • useClubCompetitions(clube) → os campeonatos em que o clube está jogando (league-standings, já guardado em cache)
+ *  • useCompetitionGames(ligas)  → os jogos desses campeonatos numa janela de dias, lidos do nosso banco
+ *    (league_fixtures — o servidor busca o mundo todo; nenhum torcedor consulta a API de jogos).
+ * Nada de campeonato ou time que não tenha relação com o clube.
  */
 import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { TOP_LEAGUE_IDS } from "@/data/topLeagues";
 
 export type DayGame = {
   fixture_id: number;
@@ -30,39 +31,105 @@ export type DayGame = {
   goals_away: number | null;
   updated_at: string;
 };
-export type DayLeague = { league_id: number; league_name: string | null; league_logo: string | null; country: string | null; jogos: number; ao_vivo: number };
+
+export type Competition = { leagueId: number; leagueName: string; leagueLogo: string | null; country: string | null; season: number };
+export type ClubTeam = { id: number; name: string; logo: string | null };
 
 export const LIVE_STATUSES = new Set(["1H", "2H", "ET", "LIVE", "HT", "BT", "P"]);
 
-const COLS = "fixture_id, league_id, league_name, league_logo, country, season, round, kickoff, status, elapsed, extra, home_id, home_name, home_logo, away_id, away_name, away_logo, goals_home, goals_away, updated_at";
+const COLS =
+  "fixture_id, league_id, league_name, league_logo, country, season, round, kickoff, status, elapsed, extra, home_id, home_name, home_logo, away_id, away_name, away_logo, goals_home, goals_away, updated_at";
 
-export function useDayGames(dayStart: Date, myTeamIds: number[]) {
+const COMP_CACHE = new Map<string, { at: number; team: ClubTeam | null; competitions: Competition[] }>();
+const COMP_TTL = 5 * 60 * 1000;
+/** Só para testes: limpa o cache em memória dos campeonatos por clube. */
+export const clearCompetitionsCache = () => COMP_CACHE.clear();
+
+export function useClubCompetitions(clubName: string | null) {
+  const [team, setTeam] = useState<ClubTeam | null>(null);
+  const [competitions, setCompetitions] = useState<Competition[]>([]);
+  const [loading, setLoading] = useState(!!clubName);
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    let alive = true;
+    if (!clubName) {
+      setTeam(null);
+      setCompetitions([]);
+      setLoading(false);
+      setFailed(false);
+      return;
+    }
+    const hit = COMP_CACHE.get(clubName);
+    if (hit && Date.now() - hit.at < COMP_TTL) {
+      setTeam(hit.team);
+      setCompetitions(hit.competitions);
+      setLoading(false);
+      setFailed(false);
+      return;
+    }
+    setLoading(true);
+    setFailed(false);
+    (async () => {
+      const { data, error } = await supabase.functions.invoke("league-standings", { body: { clubName } });
+      if (!alive) return;
+      if (error || !data) {
+        setFailed(true);
+        setLoading(false);
+        return;
+      }
+      const t: ClubTeam | null = (data as any).team ? { id: (data as any).team.id, name: (data as any).team.name, logo: (data as any).team.logo ?? null } : null;
+      const comps: Competition[] = (((data as any).competitions || []) as any[]).map((c) => ({
+        leagueId: c.leagueId,
+        leagueName: c.leagueName,
+        leagueLogo: c.leagueLogo ?? null,
+        country: c.country ?? null,
+        season: c.season,
+      }));
+      COMP_CACHE.set(clubName, { at: Date.now(), team: t, competitions: comps });
+      setTeam(t);
+      setCompetitions(comps);
+      setLoading(false);
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [clubName]);
+
+  return { team, competitions, loading, failed };
+}
+
+/** Janela de jogos dos campeonatos do clube: de 4 dias atrás a 9 dias à frente (a troca de dia é só filtro, instantânea). */
+export function useCompetitionGames(leagueIds: number[]) {
   const [games, setGames] = useState<DayGame[]>([]);
-  const [leagues, setLeagues] = useState<DayLeague[]>([]);
-  const [extra, setExtra] = useState<Record<number, DayGame[]>>({});
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [failed, setFailed] = useState(false);
   const seq = useRef(0);
-
-  const from = dayStart.toISOString();
-  const to = new Date(dayStart.getTime() + 24 * 3600 * 1000).toISOString();
-  const mine = [...myTeamIds].sort((a, b) => a - b).join(",");
+  const key = [...leagueIds].sort((a, b) => a - b).join(",");
 
   const load = useCallback(
     async (silent = false) => {
       const my = ++seq.current;
+      if (!key) {
+        setGames([]);
+        setLoading(false);
+        return;
+      }
       if (!silent) setLoading(true);
       try {
-        const ors = [`league_id.in.(${TOP_LEAGUE_IDS.join(",")})`];
-        if (mine) ors.push(`home_id.in.(${mine})`, `away_id.in.(${mine})`);
-        const [g, l] = await Promise.all([
-          (supabase as any).from("league_fixtures").select(COLS).gte("kickoff", from).lt("kickoff", to).or(ors.join(",")).order("kickoff", { ascending: true }).limit(1500),
-          (supabase as any).rpc("public_day_leagues", { p_from: from, p_to: to }),
-        ]);
+        const from = new Date(Date.now() - 4 * 24 * 3600 * 1000).toISOString();
+        const to = new Date(Date.now() + 9 * 24 * 3600 * 1000).toISOString();
+        const { data, error } = await (supabase as any)
+          .from("league_fixtures")
+          .select(COLS)
+          .in("league_id", key.split(",").map(Number))
+          .gte("kickoff", from)
+          .lt("kickoff", to)
+          .order("kickoff", { ascending: true })
+          .limit(2000);
         if (my !== seq.current) return;
-        if (g.error) throw g.error;
-        setGames((g.data || []) as DayGame[]);
-        setLeagues(((l.data || []) as DayLeague[]) ?? []);
+        if (error) throw error;
+        setGames((data || []) as DayGame[]);
         setFailed(false);
       } catch {
         if (my === seq.current) setFailed(true);
@@ -70,23 +137,12 @@ export function useDayGames(dayStart: Date, myTeamIds: number[]) {
         if (my === seq.current) setLoading(false);
       }
     },
-    [from, to, mine],
+    [key],
   );
 
   useEffect(() => {
-    setExtra({});
     void load(false);
   }, [load]);
 
-  /** Abre um campeonato que não está na lista principal (carrega só os jogos dele no dia). */
-  const openLeague = useCallback(
-    async (leagueId: number) => {
-      if (extra[leagueId]) return;
-      const { data } = await (supabase as any).from("league_fixtures").select(COLS).eq("league_id", leagueId).gte("kickoff", from).lt("kickoff", to).order("kickoff", { ascending: true }).limit(200);
-      setExtra((prev) => ({ ...prev, [leagueId]: (data || []) as DayGame[] }));
-    },
-    [extra, from, to],
-  );
-
-  return { games, leagues, extra, loading, failed, reload: () => load(true), reloadLoud: () => load(false), openLeague };
+  return { games, loading, failed, reload: () => load(true), reloadLoud: () => load(false) };
 }

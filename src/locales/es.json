@@ -839,7 +839,12 @@
     "open_season": "Partidos, probabilidades y plantilla →",
     "tab_games": "Partidos",
     "tab_squad": "Plantilla",
-    "tab_chances": "Probabilidades"
+    "tab_chances": "Probabilidades",
+    "view_stats": "Estadísticas",
+    "view_chances": "Probabilidades %",
+    "chances_loading": "Calculando…",
+    "chances_unsupported": "Probabilidades no disponibles para este formato.",
+    "chances_caption": "Probabilidad de terminar en cada objetivo (simulación). Toca un club para ver el detalle."
   },
   "squad": {
     "error": "No se pudo cargar la plantilla ahora. Inténtalo de nuevo en unos instantes.",
@@ -909,6 +914,15 @@
     "cancelled": "Susp.",
     "pull": "Desliza para actualizar",
     "release": "Suelta para actualizar",
-    "live_elsewhere": "{{n}} partidos en vivo ahora en otras competiciones — toca \"En vivo\"."
+    "live_elsewhere": "{{n}} partidos en vivo ahora en otras competiciones — toca \"En vivo\".",
+    "search_club": "Buscar otro club",
+    "back_to_mine": "Mi club",
+    "consulting": "· consultando",
+    "pick_club": "Elige un club para ver los partidos de su campeonato.",
+    "pick_club_short": "Elige un club",
+    "no_games_day": "No hay partidos este día en los campeonatos de {{club}}.",
+    "next_day": "Ir al próximo día con partidos",
+    "table_chances": "Tabla y probabilidades",
+    "no_competitions": "No encontramos campeonato en curso para {{club}}."
   }
 }

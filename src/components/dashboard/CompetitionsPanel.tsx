@@ -11,6 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { ClubLogo } from "@/components/ClubLogo";
 import LeagueLiveStrip from "@/components/dashboard/LeagueLiveStrip";
+import { pctText, zoneColor, zoneLabel, zoneShort } from "@/components/clube/ClubChances";
 import { supabase } from "@/integrations/supabase/client";
 import { useTranslationApp } from "@/hooks/useTranslationApp";
 import { useToast } from "@/hooks/use-toast";
@@ -65,6 +66,27 @@ interface Competition {
 
 const LIVE_STATUSES = new Set(["1H", "2H", "HT", "ET", "BT", "P", "LIVE"]);
 
+/** Colunas de chance da tabela: até 4 zonas (as 3 primeiras e a última, ex.: Acesso, Play-off, Rebaixamento). */
+interface ChancesView {
+  zones: { label: string; short: string; color: string; name: string }[];
+  teams: Map<number, { zoneProb: Record<string, number>; title: number }>;
+}
+function buildChancesView(payload: any, leagueId: number, lang: string): ChancesView | null {
+  const groups = (payload?.groups || []).filter((g: any) => !g.unsupported && g.teams?.length);
+  if (!groups.length) return null;
+  const teams = new Map<number, { zoneProb: Record<string, number>; title: number }>();
+  for (const g of groups) for (const tm of g.teams) teams.set(tm.id, { zoneProb: tm.zoneProb || {}, title: tm.title ?? 0 });
+  const g0 = groups[0];
+  const total = g0.teams.length;
+  let zones = ((g0.zones || []) as { label: string; positions: number[] }[]).map((z) => {
+    const name = zoneLabel(leagueId, z, total, lang);
+    return { label: z.label, short: zoneShort(name), color: zoneColor(z.label + " " + name), name };
+  });
+  if (zones.length > 4) zones = [...zones.slice(0, 3), zones[zones.length - 1]];
+  if (!zones.length) zones = [{ label: "__first", short: "1º", color: "#ff6200", name: "1º" }];
+  return { zones, teams };
+}
+
 /**
  * Keyframes injetados uma única vez para pulsos usados na tabela.
  * Isolado ao componente para não poluir index.css.
@@ -86,10 +108,26 @@ export default function CompetitionsPanel({ clubName, primaryColor = "#ff6200" }
   const openTeam = (teamId: number | undefined, leagueId: number, season: number) => {
     if (teamId) navigate(`/clube/${teamId}?liga=${leagueId}&temp=${season}`);
   };
+  const [showChances, setShowChances] = useState(false);
+  // chances por campeonato: undefined = ainda não pedido, null = carregando, false = formato sem chances
+  const [chances, setChances] = useState<Record<number, any>>({});
   const [loading, setLoading] = useState(true);
   const [team, setTeam] = useState<{ id: number; name: string; logo: string } | null>(null);
   const [competitions, setCompetitions] = useState<Competition[]>([]);
   const [activeTab, setActiveTab] = useState<string>("");
+
+  // Pede as chances do campeonato aberto quando o torcedor toca em "Chances %" (cálculo pronto no servidor, em cache)
+  useEffect(() => {
+    if (!showChances || !activeTab) return;
+    const comp = competitions.find((x) => String(x.leagueId) === activeTab);
+    if (!comp || chances[comp.leagueId] !== undefined) return;
+    setChances((p) => ({ ...p, [comp.leagueId]: null }));
+    (async () => {
+      const { data } = await supabase.functions.invoke("league-prognosis", { body: { leagueId: comp.leagueId, season: comp.season } });
+      setChances((p) => ({ ...p, [comp.leagueId]: data && (data as any).supported ? data : false }));
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showChances, activeTab, competitions]);
   const [sharing, setSharing] = useState(false);
   const shareRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const tickRef = useRef<(() => void) | null>(null);
@@ -289,6 +327,27 @@ export default function CompetitionsPanel({ clubName, primaryColor = "#ff6200" }
             : null;
           return (
             <TabsContent key={c.leagueId} value={String(c.leagueId)} className="space-y-4 mt-3">
+              <div className="flex items-center gap-1.5" data-testid="view-toggle">
+                <button
+                  type="button"
+                  onClick={() => setShowChances(false)}
+                  aria-pressed={!showChances}
+                  className={`h-9 rounded-full px-4 text-[10px] font-black uppercase italic ${!showChances ? "bg-white text-black" : "bg-white/10 text-white/70"}`}
+                >
+                  {t("clube.view_stats")}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowChances(true)}
+                  aria-pressed={showChances}
+                  data-testid="chances-toggle"
+                  className={`h-9 rounded-full px-4 text-[10px] font-black uppercase italic ${showChances ? "bg-white text-black" : "bg-white/10 text-white/70"}`}
+                >
+                  {t("clube.view_chances")}
+                </button>
+                {showChances && chances[c.leagueId] === null && <span className="text-[10px] text-white/40">{t("clube.chances_loading")}</span>}
+                {showChances && chances[c.leagueId] === false && <span className="text-[10px] text-amber-300/80" data-testid="chances-unavailable">{t("clube.chances_unsupported")}</span>}
+              </div>
               <div
                 ref={(el) => (shareRefs.current[String(c.leagueId)] = el)}
                 className="space-y-4 bg-[#0b0b0b] p-2 rounded-xl"
@@ -305,7 +364,9 @@ export default function CompetitionsPanel({ clubName, primaryColor = "#ff6200" }
                   leagueId={c.leagueId}
                   leagueName={c.leagueName}
                   onOpenTeam={(id) => openTeam(id, c.leagueId, c.season)}
+                  chances={showChances && chances[c.leagueId] ? buildChancesView(chances[c.leagueId], c.leagueId, language) : null}
                 />
+                {showChances && chances[c.leagueId] && <p className="text-[9px] text-white/40">{t("clube.chances_caption")}</p>}
                 <div className="flex items-center justify-center gap-1.5 pt-1">
                   <span className="text-[9px] font-black uppercase italic text-white">Heart Club</span>
                   <span className="text-[9px] text-white/40">· heartclubapp.com</span>
@@ -491,6 +552,7 @@ function StandingsTable({
   primaryColor,
   leagueId,
   onOpenTeam,
+  chances,
 }: {
   rows: StandingRow[];
   meTeamId?: number;
@@ -501,6 +563,7 @@ function StandingsTable({
   leagueId?: number;
   leagueName?: string;
   onOpenTeam?: (teamId: number) => void;
+  chances?: ChancesView | null;
 }) {
   const { t } = useTranslationApp();
   const headerBg = "bg-[#141414]";
@@ -587,10 +650,20 @@ function StandingsTable({
               </th>
               <th className={`${numCol} ${headerBg} border-white/15 font-bold`} style={{ color: primaryColor }}>P</th>
               <th className={`${numCol} ${headerBg} border-white/15`}>J</th>
-              <th className={`${numCol} ${headerBg} border-white/15`}>V</th>
-              <th className={`${numCol} ${headerBg} border-white/15`}>E</th>
-              <th className={`${numCol} ${headerBg} border-white/15`}>D</th>
-              <th className={`${numCol} ${headerBg} border-white/15 w-9`}>SG</th>
+              {chances ? (
+                chances.zones.map((z) => (
+                  <th key={z.label} className={`${numCol} ${headerBg} border-white/15 w-11 text-[8px] font-black`} style={{ color: z.color }} title={z.name}>
+                    {z.short}
+                  </th>
+                ))
+              ) : (
+                <>
+                  <th className={`${numCol} ${headerBg} border-white/15`}>V</th>
+                  <th className={`${numCol} ${headerBg} border-white/15`}>E</th>
+                  <th className={`${numCol} ${headerBg} border-white/15`}>D</th>
+                  <th className={`${numCol} ${headerBg} border-white/15 w-9`}>SG</th>
+                </>
+              )}
             </tr>
           </thead>
           <tbody>
@@ -647,7 +720,7 @@ function StandingsTable({
                   {groupLabel && (
                     <tr key={`gh-${r.position}`}>
                       <td
-                        colSpan={7}
+                        colSpan={chances ? 3 + chances.zones.length : 7}
                         className="pt-3 pb-1 pl-2 pr-1 text-[9px] font-black italic uppercase tracking-widest"
                         style={{ color: headerColor }}
                       >
@@ -695,12 +768,26 @@ function StandingsTable({
                       {fmt(r.points)}
                     </td>
                     <td className={`${numCol} text-white/70`}>{fmt(r.played)}</td>
-                    <td className={`${numCol} text-white/70`}>{fmt(r.win)}</td>
-                    <td className={`${numCol} text-white/70`}>{fmt(r.draw)}</td>
-                    <td className={`${numCol} text-white/70`}>{fmt(r.lose)}</td>
-                    <td className={`${numCol} text-white/70 w-9`}>
-                      {(r.goalsDiff ?? 0) > 0 ? `+${r.goalsDiff}` : fmt(r.goalsDiff)}
-                    </td>
+                    {chances ? (
+                      chances.zones.map((z) => {
+                        const tm = r.teamId ? chances.teams.get(r.teamId) : undefined;
+                        const p = tm ? (z.label === "__first" ? tm.title : tm.zoneProb[z.label] ?? 0) : 0;
+                        return (
+                          <td key={z.label} className={`${numCol} w-11 text-[10px] font-black`} style={{ color: p >= 0.005 ? z.color : "rgba(255,255,255,0.25)", background: p >= 0.005 ? `${z.color}${Math.round(Math.min(1, p) * 56 + 8).toString(16).padStart(2, "0")}` : undefined }} data-testid="chance-cell">
+                            {tm ? pctText(p) : "–"}
+                          </td>
+                        );
+                      })
+                    ) : (
+                      <>
+                        <td className={`${numCol} text-white/70`}>{fmt(r.win)}</td>
+                        <td className={`${numCol} text-white/70`}>{fmt(r.draw)}</td>
+                        <td className={`${numCol} text-white/70`}>{fmt(r.lose)}</td>
+                        <td className={`${numCol} text-white/70 w-9`}>
+                          {(r.goalsDiff ?? 0) > 0 ? `+${r.goalsDiff}` : fmt(r.goalsDiff)}
+                        </td>
+                      </>
+                    )}
                   </tr>
                 </Fragment>
               );
