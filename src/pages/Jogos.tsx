@@ -26,7 +26,7 @@ function LeagueHeader({ logo, country, name, count }: { logo: string | null; cou
   const { t } = useTranslationApp();
   return (
     <div className="flex items-center gap-2 border-b border-white/[0.06] bg-white/[0.03] px-3 py-2.5">
-      {logo ? <img src={logo} alt="" className="h-5 w-5 rounded bg-white/90 object-contain p-0.5" loading="lazy" /> : <span className="h-5 w-5" />}
+      {logo ? <img src={logo} alt="" className="h-5 w-5 rounded bg-white/90 object-contain p-0.5" /> : <span className="h-5 w-5" />}
       <p className="min-w-0 flex-1 truncate text-[12px] font-black uppercase tracking-wide">
         {country && <span className="font-semibold normal-case text-white/45">{country} · </span>}
         {name}
