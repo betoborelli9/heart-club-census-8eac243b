@@ -223,7 +223,7 @@ export default function ClubChances({ teamId, leagueId, season, accent = "#ff620
             const z = zones.find((x) => x.positions.includes(i + 1));
             const maxP = Math.max(...me.dist, 0.01);
             return (
-              <div key={i} className="flex flex-1 flex-col items-center justify-end" title={`${i + 1}º: ${pctFmt(p)}`}>
+              <div key={i} className="flex h-full flex-1 flex-col items-center justify-end" title={`${i + 1}º: ${pctFmt(p)}`}>
                 <div className="w-full rounded-t" style={{ height: `${(p / maxP) * 100}%`, minHeight: p > 0 ? 2 : 0, background: z?.color ?? "rgba(255,255,255,0.35)", opacity: i + 1 === me.position ? 1 : 0.8 }} />
               </div>
             );
