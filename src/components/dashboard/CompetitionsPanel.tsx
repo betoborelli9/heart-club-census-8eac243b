@@ -11,7 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { ClubLogo } from "@/components/ClubLogo";
 import LeagueLiveStrip from "@/components/dashboard/LeagueLiveStrip";
-import { pctText, zoneColor, zoneLabel, zoneShort } from "@/components/clube/ClubChances";
+import { isNeutral, pctText, zoneColor, zoneLabel, zoneShort } from "@/components/clube/ClubChances";
 import { supabase } from "@/integrations/supabase/client";
 import { useTranslationApp } from "@/hooks/useTranslationApp";
 import { useToast } from "@/hooks/use-toast";
@@ -108,7 +108,8 @@ export default function CompetitionsPanel({ clubName, primaryColor = "#ff6200" }
   const openTeam = (teamId: number | undefined, leagueId: number, season: number) => {
     if (teamId) navigate(`/clube/${teamId}?liga=${leagueId}&temp=${season}`);
   };
-  const [showChances, setShowChances] = useState(false);
+  // Percentuais à vista desde o início (campeonato sem chances volta sozinho para as estatísticas)
+  const [showChances, setShowChances] = useState(true);
   // chances por campeonato: undefined = ainda não pedido, null = carregando, false = formato sem chances
   const [chances, setChances] = useState<Record<number, any>>({});
   const [loading, setLoading] = useState(true);
@@ -769,15 +770,25 @@ function StandingsTable({
                     </td>
                     <td className={`${numCol} text-white/70`}>{fmt(r.played)}</td>
                     {chances ? (
-                      chances.zones.map((z) => {
+                      (() => {
                         const tm = r.teamId ? chances.teams.get(r.teamId) : undefined;
-                        const p = tm ? (z.label === "__first" ? tm.title : tm.zoneProb[z.label] ?? 0) : 0;
-                        return (
-                          <td key={z.label} className={`${numCol} w-11 text-[10px] font-black`} style={{ color: p >= 0.005 ? z.color : "rgba(255,255,255,0.25)", background: p >= 0.005 ? `${z.color}${Math.round(Math.min(1, p) * 56 + 8).toString(16).padStart(2, "0")}` : undefined }} data-testid="chance-cell">
-                            {tm ? pctText(p) : "–"}
-                          </td>
-                        );
-                      })
+                        const neutral = !!tm && isNeutral(tm.zoneProb, chances.zones.some((z) => z.label === "__first") ? tm.title : 0);
+                        if (neutral) {
+                          return (
+                            <td colSpan={chances.zones.length} className={`${numCol} text-center text-[9px] font-black uppercase tracking-wider text-white/35`} data-testid="chance-neutral" title={t("clube.neutral_hint")}>
+                              {t("chances.neutral")}
+                            </td>
+                          );
+                        }
+                        return chances.zones.map((z) => {
+                          const p = tm ? (z.label === "__first" ? tm.title : tm.zoneProb[z.label] ?? 0) : 0;
+                          return (
+                            <td key={z.label} className={`${numCol} w-11 text-[10px] font-black`} style={{ color: p >= 0.005 ? z.color : "rgba(255,255,255,0.25)", background: p >= 0.005 ? `${z.color}${Math.round(Math.min(1, p) * 56 + 8).toString(16).padStart(2, "0")}` : undefined }} data-testid="chance-cell">
+                              {tm ? pctText(p) : "–"}
+                            </td>
+                          );
+                        });
+                      })()
                     ) : (
                       <>
                         <td className={`${numCol} text-white/70`}>{fmt(r.win)}</td>

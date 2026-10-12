@@ -69,6 +69,14 @@ export function zoneLabel(leagueId: number | undefined, zone: Zone, total: numbe
   return s.replace(/\s{2,}/g, " ").replace(/^[\s-]+|[\s-]+$/g, "") || zone.label;
 }
 
+/** Clube neutro: sem chance prática (< 2%) em qualquer objetivo — não vai subir, nem cair, nem brigar por vaga. */
+export const NEUTRAL_BELOW = 0.02;
+export function isNeutral(zoneProb: Record<string, number> | undefined, title = 0): boolean {
+  if (title >= NEUTRAL_BELOW) return false;
+  const vals = Object.values(zoneProb ?? {});
+  return vals.every((v) => v < NEUTRAL_BELOW);
+}
+
 /** Sigla curta da zona para cabeçalho de coluna (ACESSO, PO, REB, UCL…). */
 export function zoneShort(name: string): string {
   const n = name.toLowerCase();
@@ -184,6 +192,12 @@ export default function ClubChances({ teamId, leagueId, season, accent = "#ff620
           <p className="text-[10px] text-white/40">{t("chances.games")}</p>
         </div>
       </section>
+
+      {isNeutral(me.zoneProb, me.title) && (
+        <div className="flex gap-2 rounded-xl border border-white/15 bg-white/[0.05] p-3 text-[12px] text-white/70" data-testid="chances-neutral-note">
+          <Info className="mt-0.5 h-4 w-4 shrink-0" /> {t("chances.neutral_note")}
+        </div>
+      )}
 
       {/* Chances por objetivo */}
       <section data-testid="chances-zones">
@@ -320,11 +334,17 @@ export default function ClubChances({ teamId, leagueId, season, accent = "#ff620
                     <ClubLogo src={tm.logo || undefined} alt={tm.name} clubName={tm.name} size="xs" className="h-5 w-5 shrink-0" />
                     <span className="min-w-0 flex-1 truncate text-[12px] font-bold">{tm.name}</span>
                     <span className="w-8 text-right text-[11px] tabular-nums text-white/60">{tm.points}</span>
-                    <span className="w-10 text-right text-[11px] font-black tabular-nums" style={{ color: accent }} title={t("chances.first")}>{pctFmt(tm.title)}</span>
-                    {bottom && (
-                      <span className="w-10 text-right text-[11px] font-black tabular-nums text-red-400" title={bottom.name}>{pctFmt(tm.zoneProb[bottom.label] ?? 0)}</span>
+                    {isNeutral(tm.zoneProb, tm.title) ? (
+                      <span className="w-20 rounded-full bg-white/10 px-2 py-0.5 text-center text-[9px] font-black uppercase tracking-wider text-white/50" data-testid="all-neutral">{t("chances.neutral")}</span>
+                    ) : (
+                      <>
+                        <span className="w-10 text-right text-[11px] font-black tabular-nums" style={{ color: accent }} title={t("chances.first")}>{pctFmt(tm.title)}</span>
+                        {bottom && (
+                          <span className="w-10 text-right text-[11px] font-black tabular-nums text-red-400" title={bottom.name}>{pctFmt(tm.zoneProb[bottom.label] ?? 0)}</span>
+                        )}
+                        {!bottom && top && <span className="w-10 text-right text-[11px] tabular-nums" style={{ color: top.color }}>{pctFmt(tm.zoneProb[top.label] ?? 0)}</span>}
+                      </>
                     )}
-                    {!bottom && top && <span className="w-10 text-right text-[11px] tabular-nums" style={{ color: top.color }}>{pctFmt(tm.zoneProb[top.label] ?? 0)}</span>}
                   </button>
                 </li>
               );

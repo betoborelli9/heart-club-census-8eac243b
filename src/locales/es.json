@@ -844,7 +844,8 @@
     "view_chances": "Probabilidades %",
     "chances_loading": "Calculando…",
     "chances_unsupported": "Probabilidades no disponibles para este formato.",
-    "chances_caption": "Probabilidad de terminar en cada objetivo (simulación). Toca un club para ver el detalle."
+    "chances_caption": "Probabilidad de terminar en cada objetivo (simulación). \"Neutro\" = menos de 2% de subir o bajar. Toca un club para ver el detalle.",
+    "neutral_hint": "Neutro: sin opción práctica de subir ni bajar"
   },
   "squad": {
     "error": "No se pudo cargar la plantilla ahora. Inténtalo de nuevo en unos instantes.",
@@ -901,7 +902,9 @@
     "how_3": "La propia tabla oficial define las zonas (título, ascenso, cupos, descenso) y el criterio de desempate de cada campeonato.",
     "how_4": "Con pocos partidos jugados las estimaciones son más inciertas, por eso el aviso al inicio del campeonato.",
     "how_5": "Otros modelos pueden dar números diferentes, porque cada uno pondera los datos de otra manera. El nuestro fue probado con temporadas completas del pasado, y guardamos las predicciones de cada día para medir cuánto acertamos.",
-    "how_6": "Es una probabilidad, no una garantía de resultado."
+    "how_6": "Es una probabilidad, no una garantía de resultado.",
+    "neutral": "Neutro",
+    "neutral_note": "Neutro: este club tiene menos de 2% de opciones de ascender, pelear un cupo o descender."
   },
   "jogos": {
     "title": "Partidos",

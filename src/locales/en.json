@@ -844,7 +844,8 @@
     "view_chances": "Chances %",
     "chances_loading": "Calculating…",
     "chances_unsupported": "Chances unavailable for this competition format.",
-    "chances_caption": "Chance of finishing in each goal (simulation). Tap a club for details."
+    "chances_caption": "Chance of finishing in each goal (simulation). \"Neutral\" = under 2% chance of going up or down. Tap a club for details.",
+    "neutral_hint": "Neutral: no practical chance of going up or down"
   },
   "squad": {
     "error": "Couldn't load the squad right now. Please try again shortly.",
@@ -901,7 +902,9 @@
     "how_3": "The official table itself defines the zones (title, promotion, qualification spots, relegation) and each competition's tie-break rule.",
     "how_4": "With few matches played the estimates are more uncertain, hence the early-season notice.",
     "how_5": "Other models may give different numbers, since each weighs the data differently. Ours was tested on full past seasons, and we keep each day's predictions to measure how accurate we are.",
-    "how_6": "It is a probability, not a guarantee of any result."
+    "how_6": "It is a probability, not a guarantee of any result.",
+    "neutral": "Neutral",
+    "neutral_note": "Neutral: this club has under 2% chance of promotion, of fighting for a spot or of relegation."
   },
   "jogos": {
     "title": "Matches",

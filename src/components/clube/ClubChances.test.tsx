@@ -20,7 +20,7 @@ vi.mock("@/hooks/useTranslationApp", () => ({
 }));
 vi.mock("@/components/ClubLogo", () => ({ ClubLogo: () => null }));
 
-import ClubChances, { amr, zoneColor, zoneLabel } from "./ClubChances";
+import ClubChances, { amr, isNeutral, zoneColor, zoneLabel } from "./ClubChances";
 
 // Campeonato de 4 times: 1 vaga de acesso (1º) e 1 rebaixado (4º). Nosso time = id 2 (hoje 2º, 10 pts, 2 jogos faltando).
 const team = (id: number, name: string, position: number, points: number, over: any = {}) => ({
@@ -152,5 +152,30 @@ describe("Chances do clube", () => {
     expect(dialog.textContent).toContain("chances.how_1");
     expect(dialog.textContent).toContain("chances.how_5"); // outros modelos podem dar números diferentes
     expect(dialog.textContent).toContain("chances.how_6"); // probabilidade, não garantia
+  });
+
+  it("clube neutro: na lista aparece 'Neutro' no lugar dos números e quem tem chance mostra os percentuais", async () => {
+    state.payload = payload();
+    state.payload.groups[0].teams[2] = { ...state.payload.groups[0].teams[2], title: 0, zoneProb: { Promotion: 0, "Relegation - Serie B": 0.001 } }; // Meio FC
+    renderIt();
+    await screen.findByTestId("chances");
+    const list = screen.getByTestId("chances-all");
+    expect(within(list).getAllByTestId("all-neutral").length).toBe(1);
+    expect(within(list).getAllByTestId("all-neutral")[0].closest("button")!.textContent).toContain("Meio FC");
+    expect(screen.queryByTestId("chances-neutral-note")).toBeNull(); // o nosso time (Nosso FC) não é neutro
+  });
+
+  it("quando o nosso próprio clube é neutro, a aba explica em uma frase", async () => {
+    state.payload = payload();
+    state.payload.groups[0].teams[1] = { ...state.payload.groups[0].teams[1], title: 0, zoneProb: { Promotion: 0, "Relegation - Serie B": 0 } }; // Nosso FC
+    renderIt();
+    expect(await screen.findByTestId("chances-neutral-note")).toBeTruthy();
+  });
+
+  it("neutro = abaixo de 2% em todos os objetivos (e o título também conta)", () => {
+    expect(isNeutral({ a: 0.001, b: 0.019 }, 0)).toBe(true);
+    expect(isNeutral({ a: 0.001, b: 0.021 }, 0)).toBe(false);
+    expect(isNeutral({ a: 0, b: 0 }, 0.03)).toBe(false);
+    expect(isNeutral(undefined, 0)).toBe(true);
   });
 });
