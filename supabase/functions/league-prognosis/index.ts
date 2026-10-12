@@ -24,6 +24,7 @@ const API_BASE = "https://v3.football.api-sports.io";
 const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 const K_SHRINK = 8; // validado no teste com jogos passados (900+ jogos de 4 campeonatos)
 const SIGMA0 = 0.15; // incerteza de força dos times (teste em 5 temporadas completas: melhor Brier médio)
+const MODEL_VERSION = "poisson-v1 k8 s0.15"; // gravado em cada foto diária para saber qual modelo fez cada previsão
 
 const json = (b: unknown, status = 200) =>
   new Response(JSON.stringify(b), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
@@ -152,9 +153,25 @@ serve(async (req) => {
     const season = Number(body?.season);
     if (![leagueId, season].every((n) => Number.isInteger(n) && n > 0) || season < 2000 || season > 2100) return json({ error: "parâmetros inválidos" }, 400);
 
-    const { data: st } = await supabase.from("competition_standings_cache").select("standings_json").eq("league_id", leagueId).eq("season", season).maybeSingle();
-    const groups: Row[][] = (st?.standings_json as any)?.groups || [];
+    const { data: st } = await supabase.from("competition_standings_cache").select("standings_json, updated_at").eq("league_id", leagueId).eq("season", season).maybeSingle();
     if (!st) return json({ error: "campeonato não encontrado" }, 404);
+    let groups: Row[][] = (st.standings_json as any)?.groups || [];
+    // Tabela oficial velha (ninguém abriu este campeonato há mais de 20 min): renova (1 chamada) antes de calcular
+    if (groups.length && Date.now() - new Date((st as any).updated_at).getTime() > 20 * 60 * 1000) {
+      try {
+        const j = await af(`/standings?league=${leagueId}&season=${season}`);
+        const fresh = j?.response?.[0]?.league?.standings || [];
+        if (fresh.length) {
+          groups = fresh;
+          await supabase.from("competition_standings_cache").upsert({
+            league_id: leagueId, season, league_name: j.response[0].league.name,
+            standings_json: { groups: fresh, league_name: j.response[0].league.name }, updated_at: new Date().toISOString(),
+          });
+        }
+      } catch (e) {
+        console.warn("[league-prognosis] não consegui renovar a tabela oficial, usando a guardada:", e);
+      }
+    }
     if (!groups.length || groups.every((g) => g.length < 4)) return json({ supported: false, reason: "Este campeonato não tem tabela de pontos corridos." });
 
     const { data: lf } = await supabase
@@ -177,7 +194,8 @@ serve(async (req) => {
     // Cache: mesma contagem de jogos encerrados + mesmo placar ao vivo = mesmo resultado
     const finishedCount = games.filter((g) => ["FT", "AET", "PEN", "AWD", "WO"].includes(g.st) && g.gh != null && g.ga != null).length;
     const liveSig = games.filter((g) => LIVE_ST.has(g.st)).map((g) => `${g.id}:${g.gh}-${g.ga}`).sort().join(",");
-    const signature = `${finishedCount}|${liveSig}`;
+    const stSig = groups.flat().reduce((a, r: any) => a + (r.points || 0) * 31 + (r.all?.played || 0), 0);
+    const signature = `${finishedCount}|${liveSig}|${stSig}`;
     const { data: cached } = await supabase.from("league_prognosis").select("payload, signature, computed_at").eq("league_id", leagueId).eq("season", season).maybeSingle();
     if (cached) {
       const age = Date.now() - new Date(cached.computed_at).getTime();
@@ -201,6 +219,30 @@ serve(async (req) => {
       computedAt: new Date().toISOString(),
     };
     await supabase.from("league_prognosis").upsert({ league_id: leagueId, season, payload, signature, computed_at: new Date().toISOString() });
+
+    // Foto do dia (só a primeira do dia, em UTC): serve para medir a precisão quando o campeonato terminar
+    if (supported) {
+      try {
+        const day = new Date().toISOString().slice(0, 10);
+        const { count } = await supabase.from("prognosis_history").select("team_id", { count: "exact", head: true }).eq("league_id", leagueId).eq("season", season).eq("day", day);
+        if (!count) {
+          const rows: any[] = [];
+          for (const g of out as any[]) {
+            if (g.unsupported) continue;
+            for (const tm of g.teams) {
+              rows.push({
+                league_id: leagueId, season, day, group_label: g.group || "", team_id: tm.id, team_name: tm.name, position: tm.position, points: tm.points,
+                played: tm.played, remaining: tm.remaining, exp_points: tm.expPoints, p10: tm.p10, p90: tm.p90, title: tm.title, zone_prob: tm.zoneProb,
+                dist: tm.dist, zones: g.zones, model_version: MODEL_VERSION,
+              });
+            }
+          }
+          if (rows.length) await supabase.from("prognosis_history").upsert(rows, { onConflict: "league_id,season,day,group_label,team_id" });
+        }
+      } catch (e) {
+        console.warn("[league-prognosis] não consegui guardar a foto do dia:", e);
+      }
+    }
     return json(payload);
   } catch (e) {
     console.error("league-prognosis error:", e);

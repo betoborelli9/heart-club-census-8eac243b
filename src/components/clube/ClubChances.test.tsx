@@ -141,4 +141,16 @@ describe("Chances do clube", () => {
     expect(label.length).toBeGreaterThan(0);
     expect(label).not.toBe("Promotion");
   });
+
+  it("'Como calculamos' abre o explicador da metodologia, com a ressalva de que outros modelos podem diferir", async () => {
+    const { fireEvent } = await import("@testing-library/react");
+    renderIt();
+    await screen.findByTestId("chances");
+    expect(screen.queryByTestId("how-dialog")).toBeNull();
+    fireEvent.click(screen.getByTestId("how-btn"));
+    const dialog = await screen.findByTestId("how-dialog");
+    expect(dialog.textContent).toContain("chances.how_1");
+    expect(dialog.textContent).toContain("chances.how_5"); // outros modelos podem dar números diferentes
+    expect(dialog.textContent).toContain("chances.how_6"); // probabilidade, não garantia
+  });
 });

@@ -893,7 +893,15 @@
     "easy": "baja",
     "all": "Todos los clubes",
     "legend": "Columnas: puntos · probabilidad del 1º puesto · probabilidad del último objetivo de la tabla",
-    "method": "Estimación estadística: el modelo mide el ataque y la defensa de cada equipo con los resultados de la temporada y simula {{sims}} veces los partidos restantes. Es una probabilidad, no una garantía."
+    "method": "Estimación estadística: el modelo mide el ataque y la defensa de cada equipo con los resultados de la temporada y simula {{sims}} veces los partidos restantes. Es una probabilidad, no una garantía.",
+    "how_btn": "Cómo calculamos",
+    "how_title": "Cómo calculamos las probabilidades",
+    "how_1": "Medimos el ataque y la defensa de cada equipo con los goles y resultados del campeonato, considerando la localía.",
+    "how_2": "Simulamos los partidos que faltan {{sims}} veces y contamos cuántas veces cada equipo termina en cada posición.",
+    "how_3": "La propia tabla oficial define las zonas (título, ascenso, cupos, descenso) y el criterio de desempate de cada campeonato.",
+    "how_4": "Con pocos partidos jugados las estimaciones son más inciertas, por eso el aviso al inicio del campeonato.",
+    "how_5": "Otros modelos pueden dar números diferentes, porque cada uno pondera los datos de otra manera. El nuestro fue probado con temporadas completas del pasado, y guardamos las predicciones de cada día para medir cuánto acertamos.",
+    "how_6": "Es una probabilidad, no una garantía de resultado."
   },
   "jogos": {
     "title": "Partidos",

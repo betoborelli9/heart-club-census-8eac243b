@@ -893,7 +893,15 @@
     "easy": "low",
     "all": "All clubs",
     "legend": "Columns: points · chance of 1st place · chance of the table's last goal",
-    "method": "Statistical estimate: the model measures each team's attack and defence from the season's results and simulates the remaining matches {{sims}} times. It is a probability, not a guarantee."
+    "method": "Statistical estimate: the model measures each team's attack and defence from the season's results and simulates the remaining matches {{sims}} times. It is a probability, not a guarantee.",
+    "how_btn": "How we calculate",
+    "how_title": "How we calculate the chances",
+    "how_1": "We measure each team's attack and defence from the competition's goals and results, accounting for home advantage.",
+    "how_2": "We simulate the remaining matches {{sims}} times and count how often each team ends in each position.",
+    "how_3": "The official table itself defines the zones (title, promotion, qualification spots, relegation) and each competition's tie-break rule.",
+    "how_4": "With few matches played the estimates are more uncertain, hence the early-season notice.",
+    "how_5": "Other models may give different numbers, since each weighs the data differently. Ours was tested on full past seasons, and we keep each day's predictions to measure how accurate we are.",
+    "how_6": "It is a probability, not a guarantee of any result."
   },
   "jogos": {
     "title": "Matches",

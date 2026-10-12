@@ -8,7 +8,8 @@
  */
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Info, Target, TrendingUp } from "lucide-react";
+import { HelpCircle, Info, Target, TrendingUp } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useTranslationApp } from "@/hooks/useTranslationApp";
 import { getLeagueRules } from "@/data/leagueRules";
@@ -110,6 +111,7 @@ export default function ClubChances({ teamId, leagueId, season, accent = "#ff620
   const navigate = useNavigate();
   const [data, setData] = useState<Payload | null>(null);
   const [error, setError] = useState(false);
+  const [howOpen, setHowOpen] = useState(false);
 
   useEffect(() => {
     let alive = true;
@@ -331,9 +333,29 @@ export default function ClubChances({ teamId, leagueId, season, accent = "#ff620
         <p className="mt-1 text-[10px] text-white/35">{t("chances.legend")}</p>
       </section>
 
-      <p className="rounded-xl bg-white/[0.04] p-3 text-[11px] leading-relaxed text-white/50" data-testid="chances-method">
-        {t("chances.method", { sims: (grp.meta?.sims ?? 0).toLocaleString(language) })}
-      </p>
+      <div className="rounded-xl bg-white/[0.04] p-3" data-testid="chances-method">
+        <p className="text-[11px] leading-relaxed text-white/50">{t("chances.method", { sims: (grp.meta?.sims ?? 0).toLocaleString(language) })}</p>
+        <button onClick={() => setHowOpen(true)} data-testid="how-btn" className="mt-2 flex h-10 items-center gap-1.5 rounded-full bg-white/10 px-4 text-[11px] font-bold text-white/85">
+          <HelpCircle className="h-4 w-4" /> {t("chances.how_btn")}
+        </button>
+      </div>
+
+      <Dialog open={howOpen} onOpenChange={setHowOpen}>
+        <DialogContent className="max-h-[85vh] max-w-md overflow-y-auto border-white/10 bg-zinc-950 text-white" data-testid="how-dialog">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-black italic uppercase">{t("chances.how_title")}</DialogTitle>
+            <DialogDescription className="sr-only">{t("chances.how_title")}</DialogDescription>
+          </DialogHeader>
+          <ol className="list-decimal space-y-3 pl-5 text-[13px] leading-relaxed text-white/80">
+            <li>{t("chances.how_1")}</li>
+            <li>{t("chances.how_2", { sims: (grp.meta?.sims ?? 0).toLocaleString(language) })}</li>
+            <li>{t("chances.how_3")}</li>
+            <li>{t("chances.how_4")}</li>
+            <li>{t("chances.how_5")}</li>
+          </ol>
+          <p className="rounded-lg bg-white/[0.05] p-3 text-[12px] font-semibold text-white/70">{t("chances.how_6")}</p>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

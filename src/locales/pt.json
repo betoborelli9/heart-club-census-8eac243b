@@ -893,7 +893,15 @@
     "easy": "baixa",
     "all": "Todos os clubes",
     "legend": "Colunas: pontos · chance do 1º lugar · chance do último objetivo da tabela",
-    "method": "Estimativa estatística: o modelo mede o ataque e a defesa de cada time pelos resultados do campeonato e simula {{sims}} vezes os jogos que faltam. É uma probabilidade, não uma garantia."
+    "method": "Estimativa estatística: o modelo mede o ataque e a defesa de cada time pelos resultados do campeonato e simula {{sims}} vezes os jogos que faltam. É uma probabilidade, não uma garantia.",
+    "how_btn": "Como calculamos",
+    "how_title": "Como calculamos as chances",
+    "how_1": "Medimos o ataque e a defesa de cada time pelos gols e resultados do campeonato, considerando o mando de campo.",
+    "how_2": "Simulamos os jogos que faltam {{sims}} vezes e contamos em quantas delas cada time termina em cada posição.",
+    "how_3": "A própria tabela oficial define as zonas (título, acesso, vagas, rebaixamento) e o critério de desempate de cada campeonato.",
+    "how_4": "Com poucos jogos disputados as estimativas são mais incertas, por isso o aviso no começo do campeonato.",
+    "how_5": "Outros modelos podem dar números diferentes, porque cada um pesa os dados de um jeito. O nosso foi testado com temporadas completas do passado, e guardamos as previsões de cada dia para medir o quanto acertamos.",
+    "how_6": "É uma probabilidade, não uma garantia de resultado."
   },
   "jogos": {
     "title": "Jogos",
