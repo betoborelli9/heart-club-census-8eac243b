@@ -12,6 +12,7 @@ import { useTranslationApp } from "@/hooks/useTranslationApp";
 import { ClubLogo } from "@/components/ClubLogo";
 import { pctText, zoneColor, zoneLabel } from "@/components/clube/ClubChances";
 import { roundNumber, runWhatIf, type Pick, type WGame, type WTeam } from "@/lib/whatif";
+import { fmtExpPts, orderByExpected } from "@/lib/projected-order";
 import type { TieRule } from "../../../supabase/functions/_shared/prognosis";
 
 type TeamP = WTeam & { name: string; logo: string | null; remaining: number; dist: number[] };
@@ -191,11 +192,11 @@ export default function ClubSimulator({ teamId, leagueId, season, accent = "#ff6
   // Tabela mostrada: "se fosse hoje" com os placares, ou "final provável"
   const byId = new Map((grp.teams ?? []).map((x) => [x.id, x]));
   const meanPos = (id: number) => (result.dist.get(id) ?? []).reduce((acc, p, i) => acc + p * (i + 1), 0);
-  const finalOrder = [...(grp.teams ?? [])].sort((a, b) => meanPos(a.id) - meanPos(b.id) || (result.expPoints.get(b.id) ?? 0) - (result.expPoints.get(a.id) ?? 0));
+  const finalOrder = orderByExpected(grp.teams ?? [], grp.meta?.rule, (x) => result.expPoints.get(x.id) ?? 0, (x) => meanPos(x.id));
   const rows =
     view === "now"
       ? result.table.map((r) => ({ pos: r.pos, id: r.id, delta: r.delta, big: r.points, sub: `${t("sim.j")} ${r.played} · ${t("sim.sg")} ${r.gd > 0 ? `+${r.gd}` : r.gd}` }))
-      : finalOrder.map((tm, i) => ({ pos: i + 1, id: tm.id, delta: tm.position - (i + 1), big: Math.round(result.expPoints.get(tm.id) ?? 0), sub: `${pctText(result.dist.get(tm.id)?.[i] ?? 0)} ${t("sim.here")}` }));
+      : finalOrder.map((tm, i) => ({ pos: i + 1, id: tm.id, delta: tm.position - (i + 1), big: fmtExpPts(result.expPoints.get(tm.id) ?? 0, language), sub: `${pctText(result.dist.get(tm.id)?.[i] ?? 0)} ${t("sim.here")}` }));
 
   const setScore = (id: number, side: "h" | "a", v: string) => {
     const clean = v.replace(/\D/g, "").slice(0, 2);
@@ -371,12 +372,13 @@ export default function ClubSimulator({ teamId, leagueId, season, accent = "#ff6
                   <span className="block truncate text-[12px] font-bold">{tm.name}</span>
                   <span className="block truncate text-[10px] text-white/60">{r.sub}</span>
                 </span>
-                <span className="w-9 shrink-0 text-right text-[14px] font-black tabular-nums">{r.big}</span>
+                <span className="min-w-[2.25rem] shrink-0 text-right text-[14px] font-black tabular-nums">{r.big}</span>
               </li>
             );
           })}
         </ul>
-        <p className="mt-2 text-[10px] text-white/50">{t("sim.legend")}</p>
+        <p className="mt-2 text-[10px] text-white/60">{t("sim.legend")}</p>
+        <p className="mt-0.5 text-[10px] text-white/60">{t(grp.meta?.rule === "br" ? "chances.tiebreak_br" : grp.meta?.rule === "gd" ? "chances.tiebreak_gd" : "chances.tiebreak_official")}</p>
       </section>
     </div>
   );

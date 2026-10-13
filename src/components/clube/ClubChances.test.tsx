@@ -235,6 +235,29 @@ describe("Chances do clube", () => {
     expect(screen.getAllByTestId("table-also")[0].textContent).toContain("Nosso FC"); // também pode ficar em 1º
   });
 
+  it("tabela provável mostra os pontos esperados com 1 casa decimal e diz qual desempate foi usado", async () => {
+    state.payload = payload();
+    state.payload.groups[0].meta.rule = "br";
+    renderIt();
+    await screen.findByTestId("chances-table");
+    const pts = screen.getAllByTestId("table-pts").map((e) => e.textContent);
+    expect(pts[0]).toBe("15,1"); // Líder FC: 13 + 2,1
+    expect(screen.getByTestId("table-tiebreak").textContent).toContain("chances.tiebreak_br");
+  });
+
+  it("tabela provável: empate nos pontos esperados vai para o desempate do Brasil (mais vitórias fica na frente)", async () => {
+    state.payload = payload();
+    const g = state.payload.groups[0];
+    g.meta.rule = "br";
+    // dois clubes com os mesmos pontos esperados (12,1): quem tem mais vitórias fica na frente, mesmo com saldo pior
+    g.teams[0] = { ...g.teams[0], points: 10, expPoints: 12.1, win: 3, gf: 8, ga: 2 }; // Líder FC
+    g.teams[1] = { ...g.teams[1], points: 10, expPoints: 12.1, win: 4, gf: 8, ga: 7 }; // Nosso FC: mais vitórias, saldo pior
+    renderIt();
+    await screen.findByTestId("chances-table");
+    const rows = screen.getAllByTestId("table-row");
+    expect(rows[0].textContent).toContain("Nosso FC");
+  });
+
   it("casa/fora dos jogos que faltam em branco e legível", async () => {
     renderIt();
     await screen.findByTestId("chances");

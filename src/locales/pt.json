@@ -915,8 +915,8 @@
     "neutral_note": "Neutro: este clube tem menos de 2% de chance de subir, de brigar por vaga ou de ser rebaixado.",
     "sum_title": "Resumo de {{club}}",
     "sum_zone": "Chance de {{zone}}",
-    "sum_atleast": "Chance de chegar pelo menos a {{zone}}",
-    "sum_upto": "terminando em até {{pos}}º lugar",
+    "sum_atleast": "Chance de {{zone}} ou melhor",
+    "sum_upto": "do 1º ao {{pos}}º lugar (soma as faixas de cima)",
     "sum_neutral": "Chance de ficar na zona neutra",
     "sum_neutral_sub": "sem subir nem cair",
     "sum_relegation": "Chance de ser rebaixado",
@@ -933,10 +933,14 @@
     "cut_missing": "faltam {{n}} pts",
     "pts": "pts",
     "table_title": "Tabela provável no fim",
-    "table_sub": "Ordem pela posição média de cada clube nas simulações. Embaixo, quem mais pode terminar naquela posição.",
+    "table_sub": "Ordem pelos pontos esperados de cada clube (1 casa decimal); em empate vale o desempate do campeonato. Embaixo, quem mais pode terminar naquela posição.",
     "table_also": "Também pode:",
     "table_neutral": "{{a}}º–{{b}}º · zona neutra",
-    "table_legend": "Direita: pontos esperados e chance de terminar exatamente nessa posição."
+    "table_legend": "Direita: pontos esperados e chance de terminar exatamente nessa posição.",
+    "only_band": "só esta faixa",
+    "tiebreak_br": "Desempate usado: pontos, vitórias, saldo de gols e gols pró.",
+    "tiebreak_gd": "Desempate usado: pontos, saldo de gols e gols pró.",
+    "tiebreak_official": "Desempate usado: a ordem da tabela oficial."
   },
   "jogos": {
     "title": "Jogos",

@@ -14,15 +14,17 @@ import { supabase } from "@/integrations/supabase/client";
 import { useTranslationApp } from "@/hooks/useTranslationApp";
 import { getLeagueRules } from "@/data/leagueRules";
 import { ClubLogo } from "@/components/ClubLogo";
+import { fmtExpPts, orderByExpected } from "@/lib/projected-order";
 
 type TeamP = {
   id: number; name: string; logo: string | null; position: number; points: number; played: number; remaining: number;
   dist: number[]; expPoints: number; p10: number; p90: number; title: number; zoneProb: Record<string, number>; difficulty: number;
+  win?: number; gf?: number; ga?: number;
   strength?: number; homePpg?: number | null; awayPpg?: number | null; homeLeft?: number; awayLeft?: number;
 };
 type RemGame = { id: number; date: string; h: number; a: number; hn: string; an: string; hl: string | null; al: string | null; pH: number; pD: number; pA: number; sh?: number; sa?: number; live: { gh: number; ga: number; el: number | null; st: string } | null };
 type Zone = { label: string; positions: number[] };
-type GroupP = { group: string | null; unsupported?: string; teams?: TeamP[]; zones?: Zone[]; cutMedian?: number[]; remaining?: RemGame[]; meta?: { sims: number; finishedGames: number; remainingGames: number; minPlayed: number } };
+type GroupP = { group: string | null; unsupported?: string; teams?: TeamP[]; zones?: Zone[]; cutMedian?: number[]; remaining?: RemGame[]; meta?: { sims: number; finishedGames: number; remainingGames: number; minPlayed: number; rule?: string } };
 type Payload = { supported: boolean; reason?: string | null; league?: { id: number; season: number; name?: string }; groups: GroupP[] };
 
 export const pctText = (p: number) => {
@@ -214,7 +216,7 @@ export default function ClubChances({ teamId, leagueId, season, accent = "#ff620
   type TableRow = { kind: "team"; pos: number; team: TeamP; color: string | null; also: { team: TeamP; p: number }[] } | { kind: "gap"; from: number; to: number };
   // posição média nas simulações (mais fiel que os pontos arredondados quando há empate técnico)
   const meanPos = (x: TeamP) => x.dist.reduce((acc, p, i) => acc + p * (i + 1), 0);
-  const projectedOrder = [...(grp.teams ?? [])].sort((a, b) => meanPos(a) - meanPos(b) || b.expPoints - a.expPoints || a.position - b.position);
+  const projectedOrder = orderByExpected(grp.teams ?? [], grp.meta?.rule, (x) => x.expPoints, meanPos);
   const shownPos = new Set<number>([1, ...covered]);
   const tableRows: TableRow[] = [];
   for (let p = 1; p <= total; p++) {
@@ -336,7 +338,7 @@ export default function ClubChances({ teamId, leagueId, season, accent = "#ff620
               <li key={z.label} className="rounded-xl border border-white/10 bg-white/[0.03] p-3" data-testid="zone-row">
                 <div className="mb-1 flex items-center justify-between gap-2 text-[13px] font-bold">
                   <span className="min-w-0 truncate">
-                    {z.name} <span className="text-[10px] font-normal text-white/40">({z.positions[0]}º{z.positions.length > 1 ? `–${z.positions[z.positions.length - 1]}º` : ""})</span>
+                    {z.name} <span className="text-[10px] font-normal text-white/60">({z.positions[0]}º{z.positions.length > 1 ? `–${z.positions[z.positions.length - 1]}º` : ""} · {t("chances.only_band")})</span>
                   </span>
                   <span className="tabular-nums" style={{ color: z.color }}>{pctFmt(p)}</span>
                 </div>
@@ -399,7 +401,7 @@ export default function ClubChances({ teamId, leagueId, season, accent = "#ff620
                       )}
                     </span>
                     <span className="shrink-0 text-right leading-tight">
-                      <span className="block text-[13px] font-black tabular-nums">{Math.round(r.team.expPoints)}</span>
+                      <span className="block text-[13px] font-black tabular-nums" data-testid="table-pts">{fmtExpPts(r.team.expPoints, language)}</span>
                       <span className="block text-[9px] font-bold text-white/55">{pctFmt(r.team.dist[r.pos - 1] ?? 0)}</span>
                     </span>
                   </button>
@@ -407,7 +409,8 @@ export default function ClubChances({ teamId, leagueId, season, accent = "#ff620
               ),
             )}
           </ul>
-          <p className="mt-1 text-[10px] text-white/50">{t("chances.table_legend")}</p>
+          <p className="mt-1 text-[10px] text-white/60">{t("chances.table_legend")}</p>
+          <p className="mt-0.5 text-[10px] text-white/60" data-testid="table-tiebreak">{t(grp.meta?.rule === "br" ? "chances.tiebreak_br" : grp.meta?.rule === "gd" ? "chances.tiebreak_gd" : "chances.tiebreak_official")}</p>
         </section>
       )}
 

@@ -915,8 +915,8 @@
     "neutral_note": "Neutral: this club has under 2% chance of promotion, of fighting for a spot or of relegation.",
     "sum_title": "{{club}} summary",
     "sum_zone": "Chance of {{zone}}",
-    "sum_atleast": "Chance of reaching at least {{zone}}",
-    "sum_upto": "finishing {{pos}}th or better",
+    "sum_atleast": "Chance of {{zone}} or better",
+    "sum_upto": "1st to {{pos}}th place (adds the zones above)",
     "sum_neutral": "Chance of mid-table safety",
     "sum_neutral_sub": "no promotion, no relegation",
     "sum_relegation": "Chance of relegation",
@@ -933,10 +933,14 @@
     "cut_missing": "{{n}} pts to go",
     "pts": "pts",
     "table_title": "Likely final table",
-    "table_sub": "Ordered by each club's average position across the simulations. Below, who else could finish there.",
+    "table_sub": "Ordered by each club's expected points (1 decimal); ties follow the competition's tie-break. Below, who else could finish there.",
     "table_also": "Could also be:",
     "table_neutral": "{{a}}th–{{b}}th · mid-table",
-    "table_legend": "Right: expected points and chance of finishing exactly in that position."
+    "table_legend": "Right: expected points and chance of finishing exactly in that position.",
+    "only_band": "this band only",
+    "tiebreak_br": "Tie-break used: points, wins, goal difference and goals scored.",
+    "tiebreak_gd": "Tie-break used: points, goal difference and goals scored.",
+    "tiebreak_official": "Tie-break used: the official table order."
   },
   "jogos": {
     "title": "Matches",
