@@ -85,7 +85,7 @@ export default function ClubIdentityCard({ clubName }: Props) {
       // Retorna apenas competições ATIVAS (com fixture futuro/ao vivo) — automático.
       try {
         const { data: ls } = await supabase.functions.invoke("league-standings", {
-          body: { clubName },
+          body: row?.api_id && Number(row.api_id) > 0 ? { clubName, teamId: Number(row.api_id) } : { clubName },
         });
         const list = ((ls as any)?.competitions || [])
           .map((c: any) => ({ l_id: c.leagueId, l_name: c.leagueName }))
