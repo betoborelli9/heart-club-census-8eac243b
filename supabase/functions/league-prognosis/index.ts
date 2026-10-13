@@ -93,16 +93,41 @@ function computeGroup(leagueId: number, rowsApi: Row[], gamesAll: (FullGame & { 
     const p = matchProbs(lh * frac, la * frac, gh0, ga0);
     const full = inGroup.find((x) => x.id === g.id)!;
     remainingOut.push({
+      sh: 0, sa: 0, // preenchidos depois (força dos dois times)
       id: g.id, date: full.date, h: g.h, a: g.a, hn: full.hn, an: full.an, hl: full.hl, al: full.al,
       pH: Math.round(p.pH * 1000) / 1000, pD: Math.round(p.pD * 1000) / 1000, pA: Math.round(p.pA * 1000) / 1000,
       live: live ? { gh: g.gh ?? 0, ga: g.ga ?? 0, el: g.el ?? null, st: g.st } : null,
     });
   }
 
+  {
+    const rt = (i: number) => (strengths.att.get(i) ?? 1) / (strengths.def.get(i) ?? 1);
+    const order = [...ids].sort((a, b) => rt(a) - rt(b));
+    const idx = new Map<number, number>(order.map((id, k) => [id, order.length > 1 ? Math.round((k / (order.length - 1)) * 100) : 50]));
+    for (const g of remainingOut) {
+      g.sh = idx.get(g.h) ?? 50;
+      g.sa = idx.get(g.a) ?? 50;
+    }
+  }
   const sims = simsFor(ids.length, simGames.length);
   const sigma = strengthSigma(baseRows.map((r) => r.played), SIGMA0, 10);
   const sim = simulateGroup(simTeams, simGames, rule === "official" ? "official" : rule, sims, mulberry32(leagueId * 1009 + finished.length), sigma);
   const diff = scheduleDifficulty(strengths, ids, remaining);
+  // Força de cada time (ataque ÷ defesa), em índice 0–100 dentro do grupo: quanto maior, mais forte
+  const rating = (i: number) => (strengths.att.get(i) ?? 1) / (strengths.def.get(i) ?? 1);
+  const ranked = [...ids].sort((a, b) => rating(a) - rating(b));
+  const strengthIdx = new Map<number, number>(ranked.map((id, k) => [id, ranked.length > 1 ? Math.round((k / (ranked.length - 1)) * 100) : 50]));
+  // Campanha em casa e fora (fatos do campeonato até agora)
+  const ppg = (id: number, home: boolean) => {
+    const mine = finished.filter((g) => (home ? g.h === id : g.a === id));
+    if (!mine.length) return { v: null as number | null, n: 0 };
+    const pts = mine.reduce((a, g) => {
+      const f = (home ? g.gh : g.ga) as number;
+      const c = (home ? g.ga : g.gh) as number;
+      return a + (f > c ? 3 : f === c ? 1 : 0);
+    }, 0);
+    return { v: Math.round((pts / mine.length) * 100) / 100, n: mine.length };
+  };
 
   // 4) Zonas: a própria tabela oficial diz o que cada posição vale (descrição por linha)
   const zoneMap = new Map<string, number[]>();
@@ -132,6 +157,11 @@ function computeGroup(leagueId: number, rowsApi: Row[], gamesAll: (FullGame & { 
       title: sim.dist[i][0] ?? 0,
       zoneProb,
       difficulty: diff.get(r.teamId) ?? 50,
+      strength: strengthIdx.get(r.teamId) ?? 50,
+      homePpg: ppg(r.teamId, true).v,
+      awayPpg: ppg(r.teamId, false).v,
+      homeLeft: remaining.filter((g) => g.h === r.teamId).length,
+      awayLeft: remaining.filter((g) => g.a === r.teamId).length,
     };
   });
 
@@ -195,7 +225,7 @@ serve(async (req) => {
     const finishedCount = games.filter((g) => ["FT", "AET", "PEN", "AWD", "WO"].includes(g.st) && g.gh != null && g.ga != null).length;
     const liveSig = games.filter((g) => LIVE_ST.has(g.st)).map((g) => `${g.id}:${g.gh}-${g.ga}`).sort().join(",");
     const stSig = groups.flat().reduce((a, r: any) => a + (r.points || 0) * 31 + (r.all?.played || 0), 0);
-    const signature = `${finishedCount}|${liveSig}|${stSig}`;
+    const signature = `v2|${finishedCount}|${liveSig}|${stSig}`;
     const { data: cached } = await supabase.from("league_prognosis").select("payload, signature, computed_at").eq("league_id", leagueId).eq("season", season).maybeSingle();
     if (cached) {
       const age = Date.now() - new Date(cached.computed_at).getTime();

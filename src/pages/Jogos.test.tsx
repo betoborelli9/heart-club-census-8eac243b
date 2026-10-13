@@ -38,7 +38,7 @@ vi.mock("@/contexts/ViewedClubContext", () => ({
   }),
 }));
 vi.mock("@/components/dashboard/ClubSearch", () => ({
-  ClubSearch: ({ onSelect }: any) => <button data-testid="fake-search" onClick={() => onSelect({ name: "Newcastle" })}>buscar</button>,
+  ClubSearch: ({ onSelect }: any) => <button data-testid="fake-search" onClick={() => onSelect({ name: "Newcastle", api_id: 34 })}>buscar</button>,
 }));
 vi.mock("@/hooks/useTranslationApp", () => ({
   useTranslationApp: () => ({ t: (k: string, o?: any) => (o ? `${k}:${JSON.stringify(o)}` : k), language: "pt" }),
@@ -158,7 +158,7 @@ describe("Aba Jogos — só o clube em exibição e os campeonatos dele", () => 
     expect(state.reset).toHaveBeenCalled();
     fireEvent.click(screen.getByTestId("search-toggle"));
     fireEvent.click(await screen.findByTestId("fake-search"));
-    expect(state.setViewed).toHaveBeenCalledWith("Newcastle");
+    expect(state.setViewed).toHaveBeenCalledWith("Newcastle", 34);
   });
 
   it("toque no time abre a página do clube; 'Tabela e chances' abre a aba Chances no campeonato certo", async () => {

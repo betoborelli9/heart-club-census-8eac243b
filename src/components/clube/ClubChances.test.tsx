@@ -178,4 +178,37 @@ describe("Chances do clube", () => {
     expect(isNeutral({ a: 0, b: 0 }, 0.03)).toBe(false);
     expect(isNeutral(undefined, 0)).toBe(true);
   });
+
+  it("resumo em frases: subir direto, zona neutra e cair, com barra empilhada somando 100%", async () => {
+    renderIt();
+    await screen.findByTestId("chances-summary");
+    const lines = screen.getAllByTestId("sum-line").map((e) => e.textContent || "");
+    expect(lines.length).toBe(3); // acesso direto · zona neutra · rebaixamento
+    expect(lines[0]).toContain("10%");
+    expect(lines[0]).toContain("chances.sum_zone");
+    expect(lines[1]).toContain("80%"); // 2º e 3º lugar: nem sobe nem cai (0,5 + 0,3)
+    expect(lines[1]).toContain("chances.sum_neutral");
+    expect(lines[2]).toContain("10%");
+    expect(lines[2]).toContain("chances.sum_relegation");
+    expect(screen.getByTestId("sum-bar").children.length).toBe(3);
+  });
+
+  it("jogos que faltam: mostra quantos são em casa e fora e a força de quem joga contra", async () => {
+    state.payload = payload();
+    const g = state.payload.groups[0];
+    g.teams[1] = { ...g.teams[1], homeLeft: 1, awayLeft: 1, homePpg: 2.1, awayPpg: 1.2 };
+    g.remaining[0] = { ...g.remaining[0], sh: 40, sa: 90 }; // Nosso FC (casa) x Líder FC (forte)
+    g.remaining[1] = { ...g.remaining[1], sh: 10, sa: 40 }; // Meio FC (fraco) x Nosso FC (fora)
+    renderIt();
+    await screen.findByTestId("chances");
+    const ha = screen.getByTestId("chances-homeaway").textContent || "";
+    expect(ha).toContain('"h":1');
+    expect(ha).toContain('"a":1');
+    expect(ha).toContain("chances.ha_record");
+    const venues = screen.getAllByTestId("chance-venue").map((e) => e.textContent);
+    expect(venues).toEqual(["clube.home", "clube.away"]);
+    const strengths = screen.getAllByTestId("opp-strength").map((e) => e.textContent || "");
+    expect(strengths[0]).toContain("chances.s_strong"); // adversário 90 → forte
+    expect(strengths[1]).toContain("chances.s_weak"); // adversário 10 → fraco
+  });
 });

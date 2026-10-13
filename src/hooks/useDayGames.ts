@@ -45,7 +45,7 @@ const COMP_TTL = 5 * 60 * 1000;
 /** Só para testes: limpa o cache em memória dos campeonatos por clube. */
 export const clearCompetitionsCache = () => COMP_CACHE.clear();
 
-export function useClubCompetitions(clubName: string | null) {
+export function useClubCompetitions(clubName: string | null, teamId?: number | null) {
   const [team, setTeam] = useState<ClubTeam | null>(null);
   const [competitions, setCompetitions] = useState<Competition[]>([]);
   const [loading, setLoading] = useState(!!clubName);
@@ -60,7 +60,8 @@ export function useClubCompetitions(clubName: string | null) {
       setFailed(false);
       return;
     }
-    const hit = COMP_CACHE.get(clubName);
+    const cacheKey = `${clubName}|${teamId ?? ""}`;
+    const hit = COMP_CACHE.get(cacheKey);
     if (hit && Date.now() - hit.at < COMP_TTL) {
       setTeam(hit.team);
       setCompetitions(hit.competitions);
@@ -71,7 +72,7 @@ export function useClubCompetitions(clubName: string | null) {
     setLoading(true);
     setFailed(false);
     (async () => {
-      const { data, error } = await supabase.functions.invoke("league-standings", { body: { clubName } });
+      const { data, error } = await supabase.functions.invoke("league-standings", { body: teamId ? { clubName, teamId } : { clubName } });
       if (!alive) return;
       if (error || !data) {
         setFailed(true);
@@ -86,7 +87,7 @@ export function useClubCompetitions(clubName: string | null) {
         country: c.country ?? null,
         season: c.season,
       }));
-      COMP_CACHE.set(clubName, { at: Date.now(), team: t, competitions: comps });
+      COMP_CACHE.set(cacheKey, { at: Date.now(), team: t, competitions: comps });
       setTeam(t);
       setCompetitions(comps);
       setLoading(false);
@@ -94,7 +95,7 @@ export function useClubCompetitions(clubName: string | null) {
     return () => {
       alive = false;
     };
-  }, [clubName]);
+  }, [clubName, teamId]);
 
   return { team, competitions, loading, failed };
 }

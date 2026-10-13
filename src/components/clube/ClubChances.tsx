@@ -18,8 +18,9 @@ import { ClubLogo } from "@/components/ClubLogo";
 type TeamP = {
   id: number; name: string; logo: string | null; position: number; points: number; played: number; remaining: number;
   dist: number[]; expPoints: number; p10: number; p90: number; title: number; zoneProb: Record<string, number>; difficulty: number;
+  strength?: number; homePpg?: number | null; awayPpg?: number | null; homeLeft?: number; awayLeft?: number;
 };
-type RemGame = { id: number; date: string; h: number; a: number; hn: string; an: string; hl: string | null; al: string | null; pH: number; pD: number; pA: number; live: { gh: number; ga: number; el: number | null; st: string } | null };
+type RemGame = { id: number; date: string; h: number; a: number; hn: string; an: string; hl: string | null; al: string | null; pH: number; pD: number; pA: number; sh?: number; sa?: number; live: { gh: number; ga: number; el: number | null; st: string } | null };
 type Zone = { label: string; positions: number[] };
 type GroupP = { group: string | null; unsupported?: string; teams?: TeamP[]; zones?: Zone[]; cutMedian?: number[]; remaining?: RemGame[]; meta?: { sims: number; finishedGames: number; remainingGames: number; minPlayed: number } };
 type Payload = { supported: boolean; reason?: string | null; league?: { id: number; season: number; name?: string }; groups: GroupP[] };
@@ -165,6 +166,34 @@ export default function ClubChances({ teamId, leagueId, season, accent = "#ff620
   const dateFmt = (iso: string) => new Date(iso).toLocaleDateString(language, { day: "2-digit", month: "short" }).replace(".", "");
   const diffLabel = (d: number) => (d >= 66 ? t("chances.hard") : d <= 33 ? t("chances.easy") : t("chances.medium"));
   const diffColor = (d: number) => (d >= 66 ? "#ef4444" : d <= 33 ? "#22c55e" : "#f59e0b");
+  const strongLabel = (v: number) => (v >= 67 ? t("chances.s_strong") : v <= 33 ? t("chances.s_weak") : t("chances.s_mid"));
+  const strongColor = (v: number) => (v >= 67 ? "#ef4444" : v <= 33 ? "#22c55e" : "#f59e0b");
+
+  // Resumo em frases: subir direto · pelo menos play-off · zona neutra · cair (zonas vindas da tabela oficial)
+  const topZ = zones.filter((z) => z.positions[z.positions.length - 1] !== total).sort((a, b) => a.positions[0] - b.positions[0]);
+  const bottomZ = zones.find((z) => z.positions[z.positions.length - 1] === total);
+  const covered = new Set(zones.flatMap((z) => z.positions));
+  const neutralPos = Array.from({ length: total }, (_, i) => i + 1).filter((p) => !covered.has(p));
+  const pNeutral = neutralPos.reduce((a, p) => a + (me.dist[p - 1] ?? 0), 0);
+  const cum = (upTo: number) => me.dist.slice(0, upTo).reduce((a, b) => a + b, 0);
+  const range = (a: number, b: number) => (a === b ? `${a}º` : `${a}º–${b}º`);
+  const isRelegation = (z: { label: string; name: string }) => /relegation|rebaix|descenso/i.test(`${z.label} ${z.name}`);
+  type Line = { key: string; color: string; p: number; title: string; sub: string; seg: number };
+  const sumLines: Line[] = [
+    ...topZ.map((z, i): Line => {
+      const first = z.positions[0];
+      const last = z.positions[z.positions.length - 1];
+      return i === 0
+        ? { key: z.label, color: z.color, p: me.zoneProb[z.label] ?? 0, title: t("chances.sum_zone", { zone: z.name }), sub: range(first, last), seg: me.zoneProb[z.label] ?? 0 }
+        : { key: z.label, color: z.color, p: cum(last), title: t("chances.sum_atleast", { zone: z.name }), sub: t("chances.sum_upto", { pos: last }), seg: me.zoneProb[z.label] ?? 0 };
+    }),
+    ...(neutralPos.length
+      ? [{ key: "__neutral", color: "#a1a1aa", p: pNeutral, title: t("chances.sum_neutral"), sub: `${range(neutralPos[0], neutralPos[neutralPos.length - 1])} · ${t("chances.sum_neutral_sub")}`, seg: pNeutral } as Line]
+      : []),
+    ...(bottomZ
+      ? [{ key: bottomZ.label, color: bottomZ.color, p: me.zoneProb[bottomZ.label] ?? 0, title: isRelegation(bottomZ) ? t("chances.sum_relegation") : t("chances.sum_zone", { zone: bottomZ.name }), sub: range(bottomZ.positions[0], bottomZ.positions[bottomZ.positions.length - 1]), seg: me.zoneProb[bottomZ.label] ?? 0 } as Line]
+      : []),
+  ];
 
   return (
     <div className="space-y-5" data-testid="chances">
@@ -198,6 +227,27 @@ export default function ClubChances({ teamId, leagueId, season, accent = "#ff620
           <Info className="mt-0.5 h-4 w-4 shrink-0" /> {t("chances.neutral_note")}
         </div>
       )}
+
+      {/* Resumo em frases */}
+      <section className="rounded-2xl border border-white/10 bg-white/[0.04] p-4" data-testid="chances-summary">
+        <h3 className="mb-3 text-[12px] font-black uppercase tracking-wide">{t("chances.sum_title", { club: me.name })}</h3>
+        <div className="mb-3 flex h-3 overflow-hidden rounded-full bg-white/10" aria-hidden data-testid="sum-bar">
+          {sumLines.map((l) => (
+            <div key={l.key} style={{ width: `${l.seg * 100}%`, background: l.color }} />
+          ))}
+        </div>
+        <ul className="space-y-2.5">
+          {sumLines.map((l) => (
+            <li key={l.key} className="flex items-center gap-3" data-testid="sum-line">
+              <span className="w-14 shrink-0 text-right text-2xl font-black tabular-nums leading-none" style={{ color: l.color }}>{pctFmt(l.p)}</span>
+              <span className="min-w-0 flex-1 leading-tight">
+                <span className="block text-[13px] font-bold">{l.title}</span>
+                <span className="block text-[11px] text-white/45">{l.sub}</span>
+              </span>
+            </li>
+          ))}
+        </ul>
+      </section>
 
       {/* Chances por objetivo */}
       <section data-testid="chances-zones">
@@ -268,7 +318,11 @@ export default function ClubChances({ teamId, leagueId, season, accent = "#ff620
       {/* Jogos que faltam */}
       {myGames.length > 0 && (
         <section data-testid="chances-games">
-          <h3 className="mb-2 text-[11px] font-black uppercase tracking-widest text-white/70">{t("chances.next_games")}</h3>
+          <h3 className="mb-1 text-[11px] font-black uppercase tracking-widest text-white/70">{t("chances.next_games")}</h3>
+          <p className="mb-2 text-[11px] text-white/55" data-testid="chances-homeaway">
+            {t("chances.ha_left", { h: me.homeLeft ?? myGames.filter((g) => g.h === teamId).length, a: me.awayLeft ?? myGames.filter((g) => g.a === teamId).length })}
+            {me.homePpg != null && me.awayPpg != null ? ` · ${t("chances.ha_record", { h: me.homePpg.toFixed(2), a: me.awayPpg.toFixed(2) })}` : ""}
+          </p>
           <ul className="space-y-1.5">
             {myGames.map((g) => {
               const home = g.h === teamId;
@@ -288,11 +342,16 @@ export default function ClubChances({ teamId, leagueId, season, accent = "#ff620
                     ) : (
                       <span className="text-[10px] text-white/40">{dateFmt(g.date)}</span>
                     )}
-                    {oppTeam && (
-                      <span className="rounded-full px-1.5 py-0.5 text-[9px] font-bold text-black" style={{ background: diffColor(oppTeam.difficulty) }}>
-                        {oppTeam.position}º
-                      </span>
-                    )}
+                    <span className="text-[9px] font-bold uppercase text-white/45" data-testid="chance-venue">{home ? t("clube.home") : t("clube.away")}</span>
+                    {(() => {
+                      const sv = home ? g.sa : g.sh;
+                      return sv == null ? null : (
+                        <span className="rounded-full px-1.5 py-0.5 text-[9px] font-bold text-black" style={{ background: strongColor(sv) }} data-testid="opp-strength">
+                          {strongLabel(sv)}
+                          {oppTeam ? ` · ${oppTeam.position}º` : ""}
+                        </span>
+                      );
+                    })()}
                   </div>
                   <div className="mt-1.5 flex h-2 overflow-hidden rounded-full bg-white/10" aria-label={`${t("chances.win")} ${pctFmt(w)}, ${t("chances.draw")} ${pctFmt(g.pD)}, ${t("chances.lose")} ${pctFmt(l)}`}>
                     <div style={{ width: `${w * 100}%`, background: "#22c55e" }} />

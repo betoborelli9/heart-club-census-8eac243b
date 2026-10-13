@@ -17,8 +17,10 @@ interface ViewedClubContextType {
   heartClubName: string | null;
   /** Nome do clube sendo exibido nas páginas agora — pode ser o próprio ou outro pesquisado. */
   viewedClubName: string | null;
-  /** Troca o clube em exibição (chamado ao selecionar um resultado de busca). */
-  setViewedClubName: (name: string | null) => void;
+  /** Número oficial (id da API) do clube em exibição, quando se sabe: evita confundir clubes de nome parecido. */
+  viewedClubId: number | null;
+  /** Troca o clube em exibição (chamado ao selecionar um resultado de busca). O número do clube é opcional. */
+  setViewedClubName: (name: string | null, apiId?: number | null) => void;
   /** true quando o torcedor está vendo o próprio time do coração. */
   isViewingHeart: boolean;
   /** Volta a exibir o próprio time do coração em todas as páginas. */
@@ -35,9 +37,10 @@ interface ViewedClubContextType {
 const ViewedClubContext = createContext<ViewedClubContextType | null>(null);
 
 export function ViewedClubProvider({ children }: { children: ReactNode }) {
-  const { user, simActive } = useUser();
+  const { user, simActive, profile } = useUser();
   const [heartClubName, setHeartClubName] = useState<string | null>(null);
   const [viewedClubName, setViewedClubNameState] = useState<string | null>(null);
+  const [pickedClubId, setPickedClubId] = useState<number | null>(null);
   const [ready, setReady] = useState(false);
   const [simClub, setSimClubState] = useState<string | null>(() => getSimClub());
   const wasSimRef = useRef(false);
@@ -95,19 +98,29 @@ export function ViewedClubProvider({ children }: { children: ReactNode }) {
     };
   }, [user, simActive, simClub]);
 
-  const setViewedClubName = (name: string | null) => setViewedClubNameState(name);
-  const resetToHeart = () => setViewedClubNameState(heartClubName);
+  const setViewedClubName = (name: string | null, apiId?: number | null) => {
+    setViewedClubNameState(name);
+    setPickedClubId(apiId ? Number(apiId) : null);
+  };
+  const resetToHeart = () => {
+    setViewedClubNameState(heartClubName);
+    setPickedClubId(null);
+  };
+  // Time do coração: o número vem do perfil; clube pesquisado: o número do resultado da busca
+  const heartTeamId = Number((profile as any)?.time_do_coracao_id) || null;
+  const viewedClubId = pickedClubId ?? (viewedClubName && viewedClubName === heartClubName ? heartTeamId : null);
 
   const value = useMemo(
     () => ({
       heartClubName,
       viewedClubName,
+      viewedClubId,
       setViewedClubName,
       isViewingHeart: viewedClubName === heartClubName,
       resetToHeart,
       ready,
     }),
-    [heartClubName, viewedClubName, ready],
+    [heartClubName, viewedClubName, viewedClubId, ready],
   );
 
   return <ViewedClubContext.Provider value={value}>{children}</ViewedClubContext.Provider>;

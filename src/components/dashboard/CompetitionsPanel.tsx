@@ -21,6 +21,8 @@ import { teamColors } from "@/data/teamColors";
 
 interface Props {
   clubName: string | null;
+  /** Número oficial do clube (id da API) quando conhecido: identifica o clube sem depender do nome. */
+  teamId?: number | null;
   primaryColor?: string;
 }
 
@@ -100,7 +102,7 @@ const PULSE_CSS = `
 .hc-pulse-bracket{animation:hc-pulse-bracket 2.4s ease-in-out infinite}
 `;
 
-export default function CompetitionsPanel({ clubName, primaryColor = "#ff6200" }: Props) {
+export default function CompetitionsPanel({ clubName, teamId: clubTeamId, primaryColor = "#ff6200" }: Props) {
   const { t, language } = useTranslationApp();
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -207,7 +209,7 @@ export default function CompetitionsPanel({ clubName, primaryColor = "#ff6200" }
         return;
       }
       try {
-        const { data, error } = await supabase.functions.invoke("league-standings", { body: { clubName } });
+        const { data, error } = await supabase.functions.invoke("league-standings", { body: clubTeamId ? { clubName, teamId: clubTeamId } : { clubName } });
         if (cancelled) return;
         if (error) throw error;
         const comps: Competition[] = data?.competitions || [];
@@ -255,7 +257,7 @@ export default function CompetitionsPanel({ clubName, primaryColor = "#ff6200" }
       clearInterval(id);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [clubName]);
+  }, [clubName, clubTeamId]);
 
   if (loading) {
     return (

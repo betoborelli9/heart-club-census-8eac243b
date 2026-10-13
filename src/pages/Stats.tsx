@@ -381,7 +381,7 @@ const Stats = () => {
                       key={i}
                       onMouseDown={(e) => {
                         e.preventDefault();
-                        setClubName(c.name); setSearch(""); setSearchResults([]); setSearchOpen(false);
+                        setClubName(c.name, c.api_id); setSearch(""); setSearchResults([]); setSearchOpen(false);
                       }}
                       className="w-full flex items-center gap-3 p-2 hover:bg-white/10 rounded-lg text-left transition"
                     >

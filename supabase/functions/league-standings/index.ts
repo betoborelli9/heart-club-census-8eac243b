@@ -54,11 +54,45 @@ async function resolveTeam(clubName: string): Promise<{ id: number; name: string
     const logo = (cached.leagues_json as any)?.team_logo || "";
     return { id: cached.team_id, name: cached.team_name || clubName, logo };
   }
-  // 2) busca na API
-  const j = await af(`/teams?search=${encodeURIComponent(clubName)}`);
+  // 2) busca na API: nome completo e, se não achar, versões mais curtas (o torcedor às vezes digita "Goiânia Esporte Clube")
+  for (const q of searchVariants(clubName)) {
+    const j = await af(`/teams?search=${encodeURIComponent(q)}`).catch(() => null);
+    const all = ((j?.response || []) as any[]).map((x) => x?.team).filter(Boolean);
+    // prefere o clube de nome IGUAL (sem acento/maiúscula) e que não seja seleção; senão o primeiro
+    const exact = all.find((tm) => norm(tm.name) === norm(q) && !tm.national);
+    // nas versões encurtadas só vale nome IGUAL (nunca arriscar trocar por outro clube)
+    const r = q === clubName ? exact || all.find((tm) => !tm.national) || all[0] : exact;
+    if (r) return { id: r.id, name: r.name, logo: r.logo };
+  }
+  return null;
+}
+
+/** Nome completo primeiro; depois sem as palavras genéricas (Esporte Clube, Club de Fútbol, FC…). */
+function searchVariants(name: string): string[] {
+  const out: string[] = [];
+  const add = (v: string) => {
+    const t = v.replace(/\s+/g, " ").trim();
+    if (t.length >= 3 && !out.some((o) => norm(o) === norm(t))) out.push(t);
+  };
+  add(name);
+  const generic = /\b(esporte clube|esporte|sport club|athletic club|atletico clube|atl[eé]tico clube|clube de regatas|clube|club de futbol|club de f[uú]tbol|futebol clube|football club|f\.?c\.?|e\.?c\.?|a\.?c\.?|s\.?c\.?)\b/gi;
+  add(name.replace(generic, " "));
+  return out;
+}
+
+/** Resolve pelo NÚMERO do clube (id da API): nunca confunde clubes de nome igual (há vários "Al Hilal"). */
+async function resolveTeamById(teamId: number): Promise<{ id: number; name: string; logo: string } | null> {
+  const { data: cached } = await supabase.from("team_leagues_mapping").select("team_id, team_name, leagues_json").eq("team_id", teamId).limit(1).maybeSingle();
+  if (cached?.team_id) return { id: cached.team_id, name: cached.team_name || "", logo: (cached.leagues_json as any)?.team_logo || "" };
+  // só aceita números de clubes que o site conhece (cadastro de clubes ou calendário do mundo): protege a cota da API
+  const [{ data: cc }, { data: lf }] = await Promise.all([
+    supabase.from("clubes_cache").select("id").eq("api_id", String(teamId)).limit(1),
+    supabase.from("league_fixtures").select("fixture_id").or(`home_id.eq.${teamId},away_id.eq.${teamId}`).limit(1),
+  ]);
+  if (!(cc?.length || lf?.length)) return null;
+  const j = await af(`/teams?id=${teamId}`);
   const r = j?.response?.[0]?.team;
-  if (!r) return null;
-  return { id: r.id, name: r.name, logo: r.logo };
+  return r ? { id: r.id, name: r.name, logo: r.logo } : null;
 }
 
 async function getCurrentLeagues(teamId: number, teamName: string, teamLogo: string) {
@@ -276,15 +310,19 @@ serve(async (req) => {
 
   try {
     if (!API_KEY) throw new Error("missing FOOTBALL_API_KEY");
-    const { clubName } = await req.json();
-    if (!clubName || typeof clubName !== "string" || clubName.length > 100) {
+    const body = await req.json();
+    const clubName = body?.clubName;
+    const teamIdIn = Number(body?.teamId);
+    const hasId = Number.isInteger(teamIdIn) && teamIdIn > 0;
+    if (!hasId && (!clubName || typeof clubName !== "string" || clubName.length > 100)) {
       return new Response(JSON.stringify({ error: "clubName inválido" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const team = await resolveTeam(clubName);
+    let team = hasId ? await resolveTeamById(teamIdIn) : null;
+    if (!team && typeof clubName === "string" && clubName.length <= 100) team = await resolveTeam(clubName);
     if (!team) {
       return new Response(
         JSON.stringify({ league: null, standings: [], me: null, fixtures: [], competitions: [], team: null }),

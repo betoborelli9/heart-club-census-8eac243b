@@ -904,7 +904,19 @@
     "how_5": "Outros modelos podem dar números diferentes, porque cada um pesa os dados de um jeito. O nosso foi testado com temporadas completas do passado, e guardamos as previsões de cada dia para medir o quanto acertamos.",
     "how_6": "É uma probabilidade, não uma garantia de resultado.",
     "neutral": "Neutro",
-    "neutral_note": "Neutro: este clube tem menos de 2% de chance de subir, de brigar por vaga ou de ser rebaixado."
+    "neutral_note": "Neutro: este clube tem menos de 2% de chance de subir, de brigar por vaga ou de ser rebaixado.",
+    "sum_title": "Resumo de {{club}}",
+    "sum_zone": "Chance de {{zone}}",
+    "sum_atleast": "Chance de chegar pelo menos a {{zone}}",
+    "sum_upto": "terminando em até {{pos}}º lugar",
+    "sum_neutral": "Chance de ficar na zona neutra",
+    "sum_neutral_sub": "sem subir nem cair",
+    "sum_relegation": "Chance de ser rebaixado",
+    "ha_left": "Faltam {{h}} jogos em casa e {{a}} fora",
+    "ha_record": "Em casa: {{h}} pts/jogo · Fora: {{a}} pts/jogo",
+    "s_strong": "Forte",
+    "s_mid": "Médio",
+    "s_weak": "Fraco"
   },
   "jogos": {
     "title": "Jogos",

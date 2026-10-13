@@ -36,14 +36,14 @@ const sortGames = (a: DayGame, b: DayGame) => {
 export default function Jogos() {
   const { t } = useTranslationApp();
   const navigate = useNavigate();
-  const { viewedClubName, heartClubName, setViewedClubName, resetToHeart, isViewingHeart } = useViewedClub();
+  const { viewedClubName, viewedClubId, heartClubName, setViewedClubName, resetToHeart, isViewingHeart } = useViewedClub();
   const [offset, setOffset] = useState(0);
   const [onlyLive, setOnlyLive] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [now, setNow] = useState(() => Date.now());
   const autoFor = useRef<string>("");
 
-  const { team, competitions, loading: loadingComps, failed: compsFailed } = useClubCompetitions(viewedClubName);
+  const { team, competitions, loading: loadingComps, failed: compsFailed } = useClubCompetitions(viewedClubName, viewedClubId);
   const leagueIds = useMemo(() => competitions.map((c) => c.leagueId), [competitions]);
   const { games, loading: loadingGames, failed, reload, reloadLoud } = useCompetitionGames(leagueIds);
   const loading = loadingComps || loadingGames;
@@ -168,7 +168,7 @@ export default function Jogos() {
             <div className="mt-2" data-testid="club-search">
               <ClubSearch
                 onSelect={(c) => {
-                  setViewedClubName(c.name);
+                  setViewedClubName(c.name, c.api_id);
                   setOnlyLive(false);
                   setSearchOpen(false);
                 }}

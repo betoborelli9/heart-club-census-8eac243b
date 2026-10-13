@@ -904,7 +904,19 @@
     "how_5": "Other models may give different numbers, since each weighs the data differently. Ours was tested on full past seasons, and we keep each day's predictions to measure how accurate we are.",
     "how_6": "It is a probability, not a guarantee of any result.",
     "neutral": "Neutral",
-    "neutral_note": "Neutral: this club has under 2% chance of promotion, of fighting for a spot or of relegation."
+    "neutral_note": "Neutral: this club has under 2% chance of promotion, of fighting for a spot or of relegation.",
+    "sum_title": "{{club}} summary",
+    "sum_zone": "Chance of {{zone}}",
+    "sum_atleast": "Chance of reaching at least {{zone}}",
+    "sum_upto": "finishing {{pos}}th or better",
+    "sum_neutral": "Chance of mid-table safety",
+    "sum_neutral_sub": "no promotion, no relegation",
+    "sum_relegation": "Chance of relegation",
+    "ha_left": "{{h}} home and {{a}} away matches left",
+    "ha_record": "Home: {{h}} pts/match · Away: {{a}} pts/match",
+    "s_strong": "Strong",
+    "s_mid": "Medium",
+    "s_weak": "Weak"
   },
   "jogos": {
     "title": "Matches",

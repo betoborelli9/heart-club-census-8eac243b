@@ -904,7 +904,19 @@
     "how_5": "Otros modelos pueden dar números diferentes, porque cada uno pondera los datos de otra manera. El nuestro fue probado con temporadas completas del pasado, y guardamos las predicciones de cada día para medir cuánto acertamos.",
     "how_6": "Es una probabilidad, no una garantía de resultado.",
     "neutral": "Neutro",
-    "neutral_note": "Neutro: este club tiene menos de 2% de opciones de ascender, pelear un cupo o descender."
+    "neutral_note": "Neutro: este club tiene menos de 2% de opciones de ascender, pelear un cupo o descender.",
+    "sum_title": "Resumen de {{club}}",
+    "sum_zone": "Probabilidad de {{zone}}",
+    "sum_atleast": "Probabilidad de llegar al menos a {{zone}}",
+    "sum_upto": "terminando en el {{pos}}º puesto o mejor",
+    "sum_neutral": "Probabilidad de zona neutra",
+    "sum_neutral_sub": "sin ascender ni descender",
+    "sum_relegation": "Probabilidad de descender",
+    "ha_left": "Faltan {{h}} partidos de local y {{a}} de visita",
+    "ha_record": "Local: {{h}} pts/partido · Visita: {{a}} pts/partido",
+    "s_strong": "Fuerte",
+    "s_mid": "Medio",
+    "s_weak": "Débil"
   },
   "jogos": {
     "title": "Partidos",

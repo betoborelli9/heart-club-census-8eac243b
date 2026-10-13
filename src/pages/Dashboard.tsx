@@ -43,7 +43,7 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const { user, profile, isLoading, isAuthReady, isAuthenticated, signOut, simActive } = useUser();
-  const { heartClubName, viewedClubName, setViewedClubName, isViewingHeart } = useViewedClub();
+  const { heartClubName, viewedClubName, viewedClubId, setViewedClubName, isViewingHeart } = useViewedClub();
 
   const [heartClubData, setHeartClubData] = useState<any>(null);
   const [viewedClubData, setViewedClubData] = useState<any>(null);
@@ -148,9 +148,9 @@ const Dashboard = () => {
     return () => { cancelled = true; };
   }, [viewedClubName, viewedClubData]);
 
-  const handlePickClub = (name: string) => {
+  const handlePickClub = (name: string, apiId?: number | null) => {
     if (name === viewedClubName) return;
-    setViewedClubName(name);
+    setViewedClubName(name, apiId);
     setFadeKey((k) => k + 1);
   };
 
@@ -212,7 +212,7 @@ const Dashboard = () => {
           {/* Desktop: pesquisa inline no header */}
           <div className="hidden md:block flex-1 max-w-xl">
             <ClubSearch
-              onSelect={(club) => handlePickClub(club.name)}
+              onSelect={(club) => handlePickClub(club.name, club.api_id)}
               onClear={isMasterAdmin ? handleClearMasterPreview : undefined}
             />
           </div>
@@ -232,7 +232,7 @@ const Dashboard = () => {
         {/* Mobile: pesquisa larga entre o header e o banner */}
         <div className="md:hidden">
           <ClubSearch
-            onSelect={(club) => handlePickClub(club.name)}
+            onSelect={(club) => handlePickClub(club.name, club.api_id)}
             onClear={isMasterAdmin ? handleClearMasterPreview : undefined}
           />
         </div>
@@ -262,7 +262,7 @@ const Dashboard = () => {
               sympathies={sympathies}
               heartClubName={heartClubName}
               viewedClubName={viewedClubName}
-              onPick={handlePickClub}
+              onPick={(name) => handlePickClub(name)}
             />
           </div>
         </section>
@@ -296,7 +296,7 @@ const Dashboard = () => {
 
           <aside key={`col3-${fadeKey}`} className="fade-in space-y-6 min-w-0">
             <div className="glass-card rounded-3xl p-6">
-              <CompetitionsPanel clubName={viewedClubName} primaryColor={primary} />
+              <CompetitionsPanel clubName={viewedClubName} teamId={viewedClubId} primaryColor={primary} />
             </div>
           </aside>
         </div>

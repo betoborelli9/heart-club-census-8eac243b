@@ -1464,7 +1464,7 @@ const MapaCalor = () => {
     setSearchResults([]);
     if (club.name === activeClubName) return;
     setActiveClubName(club.name);
-    setSharedViewedClubName(club.name);
+    setSharedViewedClubName(club.name, club.api_id);
     setActiveClubInfo(CLUBS_DATA.find((c) => c.nome === club.name) || null);
     setCompareClubName(null);
     setCompareData(null);
