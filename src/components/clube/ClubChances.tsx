@@ -239,7 +239,7 @@ export default function ClubChances({ teamId, leagueId, season, accent = "#ff620
         <ul className="space-y-2.5">
           {sumLines.map((l) => (
             <li key={l.key} className="flex items-center gap-3" data-testid="sum-line">
-              <span className="w-14 shrink-0 text-right text-2xl font-black tabular-nums leading-none" style={{ color: l.color }}>{pctFmt(l.p)}</span>
+              <span className="w-[4.5rem] shrink-0 text-right text-2xl font-black tabular-nums leading-none" style={{ color: l.color }}>{pctFmt(l.p)}</span>
               <span className="min-w-0 flex-1 leading-tight">
                 <span className="block text-[13px] font-bold">{l.title}</span>
                 <span className="block text-[11px] text-white/45">{l.sub}</span>

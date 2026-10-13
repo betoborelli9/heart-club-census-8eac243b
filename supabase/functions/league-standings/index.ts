@@ -42,7 +42,19 @@ async function af(path: string): Promise<any> {
 }
 
 
+// Nomes que o torcedor digita e que existem como OUTRO clube na API (ex.: há um "Atletico Mineiro" pequeno, id 117, diferente do Atletico-MG, id 1062)
+const CLUB_ALIAS: Record<string, number> = {
+  "atletico mineiro": 1062,
+  "clube atletico mineiro": 1062,
+  "athletico paranaense": 134,
+};
+
 async function resolveTeam(clubName: string): Promise<{ id: number; name: string; logo: string } | null> {
+  const aliasId = CLUB_ALIAS[norm(clubName)];
+  if (aliasId) {
+    const byId = await resolveTeamById(aliasId).catch(() => null);
+    if (byId) return byId;
+  }
   // 1) cache por nome em team_leagues_mapping
   const { data: cached } = await supabase
     .from("team_leagues_mapping")
