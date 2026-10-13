@@ -850,7 +850,9 @@
     "search_loading": "Opening the club...",
     "search_none": "No active competition found for that club.",
     "upcoming": "Upcoming matches",
-    "played": "Matches played"
+    "played": "Matches played",
+    "my_club": "My club",
+    "my_club_aria": "Back to my favorite club"
   },
   "squad": {
     "error": "Couldn't load the squad right now. Please try again shortly.",
@@ -930,7 +932,7 @@
     "cut_missing": "{{n}} pts to go",
     "pts": "pts",
     "table_title": "Likely final table",
-    "table_sub": "Ordered by each club's expected points. Below, who else could finish in that position.",
+    "table_sub": "Ordered by each club's average position across the simulations. Below, who else could finish there.",
     "table_also": "Could also be:",
     "table_neutral": "{{a}}th–{{b}}th · mid-table",
     "table_legend": "Right: expected points and chance of finishing exactly in that position."

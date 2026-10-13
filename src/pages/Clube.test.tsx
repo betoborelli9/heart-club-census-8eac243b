@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 
-const state: { payload: any; error: any; invokes: any[]; standings: any } = { payload: null, error: null, invokes: [], standings: null };
+const state: { payload: any; error: any; invokes: any[]; standings: any; viewed: any } = { payload: null, error: null, invokes: [], standings: null, viewed: null };
 const squadPayload = { teamId: 142, updatedAt: new Date().toISOString(), coach: null, players: [{ id: 1, name: "Goleiro Um", pos: "Goalkeeper", number: 1, age: 30, photo: null }], moves: [] };
 
 vi.mock("@/integrations/supabase/client", () => ({
@@ -27,6 +27,7 @@ vi.mock("@/integrations/supabase/client", () => ({
 vi.mock("@/hooks/useTranslationApp", () => ({ useTranslationApp: () => ({ t: (k: string) => k, language: "pt" }) }));
 vi.mock("@/hooks/useClubTheme", () => ({ useClubTheme: () => ({ primaryHex: "#111111", secondaryHex: "#2a2a2a" }) }));
 vi.mock("@/components/ClubLogo", () => ({ ClubLogo: () => null }));
+vi.mock("@/contexts/ViewedClubContext", () => ({ useViewedClubOptional: () => state.viewed }));
 vi.mock("@/components/dashboard/ClubSearch", () => ({
   ClubSearch: ({ onSelect }: any) => <button data-testid="fake-search" onClick={() => onSelect({ name: "Newcastle", api_id: 34 })}>buscar</button>,
 }));
@@ -66,6 +67,7 @@ describe("Página do clube — temporada completa", () => {
     state.payload = payload();
     state.error = null;
     state.invokes = [];
+    state.viewed = null;
   });
 
   it("pede ao servidor os jogos do time no campeonato certo e mostra resumo, cores e todos os jogos", async () => {
@@ -186,5 +188,33 @@ describe("Página do clube — temporada completa", () => {
     const v = screen.getAllByTestId("game-venue")[0];
     expect(v.className).toContain("text-white");
     expect(v.className).not.toContain("text-white/");
+  });
+
+  it("botão 'Meu clube': aparece só quando está vendo outro clube e leva de volta ao clube do coração", async () => {
+    state.viewed = { heartClubName: "Flamengo", heartClubId: 127 };
+    state.standings = {
+      team: { id: 127, name: "Flamengo", logo: null },
+      competitions: [
+        { leagueId: 13, season: 2026, leagueName: "CONMEBOL Libertadores", country: "World", standings: new Array(32).fill(0) },
+        { leagueId: 71, season: 2026, leagueName: "Serie A", country: "Brazil", standings: new Array(20).fill(0) },
+      ],
+    };
+    renderAt("/clube/142?liga=72&temp=2026&aba=chances");
+    await screen.findByTestId("club-summary");
+    fireEvent.click(screen.getByTestId("club-heart-btn"));
+    await waitFor(() => expect(state.invokes.some((i) => i.name === "club-season" && i.body.teamId === 127 && i.body.leagueId === 71)).toBe(true));
+    expect(state.invokes.find((i) => i.name === "league-standings")?.body).toEqual({ clubName: "Flamengo", teamId: 127 });
+  });
+
+  it("botão 'Meu clube' não aparece na página do próprio clube do coração nem sem time do coração", async () => {
+    state.viewed = { heartClubName: "Vila Nova", heartClubId: 142 };
+    const first = renderAt();
+    await screen.findByTestId("club-summary");
+    expect(screen.queryByTestId("club-heart-btn")).toBeNull();
+    first.unmount();
+    state.viewed = { heartClubName: null, heartClubId: null };
+    renderAt();
+    await screen.findByTestId("club-summary");
+    expect(screen.queryByTestId("club-heart-btn")).toBeNull();
   });
 });

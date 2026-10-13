@@ -850,7 +850,9 @@
     "search_loading": "Abriendo el club...",
     "search_none": "No encontré competición activa para ese club.",
     "upcoming": "Próximos partidos",
-    "played": "Partidos jugados"
+    "played": "Partidos jugados",
+    "my_club": "Mi club",
+    "my_club_aria": "Volver a mi club del corazón"
   },
   "squad": {
     "error": "No se pudo cargar la plantilla ahora. Inténtalo de nuevo en unos instantes.",
@@ -930,7 +932,7 @@
     "cut_missing": "faltan {{n}} pts",
     "pts": "pts",
     "table_title": "Tabla probable al final",
-    "table_sub": "Ordenada por los puntos esperados de cada club. Abajo, quién más puede terminar en esa posición.",
+    "table_sub": "Ordenada por la posición media de cada club en las simulaciones. Abajo, quién más puede terminar ahí.",
     "table_also": "También puede:",
     "table_neutral": "{{a}}º–{{b}}º · zona neutra",
     "table_legend": "Derecha: puntos esperados y probabilidad de terminar exactamente en esa posición."

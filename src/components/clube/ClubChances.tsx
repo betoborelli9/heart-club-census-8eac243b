@@ -212,7 +212,9 @@ export default function ClubChances({ teamId, leagueId, season, accent = "#ff620
 
   // Tabela provável no fim: ordem pelos pontos esperados; em cada posição, quem mais pode ficar ali
   type TableRow = { kind: "team"; pos: number; team: TeamP; color: string | null; also: { team: TeamP; p: number }[] } | { kind: "gap"; from: number; to: number };
-  const projectedOrder = [...(grp.teams ?? [])].sort((a, b) => b.expPoints - a.expPoints || a.position - b.position);
+  // posição média nas simulações (mais fiel que os pontos arredondados quando há empate técnico)
+  const meanPos = (x: TeamP) => x.dist.reduce((acc, p, i) => acc + p * (i + 1), 0);
+  const projectedOrder = [...(grp.teams ?? [])].sort((a, b) => meanPos(a) - meanPos(b) || b.expPoints - a.expPoints || a.position - b.position);
   const shownPos = new Set<number>([1, ...covered]);
   const tableRows: TableRow[] = [];
   for (let p = 1; p <= total; p++) {

@@ -15,6 +15,8 @@ import { getSimClub, SIM_EVENT } from "@/lib/sim-fan";
 interface ViewedClubContextType {
   /** Nome do time do coração de verdade do torcedor (o que ele votou). */
   heartClubName: string | null;
+  /** Número oficial (id da API) do time do coração, quando se sabe. */
+  heartClubId: number | null;
   /** Nome do clube sendo exibido nas páginas agora — pode ser o próprio ou outro pesquisado. */
   viewedClubName: string | null;
   /** Número oficial (id da API) do clube em exibição, quando se sabe: evita confundir clubes de nome parecido. */
@@ -108,11 +110,13 @@ export function ViewedClubProvider({ children }: { children: ReactNode }) {
   };
   // Time do coração: o número vem do perfil; clube pesquisado: o número do resultado da busca
   const heartTeamId = Number((profile as any)?.time_do_coracao_id) || null;
+  const heartClubId = simActive ? null : heartTeamId;
   const viewedClubId = pickedClubId ?? (viewedClubName && viewedClubName === heartClubName ? heartTeamId : null);
 
   const value = useMemo(
     () => ({
       heartClubName,
+      heartClubId,
       viewedClubName,
       viewedClubId,
       setViewedClubName,
@@ -120,10 +124,15 @@ export function ViewedClubProvider({ children }: { children: ReactNode }) {
       resetToHeart,
       ready,
     }),
-    [heartClubName, viewedClubName, viewedClubId, ready],
+    [heartClubName, heartClubId, viewedClubName, viewedClubId, ready],
   );
 
   return <ViewedClubContext.Provider value={value}>{children}</ViewedClubContext.Provider>;
+}
+
+/** Igual ao useViewedClub, mas devolve null fora do provedor (páginas públicas que também funcionam sem login/contexto). */
+export function useViewedClubOptional(): ViewedClubContextType | null {
+  return useContext(ViewedClubContext);
 }
 
 export function useViewedClub(): ViewedClubContextType {

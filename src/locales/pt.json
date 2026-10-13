@@ -850,7 +850,9 @@
     "search_loading": "Abrindo o clube...",
     "search_none": "Não encontrei campeonato ativo para esse clube.",
     "upcoming": "Próximos jogos",
-    "played": "Jogos já realizados"
+    "played": "Jogos já realizados",
+    "my_club": "Meu clube",
+    "my_club_aria": "Voltar ao meu clube do coração"
   },
   "squad": {
     "error": "Não foi possível carregar o elenco agora. Tente de novo em instantes.",
@@ -930,7 +932,7 @@
     "cut_missing": "faltam {{n}} pts",
     "pts": "pts",
     "table_title": "Tabela provável no fim",
-    "table_sub": "Ordem pelos pontos esperados de cada clube. Embaixo, quem mais pode terminar naquela posição.",
+    "table_sub": "Ordem pela posição média de cada clube nas simulações. Embaixo, quem mais pode terminar naquela posição.",
     "table_also": "Também pode:",
     "table_neutral": "{{a}}º–{{b}}º · zona neutra",
     "table_legend": "Direita: pontos esperados e chance de terminar exatamente nessa posição."
