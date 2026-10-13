@@ -49,6 +49,9 @@ const CLUB_ALIAS: Record<string, number> = {
   "athletico paranaense": 134,
 };
 
+// Números de clubes "fantasma" da API que são o mesmo clube conhecido por outro número (117 "Atletico Mineiro" → 1062 Atletico-MG)
+const ID_ALIAS: Record<number, number> = { 117: 1062 };
+
 async function resolveTeam(clubName: string): Promise<{ id: number; name: string; logo: string } | null> {
   const aliasId = CLUB_ALIAS[norm(clubName)];
   if (aliasId) {
@@ -94,6 +97,7 @@ function searchVariants(name: string): string[] {
 
 /** Resolve pelo NÚMERO do clube (id da API): nunca confunde clubes de nome igual (há vários "Al Hilal"). */
 async function resolveTeamById(teamId: number): Promise<{ id: number; name: string; logo: string } | null> {
+  teamId = ID_ALIAS[teamId] ?? teamId;
   const { data: cached } = await supabase.from("team_leagues_mapping").select("team_id, team_name, leagues_json").eq("team_id", teamId).limit(1).maybeSingle();
   if (cached?.team_id) return { id: cached.team_id, name: cached.team_name || "", logo: (cached.leagues_json as any)?.team_logo || "" };
   // só aceita números de clubes que o site conhece (cadastro de clubes ou calendário do mundo): protege a cota da API
