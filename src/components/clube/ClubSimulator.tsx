@@ -214,7 +214,7 @@ export default function ClubSimulator({ teamId, leagueId, season, accent = "#ff6
         <div className="flex items-center gap-3">
           <ClubLogo src={me.logo || undefined} alt={me.name} clubName={me.name} size="xs" className="h-8 w-8 shrink-0" />
           <div className="min-w-0 flex-1 leading-tight">
-            <p className="truncate text-[13px] font-black" data-testid="sim-likely">
+            <p className="text-[13px] font-black leading-tight" data-testid="sim-likely">
               {t("sim.bar_final", { pos: likely })}
               {pickedCount > 0 && likely !== likelyBase && (
                 <span className="ml-1.5 text-[11px] font-black" style={{ color: likely < likelyBase ? "#22c55e" : "#ef4444" }}>
@@ -222,8 +222,8 @@ export default function ClubSimulator({ teamId, leagueId, season, accent = "#ff6
                 </span>
               )}
             </p>
-            <p className="truncate text-[11px] text-white/65" data-testid="sim-count">
-              {pickedCount > 0 ? t("sim.count", { n: pickedCount }) : t("sim.none")} · {t("sim.bar_now", { pos: myNowPos })}
+            <p className="text-[11px] leading-tight text-white/70" data-testid="sim-count">
+              {pickedCount > 1 ? t("sim.count", { n: pickedCount }) : pickedCount === 1 ? t("sim.count_one") : t("sim.none")} · {t("sim.bar_now", { pos: myNowPos })}
             </p>
           </div>
           <button

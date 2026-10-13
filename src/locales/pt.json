@@ -994,6 +994,7 @@
     "j": "J",
     "sg": "SG",
     "here": "de chance de terminar aqui",
-    "legend": "Simulação estatística: não é previsão certa nem garantia de resultado."
+    "legend": "Simulação estatística: não é previsão certa nem garantia de resultado.",
+    "count_one": "1 jogo simulado"
   }
 }

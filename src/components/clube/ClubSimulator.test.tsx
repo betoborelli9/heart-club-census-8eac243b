@@ -80,7 +80,7 @@ describe("Aba Simular (E se...?)", () => {
     const first = screen.getAllByTestId("sim-game")[0];
     fireEvent.change(within(first).getByTestId("sim-in-h"), { target: { value: "3" } });
     fireEvent.change(within(first).getByTestId("sim-in-a"), { target: { value: "0" } });
-    await waitFor(() => expect(screen.getByTestId("sim-count").textContent).toContain('"n":1'));
+    await waitFor(() => expect(screen.getByTestId("sim-count").textContent).toContain("sim.count_one"));
     const rows = screen.getAllByTestId("sim-row").map((r) => r.textContent || "");
     expect(rows[0]).toContain("Nosso FC");
     expect(rows[0]).toContain("13"); // 10 + 3 (empata com o líder em pontos, vence no saldo)
@@ -94,7 +94,7 @@ describe("Aba Simular (E se...?)", () => {
     const first = screen.getAllByTestId("sim-game")[0];
     fireEvent.change(within(first).getByTestId("sim-in-h"), { target: { value: "2" } });
     fireEvent.change(within(first).getByTestId("sim-in-a"), { target: { value: "2" } });
-    await waitFor(() => expect(screen.getByTestId("sim-count").textContent).toContain('"n":1'));
+    await waitFor(() => expect(screen.getByTestId("sim-count").textContent).toContain("sim.count_one"));
     expect(localStorage.getItem("hc-whatif:9999:2026:2")).toContain('"2"');
     fireEvent.click(screen.getByTestId("sim-clear"));
     await waitFor(() => expect(screen.getByTestId("sim-count").textContent).toContain("sim.none"));

@@ -994,6 +994,7 @@
     "j": "P",
     "sg": "GD",
     "here": "chance to finish here",
-    "legend": "Statistical simulation: not a sure forecast nor a guarantee."
+    "legend": "Statistical simulation: not a sure forecast nor a guarantee.",
+    "count_one": "1 match simulated"
   }
 }
