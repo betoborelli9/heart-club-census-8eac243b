@@ -123,6 +123,22 @@ describe("Aba Simular (E se...?)", () => {
     expect(screen.getByTestId("sim-likely").textContent).toContain("sim.bar_final");
   });
 
+  it("rodada quase toda jogada: a próxima rodada junta a seguinte até completar uma rodada cheia, com título de cada rodada", async () => {
+    state.payload = payload();
+    state.payload.groups[0].remaining = [
+      game(11, 7, 2, 1, "Nosso FC", "Líder FC", 1), // só 1 jogo falta na rodada 7
+      game(21, 8, 3, 4, "Meio FC", "Lanterna FC", 5),
+      game(22, 8, 4, 2, "Lanterna FC", "Nosso FC", 5),
+      game(31, 9, 1, 3, "Líder FC", "Meio FC", 12),
+    ];
+    renderIt();
+    await screen.findByTestId("simulator");
+    expect(screen.getAllByTestId("sim-game").length).toBe(3); // rodada 7 (1 jogo) + rodada 8 (2 jogos)
+    expect(screen.getByText('sim.round:{"n":7}')).toBeTruthy();
+    expect(screen.getByText('sim.round:{"n":8}')).toBeTruthy();
+    expect(screen.queryByText('sim.round:{"n":9}')).toBeNull();
+  });
+
   it("campeonato sem tabela de pontos corridos mostra o aviso", async () => {
     state.payload = { supported: false, groups: [] };
     renderIt();

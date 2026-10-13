@@ -110,21 +110,34 @@ export default function ClubSimulator({ teamId, leagueId, season, accent = "#ff6
   }, [grp, games, applied]);
 
   // Quais jogos mostrar
-  const nextRound = useMemo(() => {
+  // "Próxima rodada": a primeira rodada com jogo por começar; se ela já está quase toda jogada, junta a seguinte até completar uma rodada cheia
+  const nextRounds = useMemo(() => {
     const rounds = [...new Set(games.map((g) => roundNumber(g.r)).filter((n): n is number => n != null))].sort((a, b) => a - b);
+    const count = (n: number) => games.filter((g) => roundNumber(g.r) === n).length;
     const notStarted = (n: number) => games.some((g) => roundNumber(g.r) === n && !g.live && new Date(g.date).getTime() > Date.now() - 3 * 3600 * 1000);
-    return rounds.find(notStarted) ?? rounds[0] ?? null;
-  }, [games]);
+    const start = Math.max(0, rounds.findIndex(notStarted));
+    const need = Math.max(2, Math.floor(total / 2));
+    const picked: number[] = [];
+    let acc = 0;
+    for (const n of rounds.slice(start)) {
+      picked.push(n);
+      acc += count(n);
+      if (acc >= need) break;
+    }
+    return picked;
+  }, [games, total]);
   const shownGames = useMemo(() => {
     if (mode === "mine") return games.filter((g) => g.h === teamId || g.a === teamId);
     if (mode === "all") return games;
-    if (nextRound == null) return games.slice(0, 10);
-    return games.filter((g) => roundNumber(g.r) === nextRound);
-  }, [mode, games, teamId, nextRound]);
+    if (!nextRounds.length) return games.slice(0, 10);
+    return games.filter((g) => nextRounds.includes(roundNumber(g.r) as number));
+  }, [mode, games, teamId, nextRounds]);
   // meu jogo primeiro dentro da lista
   const orderedGames = useMemo(() => {
     if (mode === "all") return shownGames;
-    return [...shownGames].sort((a, b) => Number(b.h === teamId || b.a === teamId) - Number(a.h === teamId || a.a === teamId));
+    const mineFirst = (a: RemGame, b: RemGame) => Number(b.h === teamId || b.a === teamId) - Number(a.h === teamId || a.a === teamId);
+    if (mode === "round") return [...shownGames].sort((a, b) => (roundNumber(a.r) ?? 0) - (roundNumber(b.r) ?? 0) || mineFirst(a, b));
+    return [...shownGames].sort(mineFirst);
   }, [shownGames, mode, teamId]);
 
   if (error) return <p className="py-10 text-center text-sm text-white/50">{t("chances.error")}</p>;
@@ -256,7 +269,7 @@ export default function ClubSimulator({ teamId, leagueId, season, accent = "#ff6
             const r = raw[g.id] ?? { h: "", a: "" };
             const filled = !!applied[g.id];
             const prev = orderedGames[idx - 1];
-            const head = mode === "all" && roundOf(g) != null && (idx === 0 || roundOf(prev) !== roundOf(g));
+            const head = mode !== "mine" && roundOf(g) != null && (idx === 0 || roundOf(prev) !== roundOf(g));
             return (
               <li key={g.id} className="list-none">
                 {head && <p className="px-1 pb-1 pt-3 text-[11px] font-black uppercase tracking-widest text-white/70">{t("sim.round", { n: roundOf(g) })}</p>}
