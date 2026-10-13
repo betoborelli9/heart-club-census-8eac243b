@@ -298,6 +298,17 @@ describe("Chances do clube", () => {
     expect(c3.B).toBe(1);
   });
 
+  it("lista 'Todos os clubes': colunas com título (pontos, 1º lugar e rebaixamento) e cores diferentes", async () => {
+    renderIt();
+    await screen.findByTestId("chances-all");
+    const head = screen.getByTestId("all-head").textContent || "";
+    expect(head).toContain("chances.col_pts");
+    expect(head).toContain("chances.col_first");
+    expect(head).toContain("REB");
+    const first = within(screen.getByTestId("chances-all")).getAllByTitle("chances.first")[0] as HTMLElement;
+    expect(first.style.color).toBe("rgb(251, 191, 36)"); // dourado, nunca a cor do clube
+  });
+
   it("casa/fora dos jogos que faltam em branco e legível", async () => {
     renderIt();
     await screen.findByTestId("chances");

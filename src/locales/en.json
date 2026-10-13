@@ -901,7 +901,7 @@
     "medium": "medium",
     "easy": "low",
     "all": "All clubs",
-    "legend": "Columns: points · chance of 1st place · chance of the table's last goal",
+    "legend": "Columns: points · chance of winning the title (1st place) · chance of the last zone (e.g. REL = relegation)",
     "method": "Statistical estimate: the model measures each team's attack and defence from the season's results and simulates the remaining matches {{sims}} times. It is a probability, not a guarantee.",
     "how_btn": "How we calculate",
     "how_title": "How we calculate the chances",
@@ -942,7 +942,9 @@
     "tiebreak_gd": "Tie-break used: points, goal difference and goals scored.",
     "tiebreak_official": "Tie-break used: the official table order.",
     "or_better": "or better",
-    "cum_note": "Each column adds the zones above: PO is the chance of play-off or better (includes direct promotion). REB is relegation only."
+    "cum_note": "Each column adds the zones above: PO is the chance of play-off or better (includes direct promotion). REB is relegation only.",
+    "col_pts": "Pts",
+    "col_first": "1st"
   },
   "jogos": {
     "title": "Matches",

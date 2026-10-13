@@ -901,7 +901,7 @@
     "medium": "media",
     "easy": "baja",
     "all": "Todos los clubes",
-    "legend": "Columnas: puntos · probabilidad del 1º puesto · probabilidad del último objetivo de la tabla",
+    "legend": "Columnas: puntos · probabilidad de ser campeón (1º lugar) · probabilidad de la última franja (ej.: DES = descenso)",
     "method": "Estimación estadística: el modelo mide el ataque y la defensa de cada equipo con los resultados de la temporada y simula {{sims}} veces los partidos restantes. Es una probabilidad, no una garantía.",
     "how_btn": "Cómo calculamos",
     "how_title": "Cómo calculamos las probabilidades",
@@ -942,7 +942,9 @@
     "tiebreak_gd": "Desempate usado: puntos, diferencia de goles y goles a favor.",
     "tiebreak_official": "Desempate usado: el orden de la tabla oficial.",
     "or_better": "o mejor",
-    "cum_note": "Cada columna suma las franjas de arriba: PO es la probabilidad de play-off o mejor (incluye el ascenso directo). REB es solo el descenso."
+    "cum_note": "Cada columna suma las franjas de arriba: PO es la probabilidad de play-off o mejor (incluye el ascenso directo). REB es solo el descenso.",
+    "col_pts": "Pts",
+    "col_first": "1º"
   },
   "jogos": {
     "title": "Partidos",

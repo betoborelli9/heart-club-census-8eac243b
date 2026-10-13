@@ -901,7 +901,7 @@
     "medium": "média",
     "easy": "baixa",
     "all": "Todos os clubes",
-    "legend": "Colunas: pontos · chance do 1º lugar · chance do último objetivo da tabela",
+    "legend": "Colunas: pontos · chance de ser campeão (1º lugar) · chance da última faixa (ex.: REB = rebaixamento)",
     "method": "Estimativa estatística: o modelo mede o ataque e a defesa de cada time pelos resultados do campeonato e simula {{sims}} vezes os jogos que faltam. É uma probabilidade, não uma garantia.",
     "how_btn": "Como calculamos",
     "how_title": "Como calculamos as chances",
@@ -942,7 +942,9 @@
     "tiebreak_gd": "Desempate usado: pontos, saldo de gols e gols pró.",
     "tiebreak_official": "Desempate usado: a ordem da tabela oficial.",
     "or_better": "ou melhor",
-    "cum_note": "Cada coluna soma as faixas de cima: PO é a chance de play-off ou melhor (inclui o acesso direto). REB é só o rebaixamento."
+    "cum_note": "Cada coluna soma as faixas de cima: PO é a chance de play-off ou melhor (inclui o acesso direto). REB é só o rebaixamento.",
+    "col_pts": "Pts",
+    "col_first": "1º"
   },
   "jogos": {
     "title": "Jogos",

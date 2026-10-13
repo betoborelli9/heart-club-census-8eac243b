@@ -505,6 +505,19 @@ export default function ClubChances({ teamId, leagueId, season, accent = "#ff620
       {/* Todos os clubes */}
       <section data-testid="chances-all">
         <h3 className="mb-2 text-[11px] font-black uppercase tracking-widest text-white/70">{t("chances.all")}</h3>
+        {(() => {
+          const lastZ = zones.find((z) => z.positions[z.positions.length - 1] === total) ?? zones[0];
+          return (
+            <div className="mb-1 flex items-center gap-2 px-[calc(0.5rem+1px)] text-[9px] font-black uppercase tracking-wider text-white/60" data-testid="all-head">
+              <span className="w-6" />
+              <span className="w-5" />
+              <span className="min-w-0 flex-1" />
+              <span className="w-8 text-right">{t("chances.col_pts")}</span>
+              <span className="w-10 text-right" style={{ color: "#fbbf24" }}>{t("chances.col_first")}</span>
+              <span className="w-10 text-right" style={{ color: lastZ?.color ?? "#ef4444" }}>{lastZ ? zoneShort(lastZ.name) : ""}</span>
+            </div>
+          );
+        })()}
         <ul className="space-y-1">
           {[...(grp.teams ?? [])]
             .sort((a, b) => a.position - b.position)
@@ -526,7 +539,7 @@ export default function ClubChances({ teamId, leagueId, season, accent = "#ff620
                       <span className="w-20 rounded-full bg-white/10 px-2 py-0.5 text-center text-[9px] font-black uppercase tracking-wider text-white/50" data-testid="all-neutral">{t("chances.neutral")}</span>
                     ) : (
                       <>
-                        <span className="w-10 text-right text-[11px] font-black tabular-nums" style={{ color: accent }} title={t("chances.first")}>{pctFmt(tm.title)}</span>
+                        <span className="w-10 text-right text-[11px] font-black tabular-nums" style={{ color: "#fbbf24" }} title={t("chances.first")}>{pctFmt(tm.title)}</span>
                         {bottom && (
                           <span className="w-10 text-right text-[11px] font-black tabular-nums text-red-400" title={bottom.name}>{pctFmt(tm.zoneProb[bottom.label] ?? 0)}</span>
                         )}
@@ -538,7 +551,7 @@ export default function ClubChances({ teamId, leagueId, season, accent = "#ff620
               );
             })}
         </ul>
-        <p className="mt-1 text-[10px] text-white/35">{t("chances.legend")}</p>
+        <p className="mt-1 text-[10px] text-white/60">{t("chances.legend")}</p>
       </section>
 
       <div className="rounded-xl bg-white/[0.04] p-3" data-testid="chances-method">
