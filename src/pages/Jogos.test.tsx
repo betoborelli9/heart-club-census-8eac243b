@@ -175,6 +175,13 @@ describe("Aba Jogos — só o clube em exibição e os campeonatos dele", () => 
     expect((await screen.findByTestId("where")).textContent).toBe("/clube/142?liga=72&temp=2026&aba=chances");
   });
 
+  it("a página tem botão de voltar; aberta direto (sem histórico) ele leva ao início", async () => {
+    renderPage();
+    await screen.findAllByTestId("sec-league");
+    fireEvent.click(screen.getByTestId("jogos-back"));
+    expect((await screen.findByTestId("where")).textContent).toBe("/dashboard");
+  });
+
   it("sem clube escolhido: pede para escolher e não consulta nada", async () => {
     state.viewed = null;
     state.heart = null;

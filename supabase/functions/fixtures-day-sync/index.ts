@@ -1,6 +1,6 @@
 /**
  * [CAMINHO]: supabase/functions/fixtures-day-sync/index.ts
- * [MÓDULO]: CALENDÁRIO DO MUNDO — 1 chamada por dia de calendário (2 dias atrás até 5 dias à frente, em UTC — a aba Jogos mostra 8 dias) à API-Football
+ * [MÓDULO]: CALENDÁRIO DO MUNDO — 1 chamada por dia de calendário (2 dias atrás até 10 dias à frente, em UTC — a aba Jogos mostra até 9 dias à frente; o calendário TEM que cobrir tudo que a tela mostra) à API-Football
  * (/fixtures?date=) e guarda TODOS os jogos em league_fixtures. Roda poucas vezes por dia (cron); sem parâmetros.
  * Apaga jogos com mais de 3 dias. Não mexe em nenhuma outra tabela.
  */
@@ -29,7 +29,7 @@ serve(async (req) => {
   let calls = 0;
   const erros: string[] = [];
 
-  for (const offset of [-2, -1, 0, 1, 2, 3, 4, 5]) {
+  for (const offset of [-2, -1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]) {
     const date = day(offset);
     try {
       calls++;

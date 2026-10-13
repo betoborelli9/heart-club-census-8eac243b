@@ -7,8 +7,8 @@
  * deslizar para trocar de dia. Tudo lido do nosso banco (nenhuma consulta à API de jogos por torcedor).
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { ChevronRight, Loader2, Radio, Search, WifiOff, X } from "lucide-react";
+import { useLocation, useNavigate } from "react-router-dom";
+import { ArrowLeft, ChevronRight, Loader2, Radio, Search, WifiOff, X } from "lucide-react";
 import { useTranslationApp } from "@/hooks/useTranslationApp";
 import { useViewedClub } from "@/contexts/ViewedClubContext";
 import { useClubCompetitions, useCompetitionGames, LIVE_STATUSES, type DayGame } from "@/hooks/useDayGames";
@@ -36,6 +36,9 @@ const sortGames = (a: DayGame, b: DayGame) => {
 export default function Jogos() {
   const { t } = useTranslationApp();
   const navigate = useNavigate();
+  const location = useLocation();
+  // Voltar: para a tela anterior; se a página foi aberta direto (sem histórico), vai para o início
+  const goBack = () => (location.key !== "default" ? navigate(-1) : navigate("/dashboard"));
   const { viewedClubName, viewedClubId, heartClubName, setViewedClubName, resetToHeart, isViewingHeart } = useViewedClub();
   const [offset, setOffset] = useState(0);
   const [onlyLive, setOnlyLive] = useState(false);
@@ -124,6 +127,9 @@ export default function Jogos() {
       {/* Cabeçalho fixo */}
       <header className="sticky top-0 z-30 border-b border-white/10 bg-black/90 backdrop-blur" style={{ paddingTop: "env(safe-area-inset-top)" }}>
         <div className="mx-auto flex max-w-xl items-center gap-2 px-3 pb-2 pt-3">
+          <button onClick={goBack} aria-label={t("clube.back")} data-testid="jogos-back" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/10 active:scale-95">
+            <ArrowLeft className="h-5 w-5" />
+          </button>
           <h1 className="flex-1 text-xl font-black italic uppercase tracking-tight">{t("jogos.title")}</h1>
           <button
             onClick={() => setOnlyLive((v) => !v)}
