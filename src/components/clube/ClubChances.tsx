@@ -195,6 +195,44 @@ export default function ClubChances({ teamId, leagueId, season, accent = "#ff620
       : []),
   ];
 
+  // Pontos de corte: o que costuma ser preciso (mediana da simulação) para ser campeão, fechar cada faixa e fugir do rebaixamento
+  type CutRow = { key: string; title: string; pts: number; need: ReturnType<typeof amr>; escape: boolean };
+  const cutRows: CutRow[] = [];
+  const pushCut = (key: string, title: string, cut: number | undefined, extra = 0, escape = false) => {
+    if (cut == null) return;
+    const pts = Math.ceil(cut) + extra;
+    cutRows.push({ key, title, pts, need: amr(pts, me.points, me.remaining), escape });
+  };
+  pushCut("__champion", t("chances.cut_champion"), grp.cutMedian?.[0]);
+  topZ.forEach((z) => {
+    const last = z.positions[z.positions.length - 1];
+    if (last > 1) pushCut(z.label, t("chances.cut_pos", { pos: last, zone: z.name }), grp.cutMedian?.[last - 1]);
+  });
+  if (bottomZ && bottomZ.positions[0] > 1) pushCut(bottomZ.label, t("chances.cut_escape"), grp.cutMedian?.[bottomZ.positions[0] - 2], 1, true);
+
+  // Tabela provável no fim: ordem pelos pontos esperados; em cada posição, quem mais pode ficar ali
+  type TableRow = { kind: "team"; pos: number; team: TeamP; color: string | null; also: { team: TeamP; p: number }[] } | { kind: "gap"; from: number; to: number };
+  const projectedOrder = [...(grp.teams ?? [])].sort((a, b) => b.expPoints - a.expPoints || a.position - b.position);
+  const shownPos = new Set<number>([1, ...covered]);
+  const tableRows: TableRow[] = [];
+  for (let p = 1; p <= total; p++) {
+    if (shownPos.has(p)) {
+      const team = projectedOrder[p - 1];
+      if (!team) continue;
+      const also = (grp.teams ?? [])
+        .filter((x) => x.id !== team.id)
+        .map((x) => ({ team: x, p: x.dist[p - 1] ?? 0 }))
+        .filter((x) => x.p >= 0.05)
+        .sort((a, b) => b.p - a.p)
+        .slice(0, 2);
+      tableRows.push({ kind: "team", pos: p, team, color: zones.find((z) => z.positions.includes(p))?.color ?? null, also });
+    } else {
+      const last = tableRows[tableRows.length - 1];
+      if (last && last.kind === "gap") last.to = p;
+      else tableRows.push({ kind: "gap", from: p, to: p });
+    }
+  }
+
   return (
     <div className="space-y-5" data-testid="chances">
       {few && (
@@ -221,6 +259,34 @@ export default function ClubChances({ teamId, leagueId, season, accent = "#ff620
           <p className="text-[10px] text-white/40">{t("chances.games")}</p>
         </div>
       </section>
+
+      {/* Pontos de corte */}
+      {cutRows.length > 0 && (
+        <section className="rounded-2xl border border-white/10 bg-white/[0.04] p-4" data-testid="chances-cuts">
+          <h3 className="mb-1 text-[12px] font-black uppercase tracking-wide">{t("chances.cuts_title")}</h3>
+          <p className="mb-3 text-[11px] text-white/55">{t("chances.cuts_sub")}</p>
+          <ul className="divide-y divide-white/10">
+            {cutRows.map((r) => (
+              <li key={r.key} className="flex items-center gap-3 py-2.5" data-testid="cut-row">
+                <span className="min-w-0 flex-1 leading-tight">
+                  <span className="block text-[13px] font-bold">{r.title}</span>
+                  <span className="block text-[11px] text-white/60">
+                    {r.need.done
+                      ? r.escape
+                        ? t("chances.safe_now")
+                        : t("chances.reached")
+                      : `${t("chances.cut_missing", { n: r.need.need })}${r.need.pct != null ? ` · ${t("chances.need", { n: r.need.pct })}${r.need.impossible ? ` (${t("chances.hard_goal")})` : ""}` : ""}`}
+                  </span>
+                </span>
+                <span className="shrink-0 text-right">
+                  <span className="text-2xl font-black tabular-nums leading-none" style={{ color: accent }}>{r.pts}</span>
+                  <span className="ml-1 text-[11px] font-bold text-white/60">{t("chances.pts")}</span>
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       {isNeutral(me.zoneProb, me.title) && (
         <div className="flex gap-2 rounded-xl border border-white/15 bg-white/[0.05] p-3 text-[12px] text-white/70" data-testid="chances-neutral-note">
@@ -264,10 +330,6 @@ export default function ClubChances({ teamId, leagueId, season, accent = "#ff620
           </li>
           {zones.map((z) => {
             const p = me.zoneProb[z.label] ?? 0;
-            const isBottom = z.positions[z.positions.length - 1] === total;
-            const cutPos = isBottom ? z.positions[0] - 1 : z.positions[z.positions.length - 1];
-            const cut = cutPos >= 1 ? grp.cutMedian?.[cutPos - 1] : undefined;
-            const need = cut != null ? amr(cut, me.points, me.remaining) : null;
             return (
               <li key={z.label} className="rounded-xl border border-white/10 bg-white/[0.03] p-3" data-testid="zone-row">
                 <div className="mb-1 flex items-center justify-between gap-2 text-[13px] font-bold">
@@ -277,16 +339,6 @@ export default function ClubChances({ teamId, leagueId, season, accent = "#ff620
                   <span className="tabular-nums" style={{ color: z.color }}>{pctFmt(p)}</span>
                 </div>
                 <Bar p={p} color={z.color} />
-                {need && cut != null && (
-                  <p className="mt-1.5 text-[11px] text-white/50" data-testid="zone-cut">
-                    {isBottom ? t("chances.cut_safe", { pts: Math.ceil(cut) + 1 }) : t("chances.cut", { pts: Math.ceil(cut) })}
-                    {need.done
-                      ? ` · ${isBottom ? t("chances.safe_now") : t("chances.reached")}`
-                      : need.pct != null
-                        ? ` · ${t("chances.need", { n: need.pct })}${need.impossible ? ` (${t("chances.hard_goal")})` : ""}`
-                        : ""}
-                  </p>
-                )}
               </li>
             );
           })}
@@ -315,6 +367,48 @@ export default function ClubChances({ teamId, leagueId, season, accent = "#ff620
         </div>
       </section>
 
+      {/* Tabela provável no fim do campeonato */}
+      {tableRows.length > 0 && (
+        <section data-testid="chances-table">
+          <h3 className="mb-1 text-[11px] font-black uppercase tracking-widest text-white/70">{t("chances.table_title")}</h3>
+          <p className="mb-2 text-[11px] text-white/55">{t("chances.table_sub")}</p>
+          <ul className="space-y-1">
+            {tableRows.map((r) =>
+              r.kind === "gap" ? (
+                <li key={`gap-${r.from}`} className="rounded-xl border border-dashed border-white/10 px-3 py-2 text-center text-[11px] font-semibold text-white/50" data-testid="table-gap">
+                  {t("chances.table_neutral", { a: r.from, b: r.to })}
+                </li>
+              ) : (
+                <li key={r.pos} data-testid="table-row">
+                  <button
+                    onClick={() => navigate(`/clube/${r.team.id}?liga=${leagueId}&temp=${season}&aba=chances`)}
+                    className="flex min-h-[52px] w-full items-center gap-2 rounded-xl border py-2 pl-0 pr-2 text-left"
+                    style={{ borderColor: r.team.id === teamId ? accent : "rgba(255,255,255,0.08)", background: r.team.id === teamId ? `${accent}22` : "rgba(255,255,255,0.03)" }}
+                  >
+                    <span className="ml-0 h-9 w-1 shrink-0 rounded-r" style={{ background: r.color ?? "transparent" }} />
+                    <span className="w-6 text-center text-[11px] font-black text-white/70">{r.pos}</span>
+                    <ClubLogo src={r.team.logo || undefined} alt={r.team.name} clubName={r.team.name} size="xs" className="h-5 w-5 shrink-0" />
+                    <span className="min-w-0 flex-1 leading-tight">
+                      <span className="block truncate text-[12px] font-bold">{r.team.name}</span>
+                      {r.also.length > 0 && (
+                        <span className="block truncate text-[10px] text-white/55" data-testid="table-also">
+                          {t("chances.table_also")} {r.also.map((a) => `${a.team.name} ${pctFmt(a.p)}`).join(" · ")}
+                        </span>
+                      )}
+                    </span>
+                    <span className="shrink-0 text-right leading-tight">
+                      <span className="block text-[13px] font-black tabular-nums">{Math.round(r.team.expPoints)}</span>
+                      <span className="block text-[9px] font-bold text-white/55">{pctFmt(r.team.dist[r.pos - 1] ?? 0)}</span>
+                    </span>
+                  </button>
+                </li>
+              ),
+            )}
+          </ul>
+          <p className="mt-1 text-[10px] text-white/50">{t("chances.table_legend")}</p>
+        </section>
+      )}
+
       {/* Jogos que faltam */}
       {myGames.length > 0 && (
         <section data-testid="chances-games">
@@ -340,9 +434,9 @@ export default function ClubChances({ teamId, leagueId, season, accent = "#ff620
                     {g.live ? (
                       <span className="text-[11px] font-black tabular-nums text-red-500">{home ? `${g.live.gh}-${g.live.ga}` : `${g.live.ga}-${g.live.gh}`}</span>
                     ) : (
-                      <span className="text-[10px] text-white/40">{dateFmt(g.date)}</span>
+                      <span className="text-[11px] font-semibold text-white/75">{dateFmt(g.date)}</span>
                     )}
-                    <span className="text-[9px] font-bold uppercase text-white/45" data-testid="chance-venue">{home ? t("clube.home") : t("clube.away")}</span>
+                    <span className="text-[10px] font-black uppercase tracking-wide text-white" data-testid="chance-venue">{home ? t("clube.home") : t("clube.away")}</span>
                     {(() => {
                       const sv = home ? g.sa : g.sh;
                       return sv == null ? null : (

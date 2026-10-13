@@ -79,12 +79,16 @@ describe("Chances do clube", () => {
   it("pontos de corte e aproveitamento necessário (AMR) fazem a conta com os jogos que faltam", async () => {
     renderIt();
     await screen.findByTestId("chances");
-    const cuts = screen.getAllByTestId("zone-cut").map((e) => e.textContent || "");
-    // Acesso (1º): corte 14, tem 10 → faltam 4 pontos em 2 jogos (6 possíveis) = 67%
-    expect(cuts[0]).toContain('"pts":14');
+    const cuts = screen.getAllByTestId("cut-row").map((e) => e.textContent || "");
+    expect(cuts.length).toBe(2); // campeão (1º) e fugir do rebaixamento
+    // Campeão (1º): corte 14, tem 10 → faltam 4 pontos em 2 jogos (6 possíveis) = 67%
+    expect(cuts[0]).toContain("chances.cut_champion");
+    expect(cuts[0]).toContain("14");
+    expect(cuts[0]).toContain('"n":4');
     expect(cuts[0]).toContain('"n":67');
     // Rebaixamento: para escapar vale o corte do 3º (8) + 1 = 9; já tem 10 → "já está acima do corte"
-    expect(cuts[1]).toContain('"pts":9');
+    expect(cuts[1]).toContain("chances.cut_escape");
+    expect(cuts[1]).toContain("9");
     expect(cuts[1]).toContain("chances.safe_now");
   });
 
@@ -210,5 +214,32 @@ describe("Chances do clube", () => {
     const strengths = screen.getAllByTestId("opp-strength").map((e) => e.textContent || "");
     expect(strengths[0]).toContain("chances.s_strong"); // adversário 90 → forte
     expect(strengths[1]).toContain("chances.s_weak"); // adversário 10 → fraco
+  });
+
+  it("cartão de pontos de corte fica logo abaixo dos 3 cartões de números e acima do resumo", async () => {
+    renderIt();
+    const cuts = await screen.findByTestId("chances-cuts");
+    const summary = screen.getByTestId("chances-summary");
+    expect(cuts.compareDocumentPosition(summary) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it("tabela provável: posições das faixas com o clube projetado, quem mais pode ficar ali e a zona neutra recolhida", async () => {
+    renderIt();
+    await screen.findByTestId("chances-table");
+    const rows = screen.getAllByTestId("table-row");
+    expect(rows.length).toBe(2); // 1º e 4º (as faixas)
+    expect(rows[0].textContent).toContain("Líder FC"); // mais pontos esperados
+    expect(rows[1].textContent).toContain("Lanterna FC"); // menos pontos esperados
+    expect(screen.getByTestId("table-gap").textContent).toContain('"a":2');
+    expect(screen.getByTestId("table-gap").textContent).toContain('"b":3');
+    expect(screen.getAllByTestId("table-also")[0].textContent).toContain("Nosso FC"); // também pode ficar em 1º
+  });
+
+  it("casa/fora dos jogos que faltam em branco e legível", async () => {
+    renderIt();
+    await screen.findByTestId("chances");
+    const v = screen.getAllByTestId("chance-venue")[0];
+    expect(v.className).toContain("text-white");
+    expect(v.className).not.toContain("text-white/");
   });
 });

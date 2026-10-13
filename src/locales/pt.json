@@ -848,7 +848,9 @@
     "neutral_hint": "Neutro: sem chance prática de subir nem de cair",
     "search": "Pesquisar outro clube",
     "search_loading": "Abrindo o clube...",
-    "search_none": "Não encontrei campeonato ativo para esse clube."
+    "search_none": "Não encontrei campeonato ativo para esse clube.",
+    "upcoming": "Próximos jogos",
+    "played": "Jogos já realizados"
   },
   "squad": {
     "error": "Não foi possível carregar o elenco agora. Tente de novo em instantes.",
@@ -919,7 +921,19 @@
     "ha_record": "Em casa: {{h}} pts/jogo · Fora: {{a}} pts/jogo",
     "s_strong": "Forte",
     "s_mid": "Médio",
-    "s_weak": "Fraco"
+    "s_weak": "Fraco",
+    "cuts_title": "Pontos de corte",
+    "cuts_sub": "O que costuma ser preciso, segundo a simulação, para cada objetivo",
+    "cut_champion": "Ser campeão (1º lugar)",
+    "cut_pos": "{{pos}}º lugar · {{zone}}",
+    "cut_escape": "Fugir do rebaixamento",
+    "cut_missing": "faltam {{n}} pts",
+    "pts": "pts",
+    "table_title": "Tabela provável no fim",
+    "table_sub": "Ordem pelos pontos esperados de cada clube. Embaixo, quem mais pode terminar naquela posição.",
+    "table_also": "Também pode:",
+    "table_neutral": "{{a}}º–{{b}}º · zona neutra",
+    "table_legend": "Direita: pontos esperados e chance de terminar exatamente nessa posição."
   },
   "jogos": {
     "title": "Jogos",

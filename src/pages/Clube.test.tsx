@@ -76,14 +76,14 @@ describe("Página do clube — temporada completa", () => {
     await waitFor(() => expect(screen.getByTestId("club-hero").getAttribute("data-primary")).toBe("#E30613")); // cor do clube no cabeçalho
     expect(screen.getAllByTestId("game-row").length + screen.getAllByTestId("game-next").length).toBe(5);
     // resultado do ponto de vista do Vila: V, E, D
-    expect(screen.getAllByTestId("game-result").map((e) => e.textContent)).toEqual(["V", "E", "D"]);
+    expect(screen.getAllByTestId("game-result").map((e) => e.textContent)).toEqual(["D", "E", "V"]); // mais recente primeiro
   });
 
   it("o jogo ao vivo é o destaque, com minutos do próprio jogo; jogo encerrado mostra só o placar", async () => {
     renderAt();
     await screen.findByTestId("game-next");
     expect(screen.getByTestId("game-minute").textContent).toBe("63'");
-    expect(screen.getAllByTestId("game-score").map((e) => e.textContent)).toEqual(["2 - 0", "1 - 1", "0 - 2"]);
+    expect(screen.getAllByTestId("game-score").map((e) => e.textContent)).toEqual(["0 - 2", "1 - 1", "2 - 0"]);
   });
 
   it("filtros: Jogados e Próximos", async () => {
@@ -164,5 +164,27 @@ describe("Página do clube — temporada completa", () => {
     fireEvent.click(await screen.findByTestId("fake-search"));
     expect(await screen.findByTestId("club-search-msg")).toBeTruthy();
     expect(state.invokes.filter((i) => i.name === "club-season").length).toBe(1);
+  });
+
+  it("ordem dos jogos: os que faltam primeiro (do mais próximo ao mais distante) e os já realizados por último, do mais recente ao mais antigo", async () => {
+    renderAt();
+    await screen.findByTestId("club-summary");
+    const rows = screen.getAllByTestId(/^game-(next|row)$/).map((e) => e.textContent || "");
+    expect(rows.length).toBe(5);
+    expect(rows[0]).toContain("Time 13"); // ao vivo agora
+    expect(rows[1]).toContain("Time 14"); // próximo jogo marcado
+    expect(rows[2]).toContain("Time 12"); // último jogo realizado
+    expect(rows[3]).toContain("Time 11");
+    expect(rows[4]).toContain("Time 10"); // o mais antigo por último
+    const heads = screen.getAllByTestId("games-head").map((e) => e.textContent);
+    expect(heads).toEqual(["clube.upcoming", "clube.played"]);
+  });
+
+  it("casa/fora aparece em branco e legível", async () => {
+    renderAt();
+    await screen.findByTestId("club-summary");
+    const v = screen.getAllByTestId("game-venue")[0];
+    expect(v.className).toContain("text-white");
+    expect(v.className).not.toContain("text-white/");
   });
 });

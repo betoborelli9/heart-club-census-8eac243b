@@ -5,7 +5,7 @@
  * jogos desde a 1ª rodada (encerrados, ao vivo e futuros). Dados de club-season (nosso banco; 1 busca à API por
  * campeonato para todos os torcedores). Entradas: tabela de classificação e faixa de jogos do dia.
  */
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { ArrowLeft, CalendarDays, Landmark, Radio, Search, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -163,18 +163,15 @@ const Clube = () => {
 
   const games = useMemo(() => data?.games ?? [], [data]);
   const nextGame = useMemo(() => games.find((g) => LIVE.has(g.st) || BREAK.has(g.st)) || games.find((g) => g.st === "NS" || g.st === "TBD"), [games]);
-  const shown = useMemo(
-    () => games.filter((g) => (filter === "all" ? true : filter === "done" ? DONE.has(g.st) : !DONE.has(g.st))),
-    [games, filter],
+  const upcoming = useMemo(
+    () => games.filter((g) => !DONE.has(g.st)).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()),
+    [games],
   );
-
-  // Rola até o próximo jogo na primeira vez (linha do tempo da temporada)
-  useEffect(() => {
-    if (data && nextRef.current && !scrolled.current && filter === "all") {
-      scrolled.current = true;
-      nextRef.current.scrollIntoView({ block: "center", behavior: "smooth" });
-    }
-  }, [data, filter]);
+  const played = useMemo(
+    () => games.filter((g) => DONE.has(g.st)).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()),
+    [games],
+  );
+  const shown = useMemo(() => (filter === "done" ? played : filter === "next" ? upcoming : [...upcoming, ...played]), [filter, upcoming, played]);
 
   const dateFmt = (iso: string) => new Date(iso).toLocaleDateString(language, { day: "2-digit", month: "short" }).replace(".", "");
   const timeFmt = (iso: string) => new Date(iso).toLocaleTimeString(language, { hour: "2-digit", minute: "2-digit" });
@@ -343,16 +340,23 @@ const Clube = () => {
 
         {data && (
           <ul className="space-y-1.5">
-            {shown.map((g) => {
+            {shown.map((g, idx) => {
               const isNext = nextGame?.id === g.id;
+              const showHead = filter === "all" && upcoming.length > 0 && played.length > 0 && (idx === 0 || (idx === upcoming.length && DONE.has(g.st)));
+              const headTitle = idx === 0 ? t("clube.upcoming") : t("clube.played");
               const live = LIVE.has(g.st);
               const brk = BREAK.has(g.st);
               const res = resultFor(g, teamId);
               const homeGame = g.h === teamId;
               const hasScore = g.gh != null && g.ga != null;
               return (
+                <Fragment key={g.id}>
+                {showHead && (
+                  <li className="px-1 pb-0.5 pt-2 text-[11px] font-black uppercase tracking-widest text-white/70" data-testid="games-head">
+                    {headTitle}
+                  </li>
+                )}
                 <li
-                  key={g.id}
                   ref={isNext ? nextRef : undefined}
                   data-testid={isNext ? "game-next" : "game-row"}
                   className="flex items-center gap-2 rounded-xl border px-2 py-2"
@@ -389,7 +393,7 @@ const Clube = () => {
                     ) : (
                       <span className="text-[11px] font-mono text-white/45">{timeFmt(g.date)}</span>
                     )}
-                    <span className="mt-0.5 text-[8px] font-bold uppercase text-white/35">{homeGame ? t("clube.home") : t("clube.away")}</span>
+                    <span className="mt-0.5 text-[10px] font-black uppercase tracking-wide text-white" data-testid="game-venue">{homeGame ? t("clube.home") : t("clube.away")}</span>
                   </div>
 
                   <div className="flex min-w-0 flex-1 items-center gap-1.5">
@@ -407,6 +411,7 @@ const Clube = () => {
                     ) : null}
                   </div>
                 </li>
+                </Fragment>
               );
             })}
             {!shown.length && <li className="py-8 text-center text-sm text-white/40">{t("clube.no_games")}</li>}

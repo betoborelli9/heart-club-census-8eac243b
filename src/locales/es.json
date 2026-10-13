@@ -848,7 +848,9 @@
     "neutral_hint": "Neutro: sin opción práctica de subir ni bajar",
     "search": "Buscar otro club",
     "search_loading": "Abriendo el club...",
-    "search_none": "No encontré competición activa para ese club."
+    "search_none": "No encontré competición activa para ese club.",
+    "upcoming": "Próximos partidos",
+    "played": "Partidos jugados"
   },
   "squad": {
     "error": "No se pudo cargar la plantilla ahora. Inténtalo de nuevo en unos instantes.",
@@ -919,7 +921,19 @@
     "ha_record": "Local: {{h}} pts/partido · Visita: {{a}} pts/partido",
     "s_strong": "Fuerte",
     "s_mid": "Medio",
-    "s_weak": "Débil"
+    "s_weak": "Débil",
+    "cuts_title": "Puntos de corte",
+    "cuts_sub": "Lo que suele hacer falta, según la simulación, para cada objetivo",
+    "cut_champion": "Ser campeón (1º lugar)",
+    "cut_pos": "{{pos}}º lugar · {{zone}}",
+    "cut_escape": "Evitar el descenso",
+    "cut_missing": "faltan {{n}} pts",
+    "pts": "pts",
+    "table_title": "Tabla probable al final",
+    "table_sub": "Ordenada por los puntos esperados de cada club. Abajo, quién más puede terminar en esa posición.",
+    "table_also": "También puede:",
+    "table_neutral": "{{a}}º–{{b}}º · zona neutra",
+    "table_legend": "Derecha: puntos esperados y probabilidad de terminar exactamente en esa posición."
   },
   "jogos": {
     "title": "Partidos",

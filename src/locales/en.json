@@ -848,7 +848,9 @@
     "neutral_hint": "Neutral: no practical chance of going up or down",
     "search": "Search another club",
     "search_loading": "Opening the club...",
-    "search_none": "No active competition found for that club."
+    "search_none": "No active competition found for that club.",
+    "upcoming": "Upcoming matches",
+    "played": "Matches played"
   },
   "squad": {
     "error": "Couldn't load the squad right now. Please try again shortly.",
@@ -919,7 +921,19 @@
     "ha_record": "Home: {{h}} pts/match · Away: {{a}} pts/match",
     "s_strong": "Strong",
     "s_mid": "Medium",
-    "s_weak": "Weak"
+    "s_weak": "Weak",
+    "cuts_title": "Cut-off points",
+    "cuts_sub": "What is usually needed, according to the simulation, for each goal",
+    "cut_champion": "Win the title (1st place)",
+    "cut_pos": "{{pos}}th place · {{zone}}",
+    "cut_escape": "Avoid relegation",
+    "cut_missing": "{{n}} pts to go",
+    "pts": "pts",
+    "table_title": "Likely final table",
+    "table_sub": "Ordered by each club's expected points. Below, who else could finish in that position.",
+    "table_also": "Could also be:",
+    "table_neutral": "{{a}}th–{{b}}th · mid-table",
+    "table_legend": "Right: expected points and chance of finishing exactly in that position."
   },
   "jogos": {
     "title": "Matches",
