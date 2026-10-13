@@ -852,7 +852,8 @@
     "upcoming": "Próximos jogos",
     "played": "Jogos já realizados",
     "my_club": "Meu clube",
-    "my_club_aria": "Voltar ao meu clube do coração"
+    "my_club_aria": "Voltar ao meu clube do coração",
+    "tab_sim": "Simular"
   },
   "squad": {
     "error": "Não foi possível carregar o elenco agora. Tente de novo em instantes.",
@@ -966,5 +967,33 @@
     "next_day": "Ir para o próximo dia com jogos",
     "table_chances": "Tabela e chances",
     "no_competitions": "Não encontramos campeonato em andamento para o {{club}}."
+  },
+  "sim": {
+    "title": "Simulador E se...?",
+    "unsupported": "Este campeonato ainda não tem simulador (formato de copa ou sem tabela de pontos corridos).",
+    "intro": "Escreva o placar que você acha que vai acontecer. A tabela e a posição final do clube mudam na hora. Jogos sem placar seguem a previsão do modelo. É só uma simulação e fica apenas neste aparelho.",
+    "mode_round": "Próxima rodada",
+    "mode_mine": "Só meu clube",
+    "mode_all": "Todos os jogos",
+    "clear": "Limpar",
+    "none": "Nenhum placar ainda",
+    "count": "{{n}} jogos simulados",
+    "bar_final": "Termina em {{pos}}º (provável)",
+    "before": "antes {{pos}}º",
+    "bar_now": "na tabela com seus placares: {{pos}}º",
+    "no_games": "Não há jogos para simular.",
+    "my_game": "jogo do meu clube",
+    "live": "ao vivo",
+    "round": "Rodada {{n}}",
+    "result_title": "Chances de {{club}} com os seus placares",
+    "pp": "pontos percentuais",
+    "view_now": "Tabela com seus placares",
+    "view_final": "Final provável",
+    "view_now_sub": "Pontos de cada clube com os placares que você colocou. A seta mostra quantas posições subiu ou desceu.",
+    "view_final_sub": "Posição final provável de cada clube, com seus placares e o modelo no resto do campeonato. Pontos esperados à direita.",
+    "j": "J",
+    "sg": "SG",
+    "here": "de chance de terminar aqui",
+    "legend": "Simulação estatística: não é previsão certa nem garantia de resultado."
   }
 }

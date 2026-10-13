@@ -94,7 +94,9 @@ function computeGroup(leagueId: number, rowsApi: Row[], gamesAll: (FullGame & { 
     const full = inGroup.find((x) => x.id === g.id)!;
     remainingOut.push({
       sh: 0, sa: 0, // preenchidos depois (força dos dois times)
-      id: g.id, date: full.date, h: g.h, a: g.a, hn: full.hn, an: full.an, hl: full.hl, al: full.al,
+      id: g.id, r: full.r ?? null, date: full.date, h: g.h, a: g.a, hn: full.hn, an: full.an, hl: full.hl, al: full.al,
+      // taxas de gol do modelo: o simulador do celular ("E se...?") usa os mesmos números
+      lh: Math.round(lh * 1000) / 1000, la: Math.round(la * 1000) / 1000, frac: Math.round(frac * 1000) / 1000, g0h: gh0, g0a: ga0,
       pH: Math.round(p.pH * 1000) / 1000, pD: Math.round(p.pD * 1000) / 1000, pA: Math.round(p.pA * 1000) / 1000,
       live: live ? { gh: g.gh ?? 0, ga: g.ga ?? 0, el: g.el ?? null, st: g.st } : null,
     });
@@ -162,6 +164,10 @@ function computeGroup(leagueId: number, rowsApi: Row[], gamesAll: (FullGame & { 
       awayPpg: ppg(r.teamId, false).v,
       homeLeft: remaining.filter((g) => g.h === r.teamId).length,
       awayLeft: remaining.filter((g) => g.a === r.teamId).length,
+      win: r.win,
+      gf: r.goalsFor,
+      ga: r.goalsAgainst,
+      sg: Math.round((sigma[i] ?? 0) * 1000) / 1000,
     };
   });
 
@@ -225,7 +231,7 @@ serve(async (req) => {
     const finishedCount = games.filter((g) => ["FT", "AET", "PEN", "AWD", "WO"].includes(g.st) && g.gh != null && g.ga != null).length;
     const liveSig = games.filter((g) => LIVE_ST.has(g.st)).map((g) => `${g.id}:${g.gh}-${g.ga}`).sort().join(",");
     const stSig = groups.flat().reduce((a, r: any) => a + (r.points || 0) * 31 + (r.all?.played || 0), 0);
-    const signature = `v2|${finishedCount}|${liveSig}|${stSig}`;
+    const signature = `v3|${finishedCount}|${liveSig}|${stSig}`;
     const { data: cached } = await supabase.from("league_prognosis").select("payload, signature, computed_at").eq("league_id", leagueId).eq("season", season).maybeSingle();
     if (cached) {
       const age = Date.now() - new Date(cached.computed_at).getTime();

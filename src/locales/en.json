@@ -852,7 +852,8 @@
     "upcoming": "Upcoming matches",
     "played": "Matches played",
     "my_club": "My club",
-    "my_club_aria": "Back to my favorite club"
+    "my_club_aria": "Back to my favorite club",
+    "tab_sim": "Simulate"
   },
   "squad": {
     "error": "Couldn't load the squad right now. Please try again shortly.",
@@ -966,5 +967,33 @@
     "next_day": "Go to the next day with matches",
     "table_chances": "Table & chances",
     "no_competitions": "No ongoing competition found for {{club}}."
+  },
+  "sim": {
+    "title": "What-if simulator",
+    "unsupported": "This competition has no simulator yet (cup format or no league table).",
+    "intro": "Type the score you think will happen. The table and the club's final position change instantly. Matches without a score follow the model's forecast. It is just a simulation and stays on this device only.",
+    "mode_round": "Next round",
+    "mode_mine": "My club only",
+    "mode_all": "All matches",
+    "clear": "Clear",
+    "none": "No scores yet",
+    "count": "{{n}} matches simulated",
+    "bar_final": "Finishes {{pos}}th (likely)",
+    "before": "was {{pos}}th",
+    "bar_now": "in the table with your scores: {{pos}}th",
+    "no_games": "No matches to simulate.",
+    "my_game": "my club's match",
+    "live": "live",
+    "round": "Round {{n}}",
+    "result_title": "{{club}} chances with your scores",
+    "pp": "percentage points",
+    "view_now": "Table with your scores",
+    "view_final": "Likely final",
+    "view_now_sub": "Each club's points with the scores you entered. The arrow shows how many places it moved.",
+    "view_final_sub": "Likely final position of each club, with your scores and the model for the rest of the season. Expected points on the right.",
+    "j": "P",
+    "sg": "GD",
+    "here": "chance to finish here",
+    "legend": "Statistical simulation: not a sure forecast nor a guarantee."
   }
 }

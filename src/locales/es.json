@@ -852,7 +852,8 @@
     "upcoming": "Próximos partidos",
     "played": "Partidos jugados",
     "my_club": "Mi club",
-    "my_club_aria": "Volver a mi club del corazón"
+    "my_club_aria": "Volver a mi club del corazón",
+    "tab_sim": "Simular"
   },
   "squad": {
     "error": "No se pudo cargar la plantilla ahora. Inténtalo de nuevo en unos instantes.",
@@ -966,5 +967,33 @@
     "next_day": "Ir al próximo día con partidos",
     "table_chances": "Tabla y probabilidades",
     "no_competitions": "No encontramos campeonato en curso para {{club}}."
+  },
+  "sim": {
+    "title": "Simulador ¿Y si...?",
+    "unsupported": "Esta competición aún no tiene simulador (formato de copa o sin tabla de liga).",
+    "intro": "Escribe el marcador que crees que va a pasar. La tabla y la posición final del club cambian al instante. Los partidos sin marcador siguen la previsión del modelo. Es solo una simulación y queda únicamente en este dispositivo.",
+    "mode_round": "Próxima jornada",
+    "mode_mine": "Solo mi club",
+    "mode_all": "Todos los partidos",
+    "clear": "Borrar",
+    "none": "Aún sin marcadores",
+    "count": "{{n}} partidos simulados",
+    "bar_final": "Termina {{pos}}º (probable)",
+    "before": "antes {{pos}}º",
+    "bar_now": "en la tabla con tus marcadores: {{pos}}º",
+    "no_games": "No hay partidos para simular.",
+    "my_game": "partido de mi club",
+    "live": "en vivo",
+    "round": "Jornada {{n}}",
+    "result_title": "Probabilidades de {{club}} con tus marcadores",
+    "pp": "puntos porcentuales",
+    "view_now": "Tabla con tus marcadores",
+    "view_final": "Final probable",
+    "view_now_sub": "Puntos de cada club con los marcadores que pusiste. La flecha muestra cuántos puestos subió o bajó.",
+    "view_final_sub": "Posición final probable de cada club, con tus marcadores y el modelo en el resto del campeonato. Puntos esperados a la derecha.",
+    "j": "PJ",
+    "sg": "DG",
+    "here": "de probabilidad de terminar aquí",
+    "legend": "Simulación estadística: no es una previsión segura ni garantía de resultado."
   }
 }
