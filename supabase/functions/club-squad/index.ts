@@ -61,12 +61,16 @@ async function refreshTeam(teamId: number) {
   if (!players.length && prev?.players?.length) return prev;
 
   // Técnico atual: quem tem passagem aberta (sem data final) neste time
+  // A API quase nunca fecha a data de saída de quem já foi embora: vários técnicos ficam com passagem "aberta".
+  // O atual é o que ENTROU por último entre os que têm passagem aberta neste time.
   let coach: any = prev?.coach ?? null;
+  let bestStart = "";
   for (const c of (coachRes?.response || []) as any[]) {
     const current = (c.career || []).find((k: any) => k?.team?.id === teamId && !k?.end);
-    if (current) {
+    const start = String(current?.start || "");
+    if (current && start >= bestStart) {
+      bestStart = start;
       coach = { id: c.id, name: c.name, age: c.age ?? null, photo: c.photo ?? null, nationality: c.nationality ?? null };
-      break;
     }
   }
 
