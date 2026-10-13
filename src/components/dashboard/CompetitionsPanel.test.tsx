@@ -92,7 +92,7 @@ describe("Tabela do Dashboard — chances %", () => {
     const rows = screen.getAllByRole("row");
     const vila = rows.find((r) => r.textContent?.includes("Vila Nova"))!;
     expect(vila.textContent).toContain("57%"); // acesso direto (1º–2º)
-    expect(vila.textContent).toContain("42%"); // play-off (3º–6º)
+    expect(vila.textContent).toContain(">99%"); // play-off OU MELHOR (57% + 42%): o G6 nunca é menor que o acesso direto
     const ponte = rows.find((r) => r.textContent?.includes("Ponte Preta"))!;
     expect(within(ponte).getAllByTestId("chance-cell").map((c) => c.textContent)).toEqual(["0%", "0%", "100%"]); // só rebaixamento
   });

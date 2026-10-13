@@ -20,7 +20,7 @@ vi.mock("@/hooks/useTranslationApp", () => ({
 }));
 vi.mock("@/components/ClubLogo", () => ({ ClubLogo: () => null }));
 
-import ClubChances, { amr, isNeutral, zoneColor, zoneLabel } from "./ClubChances";
+import ClubChances, { amr, cumZoneProbs, isNeutral, zoneColor, zoneLabel } from "./ClubChances";
 
 // Campeonato de 4 times: 1 vaga de acesso (1º) e 1 rebaixado (4º). Nosso time = id 2 (hoje 2º, 10 pts, 2 jogos faltando).
 const team = (id: number, name: string, position: number, points: number, over: any = {}) => ({
@@ -256,6 +256,46 @@ describe("Chances do clube", () => {
     await screen.findByTestId("chances-table");
     const rows = screen.getAllByTestId("table-row");
     expect(rows[0].textContent).toContain("Nosso FC");
+  });
+
+  it("faixas de cima somam ('ou melhor'): o G6 nunca é menor que o acesso direto, no resumo e nos objetivos", async () => {
+    state.payload = payload();
+    const g = state.payload.groups[0];
+    g.zones = [
+      { label: "Promotion", positions: [1] },
+      { label: "Promotion Play-offs", positions: [2, 3] },
+      { label: "Relegation - Serie B", positions: [4] },
+    ];
+    g.teams[1] = { ...g.teams[1], zoneProb: { Promotion: 0.1, "Promotion Play-offs": 0.8, "Relegation - Serie B": 0.1 } }; // Nosso FC: dist [0.1,0.5,0.3,0.1]
+    renderIt();
+    await screen.findByTestId("chances-zones");
+    const rows = screen.getAllByTestId("zone-row");
+    expect(rows[0].textContent).toContain("10%"); // acesso (1º)
+    expect(rows[1].textContent).toContain("90%"); // play-off OU MELHOR = 1º+2º+3º (10% + 50% + 30%)
+    expect(rows[1].textContent).toContain("chances.or_better");
+    expect(screen.getAllByTestId("zone-range")[1].textContent).toContain("1º–3º");
+    expect(rows[2].textContent).toContain("10%"); // rebaixamento exato
+    // resumo diz o mesmo número que a lista
+    const lines = screen.getAllByTestId("sum-line").map((e) => e.textContent || "");
+    expect(lines[1]).toContain("90%");
+    // regra de ouro: cada faixa de cima é >= a anterior
+    const pcts = [rows[0], rows[1]].map((r) => Number(/(\d+)%/.exec(r.textContent || "")![1]));
+    expect(pcts[1]).toBeGreaterThanOrEqual(pcts[0]);
+  });
+
+  it("cumZoneProbs: com a distribuição por posição, sem ela, faixa de rebaixamento exata e limite de 100%", () => {
+    const zones = [{ label: "A", positions: [1, 2] }, { label: "B", positions: [3, 4, 5, 6] }, { label: "R", positions: [7, 8] }];
+    const dist = [0.3, 0.2, 0.2, 0.1, 0.05, 0.05, 0.05, 0.05];
+    const c = cumZoneProbs(zones, 8, dist, {});
+    expect(c.A).toBeCloseTo(0.5, 5);
+    expect(c.B).toBeCloseTo(0.9, 5); // 1º ao 6º
+    expect(c.R).toBeCloseTo(0.1, 5); // rebaixamento: só 7º e 8º
+    const c2 = cumZoneProbs(zones, 8, [], { A: 0.5, B: 0.4, R: 0.1 }); // sem dist: soma as faixas de cima
+    expect(c2.A).toBeCloseTo(0.5, 5);
+    expect(c2.B).toBeCloseTo(0.9, 5);
+    expect(c2.R).toBeCloseTo(0.1, 5);
+    const c3 = cumZoneProbs(zones, 8, [], { A: 0.7, B: 0.6, R: 0 });
+    expect(c3.B).toBe(1);
   });
 
   it("casa/fora dos jogos que faltam em branco e legível", async () => {

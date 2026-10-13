@@ -11,7 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { ClubLogo } from "@/components/ClubLogo";
 import LeagueLiveStrip from "@/components/dashboard/LeagueLiveStrip";
-import { isNeutral, pctText, zoneColor, zoneLabel, zoneShort } from "@/components/clube/ClubChances";
+import { cumZoneProbs, isNeutral, pctText, zoneColor, zoneLabel, zoneShort } from "@/components/clube/ClubChances";
 import { supabase } from "@/integrations/supabase/client";
 import { useTranslationApp } from "@/hooks/useTranslationApp";
 import { useToast } from "@/hooks/use-toast";
@@ -71,13 +71,14 @@ const LIVE_STATUSES = new Set(["1H", "2H", "HT", "ET", "BT", "P", "LIVE"]);
 /** Colunas de chance da tabela: até 4 zonas (as 3 primeiras e a última, ex.: Acesso, Play-off, Rebaixamento). */
 interface ChancesView {
   zones: { label: string; short: string; color: string; name: string }[];
-  teams: Map<number, { zoneProb: Record<string, number>; title: number }>;
+  teams: Map<number, { zoneProb: Record<string, number>; cum: Record<string, number>; title: number }>;
 }
 function buildChancesView(payload: any, leagueId: number, lang: string): ChancesView | null {
   const groups = (payload?.groups || []).filter((g: any) => !g.unsupported && g.teams?.length);
   if (!groups.length) return null;
-  const teams = new Map<number, { zoneProb: Record<string, number>; title: number }>();
-  for (const g of groups) for (const tm of g.teams) teams.set(tm.id, { zoneProb: tm.zoneProb || {}, title: tm.title ?? 0 });
+  const teams = new Map<number, { zoneProb: Record<string, number>; cum: Record<string, number>; title: number }>();
+  // "ou melhor": as faixas de cima somam (o G6 nunca é menor que o acesso direto)
+  for (const g of groups) for (const tm of g.teams) teams.set(tm.id, { zoneProb: tm.zoneProb || {}, cum: cumZoneProbs(g.zones || [], g.teams.length, tm.dist, tm.zoneProb), title: tm.title ?? 0 });
   const g0 = groups[0];
   const total = g0.teams.length;
   let zones = ((g0.zones || []) as { label: string; positions: number[] }[]).map((z) => {
@@ -655,7 +656,7 @@ function StandingsTable({
               <th className={`${numCol} ${headerBg} border-white/15`}>J</th>
               {chances ? (
                 chances.zones.map((z) => (
-                  <th key={z.label} className={`${numCol} ${headerBg} border-white/15 w-11 text-[8px] font-black`} style={{ color: z.color }} title={z.name}>
+                  <th key={z.label} className={`${numCol} ${headerBg} border-white/15 w-11 text-[8px] font-black`} style={{ color: z.color }} title={`${z.name} (${t("chances.or_better")})`}>
                     {z.short}
                   </th>
                 ))
@@ -783,7 +784,7 @@ function StandingsTable({
                           );
                         }
                         return chances.zones.map((z) => {
-                          const p = tm ? (z.label === "__first" ? tm.title : tm.zoneProb[z.label] ?? 0) : 0;
+                          const p = tm ? (z.label === "__first" ? tm.title : tm.cum[z.label] ?? tm.zoneProb[z.label] ?? 0) : 0;
                           return (
                             <td key={z.label} className={`${numCol} w-11 text-[10px] font-black`} style={{ color: p >= 0.005 ? z.color : "rgba(255,255,255,0.25)", background: p >= 0.005 ? `${z.color}${Math.round(Math.min(1, p) * 56 + 8).toString(16).padStart(2, "0")}` : undefined }} data-testid="chance-cell">
                               {tm ? pctText(p) : "–"}
@@ -808,6 +809,8 @@ function StandingsTable({
           </tbody>
         </table>
       </div>
+
+      {chances && <p className="px-1 pt-1 text-[9px] text-white/60" data-testid="chances-cum-note">{t("chances.cum_note")}</p>}
 
       {presentZones.length > 0 && (
         <div className="flex flex-wrap gap-x-3 gap-y-1.5 px-1 pt-1 border-t border-white/5">

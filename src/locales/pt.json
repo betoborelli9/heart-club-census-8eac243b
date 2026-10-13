@@ -940,7 +940,9 @@
     "only_band": "só esta faixa",
     "tiebreak_br": "Desempate usado: pontos, vitórias, saldo de gols e gols pró.",
     "tiebreak_gd": "Desempate usado: pontos, saldo de gols e gols pró.",
-    "tiebreak_official": "Desempate usado: a ordem da tabela oficial."
+    "tiebreak_official": "Desempate usado: a ordem da tabela oficial.",
+    "or_better": "ou melhor",
+    "cum_note": "Cada coluna soma as faixas de cima: PO é a chance de play-off ou melhor (inclui o acesso direto). REB é só o rebaixamento."
   },
   "jogos": {
     "title": "Jogos",

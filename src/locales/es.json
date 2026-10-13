@@ -940,7 +940,9 @@
     "only_band": "solo esta franja",
     "tiebreak_br": "Desempate usado: puntos, victorias, diferencia de goles y goles a favor.",
     "tiebreak_gd": "Desempate usado: puntos, diferencia de goles y goles a favor.",
-    "tiebreak_official": "Desempate usado: el orden de la tabla oficial."
+    "tiebreak_official": "Desempate usado: el orden de la tabla oficial.",
+    "or_better": "o mejor",
+    "cum_note": "Cada columna suma las franjas de arriba: PO es la probabilidad de play-off o mejor (incluye el ascenso directo). REB es solo el descenso."
   },
   "jogos": {
     "title": "Partidos",

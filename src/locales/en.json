@@ -940,7 +940,9 @@
     "only_band": "this band only",
     "tiebreak_br": "Tie-break used: points, wins, goal difference and goals scored.",
     "tiebreak_gd": "Tie-break used: points, goal difference and goals scored.",
-    "tiebreak_official": "Tie-break used: the official table order."
+    "tiebreak_official": "Tie-break used: the official table order.",
+    "or_better": "or better",
+    "cum_note": "Each column adds the zones above: PO is the chance of play-off or better (includes direct promotion). REB is relegation only."
   },
   "jogos": {
     "title": "Matches",

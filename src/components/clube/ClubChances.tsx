@@ -72,6 +72,32 @@ export function zoneLabel(leagueId: number | undefined, zone: Zone, total: numbe
   return s.replace(/\s{2,}/g, " ").replace(/^[\s-]+|[\s-]+$/g, "") || zone.label;
 }
 
+/**
+ * Chance de cada faixa, no modo "OU MELHOR": as faixas de cima somam (quem pode subir direto está, por definição, também no G6).
+ * A faixa de rebaixamento (a última) fica exata. Com a distribuição por posição a conta é exata; sem ela, somamos as faixas de cima.
+ */
+export function cumZoneProbs(zones: { label: string; positions: number[] }[], total: number, dist?: number[] | null, zoneProb?: Record<string, number>): Record<string, number> {
+  const out: Record<string, number> = {};
+  const useDist = !!dist && dist.length >= total && dist.some((v) => v > 0);
+  const sorted = [...zones].sort((a, b) => a.positions[0] - b.positions[0]);
+  let acc = 0;
+  for (const z of sorted) {
+    const last = Math.max(...z.positions);
+    const isBottom = last === total;
+    const exact = useDist ? z.positions.reduce((a, p) => a + ((dist as number[])[p - 1] ?? 0), 0) : zoneProb?.[z.label] ?? 0;
+    if (isBottom) {
+      out[z.label] = exact;
+    } else if (useDist) {
+      out[z.label] = (dist as number[]).slice(0, last).reduce((a, b) => a + b, 0);
+    } else {
+      acc += exact;
+      out[z.label] = acc;
+    }
+  }
+  for (const k of Object.keys(out)) out[k] = Math.min(1, out[k]);
+  return out;
+}
+
 /** Clube neutro: sem chance prática (< 2%) em qualquer objetivo — não vai subir, nem cair, nem brigar por vaga. */
 export const NEUTRAL_BELOW = 0.02;
 export function isNeutral(zoneProb: Record<string, number> | undefined, title = 0): boolean {
@@ -162,6 +188,7 @@ export default function ClubChances({ teamId, leagueId, season, accent = "#ff620
 
   const zones = (grp.zones ?? []).map((z) => ({ ...z, name: zoneLabel(leagueId, z, total, language), color: zoneColor(`${z.label} ${zoneLabel(leagueId, z, total, language)}`) }));
   const modePos = me.dist.indexOf(Math.max(...me.dist)) + 1;
+  const cumMe = cumZoneProbs(zones, total, me.dist, me.zoneProb);
   const myGames = (grp.remaining ?? []).filter((g) => g.h === teamId || g.a === teamId).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
   const few = (grp.meta?.minPlayed ?? 99) < 8;
   const pctFmt = (p: number) => pctText(p);
@@ -333,12 +360,15 @@ export default function ClubChances({ teamId, leagueId, season, accent = "#ff620
             <Bar p={me.title} color={accent} />
           </li>
           {zones.map((z) => {
-            const p = me.zoneProb[z.label] ?? 0;
+            const p = cumMe[z.label] ?? 0;
+            const isBottom = z.positions[z.positions.length - 1] === total;
+            const orBetter = !isBottom && topZ.findIndex((x) => x.label === z.label) > 0;
+            const last = z.positions[z.positions.length - 1];
             return (
               <li key={z.label} className="rounded-xl border border-white/10 bg-white/[0.03] p-3" data-testid="zone-row">
                 <div className="mb-1 flex items-center justify-between gap-2 text-[13px] font-bold">
                   <span className="min-w-0 truncate">
-                    {z.name} <span className="text-[10px] font-normal text-white/60">({z.positions[0]}º{z.positions.length > 1 ? `–${z.positions[z.positions.length - 1]}º` : ""} · {t("chances.only_band")})</span>
+                    {z.name}{orBetter ? ` ${t("chances.or_better")}` : ""} <span className="text-[10px] font-normal text-white/60" data-testid="zone-range">({orBetter ? `1º–${last}º` : `${z.positions[0]}º${z.positions.length > 1 ? `–${last}º` : ""}`})</span>
                   </span>
                   <span className="tabular-nums" style={{ color: z.color }}>{pctFmt(p)}</span>
                 </div>
