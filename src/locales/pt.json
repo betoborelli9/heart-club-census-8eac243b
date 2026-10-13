@@ -845,7 +845,10 @@
     "chances_loading": "Calculando…",
     "chances_unsupported": "Chances indisponíveis para este formato de campeonato.",
     "chances_caption": "Chance de terminar em cada objetivo (simulação). \"Neutro\" = menos de 2% de chance de subir ou cair. Toque no clube para ver o detalhe.",
-    "neutral_hint": "Neutro: sem chance prática de subir nem de cair"
+    "neutral_hint": "Neutro: sem chance prática de subir nem de cair",
+    "search": "Pesquisar outro clube",
+    "search_loading": "Abrindo o clube...",
+    "search_none": "Não encontrei campeonato ativo para esse clube."
   },
   "squad": {
     "error": "Não foi possível carregar o elenco agora. Tente de novo em instantes.",

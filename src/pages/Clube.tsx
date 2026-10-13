@@ -7,7 +7,7 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { ArrowLeft, CalendarDays, Landmark, Radio } from "lucide-react";
+import { ArrowLeft, CalendarDays, Landmark, Radio, Search, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useTranslationApp } from "@/hooks/useTranslationApp";
 import { useClubTheme } from "@/hooks/useClubTheme";
@@ -15,6 +15,8 @@ import { isLightColor } from "@/hooks/useMatchCardInfo";
 import { ClubLogo } from "@/components/ClubLogo";
 import ClubSquad from "@/components/clube/ClubSquad";
 import ClubChances from "@/components/clube/ClubChances";
+import { ClubSearch } from "@/components/dashboard/ClubSearch";
+import { pickMainCompetition } from "@/lib/main-competition";
 
 type Game = {
   id: number;
@@ -100,6 +102,9 @@ const Clube = () => {
   const [filter, setFilter] = useState<"all" | "done" | "next">("all");
   const [tab, setTab] = useState<"jogos" | "chances" | "elenco">(sp.get("aba") === "elenco" ? "elenco" : sp.get("aba") === "chances" ? "chances" : "jogos");
   const [now, setNow] = useState(() => Date.now());
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchBusy, setSearchBusy] = useState(false);
+  const [searchMsg, setSearchMsg] = useState<string | null>(null);
   const nextRef = useRef<HTMLLIElement | null>(null);
   const scrolled = useRef(false);
 
@@ -174,6 +179,28 @@ const Clube = () => {
   const dateFmt = (iso: string) => new Date(iso).toLocaleDateString(language, { day: "2-digit", month: "short" }).replace(".", "");
   const timeFmt = (iso: string) => new Date(iso).toLocaleTimeString(language, { hour: "2-digit", minute: "2-digit" });
 
+  // Pesquisar outro clube: abre a página dele no campeonato principal, mantendo a mesma aba
+  const openOtherClub = async (c: { name: string; api_id?: number | null }) => {
+    setSearchBusy(true);
+    setSearchMsg(null);
+    try {
+      const { data: ls } = await supabase.functions.invoke("league-standings", { body: c.api_id ? { clubName: c.name, teamId: c.api_id } : { clubName: c.name } });
+      const id = (ls as any)?.team?.id;
+      const comp = pickMainCompetition(((ls as any)?.competitions || []) as any[]);
+      if (!id || !comp) {
+        setSearchMsg(t("clube.search_none"));
+        return;
+      }
+      setSearchOpen(false);
+      setFilter("all");
+      navigate(`/clube/${id}?liga=${comp.leagueId}&temp=${comp.season}&aba=${tab}`);
+    } catch {
+      setSearchMsg(t("clube.search_none"));
+    } finally {
+      setSearchBusy(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-black pb-28 text-white" style={{ paddingTop: "env(safe-area-inset-top)" }}>
       {/* Cabeçalho com as cores do clube */}
@@ -183,9 +210,30 @@ const Clube = () => {
         data-testid="club-hero"
         data-primary={primary}
       >
-        <button onClick={() => navigate(-1)} className="mb-3 inline-flex h-12 w-12 items-center justify-center rounded-full bg-black/25 backdrop-blur" aria-label={t("clube.back")}>
-          <ArrowLeft className="h-5 w-5" />
-        </button>
+        <div className="mb-3 flex items-center justify-between">
+          <button onClick={() => navigate(-1)} className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-black/25 backdrop-blur" aria-label={t("clube.back")}>
+            <ArrowLeft className="h-5 w-5" />
+          </button>
+          <button
+            onClick={() => {
+              setSearchOpen((v) => !v);
+              setSearchMsg(null);
+            }}
+            aria-label={t("clube.search")}
+            aria-expanded={searchOpen}
+            data-testid="club-search-toggle"
+            className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-black/25 backdrop-blur"
+          >
+            {searchOpen ? <X className="h-5 w-5" /> : <Search className="h-5 w-5" />}
+          </button>
+        </div>
+        {searchOpen && (
+          <div className="mb-3" data-testid="club-search">
+            <ClubSearch onSelect={(c) => void openOtherClub(c)} />
+            {searchBusy && <p className="mt-2 text-center text-xs font-semibold opacity-85">{t("clube.search_loading")}</p>}
+            {searchMsg && <p className="mt-2 text-center text-xs font-semibold" data-testid="club-search-msg">{searchMsg}</p>}
+          </div>
+        )}
 
         {!data && !error && <div className="h-28 animate-pulse rounded-2xl bg-black/20" />}
         {error && <p className="py-6 text-center text-sm font-semibold">{t("clube.error")}</p>}

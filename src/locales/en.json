@@ -845,7 +845,10 @@
     "chances_loading": "Calculating…",
     "chances_unsupported": "Chances unavailable for this competition format.",
     "chances_caption": "Chance of finishing in each goal (simulation). \"Neutral\" = under 2% chance of going up or down. Tap a club for details.",
-    "neutral_hint": "Neutral: no practical chance of going up or down"
+    "neutral_hint": "Neutral: no practical chance of going up or down",
+    "search": "Search another club",
+    "search_loading": "Opening the club...",
+    "search_none": "No active competition found for that club."
   },
   "squad": {
     "error": "Couldn't load the squad right now. Please try again shortly.",

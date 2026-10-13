@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 
-const state: { payload: any; error: any; invokes: any[] } = { payload: null, error: null, invokes: [] };
+const state: { payload: any; error: any; invokes: any[]; standings: any } = { payload: null, error: null, invokes: [], standings: null };
 const squadPayload = { teamId: 142, updatedAt: new Date().toISOString(), coach: null, players: [{ id: 1, name: "Goleiro Um", pos: "Goalkeeper", number: 1, age: 30, photo: null }], moves: [] };
 
 vi.mock("@/integrations/supabase/client", () => ({
@@ -11,7 +11,7 @@ vi.mock("@/integrations/supabase/client", () => ({
     functions: {
       invoke: (name: string, opts: any) => {
         state.invokes.push({ name, body: opts?.body });
-        return Promise.resolve({ data: name === "club-squad" ? squadPayload : state.payload, error: state.error });
+        return Promise.resolve({ data: name === "club-squad" ? squadPayload : name === "league-standings" ? state.standings : state.payload, error: state.error });
       },
     },
     from: () => {
@@ -27,6 +27,9 @@ vi.mock("@/integrations/supabase/client", () => ({
 vi.mock("@/hooks/useTranslationApp", () => ({ useTranslationApp: () => ({ t: (k: string) => k, language: "pt" }) }));
 vi.mock("@/hooks/useClubTheme", () => ({ useClubTheme: () => ({ primaryHex: "#111111", secondaryHex: "#2a2a2a" }) }));
 vi.mock("@/components/ClubLogo", () => ({ ClubLogo: () => null }));
+vi.mock("@/components/dashboard/ClubSearch", () => ({
+  ClubSearch: ({ onSelect }: any) => <button data-testid="fake-search" onClick={() => onSelect({ name: "Newcastle", api_id: 34 })}>buscar</button>,
+}));
 
 import Clube, { resultFor, roundLabel } from "./Clube";
 
@@ -132,5 +135,34 @@ describe("Página do clube — temporada completa", () => {
   it("endereço com ?aba=elenco já abre no elenco", async () => {
     renderAt("/clube/142?liga=72&temp=2026&aba=elenco");
     expect(await screen.findByTestId("squad")).toBeTruthy();
+  });
+
+  it("pesquisar outro clube: a lupa abre a busca e o clube escolhido abre no campeonato principal, na mesma aba", async () => {
+    state.standings = {
+      team: { id: 34, name: "Newcastle", logo: null },
+      competitions: [
+        { leagueId: 48, season: 2026, leagueName: "League Cup", country: "England", standings: [] },
+        { leagueId: 2, season: 2026, leagueName: "UEFA Champions League", country: "World", standings: new Array(36).fill(0) },
+        { leagueId: 39, season: 2026, leagueName: "Premier League", country: "England", standings: new Array(20).fill(0) },
+      ],
+    };
+    renderAt("/clube/142?liga=72&temp=2026&aba=chances");
+    await screen.findByTestId("club-summary");
+    expect(screen.queryByTestId("club-search")).toBeNull();
+    fireEvent.click(screen.getByTestId("club-search-toggle"));
+    fireEvent.click(await screen.findByTestId("fake-search"));
+    await waitFor(() => expect(state.invokes.some((i) => i.name === "club-season" && i.body.teamId === 34 && i.body.leagueId === 39)).toBe(true));
+    expect(state.invokes.find((i) => i.name === "league-standings")?.body).toEqual({ clubName: "Newcastle", teamId: 34 });
+    expect(screen.getByTestId("tab-chances")).toBeTruthy(); // continua na aba Chances
+  });
+
+  it("pesquisar clube sem campeonato ativo mostra aviso e não troca de página", async () => {
+    state.standings = { team: { id: 999, name: "Clube Amador", logo: null }, competitions: [] };
+    renderAt();
+    await screen.findByTestId("club-summary");
+    fireEvent.click(screen.getByTestId("club-search-toggle"));
+    fireEvent.click(await screen.findByTestId("fake-search"));
+    expect(await screen.findByTestId("club-search-msg")).toBeTruthy();
+    expect(state.invokes.filter((i) => i.name === "club-season").length).toBe(1);
   });
 });

@@ -845,7 +845,10 @@
     "chances_loading": "Calculando…",
     "chances_unsupported": "Probabilidades no disponibles para este formato.",
     "chances_caption": "Probabilidad de terminar en cada objetivo (simulación). \"Neutro\" = menos de 2% de subir o bajar. Toca un club para ver el detalle.",
-    "neutral_hint": "Neutro: sin opción práctica de subir ni bajar"
+    "neutral_hint": "Neutro: sin opción práctica de subir ni bajar",
+    "search": "Buscar otro club",
+    "search_loading": "Abriendo el club...",
+    "search_none": "No encontré competición activa para ese club."
   },
   "squad": {
     "error": "No se pudo cargar la plantilla ahora. Inténtalo de nuevo en unos instantes.",
