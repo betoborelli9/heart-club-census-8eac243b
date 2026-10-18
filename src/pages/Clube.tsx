@@ -44,6 +44,8 @@ type Payload = {
   team: { id: number; name: string; logo: string | null };
   league: { id: number; season: number; name?: string; logo?: string; country?: string };
   summary: Summary;
+  /** Projeção ao vivo (quando o clube está jogando agora): conta o placar de agora como se fosse o final. */
+  liveSummary?: Summary | null;
   games: Game[];
 };
 
@@ -166,6 +168,7 @@ const Clube = () => {
   const heroText = isLightColor(primary) ? "#111111" : "#ffffff";
 
   const games = useMemo(() => data?.games ?? [], [data]);
+  const sum = (data?.liveSummary ?? data?.summary) as Summary;
   const nextGame = useMemo(() => games.find((g) => LIVE.has(g.st) || BREAK.has(g.st)) || games.find((g) => g.st === "NS" || g.st === "TBD"), [games]);
   const upcoming = useMemo(
     () => games.filter((g) => !DONE.has(g.st)).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()),
@@ -281,24 +284,29 @@ const Clube = () => {
             </div>
 
             {/* Resumo da campanha */}
-            <div className="mt-4 grid grid-cols-6 gap-1 rounded-2xl bg-black/25 px-2 py-3 backdrop-blur" data-testid="club-summary">
-              <Stat label={t("clube.pts")} value={data.summary.points} strong />
-              <Stat label={t("clube.j")} value={data.summary.played} />
-              <Stat label={t("clube.v")} value={data.summary.win} />
-              <Stat label={t("clube.e")} value={data.summary.draw} />
-              <Stat label={t("clube.d")} value={data.summary.lose} />
-              <Stat label={t("clube.sg")} value={data.summary.goalsDiff > 0 ? `+${data.summary.goalsDiff}` : data.summary.goalsDiff} />
+            {data.liveSummary && (
+              <p className="mt-3 flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest" data-testid="summary-live">
+                <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-red-500" /> {t("clube.live_projection")}
+              </p>
+            )}
+            <div className={`${data.liveSummary ? "mt-1.5" : "mt-4"} grid grid-cols-6 gap-1 rounded-2xl bg-black/25 px-2 py-3 backdrop-blur`} data-testid="club-summary">
+              <Stat label={t("clube.pts")} value={sum.points} strong />
+              <Stat label={t("clube.j")} value={sum.played} />
+              <Stat label={t("clube.v")} value={sum.win} />
+              <Stat label={t("clube.e")} value={sum.draw} />
+              <Stat label={t("clube.d")} value={sum.lose} />
+              <Stat label={t("clube.sg")} value={sum.goalsDiff > 0 ? `+${sum.goalsDiff}` : sum.goalsDiff} />
             </div>
             <div className="mt-3 flex items-center justify-between gap-3">
               <div className="flex items-center gap-1.5" aria-label={t("clube.form")}>
-                {data.summary.form.map((f, i) => (
+                {sum.form.map((f, i) => (
                   <span key={i} className="flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-black" style={{ background: RES_STYLE[f].bg, color: RES_STYLE[f].fg }}>
                     {f}
                   </span>
                 ))}
               </div>
               <span className="text-xs font-bold opacity-90">
-                {t("clube.aprov")} {data.summary.pct}%
+                {t("clube.aprov")} {sum.pct}%
               </span>
             </div>
           </>

@@ -78,6 +78,8 @@ serve(async (req) => {
       team,
       league: { id: leagueId, season, name: season_.meta.league_name, logo: season_.meta.league_logo, country: season_.meta.country },
       summary: summarizeTeam(games, teamId),
+      // jogo em andamento: pontos, jogos e forma como ficariam se o placar de agora fosse o final
+      liveSummary: mine.some((g) => isLiveStatus(g.st) && g.gh != null && g.ga != null) ? summarizeTeam(games, teamId, { includeLive: true }) : null,
       games: mine,
       totalGames: mine.length,
       generatedAt: new Date().toISOString(),

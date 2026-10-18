@@ -853,7 +853,8 @@
     "played": "Partidos jugados",
     "my_club": "Mi club",
     "my_club_aria": "Volver a mi club del corazón",
-    "tab_sim": "Simular"
+    "tab_sim": "Simular",
+    "live_projection": "En vivo: proyección con el marcador actual"
   },
   "squad": {
     "error": "No se pudo cargar la plantilla ahora. Inténtalo de nuevo en unos instantes.",

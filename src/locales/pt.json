@@ -853,7 +853,8 @@
     "played": "Jogos já realizados",
     "my_club": "Meu clube",
     "my_club_aria": "Voltar ao meu clube do coração",
-    "tab_sim": "Simular"
+    "tab_sim": "Simular",
+    "live_projection": "Ao vivo: projeção com o placar de agora"
   },
   "squad": {
     "error": "Não foi possível carregar o elenco agora. Tente de novo em instantes.",

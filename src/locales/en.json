@@ -853,7 +853,8 @@
     "played": "Matches played",
     "my_club": "My club",
     "my_club_aria": "Back to my favorite club",
-    "tab_sim": "Simulate"
+    "tab_sim": "Simulate",
+    "live_projection": "Live: projection with the current score"
   },
   "squad": {
     "error": "Couldn't load the squad right now. Please try again shortly.",

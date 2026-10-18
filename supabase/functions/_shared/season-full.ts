@@ -101,15 +101,15 @@ export async function getFullSeason(
   }
 }
 
-/** Soma de pontos/gols de um time a partir dos jogos encerrados. */
-export function summarizeTeam(games: FullGame[], teamId: number) {
+/** Soma de pontos/gols de um time a partir dos jogos encerrados. Com `includeLive`, o jogo em andamento conta pelo placar de agora (projeção ao vivo). */
+export function summarizeTeam(games: FullGame[], teamId: number, opts?: { includeLive?: boolean }) {
   let w = 0,
     d = 0,
     l = 0,
     gf = 0,
     ga = 0;
   const form: ("V" | "E" | "D")[] = [];
-  const mine = games.filter((g) => (g.h === teamId || g.a === teamId) && DONE.has(g.st) && g.gh != null && g.ga != null);
+  const mine = games.filter((g) => (g.h === teamId || g.a === teamId) && (DONE.has(g.st) || (opts?.includeLive && isLiveStatus(g.st))) && g.gh != null && g.ga != null);
   for (const g of mine) {
     const home = g.h === teamId;
     const f = home ? (g.gh as number) : (g.ga as number);

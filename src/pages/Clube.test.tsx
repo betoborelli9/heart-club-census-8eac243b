@@ -190,6 +190,23 @@ describe("Página do clube — temporada completa", () => {
     expect(v.className).not.toContain("text-white/");
   });
 
+  it("jogo em andamento: o topo mostra a projeção ao vivo (pontos e jogos com o placar de agora) com o aviso AO VIVO", async () => {
+    state.payload = { ...payload(), liveSummary: { played: 4, win: 2, draw: 1, lose: 1, goalsFor: 5, goalsAgainst: 4, goalsDiff: 1, points: 7, pct: 58, form: ["E", "D", "V", "V"] } };
+    renderAt();
+    const sumEl = await screen.findByTestId("club-summary");
+    expect(screen.getByTestId("summary-live")).toBeTruthy();
+    expect(sumEl.textContent).toContain("7"); // pontos projetados (eram 4)
+    expect(sumEl.textContent).toContain("4"); // jogos (eram 3)
+    expect(screen.getAllByText(/58%/).length).toBeGreaterThan(0);
+  });
+
+  it("sem jogo em andamento: nada de aviso AO VIVO e vale o resumo oficial", async () => {
+    renderAt();
+    const sumEl = await screen.findByTestId("club-summary");
+    expect(screen.queryByTestId("summary-live")).toBeNull();
+    expect(sumEl.textContent).toContain("4");
+  });
+
   it("botão 'Meu clube': aparece só quando está vendo outro clube e leva de volta ao clube do coração", async () => {
     state.viewed = { heartClubName: "Flamengo", heartClubId: 127 };
     state.standings = {
