@@ -189,6 +189,10 @@ export default function ClubChances({ teamId, leagueId, season, accent = "#ff620
   const zones = (grp.zones ?? []).map((z) => ({ ...z, name: zoneLabel(leagueId, z, total, language), color: zoneColor(`${z.label} ${zoneLabel(leagueId, z, total, language)}`) }));
   const modePos = me.dist.indexOf(Math.max(...me.dist)) + 1;
   const cumMe = cumZoneProbs(zones, total, me.dist, me.zoneProb);
+  const myLive = (grp.remaining ?? []).find((g) => g.live && (g.h === teamId || g.a === teamId));
+  const liveDiff = myLive?.live ? (myLive.h === teamId ? myLive.live.gh - myLive.live.ga : myLive.live.ga - myLive.live.gh) : 0;
+  const ptsNow = me.points + (myLive ? (liveDiff > 0 ? 3 : liveDiff === 0 ? 1 : 0) : 0);
+  const remNow = me.remaining - (myLive ? 1 : 0);
   const myGames = (grp.remaining ?? []).filter((g) => g.h === teamId || g.a === teamId).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
   const few = (grp.meta?.minPlayed ?? 99) < 8;
   const pctFmt = (p: number) => pctText(p);
@@ -230,7 +234,7 @@ export default function ClubChances({ teamId, leagueId, season, accent = "#ff620
   const pushCut = (key: string, title: string, cut: number | undefined, extra = 0, escape = false) => {
     if (cut == null) return;
     const pts = Math.ceil(cut) + extra;
-    cutRows.push({ key, title, pts, need: amr(pts, me.points, me.remaining), escape });
+    cutRows.push({ key, title, pts, need: amr(pts, ptsNow, remNow), escape });
   };
   pushCut("__champion", t("chances.cut_champion"), grp.cutMedian?.[0]);
   topZ.forEach((z) => {
@@ -286,8 +290,8 @@ export default function ClubChances({ teamId, leagueId, season, accent = "#ff620
         </div>
         <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-3 text-center">
           <p className="text-[10px] font-bold uppercase tracking-wider text-white/50">{t("chances.left")}</p>
-          <p className="mt-1 text-2xl font-black tabular-nums">{me.remaining}</p>
-          <p className="text-[10px] text-white/40">{t("chances.games")}</p>
+          <p className="mt-1 text-2xl font-black tabular-nums" data-testid="left-count">{remNow}</p>
+          <p className="text-[10px] text-white/40">{t("chances.games")}{myLive ? ` · ${t("chances.live_one")}` : ""}</p>
         </div>
       </section>
 
@@ -307,7 +311,7 @@ export default function ClubChances({ teamId, leagueId, season, accent = "#ff620
                         ? t("chances.safe_now")
                         : t("chances.reached")
                       : r.need.impossible
-                        ? `${t("chances.cut_missing", { n: r.need.need })} · ${t("chances.out_of_reach", { max: 3 * me.remaining })}`
+                        ? `${t("chances.cut_missing", { n: r.need.need })} · ${t("chances.out_of_reach", { max: 3 * remNow })}`
                         : `${t("chances.cut_missing", { n: r.need.need })}${r.need.pct != null ? ` · ${t("chances.need", { n: r.need.pct })}` : ""}`}
                   </span>
                 </span>

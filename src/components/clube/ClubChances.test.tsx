@@ -325,6 +325,19 @@ describe("Chances do clube", () => {
     }
   });
 
+  it("jogo do clube em andamento: pontos e 'faltam' usam o placar de agora, igual ao topo da página (nunca os pontos oficiais velhos)", async () => {
+    state.payload = payload();
+    const g = state.payload.groups[0];
+    // Nosso FC (10 pts, 2 jogos faltando) está ganhando 1 x 0 em casa agora: conta 13 pts e falta 1 jogo
+    g.remaining[0] = { ...g.remaining[0], live: { gh: 1, ga: 0, el: 60, st: "2H" } };
+    renderIt();
+    await screen.findByTestId("chances-cuts");
+    expect(screen.getByTestId("left-count").textContent).toBe("1");
+    const champion = screen.getAllByTestId("cut-row")[0].textContent || "";
+    expect(champion).toContain('"n":1'); // corte 14: tem 13 → falta 1 ponto (e não 4, como seria com os 10 oficiais)
+    expect(champion).toContain('"n":33'); // 1 de 3 pontos possíveis no 1 jogo que sobra
+  });
+
   it("casa/fora dos jogos que faltam em branco e legível", async () => {
     renderIt();
     await screen.findByTestId("chances");

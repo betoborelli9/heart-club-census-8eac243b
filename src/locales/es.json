@@ -946,7 +946,8 @@
     "cum_note": "Cada columna suma las franjas de arriba: PO es la probabilidad de play-off o mejor (incluye el ascenso directo). REB es solo el descenso.",
     "col_pts": "Pts",
     "col_first": "1º",
-    "out_of_reach": "fuera de alcance: solo quedan {{max}} puntos posibles"
+    "out_of_reach": "fuera de alcance: solo quedan {{max}} puntos posibles",
+    "live_one": "1 en vivo"
   },
   "jogos": {
     "title": "Partidos",
