@@ -52,6 +52,7 @@ export function useLeaguePrognosis<T extends AnyPayload = AnyPayload>(leagueId: 
   const [error, setError] = useState(false);
   const alive = useRef(true);
   const dataRef = useRef<T | null>(null);
+  const seen = useRef<Map<number, string>>(new Map()); // último estado visto de cada jogo: minuto passando não recalcula, gol e mudança de status sim
   dataRef.current = data;
 
   const load = useCallback(
@@ -92,7 +93,14 @@ export function useLeaguePrognosis<T extends AnyPayload = AnyPayload>(leagueId: 
       if (typeof sb.channel === "function") {
         channel = sb
           .channel(`prog-${leagueId}-${season}`)
-          .on("postgres_changes", { event: "*", schema: "public", table: "league_fixtures", filter: `league_id=eq.${leagueId}` }, () => {
+          .on("postgres_changes", { event: "*", schema: "public", table: "league_fixtures", filter: `league_id=eq.${leagueId}` }, (p: any) => {
+            const n = p?.new;
+            if (n && n.fixture_id != null) {
+              const key = `${n.status}|${n.goals_home}|${n.goals_away}`;
+              const prev = seen.current.get(Number(n.fixture_id));
+              seen.current.set(Number(n.fixture_id), key);
+              if (prev === key) return; // só o minuto andou
+            }
             if (timer) clearTimeout(timer);
             timer = setTimeout(() => void load(true), GOAL_DEBOUNCE_MS);
           })

@@ -106,6 +106,29 @@ describe("probabilidades que se recalculam sozinhas", () => {
     expect(result.current.data.groups[0].teams[0].points).toBe(12);
   });
 
+  it("só o minuto andando não recalcula; gol e mudança de status (intervalo, fim de jogo) recalculam", async () => {
+    state.payload = payload(true, 10);
+    renderHook(() => useLeaguePrognosis<any>(72, 2026));
+    await flush();
+    const ev = (status: string, gh: number, ga: number) => ({ new: { fixture_id: 7, status, goals_home: gh, goals_away: ga, elapsed: 50 } });
+    const fire = async (e: any) => {
+      state.handlers[0](e);
+      await act(async () => {
+        vi.advanceTimersByTime(GOAL_DEBOUNCE_MS + 100);
+      });
+      await flush();
+    };
+    await fire(ev("2H", 0, 0)); // primeiro evento do jogo: não há como comparar, busca uma vez
+    const afterFirst = state.invokes;
+    await fire(ev("2H", 0, 0)); // só o relógio andou
+    await fire(ev("2H", 0, 0));
+    expect(state.invokes).toBe(afterFirst);
+    await fire(ev("2H", 1, 0)); // gol
+    expect(state.invokes).toBe(afterFirst + 1);
+    await fire(ev("FT", 1, 0)); // fim de jogo
+    expect(state.invokes).toBe(afterFirst + 2);
+  });
+
   it("falha numa atualização mantém o que já está na tela (não vira tela de erro)", async () => {
     state.payload = payload(true, 10);
     const { result } = renderHook(() => useLeaguePrognosis<any>(72, 2026));
