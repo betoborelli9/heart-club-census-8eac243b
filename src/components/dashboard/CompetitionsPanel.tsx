@@ -12,6 +12,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { ClubLogo } from "@/components/ClubLogo";
 import LeagueLiveStrip from "@/components/dashboard/LeagueLiveStrip";
 import { cumZoneProbs, isNeutral, pctText, zoneColor, zoneLabel, zoneShort } from "@/components/clube/ClubChances";
+import { readableOnDark } from "@/lib/readable-color";
 import { supabase } from "@/integrations/supabase/client";
 import { useTranslationApp } from "@/hooks/useTranslationApp";
 import { useToast } from "@/hooks/use-toast";
@@ -103,7 +104,9 @@ const PULSE_CSS = `
 .hc-pulse-bracket{animation:hc-pulse-bracket 2.4s ease-in-out infinite}
 `;
 
-export default function CompetitionsPanel({ clubName, teamId: clubTeamId, primaryColor = "#ff6200" }: Props) {
+export default function CompetitionsPanel({ clubName, teamId: clubTeamIdProp, primaryColor: primaryColorProp = "#ff6200" }: Props) {
+  const clubTeamId = clubTeamIdProp;
+  const primaryColor = readableOnDark(primaryColorProp); // nunca texto escuro sobre fundo escuro
   const { t, language } = useTranslationApp();
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -591,7 +594,7 @@ function StandingsTable({
 
   // Cor tradicional do adversário (via mapa estático de cores dos clubes).
   const opponentTheme = opponentName ? teamColors[opponentName] : null;
-  const opponentColor = opponentTheme?.primaryHex || "#fbbf24";
+  const opponentColor = readableOnDark(opponentTheme?.primaryHex || "#fbbf24");
   const hexToRgba = (hex: string, a: number) => {
     const h = hex.replace("#", "");
     const r = parseInt(h.slice(0, 2), 16) || 0;
@@ -704,7 +707,7 @@ function StandingsTable({
               let insetColor: string | null = null;
               if (isMe) insetColor = primaryColor;
               else if (isRival) insetColor = "#ef4444";
-              else if (zone && !isNeutralZone) insetColor = zone.style.color;
+              else if (zone && !isNeutralZone) insetColor = readableOnDark(zone.style.color);
 
               const stickyClass =
                 zone?.style.pulse && !isNeutralZone && !isMe && !isRival ? "hc-pulse-bracket" : "";
@@ -712,12 +715,12 @@ function StandingsTable({
               // Cor do número da posição — neutra usa branco padrão
               const posColor = isNeutralZone
                 ? "rgba(255,255,255,0.5)"
-                : zone?.style.color || "rgba(255,255,255,0.5)";
+                : readableOnDark(zone?.style.color || "rgba(255,255,255,0.5)");
 
               // Cor do subcabeçalho de grupo — neutro usa branco suave
               const headerColor = isNeutralZone
                 ? "rgba(255,255,255,0.55)"
-                : zone?.style.color || "rgba(255,255,255,0.55)";
+                : readableOnDark(zone?.style.color || "rgba(255,255,255,0.55)");
 
               return (
                 <Fragment key={`${r.teamId}-${r.position}`}>

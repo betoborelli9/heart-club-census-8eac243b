@@ -18,6 +18,7 @@ import ClubChances from "@/components/clube/ClubChances";
 import ClubSimulator from "@/components/clube/ClubSimulator";
 import { ClubSearch } from "@/components/dashboard/ClubSearch";
 import { pickMainCompetition } from "@/lib/main-competition";
+import { readableOnDark } from "@/lib/readable-color";
 import { useViewedClubOptional } from "@/contexts/ViewedClubContext";
 
 type Game = {
@@ -323,28 +324,28 @@ const Clube = () => {
       {/* Chances (carrega só quando a aba é aberta) */}
       {tab === "chances" && (
         <main className="mx-auto max-w-xl px-3 pt-4" data-testid="tab-chances">
-          <ClubChances teamId={teamId} leagueId={leagueId} season={season} accent={primary === "#1a1a1a" ? "#ff6200" : isLightColor(primary) ? secondary : primary} />
+          <ClubChances teamId={teamId} leagueId={leagueId} season={season} accent={readableOnDark(primary === "#1a1a1a" ? "#ff6200" : isLightColor(primary) ? secondary : primary)} />
         </main>
       )}
 
       {/* Simulador "E se...?" (carrega só quando a aba é aberta) */}
       {tab === "simular" && (
         <main className="mx-auto max-w-xl px-3 pt-4" data-testid="tab-simular">
-          <ClubSimulator teamId={teamId} leagueId={leagueId} season={season} accent={primary === "#1a1a1a" ? "#ff6200" : isLightColor(primary) ? secondary : primary} />
+          <ClubSimulator teamId={teamId} leagueId={leagueId} season={season} accent={readableOnDark(primary === "#1a1a1a" ? "#ff6200" : isLightColor(primary) ? secondary : primary)} />
         </main>
       )}
 
       {/* Elenco (carrega só quando a aba é aberta) */}
       {tab === "elenco" && (
         <main className="mx-auto max-w-xl px-3 pt-4" data-testid="tab-elenco">
-          <ClubSquad teamId={teamId} accent={primary === "#1a1a1a" ? "#ff6200" : isLightColor(primary) ? secondary : primary} />
+          <ClubSquad teamId={teamId} accent={readableOnDark(primary === "#1a1a1a" ? "#ff6200" : isLightColor(primary) ? secondary : primary)} />
         </main>
       )}
 
       {/* Jogos */}
       <main className="mx-auto max-w-xl px-3 pt-4" hidden={tab !== "jogos"}>
         <div className="mb-3 flex items-center gap-2">
-          <CalendarDays className="h-4 w-4" style={{ color: primary === "#1a1a1a" ? "#ff6200" : primary }} />
+          <CalendarDays className="h-4 w-4" style={{ color: readableOnDark(primary === "#1a1a1a" ? "#ff6200" : primary) }} />
           <h2 className="flex-1 text-[11px] font-black uppercase tracking-widest text-white/80">{t("clube.games")}</h2>
           <div className="flex gap-1">
             {(["all", "done", "next"] as const).map((k) => (

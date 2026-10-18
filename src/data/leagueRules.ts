@@ -42,7 +42,7 @@ const C = {
   green:   "#10b981",
   greenL:  "#34d399",
   blue:    "#3b82f6",
-  blueD:   "#1e40af",
+  blueD:   "#818cf8", // era #1e40af (azul-marinho): ilegível sobre o fundo preto
   red:     "#ef4444",
   redD:    "#991b1b",
   purple:  "#a855f7",

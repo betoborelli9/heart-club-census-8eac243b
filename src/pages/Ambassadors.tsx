@@ -4,6 +4,7 @@
  */
 
 /* [MÓDULO: IMPORTS] */
+import { readableOnDark } from "@/lib/readable-color";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -503,7 +504,7 @@ const Ambassadors = () => {
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider">
                     <span className="text-white/60">{t("ambassadors.tier_to", { a: levelInfo.tier, b: levelInfo.next })}</span>
-                    <span style={{ color: theme.primaryHex }}>
+                    <span style={{ color: readableOnDark(theme.primaryHex) }}>
                       {t("ambassadors.referred_count", { count: levelInfo.indicacoesCount })}
                       {levelInfo.faltam > 0 ? ` ${t("ambassadors.missing_count", { count: levelInfo.faltam })}` : ""}
                     </span>
@@ -540,7 +541,7 @@ const Ambassadors = () => {
                 <div className="flex items-center gap-2 flex-wrap">
                   <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-xl px-4 py-2.5">
                     <span className="text-[10px] font-bold uppercase tracking-wider text-white/40">{t("ambassadors.code_label")}</span>
-                    <span className="text-lg font-black tracking-[0.2em]" style={{ color: theme.primaryHex }}>
+                    <span className="text-lg font-black tracking-[0.2em]" style={{ color: readableOnDark(theme.primaryHex) }}>
                       {profile?.codigo_indicacao || "—"}
                     </span>
                     <button onClick={handleCopyCode} className="ml-1 text-white/40 hover:text-white transition-colors">
@@ -582,7 +583,7 @@ const Ambassadors = () => {
                       </DropdownMenuItem>
                       <DropdownMenuSeparator className="bg-white/5" />
                       <DropdownMenuItem onClick={shareNative} className="gap-2 focus:bg-white/10 cursor-pointer">
-                        <Sparkles className="w-4 h-4" style={{ color: theme.primaryHex }} /> {t("ambassadors.more_options")}
+                        <Sparkles className="w-4 h-4" style={{ color: readableOnDark(theme.primaryHex) }} /> {t("ambassadors.more_options")}
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>

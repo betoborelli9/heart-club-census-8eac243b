@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { useUser } from "@/contexts/UserContext";
 import { useViewedClub } from "@/contexts/ViewedClubContext";
+import { readableOnDark } from "@/lib/readable-color";
 import { supabase } from "@/integrations/supabase/client";
 import { CLUBS_DATA } from "@/clubes-data";
 import { isMasterEmail } from "@/lib/master";
@@ -158,6 +159,8 @@ const Dashboard = () => {
   const heartTheme = useClubTheme(heartClubName);
   const primary = viewedTheme?.primaryHex || "#ff6200";
   const secondary = viewedTheme?.secondaryHex || "#000000";
+  // Cor do clube para TEXTO sobre o fundo escuro (azul-marinho, preto e vinho viram uma versão clara do mesmo matiz)
+  const primaryText = readableOnDark(primary);
 
   // Exclusivo do Master Admin: ao consultar outro clube na busca, a Dashboard
   // inteira (banner, identidade, próximo jogo) reflete o clube consultado —
@@ -270,7 +273,7 @@ const Dashboard = () => {
         <div className="grid grid-cols-1 lg:grid-cols-[26%_40%_34%] gap-6">
           <aside className="space-y-4">
             <div className="glass-card rounded-3xl p-5 lg:sticky lg:top-24">
-              <RivalsColumn clubName={viewedClubName} refCode={effectiveProfile.codigo_indicacao} primaryColor={primary} />
+              <RivalsColumn clubName={viewedClubName} refCode={effectiveProfile.codigo_indicacao} primaryColor={primaryText} />
             </div>
           </aside>
 
@@ -290,13 +293,13 @@ const Dashboard = () => {
               </div>
             )}
             <div className="glass-card rounded-[32px] p-2">
-              <NewsFeedCards teamName={viewedClubName} primaryColor={primary} clubMeta={viewedClubMeta} />
+              <NewsFeedCards teamName={viewedClubName} primaryColor={primaryText} clubMeta={viewedClubMeta} />
             </div>
           </section>
 
           <aside key={`col3-${fadeKey}`} className="fade-in space-y-6 min-w-0">
             <div className="glass-card rounded-3xl p-6">
-              <CompetitionsPanel clubName={viewedClubName} teamId={viewedClubId} primaryColor={primary} />
+              <CompetitionsPanel clubName={viewedClubName} teamId={viewedClubId} primaryColor={primaryText} />
             </div>
           </aside>
         </div>
