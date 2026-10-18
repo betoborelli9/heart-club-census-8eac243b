@@ -32,6 +32,7 @@ vi.mock("@/components/dashboard/ClubSearch", () => ({
   ClubSearch: ({ onSelect }: any) => <button data-testid="fake-search" onClick={() => onSelect({ name: "Newcastle", api_id: 34 })}>buscar</button>,
 }));
 
+import { clearPrognosisCache } from "@/hooks/useLeaguePrognosis";
 import Clube, { resultFor, roundLabel } from "./Clube";
 
 const g = (id: number, r: number, h: number, a: number, gh: number | null, ga: number | null, st: string, day: number, extra: any = {}) => ({
@@ -64,6 +65,7 @@ const renderAt = (url = "/clube/142?liga=72&temp=2026") => {
 
 describe("Página do clube — temporada completa", () => {
   beforeEach(() => {
+    clearPrognosisCache();
     state.payload = payload();
     state.error = null;
     state.invokes = [];

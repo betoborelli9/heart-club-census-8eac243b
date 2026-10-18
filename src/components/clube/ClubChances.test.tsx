@@ -20,6 +20,7 @@ vi.mock("@/hooks/useTranslationApp", () => ({
 }));
 vi.mock("@/components/ClubLogo", () => ({ ClubLogo: () => null }));
 
+import { clearPrognosisCache } from "@/hooks/useLeaguePrognosis";
 import ClubChances, { amr, cumZoneProbs, isNeutral, zoneColor, zoneLabel } from "./ClubChances";
 
 // Campeonato de 4 times: 1 vaga de acesso (1º) e 1 rebaixado (4º). Nosso time = id 2 (hoje 2º, 10 pts, 2 jogos faltando).
@@ -59,6 +60,7 @@ const renderIt = (teamId = 2) =>
 
 describe("Chances do clube", () => {
   beforeEach(() => {
+    clearPrognosisCache();
     state.payload = payload();
     state.invokes = [];
   });

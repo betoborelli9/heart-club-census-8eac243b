@@ -129,12 +129,32 @@ export default function CompetitionsPanel({ clubName, teamId: clubTeamIdProp, pr
     const comp = competitions.find((x) => String(x.leagueId) === activeTab);
     if (!comp || chances[comp.leagueId] !== undefined) return;
     setChances((p) => ({ ...p, [comp.leagueId]: null }));
-    (async () => {
-      const { data } = await supabase.functions.invoke("league-prognosis", { body: { leagueId: comp.leagueId, season: comp.season } });
-      setChances((p) => ({ ...p, [comp.leagueId]: data && (data as any).supported ? data : false }));
-    })();
+    void loadChances(comp.leagueId, comp.season);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showChances, activeTab, competitions]);
+
+  // Renovação sem piscar: mantém o que está na tela até chegar o número novo
+  const loadChances = async (leagueId: number, season: number) => {
+    const { data } = await supabase.functions.invoke("league-prognosis", { body: { leagueId, season } });
+    setChances((p) => ({ ...p, [leagueId]: data && (data as any).supported ? data : p[leagueId] ? p[leagueId] : false }));
+  };
+  const refreshChances = () => {
+    const comp = competitions.find((x) => String(x.leagueId) === activeTab);
+    if (showChances && comp && chances[comp.leagueId]) void loadChances(comp.leagueId, comp.season);
+  };
+  // com jogo rolando no campeonato aberto: confere a cada 60 s (e a cada gol, via refreshSoon)
+  const activeHasLive = (() => {
+    const comp = competitions.find((x) => String(x.leagueId) === activeTab);
+    return !!(comp && (comp as any).liveMatch);
+  })();
+  useEffect(() => {
+    if (!showChances || !activeHasLive) return;
+    const id = setInterval(() => {
+      if (typeof document === "undefined" || !document.hidden) refreshChances();
+    }, 60_000);
+    return () => clearInterval(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showChances, activeHasLive, activeTab, competitions, chances]);
   const [sharing, setSharing] = useState(false);
   const shareRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const tickRef = useRef<(() => void) | null>(null);
@@ -142,7 +162,10 @@ export default function CompetitionsPanel({ clubName, teamId: clubTeamIdProp, pr
   // Gol ou fim de jogo no campeonato: renova a tabela em ~4 s (lê do nosso banco, não gasta a API).
   const refreshSoon = () => {
     if (refreshTimer.current) clearTimeout(refreshTimer.current);
-    refreshTimer.current = setTimeout(() => tickRef.current?.(), 4000);
+    refreshTimer.current = setTimeout(() => {
+      tickRef.current?.();
+      refreshChances(); // gol ou fim de jogo: as chances também se recalculam
+    }, 4000);
   };
 
   // Captura a tabela + próximo jogo REAIS da tela (com todas as cores, o

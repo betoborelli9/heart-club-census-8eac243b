@@ -6,11 +6,11 @@
  * Os números vêm prontos de league-prognosis (simulação no servidor, compartilhada); o celular só desenha.
  * Estimativa estatística — nunca promete resultado. Sem linguagem de aposta.
  */
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { HelpCircle, Info, Target, TrendingUp } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { supabase } from "@/integrations/supabase/client";
+import { useLeaguePrognosis } from "@/hooks/useLeaguePrognosis";
 import { useTranslationApp } from "@/hooks/useTranslationApp";
 import { getLeagueRules } from "@/data/leagueRules";
 import { ClubLogo } from "@/components/ClubLogo";
@@ -146,24 +146,9 @@ function Bar({ p, color }: { p: number; color: string }) {
 export default function ClubChances({ teamId, leagueId, season, accent = "#ff6200" }: { teamId: number; leagueId: number; season: number; accent?: string }) {
   const { t, language } = useTranslationApp();
   const navigate = useNavigate();
-  const [data, setData] = useState<Payload | null>(null);
-  const [error, setError] = useState(false);
+  // Recalcula sozinho a cada gol ou mudança de placar no campeonato (tempo real + conferência a cada 60 s com jogo rolando)
+  const { data, error } = useLeaguePrognosis<Payload>(leagueId, season);
   const [howOpen, setHowOpen] = useState(false);
-
-  useEffect(() => {
-    let alive = true;
-    setData(null);
-    setError(false);
-    (async () => {
-      const { data: res, error: err } = await supabase.functions.invoke("league-prognosis", { body: { leagueId, season } });
-      if (!alive) return;
-      if (err || !res || (res as any).error) return setError(true);
-      setData(res as Payload);
-    })();
-    return () => {
-      alive = false;
-    };
-  }, [leagueId, season]);
 
   const grp = useMemo(() => data?.groups?.find((g) => !g.unsupported && g.teams?.some((x) => x.id === teamId)) ?? null, [data, teamId]);
   const me = grp?.teams?.find((x) => x.id === teamId) ?? null;

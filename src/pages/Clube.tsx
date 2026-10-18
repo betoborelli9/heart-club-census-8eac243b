@@ -141,7 +141,7 @@ const Clube = () => {
     const clock = setInterval(() => setNow(Date.now()), 15_000);
     const poll = setInterval(() => {
       if (!document.hidden) void load();
-    }, 45_000);
+    }, 20_000);
     return () => {
       clearInterval(clock);
       clearInterval(poll);

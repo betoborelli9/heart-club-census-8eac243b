@@ -7,7 +7,7 @@
  */
 import { useEffect, useMemo, useRef, useState } from "react";
 import { FlaskConical, Info, RotateCcw } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { clearPrognosisCache, useLeaguePrognosis } from "@/hooks/useLeaguePrognosis";
 import { useTranslationApp } from "@/hooks/useTranslationApp";
 import { ClubLogo } from "@/components/ClubLogo";
 import { pctText, zoneColor, zoneLabel } from "@/components/clube/ClubChances";
@@ -21,10 +21,8 @@ type Zone = { label: string; positions: number[] };
 type GroupP = { group: string | null; unsupported?: string; teams?: TeamP[]; zones?: Zone[]; remaining?: RemGame[]; meta?: { rule?: string } };
 type Payload = { supported: boolean; groups: GroupP[] };
 
-const CACHE = new Map<string, { at: number; data: Payload }>();
-const CACHE_TTL = 2 * 60 * 1000;
 /** Só para testes. */
-export const clearSimulatorCache = () => CACHE.clear();
+export const clearSimulatorCache = clearPrognosisCache;
 
 type Mode = "round" | "mine" | "all";
 type Raw = Record<number, { h: string; a: string }>;
@@ -33,36 +31,13 @@ const storageKey = (leagueId: number, season: number, teamId: number) => `hc-wha
 
 export default function ClubSimulator({ teamId, leagueId, season, accent = "#ff6200" }: { teamId: number; leagueId: number; season: number; accent?: string }) {
   const { t, language } = useTranslationApp();
-  const [data, setData] = useState<Payload | null>(null);
-  const [error, setError] = useState(false);
+  // Recalcula sozinho a cada gol ou mudança de placar no campeonato
+  const { data, error } = useLeaguePrognosis<Payload>(leagueId, season);
   const [mode, setMode] = useState<Mode>("round");
   const [view, setView] = useState<"now" | "final">("now");
   const [raw, setRaw] = useState<Raw>({});
   const [applied, setApplied] = useState<Record<number, Pick>>({});
   const tableRef = useRef<HTMLElement | null>(null);
-
-  // Dados do campeonato (mesmos da aba Chances, guardados por 2 min no aparelho)
-  useEffect(() => {
-    let alive = true;
-    setError(false);
-    const key = `${leagueId}:${season}`;
-    const hit = CACHE.get(key);
-    if (hit && Date.now() - hit.at < CACHE_TTL) {
-      setData(hit.data);
-      return;
-    }
-    setData(null);
-    (async () => {
-      const { data: res, error: err } = await supabase.functions.invoke("league-prognosis", { body: { leagueId, season } });
-      if (!alive) return;
-      if (err || !res || (res as any).error) return setError(true);
-      CACHE.set(key, { at: Date.now(), data: res as Payload });
-      setData(res as Payload);
-    })();
-    return () => {
-      alive = false;
-    };
-  }, [leagueId, season]);
 
   // Placares do torcedor: ficam só neste aparelho
   useEffect(() => {

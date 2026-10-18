@@ -229,14 +229,14 @@ serve(async (req) => {
 
     // Cache: mesma contagem de jogos encerrados + mesmo placar ao vivo = mesmo resultado
     const finishedCount = games.filter((g) => ["FT", "AET", "PEN", "AWD", "WO"].includes(g.st) && g.gh != null && g.ga != null).length;
-    const liveSig = games.filter((g) => LIVE_ST.has(g.st)).map((g) => `${g.id}:${g.gh}-${g.ga}`).sort().join(",");
+    const liveSig = games.filter((g) => LIVE_ST.has(g.st)).map((g) => `${g.id}:${g.gh}-${g.ga}:${Math.floor((((g as any).el as number) || 0) / 5)}`).sort().join(",");
     const stSig = groups.flat().reduce((a, r: any) => a + (r.points || 0) * 31 + (r.all?.played || 0), 0);
-    const signature = `v3|${finishedCount}|${liveSig}|${stSig}`;
+    const signature = `v4|${finishedCount}|${liveSig}|${stSig}`;
     const { data: cached } = await supabase.from("league_prognosis").select("payload, signature, computed_at").eq("league_id", leagueId).eq("season", season).maybeSingle();
     if (cached) {
       const age = Date.now() - new Date(cached.computed_at).getTime();
       if (cached.signature === signature && age < 6 * 3600 * 1000) return json(cached.payload);
-      if (hasLive && age < 60 * 1000) return json(cached.payload); // jogo rolando: no máximo 1 cálculo por minuto
+      if (hasLive && age < 20 * 1000) return json(cached.payload); // jogo rolando: no máximo 1 cálculo a cada 20 s (protege o servidor)
     }
 
     const names = new Map<number, { name: string; logo: string | null }>();
