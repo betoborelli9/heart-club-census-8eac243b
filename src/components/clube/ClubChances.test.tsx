@@ -309,6 +309,22 @@ describe("Chances do clube", () => {
     expect(first.style.color).toBe("rgb(251, 191, 36)"); // dourado, nunca a cor do clube
   });
 
+  it("meta impossível (precisaria de mais de 100% dos pontos que restam) diz 'fora do alcance' e nunca mostra % acima de 100", async () => {
+    state.payload = payload();
+    const g = state.payload.groups[0];
+    g.cutMedian = [40, 11, 8, 4]; // campeão precisaria de 40 pts: tem 10 e só restam 6 possíveis (2 jogos)
+    renderIt();
+    await screen.findByTestId("chances-cuts");
+    const first = screen.getAllByTestId("cut-row")[0].textContent || "";
+    expect(first).toContain("chances.out_of_reach");
+    expect(first).toContain('"max":6');
+    expect(first).not.toContain("chances.need");
+    for (const r of screen.getAllByTestId("cut-row")) {
+      const m = /"n":(\d+)\}.*chances\.need:\{"n":(\d+)/.exec(r.textContent || "");
+      if (m) expect(Number(m[2])).toBeLessThanOrEqual(100);
+    }
+  });
+
   it("casa/fora dos jogos que faltam em branco e legível", async () => {
     renderIt();
     await screen.findByTestId("chances");

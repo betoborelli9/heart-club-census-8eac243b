@@ -306,7 +306,9 @@ export default function ClubChances({ teamId, leagueId, season, accent = "#ff620
                       ? r.escape
                         ? t("chances.safe_now")
                         : t("chances.reached")
-                      : `${t("chances.cut_missing", { n: r.need.need })}${r.need.pct != null ? ` · ${t("chances.need", { n: r.need.pct })}${r.need.impossible ? ` (${t("chances.hard_goal")})` : ""}` : ""}`}
+                      : r.need.impossible
+                        ? `${t("chances.cut_missing", { n: r.need.need })} · ${t("chances.out_of_reach", { max: 3 * me.remaining })}`
+                        : `${t("chances.cut_missing", { n: r.need.need })}${r.need.pct != null ? ` · ${t("chances.need", { n: r.need.pct })}` : ""}`}
                   </span>
                 </span>
                 <span className="shrink-0 text-right">

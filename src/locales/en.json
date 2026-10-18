@@ -944,7 +944,8 @@
     "or_better": "or better",
     "cum_note": "Each column adds the zones above: PO is the chance of play-off or better (includes direct promotion). REB is relegation only.",
     "col_pts": "Pts",
-    "col_first": "1st"
+    "col_first": "1st",
+    "out_of_reach": "out of reach: only {{max}} points are still available"
   },
   "jogos": {
     "title": "Matches",

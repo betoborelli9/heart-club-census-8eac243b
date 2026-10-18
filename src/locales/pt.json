@@ -944,7 +944,8 @@
     "or_better": "ou melhor",
     "cum_note": "Cada coluna soma as faixas de cima: PO é a chance de play-off ou melhor (inclui o acesso direto). REB é só o rebaixamento.",
     "col_pts": "Pts",
-    "col_first": "1º"
+    "col_first": "1º",
+    "out_of_reach": "fora do alcance: só restam {{max}} pontos possíveis"
   },
   "jogos": {
     "title": "Jogos",
