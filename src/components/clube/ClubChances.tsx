@@ -515,7 +515,7 @@ export default function ClubChances({ teamId, leagueId, season, accent = "#ff620
               ? [{ key: bottomZ.label, label: zoneShort(bottomZ.name), title: bottomZ.name, color: bottomZ.color, val: (tm: TeamP) => tm.zoneProb[bottomZ.label] ?? 0 } as Col]
               : []),
           ];
-          const colsWidth = cols.length * 40 + Math.max(0, cols.length - 1) * 4; // cada coluna 40 px, 4 px entre elas
+          const colsWidth = cols.length * 36 + Math.max(0, cols.length - 1) * 4; // cada coluna 36 px, 4 px entre elas
           return (
             <>
               <div className="mb-1 flex items-center gap-1.5 px-[calc(0.5rem+1px)] text-[8px] font-black uppercase tracking-wide text-white/60" data-testid="all-head">
@@ -525,7 +525,7 @@ export default function ClubChances({ teamId, leagueId, season, accent = "#ff620
                 <span className="w-7 text-right">{t("chances.col_pts")}</span>
                 <span className="flex shrink-0 gap-1" style={{ width: colsWidth }}>
                   {cols.map((c) => (
-                    <span key={c.key} className="w-10 text-right" style={{ color: c.color }} title={c.title} data-testid="all-col">
+                    <span key={c.key} className="w-9 text-right" style={{ color: c.color }} title={c.title} data-testid="all-col">
                       {c.label}
                     </span>
                   ))}
@@ -543,7 +543,7 @@ export default function ClubChances({ teamId, leagueId, season, accent = "#ff620
                       >
                         <span className="w-6 text-center text-[11px] font-black text-white/50">{tm.position}</span>
                         <ClubLogo src={tm.logo || undefined} alt={tm.name} clubName={tm.name} size="xs" className="h-5 w-5 shrink-0" />
-                        <span className="min-w-0 flex-1 truncate text-[12px] font-bold">{tm.name}</span>
+                        <span className="min-w-0 flex-1 line-clamp-2 break-words text-[12px] font-bold leading-tight" data-testid="all-name">{tm.name}</span>
                         <span className="w-7 text-right text-[11px] tabular-nums text-white/60">{tm.points}</span>
                         <span className="flex shrink-0 gap-1" style={{ width: colsWidth }}>
                           {isNeutral(tm.zoneProb, tm.title) ? (
@@ -552,7 +552,7 @@ export default function ClubChances({ teamId, leagueId, season, accent = "#ff620
                             cols.map((c) => {
                               const p = c.val(tm);
                               return (
-                                <span key={c.key} className="w-10 text-right text-[11px] font-black tabular-nums" style={{ color: p >= 0.005 ? c.color : "rgba(255,255,255,0.28)" }} data-testid="all-cell">
+                                <span key={c.key} className="w-9 text-right text-[10.5px] font-black tabular-nums" style={{ color: p >= 0.005 ? c.color : "rgba(255,255,255,0.28)" }} data-testid="all-cell">
                                   {pctFmt(p)}
                                 </span>
                               );
