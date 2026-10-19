@@ -13,4 +13,15 @@ if ("serviceWorker" in navigator) {
   });
 }
 
+// Depois de uma publicação, a janela antiga pode tentar abrir uma tela cujo arquivo já foi trocado: recarrega uma vez para pegar a versão nova
+window.addEventListener("vite:preloadError", () => {
+  try {
+    if (sessionStorage.getItem("hc-preload-reload")) return; // nunca em loop
+    sessionStorage.setItem("hc-preload-reload", "1");
+  } catch {
+    /* sem armazenamento: recarrega mesmo assim, uma vez por abertura */
+  }
+  window.location.reload();
+});
+
 createRoot(document.getElementById("root")!).render(<App />);

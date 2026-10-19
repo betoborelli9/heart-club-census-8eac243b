@@ -1013,5 +1013,9 @@
     "here": "de probabilidad de terminar aquí",
     "legend": "Simulación estadística: no es una previsión segura ni garantía de resultado.",
     "count_one": "1 partido simulado"
+  },
+  "update": {
+    "available": "Hay una nueva versión de Heart Club",
+    "action": "Actualizar"
   }
 }

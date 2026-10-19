@@ -21,6 +21,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { UserProvider } from "@/contexts/UserContext";
 import { ViewedClubProvider } from "@/contexts/ViewedClubContext";
 import FeedbackWidget from "@/components/FeedbackWidget";
+import UpdateBanner from "@/components/UpdateBanner";
 // Aviso "Instalar App" DESLIGADO a pedido do Beto (08/10/2026): só volta quando o app Android estiver público.
 // Para religar: reimportar InstallAppButton de "@/components/InstallAppButton" e renderizar <InstallAppButton /> abaixo do FeedbackWidget.
 import AppNavBar from "@/components/AppNavBar";
@@ -158,6 +159,7 @@ const App = () => (
           </Routes>
           </Suspense>
           <FeedbackWidget />
+          <UpdateBanner />
           <GlobalNav />
           <GlobalFooter />
           <SimBanner />

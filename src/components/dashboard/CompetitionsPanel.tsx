@@ -114,8 +114,8 @@ export default function CompetitionsPanel({ clubName, teamId: clubTeamIdProp, pr
   const openTeam = (teamId: number | undefined, leagueId: number, season: number) => {
     if (teamId) navigate(`/clube/${teamId}?liga=${leagueId}&temp=${season}`);
   };
-  // Percentuais à vista desde o início (campeonato sem chances volta sozinho para as estatísticas)
-  const [showChances, setShowChances] = useState(true);
+  // A tabela de classificação abre CLÁSSICA (pontos, jogos, vitórias, empates, derrotas, saldo). As chances ficam no botão "Chances %" e na aba Chances da página do clube.
+  const [showChances, setShowChances] = useState(false);
   // chances por campeonato: undefined = ainda não pedido, null = carregando, false = formato sem chances
   const [chances, setChances] = useState<Record<number, any>>({});
   const [loading, setLoading] = useState(true);

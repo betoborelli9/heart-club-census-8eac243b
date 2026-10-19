@@ -72,22 +72,37 @@ const renderPanel = () =>
     </MemoryRouter>,
   );
 
+const openChances = () => fireEvent.click(screen.getByTestId("chances-toggle"));
+
 describe("Tabela do Dashboard — chances %", () => {
   beforeEach(() => {
     state.prognosis = prognosis();
     state.invokes = [];
   });
 
-  it("os percentuais já aparecem de cara (sem tocar em nada): ACESSO, PO e REB, e o servidor é consultado na abertura", async () => {
+  it("a tabela de classificação abre CLÁSSICA: P J V E D SG, sem colunas de porcentagem e sem consultar chances", async () => {
     renderPanel();
+    await screen.findByTestId("chances-toggle");
+    await waitFor(() => expect(screen.getAllByRole("row").length).toBeGreaterThan(3));
+    for (const h of ["P", "J", "V", "E", "D", "SG"]) expect(screen.getAllByText(h).length).toBeGreaterThanOrEqual(1);
+    expect(screen.queryAllByTestId("chance-cell").length).toBe(0);
+    for (const h of ["ACESSO", "PO", "REB"]) expect(screen.queryAllByText(h).length).toBe(0);
+    expect(state.invokes).not.toContain("league-prognosis"); // nem gasta consulta: só quando o torcedor pedir as chances
+  });
+
+  it("'Chances %' (opcional) mostra ACESSO, PO e REB no lugar de V E D SG, e consulta o servidor só então", async () => {
+    renderPanel();
+    await screen.findByTestId("chances-toggle");
+    openChances();
     await waitFor(() => expect(screen.getAllByTestId("chance-cell").length).toBeGreaterThan(0));
     expect(state.invokes).toContain("league-prognosis");
     for (const h of ["ACESSO", "PO", "REB"]) expect(screen.getAllByText(h).length).toBeGreaterThanOrEqual(1);
-    expect(screen.queryAllByText("SG").length).toBe(0);
   });
 
   it("mostra a chance de cada clube em cada objetivo", async () => {
     renderPanel();
+    await screen.findByTestId("chances-toggle");
+    openChances();
     await waitFor(() => expect(screen.getAllByTestId("chance-cell").length).toBe(12)); // 4 clubes com chance × 3 zonas
     const rows = screen.getAllByRole("row");
     const vila = rows.find((r) => r.textContent?.includes("Vila Nova"))!;
@@ -99,6 +114,8 @@ describe("Tabela do Dashboard — chances %", () => {
 
   it("clube sem chance prática de subir ou cair aparece como NEUTRO numa célula só, e quem tem chance não", async () => {
     renderPanel();
+    await screen.findByTestId("chances-toggle");
+    openChances();
     const neutral = await screen.findAllByTestId("chance-neutral");
     expect(neutral.length).toBe(1);
     const row = neutral[0].closest("tr")!;
@@ -111,17 +128,20 @@ describe("Tabela do Dashboard — chances %", () => {
 
   it("'Estatísticas' traz V E D SG de volta e 'Chances %' volta às colunas de chance", async () => {
     renderPanel();
+    await screen.findByTestId("chances-toggle");
+    expect(screen.queryAllByTestId("chance-cell").length).toBe(0); // começa clássica
+    openChances();
     await waitFor(() => expect(screen.getAllByTestId("chance-cell").length).toBeGreaterThan(0));
     fireEvent.click(screen.getByText("clube.view_stats"));
     await waitFor(() => expect(screen.queryAllByTestId("chance-cell").length).toBe(0));
     expect(screen.getAllByText("SG").length).toBeGreaterThan(0);
-    fireEvent.click(screen.getByTestId("chances-toggle"));
-    await waitFor(() => expect(screen.getAllByTestId("chance-cell").length).toBeGreaterThan(0));
   });
 
   it("campeonato em formato sem chances (copa/grupos especiais): avisa e mostra a tabela normal", async () => {
     state.prognosis = { supported: false, reason: "formato", groups: [] };
     renderPanel();
+    await screen.findByTestId("chances-toggle");
+    openChances();
     expect(await screen.findByTestId("chances-unavailable")).toBeTruthy();
     expect(screen.queryAllByTestId("chance-cell").length).toBe(0);
     expect(screen.getAllByText("SG").length).toBeGreaterThan(0);
