@@ -908,7 +908,7 @@
     "medium": "medium",
     "easy": "low",
     "all": "All clubs",
-    "legend": "Columns: points · chance of winning the title (1st place) · chance of the last zone (e.g. REL = relegation)",
+    "legend": "Columns: points and the chance of each zone. The play-off column already includes direct promotion (play-off or better); mid-table and relegation are exact.",
     "method": "Statistical estimate: the model measures each team's attack and defence from the season's results and simulates the remaining matches {{sims}} times. It is a probability, not a guarantee.",
     "how_btn": "How we calculate",
     "how_title": "How we calculate the chances",

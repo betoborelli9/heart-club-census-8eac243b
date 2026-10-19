@@ -908,7 +908,7 @@
     "medium": "media",
     "easy": "baja",
     "all": "Todos los clubes",
-    "legend": "Columnas: puntos · probabilidad de ser campeón (1º lugar) · probabilidad de la última franja (ej.: DES = descenso)",
+    "legend": "Columnas: puntos y la probabilidad de cada franja. La franja de play-off ya incluye el ascenso directo (play-off o mejor); zona neutra y descenso son exactos.",
     "method": "Estimación estadística: el modelo mide el ataque y la defensa de cada equipo con los resultados de la temporada y simula {{sims}} veces los partidos restantes. Es una probabilidad, no una garantía.",
     "how_btn": "Cómo calculamos",
     "how_title": "Cómo calculamos las probabilidades",

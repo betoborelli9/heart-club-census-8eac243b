@@ -908,7 +908,7 @@
     "medium": "média",
     "easy": "baixa",
     "all": "Todos os clubes",
-    "legend": "Colunas: pontos · chance de ser campeão (1º lugar) · chance da última faixa (ex.: REB = rebaixamento)",
+    "legend": "Colunas: pontos e a chance de cada faixa. A faixa de play-off já inclui o acesso direto (play-off ou melhor); neutro e rebaixamento são exatos.",
     "method": "Estimativa estatística: o modelo mede o ataque e a defesa de cada time pelos resultados do campeonato e simula {{sims}} vezes os jogos que faltam. É uma probabilidade, não uma garantia.",
     "how_btn": "Como calculamos",
     "how_title": "Como calculamos as chances",

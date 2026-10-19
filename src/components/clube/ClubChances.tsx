@@ -497,51 +497,75 @@ export default function ClubChances({ teamId, leagueId, season, accent = "#ff620
       <section data-testid="chances-all">
         <h3 className="mb-2 text-[11px] font-black uppercase tracking-widest text-white/70">{t("chances.all")}</h3>
         {(() => {
-          const lastZ = zones.find((z) => z.positions[z.positions.length - 1] === total) ?? zones[0];
+          // Colunas: faixas de cima (acesso direto e play-off OU MELHOR), neutro e rebaixamento. Em ligas com muitas faixas: a primeira e a última de cima.
+          type Col = { key: string; label: string; title: string; color: string; val: (tm: TeamP) => number };
+          const topCols = topZ.length > 2 ? [topZ[0], topZ[topZ.length - 1]] : topZ;
+          const cols: Col[] = [
+            ...topCols.map((z) => ({
+              key: z.label,
+              label: zoneShort(z.name),
+              title: topZ.indexOf(z) > 0 ? `${z.name} (${t("chances.or_better")})` : z.name,
+              color: z.color,
+              val: (tm: TeamP) => cumZoneProbs(zones, total, tm.dist, tm.zoneProb)[z.label] ?? 0,
+            })),
+            ...(neutralPos.length
+              ? [{ key: "__neutral", label: t("chances.neutral"), title: t("chances.sum_neutral"), color: "#a1a1aa", val: (tm: TeamP) => neutralPos.reduce((acc, p) => acc + (tm.dist[p - 1] ?? 0), 0) } as Col]
+              : []),
+            ...(bottomZ
+              ? [{ key: bottomZ.label, label: zoneShort(bottomZ.name), title: bottomZ.name, color: bottomZ.color, val: (tm: TeamP) => tm.zoneProb[bottomZ.label] ?? 0 } as Col]
+              : []),
+          ];
+          const colsWidth = cols.length * 40 + Math.max(0, cols.length - 1) * 4; // cada coluna 40 px, 4 px entre elas
           return (
-            <div className="mb-1 flex items-center gap-2 px-[calc(0.5rem+1px)] text-[9px] font-black uppercase tracking-wider text-white/60" data-testid="all-head">
-              <span className="w-6" />
-              <span className="w-5" />
-              <span className="min-w-0 flex-1" />
-              <span className="w-8 text-right">{t("chances.col_pts")}</span>
-              <span className="w-10 text-right" style={{ color: "#fbbf24" }}>{t("chances.col_first")}</span>
-              <span className="w-10 text-right" style={{ color: lastZ?.color ?? "#ef4444" }}>{lastZ ? zoneShort(lastZ.name) : ""}</span>
-            </div>
+            <>
+              <div className="mb-1 flex items-center gap-1.5 px-[calc(0.5rem+1px)] text-[8px] font-black uppercase tracking-wide text-white/60" data-testid="all-head">
+                <span className="w-6" />
+                <span className="w-5" />
+                <span className="min-w-0 flex-1" />
+                <span className="w-7 text-right">{t("chances.col_pts")}</span>
+                <span className="flex shrink-0 gap-1" style={{ width: colsWidth }}>
+                  {cols.map((c) => (
+                    <span key={c.key} className="w-10 text-right" style={{ color: c.color }} title={c.title} data-testid="all-col">
+                      {c.label}
+                    </span>
+                  ))}
+                </span>
+              </div>
+              <ul className="space-y-1">
+                {[...(grp.teams ?? [])]
+                  .sort((x, y) => x.position - y.position)
+                  .map((tm) => (
+                    <li key={tm.id}>
+                      <button
+                        onClick={() => navigate(`/clube/${tm.id}?liga=${leagueId}&temp=${season}&aba=chances`)}
+                        className="flex min-h-[48px] w-full items-center gap-1.5 rounded-xl border px-2 py-2 text-left"
+                        style={{ borderColor: tm.id === teamId ? accent : "rgba(255,255,255,0.08)", background: tm.id === teamId ? `${accent}22` : "rgba(255,255,255,0.03)" }}
+                      >
+                        <span className="w-6 text-center text-[11px] font-black text-white/50">{tm.position}</span>
+                        <ClubLogo src={tm.logo || undefined} alt={tm.name} clubName={tm.name} size="xs" className="h-5 w-5 shrink-0" />
+                        <span className="min-w-0 flex-1 truncate text-[12px] font-bold">{tm.name}</span>
+                        <span className="w-7 text-right text-[11px] tabular-nums text-white/60">{tm.points}</span>
+                        <span className="flex shrink-0 gap-1" style={{ width: colsWidth }}>
+                          {isNeutral(tm.zoneProb, tm.title) ? (
+                            <span className="w-full rounded-full bg-white/10 px-2 py-0.5 text-center text-[9px] font-black uppercase tracking-wider text-white/50" data-testid="all-neutral">{t("chances.neutral")}</span>
+                          ) : (
+                            cols.map((c) => {
+                              const p = c.val(tm);
+                              return (
+                                <span key={c.key} className="w-10 text-right text-[11px] font-black tabular-nums" style={{ color: p >= 0.005 ? c.color : "rgba(255,255,255,0.28)" }} data-testid="all-cell">
+                                  {pctFmt(p)}
+                                </span>
+                              );
+                            })
+                          )}
+                        </span>
+                      </button>
+                    </li>
+                  ))}
+              </ul>
+            </>
           );
         })()}
-        <ul className="space-y-1">
-          {[...(grp.teams ?? [])]
-            .sort((a, b) => a.position - b.position)
-            .map((tm) => {
-              const top = zones[0];
-              const bottom = zones.find((z) => z.positions[z.positions.length - 1] === total);
-              return (
-                <li key={tm.id}>
-                  <button
-                    onClick={() => navigate(`/clube/${tm.id}?liga=${leagueId}&temp=${season}&aba=chances`)}
-                    className="flex min-h-[48px] w-full items-center gap-2 rounded-xl border px-2 py-2 text-left"
-                    style={{ borderColor: tm.id === teamId ? accent : "rgba(255,255,255,0.08)", background: tm.id === teamId ? `${accent}22` : "rgba(255,255,255,0.03)" }}
-                  >
-                    <span className="w-6 text-center text-[11px] font-black text-white/50">{tm.position}</span>
-                    <ClubLogo src={tm.logo || undefined} alt={tm.name} clubName={tm.name} size="xs" className="h-5 w-5 shrink-0" />
-                    <span className="min-w-0 flex-1 truncate text-[12px] font-bold">{tm.name}</span>
-                    <span className="w-8 text-right text-[11px] tabular-nums text-white/60">{tm.points}</span>
-                    {isNeutral(tm.zoneProb, tm.title) ? (
-                      <span className="w-20 rounded-full bg-white/10 px-2 py-0.5 text-center text-[9px] font-black uppercase tracking-wider text-white/50" data-testid="all-neutral">{t("chances.neutral")}</span>
-                    ) : (
-                      <>
-                        <span className="w-10 text-right text-[11px] font-black tabular-nums" style={{ color: "#fbbf24" }} title={t("chances.first")}>{pctFmt(tm.title)}</span>
-                        {bottom && (
-                          <span className="w-10 text-right text-[11px] font-black tabular-nums text-red-400" title={bottom.name}>{pctFmt(tm.zoneProb[bottom.label] ?? 0)}</span>
-                        )}
-                        {!bottom && top && <span className="w-10 text-right text-[11px] tabular-nums" style={{ color: top.color }}>{pctFmt(tm.zoneProb[top.label] ?? 0)}</span>}
-                      </>
-                    )}
-                  </button>
-                </li>
-              );
-            })}
-        </ul>
         <p className="mt-1 text-[10px] text-white/60">{t("chances.legend")}</p>
       </section>
 

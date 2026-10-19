@@ -300,15 +300,36 @@ describe("Chances do clube", () => {
     expect(c3.B).toBe(1);
   });
 
-  it("lista 'Todos os clubes': colunas com título (pontos, 1º lugar e rebaixamento) e cores diferentes", async () => {
+  it("lista 'Todos os clubes': colunas com título (pontos, faixas, neutro e rebaixamento), cada uma na sua cor", async () => {
     renderIt();
     await screen.findByTestId("chances-all");
     const head = screen.getByTestId("all-head").textContent || "";
     expect(head).toContain("chances.col_pts");
-    expect(head).toContain("chances.col_first");
+    expect(head).toContain("ACESSO");
+    expect(head).toContain("chances.neutral");
     expect(head).toContain("REB");
-    const first = within(screen.getByTestId("chances-all")).getAllByTitle("chances.first")[0] as HTMLElement;
-    expect(first.style.color).toBe("rgb(251, 191, 36)"); // dourado, nunca a cor do clube
+    const cols = screen.getAllByTestId("all-col") as HTMLElement[];
+    expect(cols.length).toBe(3); // acesso · neutro · rebaixamento (este campeonato de teste tem só essas faixas)
+    expect(new Set(cols.map((c) => c.style.color)).size).toBe(3); // cores diferentes
+  });
+
+  it("lista 'Todos os clubes' mostra acesso direto, play-off (ou melhor), neutro e rebaixamento — e o play-off nunca é menor que o acesso", async () => {
+    state.payload = payload();
+    const g = state.payload.groups[0];
+    g.zones = [
+      { label: "Promotion", positions: [1] },
+      { label: "Promotion Play-offs", positions: [2] },
+      { label: "Relegation - Serie B", positions: [4] },
+    ];
+    g.teams[1] = { ...g.teams[1], zoneProb: { Promotion: 0.1, "Promotion Play-offs": 0.5, "Relegation - Serie B": 0.1 } }; // Nosso FC: dist [0.1, 0.5, 0.3, 0.1]
+    renderIt();
+    await screen.findByTestId("chances-all");
+    const head = (screen.getAllByTestId("all-col") as HTMLElement[]).map((c) => c.textContent);
+    expect(head).toEqual(["ACESSO", "PO", "chances.neutral", "REB"]);
+    const row = screen.getAllByTestId("chances-all")[0].querySelectorAll("li")[1]; // 2º colocado = Nosso FC
+    const cells = Array.from(row.querySelectorAll('[data-testid="all-cell"]')).map((c) => c.textContent);
+    expect(cells).toEqual(["10%", "60%", "30%", "10%"]); // 60% = 10% (acesso) + 50% (play-off): ou melhor
+    expect(Number(cells[1]!.replace("%", ""))).toBeGreaterThanOrEqual(Number(cells[0]!.replace("%", "")));
   });
 
   it("meta impossível (precisaria de mais de 100% dos pontos que restam) diz 'fora do alcance' e nunca mostra % acima de 100", async () => {
