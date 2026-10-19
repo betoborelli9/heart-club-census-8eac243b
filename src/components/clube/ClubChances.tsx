@@ -543,7 +543,7 @@ export default function ClubChances({ teamId, leagueId, season, accent = "#ff620
                       >
                         <span className="w-6 text-center text-[11px] font-black text-white/50">{tm.position}</span>
                         <ClubLogo src={tm.logo || undefined} alt={tm.name} clubName={tm.name} size="xs" className="h-5 w-5 shrink-0" />
-                        <span className="min-w-0 flex-1 line-clamp-2 break-words text-[12px] font-bold leading-tight" data-testid="all-name">{tm.name}</span>
+                        <span className="min-w-0 flex-1 line-clamp-2 break-words text-[11px] font-bold leading-tight" data-testid="all-name">{tm.name}</span>
                         <span className="w-7 text-right text-[11px] tabular-nums text-white/60">{tm.points}</span>
                         <span className="flex shrink-0 gap-1" style={{ width: colsWidth }}>
                           {isNeutral(tm.zoneProb, tm.title) ? (
