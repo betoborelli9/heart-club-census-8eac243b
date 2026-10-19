@@ -1,12 +1,13 @@
 /**
  * [CAMINHO]: src/components/FeedbackWidget.tsx
  * Widget global de feedback. Aparece em todas as páginas.
- * Salva em public.user_feedback com URL atual + user agent.
+ * O torcedor escreve aqui e o botão ENVIAR abre o WhatsApp OFICIAL do Heart Club (src/lib/contact.ts) com a mensagem pronta;
+ * uma cópia também é guardada em public.user_feedback (URL atual + user agent) para o painel Admin.
  * Borda LED dinâmica com cor do clube do torcedor (fallback laranja #ff6200).
  */
 
 import { useState } from "react";
-import { MessageCircle, Lightbulb, Bug, X, Loader2 } from "lucide-react";
+import { MessageCircle, Lightbulb, Bug, X, Loader2, Send } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import { useUser } from "@/contexts/UserContext";
@@ -15,6 +16,7 @@ import { toast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useTranslationApp } from "@/hooks/useTranslationApp";
+import { feedbackWhatsAppText, whatsappLink } from "@/lib/contact";
 
 type FeedbackType = "sugestao" | "erro";
 
@@ -39,6 +41,10 @@ export default function FeedbackWidget() {
       });
       return;
     }
+    const pageUrl = typeof window !== "undefined" ? window.location.href : null;
+    const link = whatsappLink(feedbackWhatsAppText(type, message, pageUrl));
+    const opened = typeof window !== "undefined" ? window.open(link, "_blank", "noopener,noreferrer") : null;
+    if (!opened && typeof window !== "undefined") window.location.href = link; // bloqueador de pop-up: segue na mesma aba
     setSending(true);
     const { error } = await supabase.from("user_feedback" as any).insert({
       user_id: user?.id ?? null,
@@ -48,17 +54,10 @@ export default function FeedbackWidget() {
       user_agent: typeof navigator !== "undefined" ? navigator.userAgent : null,
     });
     setSending(false);
-    if (error) {
-      toast({
-        title: t("feedback.error.send_failed_title"),
-        description: t("feedback.error.send_failed_desc"),
-        variant: "destructive",
-      });
-      return;
-    }
+    if (error) console.warn("[feedback] cópia no painel não foi guardada (o WhatsApp já foi aberto):", error.message);
     toast({
-      title: t("feedback.success.feedback_received_title"),
-      description: t("feedback.success.feedback_received_desc"),
+      title: t("components.feedback_widget.whatsapp_opened_title"),
+      description: t("components.feedback_widget.whatsapp_opened_desc"),
     });
     setMessage("");
     setOpen(false);
@@ -69,6 +68,7 @@ export default function FeedbackWidget() {
       {/* FAB */}
       <motion.button
         onClick={() => setOpen(true)}
+        data-testid="feedback-fab"
         whileHover={{ scale: 1.08 }}
         whileTap={{ scale: 0.94 }}
         className="fixed bottom-20 right-6 z-[999] w-12 h-12 rounded-full flex items-center justify-center bg-black"
@@ -137,6 +137,7 @@ export default function FeedbackWidget() {
               </div>
 
               <Textarea
+                data-testid="feedback-text"
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
                 placeholder={type === "sugestao" ? t("components.feedback_widget.placeholder_suggestion") : t("components.feedback_widget.placeholder_bug")}
@@ -150,6 +151,7 @@ export default function FeedbackWidget() {
               <Button
                 onClick={handleSubmit}
                 disabled={sending}
+                data-testid="feedback-send"
                 className="w-full mt-2 italic font-bold"
                 style={{
                   backgroundColor: "#ff6200",
@@ -157,10 +159,13 @@ export default function FeedbackWidget() {
                   boxShadow: `0 0 14px ${glow}80`,
                 }}
               >
-                {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : t("components.feedback_widget.send")}
+                {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : (<><Send className="w-4 h-4 mr-2" /> {t("components.feedback_widget.send_whatsapp")}</>)}
               </Button>
 
-              <p className="text-[10px] text-white/30 mt-3 italic text-center">
+              <p className="text-[11px] text-white/60 mt-3 italic text-center" data-testid="feedback-whatsapp-note">
+                {t("components.feedback_widget.whatsapp_note")}
+              </p>
+              <p className="text-[10px] text-white/40 mt-1 italic text-center">
                 {t("components.feedback_widget.url_disclaimer")}
               </p>
             </motion.div>

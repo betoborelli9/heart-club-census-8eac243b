@@ -239,7 +239,11 @@
       "placeholder_suggestion": "Tu idea para hacer Heart Club aún más épico...",
       "placeholder_bug": "Describe el error: qué pasó, en qué pantalla, qué esperabas...",
       "send": "Enviar Feedback",
-      "url_disclaimer": "Tu URL actual se incluirá automáticamente para ayudarnos a investigar."
+      "url_disclaimer": "Tu URL actual se incluirá automáticamente para ayudarnos a investigar.",
+      "send_whatsapp": "Enviar por WhatsApp",
+      "whatsapp_note": "Al enviar, se abre el WhatsApp oficial de Heart Club (+55 62 9697-0121) con tu mensaje listo. Solo toca enviar allí.",
+      "whatsapp_opened_title": "WhatsApp abierto",
+      "whatsapp_opened_desc": "Confirma el envío en WhatsApp para que el mensaje llegue hasta nosotros."
     }
   },
   "feedback": {
