@@ -11,9 +11,14 @@ export const DAY_OFFSETS = [-3, -2, -1, 0, 1, 2, 3, 4, 5, 6, 7];
 export default function DayStrip({ offset, onChange, marks }: { offset: number; onChange: (o: number) => void; marks?: Set<number> }) {
   const { t, language } = useTranslationApp();
   const refs = useRef<Record<number, HTMLButtonElement | null>>({});
+  const strip = useRef<HTMLDivElement | null>(null);
 
+  // Centraliza o dia escolhido SÓ na horizontal, dentro da própria faixa (scrollIntoView puxava a página inteira para baixo)
   useEffect(() => {
-    refs.current[offset]?.scrollIntoView?.({ inline: "center", block: "nearest", behavior: "smooth" });
+    const el = refs.current[offset];
+    const box = strip.current;
+    if (!el || !box || typeof box.scrollTo !== "function") return;
+    box.scrollTo({ left: el.offsetLeft - (box.clientWidth - el.clientWidth) / 2, behavior: "smooth" });
   }, [offset]);
 
   const label = (o: number) => {
@@ -31,7 +36,7 @@ export default function DayStrip({ offset, onChange, marks }: { offset: number; 
   };
 
   return (
-    <div className="no-scrollbar flex gap-1.5 overflow-x-auto px-3 pb-2" role="tablist" aria-label="dias" data-testid="day-strip">
+    <div ref={strip} className="no-scrollbar flex gap-1.5 overflow-x-auto px-3 pb-2" role="tablist" aria-label="dias" data-testid="day-strip">
       {DAY_OFFSETS.map((o) => (
         <button
           key={o}

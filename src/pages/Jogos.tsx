@@ -41,6 +41,10 @@ export default function Jogos() {
   const goBack = () => (location.key !== "default" ? navigate(-1) : navigate("/dashboard"));
   const { viewedClubName, viewedClubId, heartClubName, setViewedClubName, resetToHeart, isViewingHeart } = useViewedClub();
   const [offset, setOffset] = useState(0);
+  // Abrir a página (ou trocar de dia) sempre mostra os primeiros jogos: nada fica escondido atrás do cabeçalho fixo
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0 });
+  }, [offset]);
   const [onlyLive, setOnlyLive] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [now, setNow] = useState(() => Date.now());

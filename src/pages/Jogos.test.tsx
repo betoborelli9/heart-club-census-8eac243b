@@ -175,6 +175,27 @@ describe("Aba Jogos — só o clube em exibição e os campeonatos dele", () => 
     expect((await screen.findByTestId("where")).textContent).toBe("/clube/142?liga=72&temp=2026&aba=chances");
   });
 
+  it("ao abrir a página, e ao trocar de dia, volta ao topo: os primeiros jogos aparecem primeiro (nada escondido atrás do cabeçalho)", async () => {
+    const spy = vi.spyOn(window, "scrollTo").mockImplementation(() => {});
+    renderPage();
+    await screen.findAllByTestId("sec-league");
+    expect(spy).toHaveBeenCalledWith({ top: 0, left: 0 });
+    spy.mockClear();
+    fireEvent.click(screen.getAllByRole("tab")[0]); // troca de dia
+    await waitFor(() => expect(spy).toHaveBeenCalledWith({ top: 0, left: 0 }));
+    spy.mockRestore();
+  });
+
+  it("a faixa de dias centraliza o dia só na horizontal e nunca rola a página para baixo", async () => {
+    const page = vi.spyOn(window, "scrollTo").mockImplementation(() => {});
+    const into = vi.fn();
+    Element.prototype.scrollIntoView = into;
+    renderPage();
+    await screen.findAllByTestId("sec-league");
+    expect(into).not.toHaveBeenCalled(); // scrollIntoView puxava a página junto
+    page.mockRestore();
+  });
+
   it("a página tem botão de voltar; aberta direto (sem histórico) ele leva ao início", async () => {
     renderPage();
     await screen.findAllByTestId("sec-league");
