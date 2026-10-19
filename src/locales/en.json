@@ -154,7 +154,9 @@
     "invite": {
       "copied_title": "Link copied!",
       "copied_desc": "Share it with the fans 🔥"
-    }
+    },
+    "share_of": "{{pct}} of votes",
+    "share_hint": "The percentage is the share of Heart Club votes in this view. It is not a share of all football fans."
   },
   "common": {
     "copy": "Copy",

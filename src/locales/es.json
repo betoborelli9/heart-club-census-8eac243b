@@ -154,7 +154,9 @@
     "invite": {
       "copied_title": "¡Enlace copiado!",
       "copied_desc": "Comparte con la hinchada 🔥"
-    }
+    },
+    "share_of": "{{pct}} de los votos",
+    "share_hint": "El porcentaje es la parte de los votos de Heart Club en este recorte. No es el porcentaje de la afición del fútbol."
   },
   "common": {
     "copy": "Copiar",

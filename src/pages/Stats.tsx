@@ -29,6 +29,7 @@ import { useViewedClub } from "@/contexts/ViewedClubContext";
 import { supabase } from "@/integrations/supabase/client";
 import { searchClubsWithFallback } from "@/lib/search-clubs";
 import { ClubLogo } from "@/components/ClubLogo";
+import { scopeTotal, shareText } from "@/lib/vote-share";
 import { getHistoricalRivals } from "@/lib/rivalries";
 import { useTranslationApp } from "@/hooks/useTranslationApp";
 
@@ -253,6 +254,8 @@ const Stats = () => {
 
   // ─── Derived: position + targets ───
   const myIdx = ranking.findIndex((r) => r.club === clubName);
+  // Fatia de cada clube nos votos do Heart Club neste recorte (só quando o total é conhecido: lista não cheia)
+  const rankTotal = scopeTotal(ranking, 50);
   const myRow = myIdx >= 0 ? ranking[myIdx] : null;
   const aboveRow = myIdx > 0 ? ranking[myIdx - 1] : null;
   const top10Row = ranking[9];
@@ -472,7 +475,7 @@ const Stats = () => {
               </p>
               {myRow && (
                 <p className="text-xs text-white/60 mt-1">
-                  {t("ranking.position.current")} <span className="text-white font-black">#{myIdx + 1}</span> · {fmt(myRow.votes)} {t("ranking.position.votes")}
+                  {t("ranking.position.current")} <span className="text-white font-black">#{myIdx + 1}</span> · {fmt(myRow.votes)} {t("ranking.position.votes")}{shareText(myRow.votes, rankTotal) && <span title={t("ranking.share_hint")} data-testid="my-share"> · {t("ranking.share_of", { pct: shareText(myRow.votes, rankTotal) })}</span>}
                   {myRow.growth_24h > 0 && (
                     <span className="ml-2 text-green-400">{t("ranking.position.growth_24h", { value: fmt(myRow.growth_24h) })}</span>
                   )}
@@ -584,6 +587,7 @@ const Stats = () => {
             </p>
             {loadingRanking && <Loader2 className="h-4 w-4 animate-spin text-primary" />}
           </div>
+          {rankTotal && <p className="px-4 py-2 text-[10px] text-white/55 border-b border-white/5" data-testid="share-note">{t("ranking.share_hint")}</p>}
           <div className="divide-y divide-white/5">
             {ranking.length === 0 && !loadingRanking && (
               <p className="p-6 text-center text-white/40 italic text-sm">
@@ -615,6 +619,9 @@ const Stats = () => {
                     </p>
                     <p className="text-[10px] text-white/50">
                       {fmt(r.votes)} {t("ranking.table.votes_label")}
+                      {shareText(r.votes, rankTotal) && (
+                        <span className="text-white/80 font-bold" title={t("ranking.share_hint")} data-testid="row-share"> · {t("ranking.share_of", { pct: shareText(r.votes, rankTotal) })}</span>
+                      )}
                       {r.growth_24h > 0 && (
                         <span className="text-green-400 ml-2">{t("ranking.position.growth_24h", { value: fmt(r.growth_24h) })}</span>
                       )}
