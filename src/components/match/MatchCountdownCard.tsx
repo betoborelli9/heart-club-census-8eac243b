@@ -44,7 +44,7 @@ export function MatchCountdownCard({ fixture, diffMs, teamId }: { fixture: Fixtu
 
   return (
     <div
-      className="w-full overflow-hidden rounded-2xl p-3 sm:p-4"
+      className="w-full overflow-hidden rounded-2xl p-4 sm:p-5"
       style={{
         color: info.textColor,
         background: `linear-gradient(135deg, ${info.primary} 0%, ${info.primary} 62%, ${info.secondary} 160%)`,
@@ -53,31 +53,32 @@ export function MatchCountdownCard({ fixture, diffMs, teamId }: { fixture: Fixtu
       }}
       data-testid="match-card"
     >
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex min-w-0 flex-1 items-center gap-2">
-          <ClubLogo src={fixture.home.logo} alt={fixture.home.name} clubName={fixture.home.name} size="sm" />
-          <span className="truncate text-sm font-bold sm:text-base">{fixture.home.name}</span>
+      {/* Simétrico: mandante | centro | visitante, tudo centralizado */}
+      <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 sm:gap-4" data-testid="match-teams">
+        <div className="flex min-w-0 flex-col items-center gap-1.5 text-center" data-testid="match-home">
+          <ClubLogo src={fixture.home.logo} alt={fixture.home.name} clubName={fixture.home.name} size="md" />
+          <span className="line-clamp-2 break-words text-sm font-bold leading-tight sm:text-base">{fixture.home.name}</span>
         </div>
-        <span className="shrink-0 text-xs font-black opacity-70">×</span>
-        <div className="flex min-w-0 flex-1 items-center justify-end gap-2">
-          <span className="truncate text-right text-sm font-bold sm:text-base">{fixture.away.name}</span>
-          <ClubLogo src={fixture.away.logo} alt={fixture.away.name} clubName={fixture.away.name} size="sm" />
+        <span className="shrink-0 text-lg font-black opacity-70 sm:text-xl">×</span>
+        <div className="flex min-w-0 flex-col items-center gap-1.5 text-center" data-testid="match-away">
+          <ClubLogo src={fixture.away.logo} alt={fixture.away.name} clubName={fixture.away.name} size="md" />
+          <span className="line-clamp-2 break-words text-sm font-bold leading-tight sm:text-base">{fixture.away.name}</span>
         </div>
       </div>
 
-      <p className="mt-2 text-[11px] font-semibold opacity-80 sm:text-xs">
+      <p className="mt-3 text-center text-[11px] font-semibold opacity-80 sm:text-xs" data-testid="match-when">
         {fixture.league.name} • {dt}
       </p>
 
-      <div className="mt-2 space-y-1.5 text-[11px] sm:text-xs">
+      <div className="mt-2 flex flex-col items-center gap-1.5 text-center text-[11px] sm:text-xs">
         {info.stadium && (
-          <p className="flex items-center gap-1.5 font-semibold" data-testid="match-stadium">
+          <p className="flex items-center justify-center gap-1.5 font-semibold" data-testid="match-stadium">
             <Landmark className="h-3.5 w-3.5 shrink-0" />
             <span className="min-w-0 truncate">{info.stadium}</span>
           </p>
         )}
         {!info.hideWatch && (
-        <div className="flex flex-wrap items-center gap-1.5" data-testid="match-watch">
+        <div className="flex flex-wrap items-center justify-center gap-1.5" data-testid="match-watch">
           <Tv className="h-3.5 w-3.5 shrink-0" />
           <span className="font-semibold">{t("match.where_to_watch")}:</span>
           {info.canais === null ? null : info.canais.length > 0 ? (

@@ -236,4 +236,22 @@ describe("Página do clube — temporada completa", () => {
     await screen.findByTestId("club-summary");
     expect(screen.queryByTestId("club-heart-btn")).toBeNull();
   });
+
+  it("topo da página não estica no computador: conteúdo centralizado na mesma largura das abas (max-w-xl)", async () => {
+    renderAt();
+    await screen.findByTestId("club-summary");
+    const inner = screen.getByTestId("club-hero-inner");
+    expect(inner.className).toContain("max-w-xl");
+    expect(inner.className).toContain("mx-auto");
+    expect(inner.contains(screen.getByTestId("club-summary"))).toBe(true);
+  });
+
+  it("botão Meu clube fica centralizado e com largura própria (não estica de ponta a ponta)", async () => {
+    state.viewed = { heartClubName: "Flamengo", heartClubId: 127 };
+    renderAt();
+    await screen.findByTestId("club-summary");
+    const btn = screen.getByTestId("club-heart-btn");
+    expect(btn.className).toContain("max-w-[220px]");
+    expect(btn.className).not.toContain("flex-1");
+  });
 });

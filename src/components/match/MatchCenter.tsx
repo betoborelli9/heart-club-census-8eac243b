@@ -43,12 +43,14 @@ export function MatchCenter({ userId, teamIdOverride }: { userId?: string; teamI
   const diff = kickoff - now;
   const isLive = LIVE.has((liveState?.status || upcoming.status) as string);
 
+  // Qualquer estado do jogo (contagem, escalações, ao vivo) fica centralizado na mesma largura, sem esticar no computador
+  const wrap = (node: JSX.Element) => <div className="mx-auto w-full max-w-3xl" data-testid="match-wrap">{node}</div>;
   if (isLive) {
-    return <LiveMatchOverlay fixture={upcoming} liveState={liveState} />;
+    return wrap(<LiveMatchOverlay fixture={upcoming} liveState={liveState} />);
   }
   // T-40min em diante: mostra escalações se prontas; senão segue o countdown.
   if (diff <= 40 * 60 * 1000 && lineups?.ready) {
-    return <MatchLineupsCard fixture={upcoming} lineups={lineups.data || []} />;
+    return wrap(<MatchLineupsCard fixture={upcoming} lineups={lineups.data || []} />);
   }
-  return <MatchCountdownCard fixture={upcoming} diffMs={diff} teamId={teamId} />;
+  return wrap(<MatchCountdownCard fixture={upcoming} diffMs={diff} teamId={teamId} />);
 }

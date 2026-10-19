@@ -106,7 +106,7 @@ export default function ClubIdentityCard({ clubName }: Props) {
 
   if (loading) {
     return (
-      <div className="w-full max-w-7xl mx-auto px-4 mt-3">
+      <div className="w-full mx-auto">
         <div className="rounded-xl border border-white/5 bg-white/[0.02] h-16 animate-pulse" />
       </div>
     );
@@ -119,7 +119,7 @@ export default function ClubIdentityCard({ clubName }: Props) {
     .filter(Boolean) as string[];
 
   return (
-    <div className="w-full max-w-7xl mx-auto px-4 mt-3">
+    <div className="w-full mx-auto">
       <div className="relative rounded-xl border border-white/5 bg-white/[0.025] px-4 py-2.5">
         {/* LINHA 1 — CORES (centralizadas) */}
         <div className="flex items-center justify-center gap-2 mb-2">

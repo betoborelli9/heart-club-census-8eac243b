@@ -221,6 +221,7 @@ const Clube = () => {
         data-testid="club-hero"
         data-primary={primary}
       >
+        <div className="mx-auto w-full max-w-xl" data-testid="club-hero-inner">
         <div className="mb-3 flex items-center justify-between">
           <button onClick={() => navigate(-1)} className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-black/25 backdrop-blur" aria-label={t("clube.back")}>
             <ArrowLeft className="h-5 w-5" />
@@ -231,7 +232,7 @@ const Clube = () => {
               disabled={searchBusy}
               aria-label={t("clube.my_club_aria")}
               data-testid="club-heart-btn"
-              className="group mx-2 inline-flex h-12 min-w-0 flex-1 items-center justify-center gap-2 rounded-full border border-white/40 bg-white/90 px-4 text-black shadow-[0_6px_20px_rgba(0,0,0,0.35)] backdrop-blur transition-transform active:scale-95 disabled:opacity-60"
+              className="group mx-2 inline-flex h-12 w-full max-w-[220px] min-w-0 items-center justify-center gap-2 rounded-full border border-white/40 bg-white/90 px-4 text-black shadow-[0_6px_20px_rgba(0,0,0,0.35)] backdrop-blur transition-transform active:scale-95 disabled:opacity-60"
             >
               <Heart className="h-5 w-5 shrink-0 fill-red-500 text-red-500 transition-transform group-active:scale-110" />
               <span className="truncate text-[12px] font-black uppercase tracking-wide">{t("clube.my_club")}</span>
@@ -311,6 +312,7 @@ const Clube = () => {
             </div>
           </>
         )}
+        </div>
       </header>
 
       {/* Abas */}

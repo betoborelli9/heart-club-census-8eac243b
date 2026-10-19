@@ -220,7 +220,7 @@ const ClubBanner = ({
   };
 
   return (
-    <div className="w-full max-w-7xl mx-auto p-4">
+    <div className="w-full mx-auto">
       <style>{`
         @keyframes waveFlag {
           0%, 100% { background-position: 0% 50%; }

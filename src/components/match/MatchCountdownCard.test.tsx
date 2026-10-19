@@ -111,4 +111,21 @@ describe("Card do próximo jogo", () => {
     await new Promise((r) => setTimeout(r, 30));
     expect(screen.queryByTestId("match-watch")).toBeNull();
   });
+
+  it("layout simétrico: mandante, centro e visitante em 3 colunas, tudo centralizado (nada colado nas pontas)", async () => {
+    render(<MatchCountdownCard fixture={fixture} diffMs={1000} teamId={10} />);
+    await screen.findByTestId("match-stadium");
+    const teams = screen.getByTestId("match-teams");
+    expect(teams.className).toContain("grid-cols-[1fr_auto_1fr]"); // as duas pontas têm sempre a mesma largura
+    for (const id of ["match-home", "match-away"]) {
+      const el = screen.getByTestId(id);
+      expect(el.className).toContain("items-center");
+      expect(el.className).toContain("text-center");
+    }
+    expect(screen.getByTestId("match-home").textContent).toContain("Vila Nova");
+    expect(screen.getByTestId("match-away").textContent).toContain("Nautico Recife");
+    expect(screen.getByTestId("match-when").className).toContain("text-center");
+    expect(screen.getByTestId("match-stadium").className).toContain("justify-center");
+    expect(screen.getByTestId("match-watch").className).toContain("justify-center");
+  });
 });

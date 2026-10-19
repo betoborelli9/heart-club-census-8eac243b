@@ -207,7 +207,7 @@ const Dashboard = () => {
 
       {/* HEADER */}
       <header className="h-16 border-b border-white/5 bg-black/60 backdrop-blur-xl sticky top-0 z-[60]">
-        <div className="max-w-[1440px] mx-auto px-4 md:px-6 h-full flex items-center justify-between gap-4">
+        <div className="max-w-7xl mx-auto px-4 md:px-6 h-full flex items-center justify-between gap-4">
           <div className="flex items-center gap-3 cursor-pointer group min-w-0" onClick={() => navigate("/dashboard")}>
             <img src={logo} alt="Logo" className="h-7 w-auto shrink-0" />
             <span className="font-black italic text-xl tracking-tighter uppercase truncate">{t("header.brand")}</span>
@@ -229,7 +229,7 @@ const Dashboard = () => {
         </div>
       </header>
 
-      <main className="max-w-[1440px] mx-auto px-4 md:px-6 py-6 space-y-6 pb-24">
+      <main className="max-w-7xl mx-auto px-4 md:px-6 py-6 space-y-6 pb-24">
         {/* Alertas e termômetros — SÓ Master Admin (o banco também recusa os demais) */}
         {isMasterAdmin && <MasterAlerts />}
         {/* Mobile: pesquisa larga entre o header e o banner */}
