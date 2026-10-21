@@ -107,6 +107,11 @@ const Clube = () => {
   const [filter, setFilter] = useState<"all" | "done" | "next">("all");
   const [tab, setTab] = useState<"jogos" | "chances" | "simular" | "elenco">(sp.get("aba") === "elenco" ? "elenco" : sp.get("aba") === "chances" ? "chances" : sp.get("aba") === "simular" ? "simular" : "jogos");
   const [now, setNow] = useState(() => Date.now());
+  // Trocar de aba (Jogos, Chances, Simular, Elenco) também começa no topo, como qualquer página
+  const selectTab = (k: "jogos" | "chances" | "simular" | "elenco") => {
+    setTab(k);
+    window.scrollTo({ top: 0, left: 0 });
+  };
   const viewed = useViewedClubOptional();
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchBusy, setSearchBusy] = useState(false);
@@ -321,7 +326,7 @@ const Clube = () => {
           {([["jogos", t("clube.tab_games")], ["chances", t("clube.tab_chances")], ["simular", t("clube.tab_sim")], ["elenco", t("clube.tab_squad")]] as const).map(([k, label]) => (
             <button
               key={k}
-              onClick={() => setTab(k)}
+              onClick={() => selectTab(k)}
               aria-pressed={tab === k}
               className={`h-11 shrink-0 rounded-full px-5 text-[12px] font-black uppercase tracking-wide ${tab === k ? "bg-white text-black" : "bg-white/10 text-white/70"}`}
             >

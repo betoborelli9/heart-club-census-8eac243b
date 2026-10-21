@@ -254,4 +254,17 @@ describe("Página do clube — temporada completa", () => {
     expect(btn.className).toContain("max-w-[220px]");
     expect(btn.className).not.toContain("flex-1");
   });
+
+  it("trocar de aba (Jogos, Chances, Simular, Elenco) volta ao topo da página", async () => {
+    const spy = vi.spyOn(window, "scrollTo").mockImplementation(() => {});
+    renderAt();
+    await screen.findByTestId("club-summary");
+    spy.mockClear();
+    fireEvent.click(screen.getByText("clube.tab_chances"));
+    expect(spy).toHaveBeenCalledWith({ top: 0, left: 0 });
+    spy.mockClear();
+    fireEvent.click(screen.getByText("clube.tab_squad"));
+    expect(spy).toHaveBeenCalledWith({ top: 0, left: 0 });
+    spy.mockRestore();
+  });
 });
