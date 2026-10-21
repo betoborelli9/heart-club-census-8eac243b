@@ -22,6 +22,7 @@ import { UserProvider } from "@/contexts/UserContext";
 import { ViewedClubProvider } from "@/contexts/ViewedClubContext";
 import FeedbackWidget from "@/components/FeedbackWidget";
 import UpdateBanner from "@/components/UpdateBanner";
+import ScrollToTop from "@/components/ScrollToTop";
 // Aviso "Instalar App" DESLIGADO a pedido do Beto (08/10/2026): só volta quando o app Android estiver público.
 // Para religar: reimportar InstallAppButton de "@/components/InstallAppButton" e renderizar <InstallAppButton /> abaixo do FeedbackWidget.
 import AppNavBar from "@/components/AppNavBar";
@@ -102,6 +103,7 @@ const App = () => (
         <Toaster />
         <Sonner />
         <BrowserRouter>
+          <ScrollToTop />
           <AccessTracker />
           <Suspense
             fallback={
