@@ -51,7 +51,7 @@ function cleanChannels(list: unknown): string[] {
   return out;
 }
 
-async function askChannels(fx: Fx): Promise<{ ok: boolean; canais: string[] }> {
+async function askChannels(fx: Fx): Promise<{ ok: boolean; canais: string[]; erro?: string }> {
   const when = new Date(fx.date);
   const brt = new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Sao_Paulo", dateStyle: "full", timeStyle: "short" }).format(when);
   const prompt = `Pesquise na web onde assistir ao jogo ${fx.home?.name} x ${fx.away?.name}, pelo campeonato "${fx.league?.name}" (${fx.league?.round || ""}), em ${brt} (horário de Brasília) — ${when.toISOString()} (UTC).
@@ -74,12 +74,13 @@ Responda APENAS com JSON, sem texto extra: {"canais": ["Canal 1"], "confirmado":
     }),
   });
   if (!res.ok) {
-    console.error("[fixture-watch] IA erro", res.status, (await res.text()).slice(0, 200));
-    return { ok: false, canais: [] };
+    const body = (await res.text()).slice(0, 200);
+    console.error("[fixture-watch] IA erro", res.status, body);
+    return { ok: false, canais: [], erro: `IA ${res.status}: ${body}` };
   }
   const data = await res.json();
   const parsed = extractJson(data?.choices?.[0]?.message?.content || "");
-  if (!parsed) return { ok: false, canais: [] };
+  if (!parsed) return { ok: false, canais: [], erro: "IA respondeu sem JSON" };
   // Só aceita se a IA marcou como confirmado E apontou pelo menos uma fonte https. Senão: "a confirmar".
   const fontes = Array.isArray(parsed.fontes) ? parsed.fontes.filter((u: unknown) => typeof u === "string" && u.startsWith("https://")) : [];
   const confirmado = parsed.confirmado === true && fontes.length > 0;
@@ -128,11 +129,13 @@ serve(async (req) => {
 
   let gravados = 0;
   let falhas = 0;
+  const erros: string[] = []; // motivo das falhas (para diagnosticar sem abrir os registros)
   const work = async (id: number) => {
     try {
       const r = await askChannels(fixtures.get(id)!);
       if (!r.ok) {
         falhas++;
+        if (r.erro && erros.length < 3) erros.push(r.erro);
         return;
       }
       const { error: upErr } = await supabase
@@ -143,6 +146,7 @@ serve(async (req) => {
     } catch (e) {
       console.error("[fixture-watch] falhou", id, e);
       falhas++;
+      if (erros.length < 3) erros.push(`excecao: ${String(e).slice(0, 150)}`);
     }
   };
   for (let i = 0; i < todo.length; i += PARALLEL) {
@@ -152,5 +156,5 @@ serve(async (req) => {
   // Limpeza: some o que tem mais de 30 dias (nunca o que o Beto definiu para jogos futuros).
   await supabase.from("fixture_watch").delete().lt("buscado_em", new Date(now - 30 * 24 * 60 * 60 * 1000).toISOString());
 
-  return json({ ok: true, candidatos: ids.length, pulados: skip.size, gravados, falhas });
+  return json({ ok: true, candidatos: ids.length, pulados: skip.size, gravados, falhas, ...(erros.length ? { erros } : {}) });
 });
