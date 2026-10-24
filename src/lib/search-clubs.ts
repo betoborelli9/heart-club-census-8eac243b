@@ -179,7 +179,7 @@ export function isValidClubName(raw: string | null | undefined): boolean {
   const name = (raw || "").trim();
   if (name.length < 3) return false;
   if (!/[A-Za-zÀ-ÿ]/.test(name)) return false;
-  const blacklist = /^(selecione|seu clube|novo time|teste|test|xxx|n\/a|na|nenhum|sem nome)/i;
+  const blacklist = /^(selecione|seu clube|novo time|teste|test|xxx|n\/a|na|nenhum|sem nome)(?![a-zà-ÿ])/i; // "na" só vale como palavra inteira (senão barra Náutico, Nacional, Napoli…)
   if (blacklist.test(name)) return false;
   if (/seu\s+clube/i.test(name)) return false;
   return true;
