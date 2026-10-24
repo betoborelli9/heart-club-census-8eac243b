@@ -1,90 +1,64 @@
 /**
  * [CAMINHO]: supabase/functions/fixture-watch/index.ts
- * [MÓDULO]: ONDE ASSISTIR — descobre os canais de TV/streaming dos jogos dos próximos dias.
- * Roda de hora em hora pelo cron (sem parâmetros: não dá para mandar o robô pesquisar "o que quiser").
- * Cada jogo é pesquisado de novo só depois de 20 h (≈ 1x/dia); a fila inicial esvazia em poucas horas.
- * Só pesquisa jogos de clubes que já estão no team_fixtures_cache, nos próximos 8 dias,
- * pula o que foi buscado há menos de 20 h e NUNCA sobrescreve o que o Beto definiu (fonte = 'admin').
- * Se a pesquisa não confirmar o canal, grava lista vazia (o card mostra "a confirmar") — não inventa.
+ * [MÓDULO]: ONDE ASSISTIR — o robô do Heart Club lê a grade de transmissão de um site de programação de TV
+ * (futebolnatv.com.br) e grava os canais dos jogos dos clubes já votados. SEM IA: só leitura de página + conferência
+ * de data, horário de Brasília e nome dos dois times (ver _shared/tv-listing.ts).
+ * Roda de hora em hora pelo cron (sem parâmetros). Só busca na internet quando há jogo "velho" para atualizar
+ * (com canal: 12 h; sem canal/não achado: 6 h), então são poucas páginas por dia, uma a uma, com intervalo.
+ * Só olha jogos de clubes que já estão no team_fixtures_cache, nos próximos 8 dias, e NUNCA sobrescreve o que o
+ * Beto definiu (fonte = 'admin'). Se a grade não traz o jogo, fica "a confirmar" — não inventa.
  */
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { brtDate, matchGame, parseListing, type ListedGame } from "../_shared/tv-listing.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const LOVABLE_KEY = Deno.env.get("LOVABLE_API_KEY") || "";
-const MAX_PER_RUN = 9; // lotes pequenos (a IA rigorosa demora); o cron roda de hora em hora
-const PARALLEL = 3;
+const SITE = "https://www.futebolnatv.com.br";
+const USER_AGENT = "Mozilla/5.0 (compatible; HeartClubBot/1.0; +https://votenoseutime.com.br)";
+const FALLBACK_LEAGUES = [`${SITE}/liga/brasileirao-serie-b-yphg5kufc2`];
 const WINDOW_DAYS = 8;
-const FRESH_MS = 20 * 60 * 60 * 1000;
+const FRESH_WITH_CHANNELS_MS = 12 * 60 * 60 * 1000;
+const FRESH_EMPTY_MS = 6 * 60 * 60 * 1000;
+const PAUSE_MS = 1500; // intervalo entre páginas: leitura educada, uma por vez
+const VERSAO = 3;
 
 type Fx = {
   id: number;
   date: string;
-  status?: string;
-  league?: { name?: string; round?: string };
+  league?: { id?: number; name?: string; round?: string };
   home?: { name?: string };
   away?: { name?: string };
 };
 
-function extractJson(text: string): any | null {
-  const m = text.match(/\{[\s\S]*\}/);
-  if (!m) return null;
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+async function fetchPage(url: string): Promise<string | null> {
   try {
-    return JSON.parse(m[0]);
-  } catch {
+    const res = await fetch(url, {
+      headers: { "User-Agent": USER_AGENT, "Accept-Language": "pt-BR,pt;q=0.9", Accept: "text/html,application/xml" },
+      signal: AbortSignal.timeout(20000),
+    });
+    if (!res.ok) {
+      console.error("[fixture-watch] página", url, res.status);
+      return null;
+    }
+    return await res.text();
+  } catch (e) {
+    console.error("[fixture-watch] página falhou", url, e);
     return null;
   }
 }
 
-function cleanChannels(list: unknown): string[] {
-  if (!Array.isArray(list)) return [];
-  const out: string[] = [];
-  for (const c of list) {
-    const s = String(c ?? "").replace(/\s+/g, " ").trim().slice(0, 40);
-    if (s && !out.some((x) => x.toLowerCase() === s.toLowerCase())) out.push(s);
-    if (out.length >= 5) break;
-  }
-  return out;
-}
-
-async function askChannels(fx: Fx): Promise<{ ok: boolean; canais: string[]; erro?: string }> {
-  const when = new Date(fx.date);
-  const brt = new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Sao_Paulo", dateStyle: "full", timeStyle: "short" }).format(when);
-  const prompt = `Pesquise na web onde assistir ao jogo ${fx.home?.name} x ${fx.away?.name}, pelo campeonato "${fx.league?.name}" (${fx.league?.round || ""}), em ${brt} (horário de Brasília) — ${when.toISOString()} (UTC).
-REGRAS (todas obrigatórias):
-1. Só vale transmissão confirmada para ESTA partida (mesmos dois times e mesma data), em página de programação, notícia, site oficial do clube, da liga ou da emissora.
-2. Liste apenas canais de TV e serviços de streaming, com o nome oficial.
-3. NUNCA deduza pelo campeonato, pelo país ou por jogos anteriores.
-4. Se houver qualquer dúvida, devolva a lista vazia e confirmado=false.
-5. Em "fontes", coloque as URLs (https) das páginas que confirmam este jogo.
-Responda APENAS com JSON, sem texto extra: {"canais": ["Canal 1"], "confirmado": true, "fontes": ["https://..."]}`;
-
-  const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-    method: "POST",
-    headers: { Authorization: `Bearer ${LOVABLE_KEY}`, "Content-Type": "application/json" },
-    body: JSON.stringify({
-      model: "google/gemini-2.5-pro",
-      messages: [{ role: "user", content: prompt }],
-      tools: [{ type: "google_search" }],
-      temperature: 0,
-    }),
-  });
-  if (!res.ok) {
-    const body = (await res.text()).slice(0, 200);
-    console.error("[fixture-watch] IA erro", res.status, body);
-    return { ok: false, canais: [], erro: `IA ${res.status}: ${body}` };
-  }
-  const data = await res.json();
-  const parsed = extractJson(data?.choices?.[0]?.message?.content || "");
-  if (!parsed) return { ok: false, canais: [], erro: "IA respondeu sem JSON" };
-  // Só aceita se a IA marcou como confirmado E apontou pelo menos uma fonte https. Senão: "a confirmar".
-  const fontes = Array.isArray(parsed.fontes) ? parsed.fontes.filter((u: unknown) => typeof u === "string" && u.startsWith("https://")) : [];
-  const confirmado = parsed.confirmado === true && fontes.length > 0;
-  return { ok: true, canais: confirmado ? cleanChannels(parsed.canais) : [] };
+async function leagueUrls(): Promise<string[]> {
+  const xml = await fetchPage(`${SITE}/site-map.xml`);
+  const urls = xml
+    ? [...xml.matchAll(/<loc>\s*(https:\/\/www\.futebolnatv\.com\.br\/liga\/[^<\s/]+)\s*<\/loc>/g)].map((m) => m[1])
+    : [];
+  return urls.length ? [...new Set(urls)] : FALLBACK_LEAGUES;
 }
 
 serve(async (req) => {
@@ -92,8 +66,6 @@ serve(async (req) => {
 
   const json = (body: unknown, status = 200) =>
     new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-
-  if (!LOVABLE_KEY) return json({ error: "LOVABLE_API_KEY ausente" }, 500);
 
   const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
@@ -113,48 +85,67 @@ serve(async (req) => {
   }
 
   const ids = [...fixtures.keys()];
-  if (!ids.length) return json({ ok: true, buscados: 0, motivo: "sem jogos nos próximos dias" });
+  if (!ids.length) return json({ ok: true, candidatos: 0, motivo: "sem jogos nos próximos dias" });
 
-  const { data: existing } = await supabase.from("fixture_watch").select("fixture_id, fonte, buscado_em, versao").in("fixture_id", ids);
+  const { data: existing } = await supabase.from("fixture_watch").select("fixture_id, canais, fonte, buscado_em, versao").in("fixture_id", ids);
+  const prev = new Map<number, { canais: string[]; fonte: string }>();
   const skip = new Set<number>();
-  for (const e of existing || []) {
-    const fresh = now - new Date((e as any).buscado_em).getTime() < FRESH_MS;
-    if ((e as any).fonte === "admin" || (fresh && Number((e as any).versao) >= 2)) skip.add(Number((e as any).fixture_id));
+  for (const e of (existing || []) as any[]) {
+    const id = Number(e.fixture_id);
+    prev.set(id, { canais: Array.isArray(e.canais) ? e.canais : [], fonte: e.fonte });
+    const age = now - new Date(e.buscado_em).getTime();
+    const fresh = Number(e.versao) >= VERSAO && age < (e.canais?.length ? FRESH_WITH_CHANNELS_MS : FRESH_EMPTY_MS);
+    if (e.fonte === "admin" || fresh) skip.add(id);
   }
 
-  const todo = ids
-    .filter((id) => !skip.has(id))
-    .sort((a, b) => new Date(fixtures.get(a)!.date).getTime() - new Date(fixtures.get(b)!.date).getTime())
-    .slice(0, MAX_PER_RUN);
+  const todo = ids.filter((id) => !skip.has(id));
+  if (!todo.length) return json({ ok: true, candidatos: ids.length, pulados: skip.size, paginas: 0, gravados: 0 });
+
+  // 1) jogos de hoje e de amanhã (todas as ligas, uma página cada); 2) só se sobrar jogo sem canal: a página de cada liga
+  const listing: ListedGame[] = [];
+  let paginas = 0;
+  const read = async (url: string, defaultDate?: string) => {
+    if (paginas > 0) await sleep(PAUSE_MS);
+    paginas++;
+    const html = await fetchPage(url);
+    if (html) listing.push(...parseListing(html, now, defaultDate));
+    return html !== null;
+  };
+  const okHoje = await read(`${SITE}/jogos-hoje`, brtDate(now, 0));
+  const okAmanha = await read(`${SITE}/jogos-amanha`, brtDate(now, 1));
+
+  const pending = () => todo.filter((id) => !matchGame(listing, fixtures.get(id)!));
+  if (pending().length) {
+    if (paginas > 0) await sleep(PAUSE_MS);
+    paginas++;
+    const ligas = await leagueUrls();
+    for (const url of ligas) await read(url);
+  }
+
+  if (!okHoje && !okAmanha && !listing.length) return json({ ok: false, erro: "grade fora do ar", paginas }, 502);
 
   let gravados = 0;
-  let falhas = 0;
-  const erros: string[] = []; // motivo das falhas (para diagnosticar sem abrir os registros)
-  const work = async (id: number) => {
-    try {
-      const r = await askChannels(fixtures.get(id)!);
-      if (!r.ok) {
-        falhas++;
-        if (r.erro && erros.length < 3) erros.push(r.erro);
-        return;
-      }
-      const { error: upErr } = await supabase
-        .from("fixture_watch")
-        .upsert({ fixture_id: id, canais: r.canais, fonte: "ia", versao: 2, buscado_em: new Date().toISOString() });
-      if (upErr) falhas++;
-      else gravados++;
-    } catch (e) {
-      console.error("[fixture-watch] falhou", id, e);
-      falhas++;
-      if (erros.length < 3) erros.push(`excecao: ${String(e).slice(0, 150)}`);
+  let semJogo = 0;
+  const exemplos: string[] = [];
+  const buscado_em = new Date().toISOString();
+  for (const id of todo) {
+    const fx = fixtures.get(id)!;
+    const hit = matchGame(listing, fx);
+    const before = prev.get(id);
+    let canais: string[];
+    if (hit) canais = hit.channels;
+    else {
+      semJogo++;
+      if (exemplos.length < 6) exemplos.push(`${fx.home?.name} x ${fx.away?.name} (${fx.date.slice(0, 10)})`);
+      // a grade não traz o jogo: mantém só o que veio da própria grade; resposta antiga de IA é descartada ("a confirmar")
+      canais = before?.fonte === "site" ? before.canais : [];
     }
-  };
-  for (let i = 0; i < todo.length; i += PARALLEL) {
-    await Promise.all(todo.slice(i, i + PARALLEL).map(work));
+    const { error: upErr } = await supabase.from("fixture_watch").upsert({ fixture_id: id, canais, fonte: "site", versao: VERSAO, buscado_em });
+    if (!upErr) gravados++;
   }
 
   // Limpeza: some o que tem mais de 30 dias (nunca o que o Beto definiu para jogos futuros).
   await supabase.from("fixture_watch").delete().lt("buscado_em", new Date(now - 30 * 24 * 60 * 60 * 1000).toISOString());
 
-  return json({ ok: true, candidatos: ids.length, pulados: skip.size, gravados, falhas, ...(erros.length ? { erros } : {}) });
+  return json({ ok: true, candidatos: ids.length, pulados: skip.size, paginas, jogos_na_grade: listing.length, gravados, sem_jogo_na_grade: semJogo, ...(exemplos.length ? { exemplos } : {}) });
 });
