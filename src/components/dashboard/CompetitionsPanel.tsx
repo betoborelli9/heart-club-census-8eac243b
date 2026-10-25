@@ -7,6 +7,7 @@ import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Trophy, Radio, Calendar, MapPin, Share2, Loader2 } from "lucide-react";
 import { toPng } from "html-to-image";
+import heartLogo from "@/assets/logo.png";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { ClubLogo } from "@/components/ClubLogo";
@@ -397,9 +398,14 @@ export default function CompetitionsPanel({ clubName, teamId: clubTeamIdProp, pr
                   chances={showChances && chances[c.leagueId] ? buildChancesView(chances[c.leagueId], c.leagueId, language) : null}
                 />
                 {showChances && chances[c.leagueId] && <p className="text-[9px] text-white/40">{t("clube.chances_caption")}</p>}
-                <div className="flex items-center justify-center gap-1.5 pt-1">
-                  <span className="text-[9px] font-black uppercase italic text-white">Heart Club</span>
-                  <span className="text-[9px] text-white/40">· heartclubapp.com</span>
+                {/* Assinatura da imagem compartilhada: logo oficial centralizada entre fios finos + endereço do site */}
+                <div className="flex flex-col items-center pt-2" data-testid="share-signature">
+                  <div className="flex w-full items-center gap-3">
+                    <span className="h-px flex-1 bg-gradient-to-r from-transparent to-white/15" />
+                    <img src={heartLogo} alt="Heart Club" className="h-[76px] w-[76px] rounded-[18px] object-contain ring-1 ring-white/10" />
+                    <span className="h-px flex-1 bg-gradient-to-l from-transparent to-white/15" />
+                  </div>
+                  <span className="mt-2 text-[10px] font-bold tracking-[0.22em] text-white/50">heartclubapp.com</span>
                 </div>
               </div>
               {team?.id && (
