@@ -182,9 +182,13 @@ export default function CompetitionsPanel({ clubName, teamId: clubTeamIdProp, pr
     const scrollBox = node.querySelector<HTMLElement>(".thin-orange-scroll");
     const prevOverflow = scrollBox?.style.overflow;
     const prevWidth = scrollBox?.style.width;
+    const prevNodeWidth = node.style.width;
     if (scrollBox) {
       scrollBox.style.overflow = "visible";
       scrollBox.style.width = `${scrollBox.scrollWidth}px`;
+      // a tabela é mais larga que a tela: o cartão inteiro passa a ter a largura dela, para o painel do jogo,
+      // os placares e a logo ficarem com a mesma largura e centralizados com a tabela (senão ficam colados à esquerda)
+      node.style.width = `${Math.max(node.clientWidth, scrollBox.scrollWidth + 16)}px`;
     }
 
     try {
@@ -221,6 +225,7 @@ export default function CompetitionsPanel({ clubName, teamId: clubTeamIdProp, pr
         scrollBox.style.overflow = prevOverflow || "";
         scrollBox.style.width = prevWidth || "";
       }
+      node.style.width = prevNodeWidth;
       setSharing(false);
     }
   };
