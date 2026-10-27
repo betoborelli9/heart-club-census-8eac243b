@@ -218,6 +218,15 @@ async function getStandings(leagueId: number, season: number, bypassCache = fals
 
 const LIVE_LIST = ["1H", "2H", "HT", "ET", "BT", "P", "LIVE"];
 
+/**
+ * Quanto tempo uma linha "ao vivo" do banco ainda vale sem ser regravada. No intervalo (HT) e nas pausas o minuto não
+ * muda, então o robô não regrava a linha: 15 min cortava a projeção da tabela no meio do intervalo (Juventude 2 x 0
+ * aparecia sem ser contado). Mesmo critério de 25 min do fixtures-live-poll.
+ */
+function liveFreshMs(status: string): number {
+  return status === "HT" || status === "BT" ? 25 * 60 * 1000 : 15 * 60 * 1000;
+}
+
 /** Jogos ao vivo do time, lidos do nosso banco (alimentado uma vez para o mundo todo). */
 async function liveFromDb(teamId: number): Promise<any[]> {
   const { data } = await supabase
@@ -225,8 +234,10 @@ async function liveFromDb(teamId: number): Promise<any[]> {
     .select("*")
     .or(`home_id.eq.${teamId},away_id.eq.${teamId}`)
     .in("status", LIVE_LIST)
-    .gte("updated_at", new Date(Date.now() - 15 * 60 * 1000).toISOString());
-  return ((data || []) as any[]).map((f) => ({
+    .gte("updated_at", new Date(Date.now() - 25 * 60 * 1000).toISOString());
+  return ((data || []) as any[])
+    .filter((f) => Date.now() - new Date(f.updated_at).getTime() < liveFreshMs(f.status))
+    .map((f) => ({
     id: f.fixture_id,
     date: f.kickoff,
     status: f.status,
@@ -358,12 +369,11 @@ serve(async (req) => {
           .in("league_id", leagueIds)
           .gte("kickoff", new Date(Date.now() - 10 * 60 * 60 * 1000).toISOString())
       : { data: [] as any[] };
-    const FRESH_LIVE_MS = 15 * 60 * 1000;
     const liveByLeague = new Map<number, LiveGame[]>();
     const recentFinished = new Map<number, SeasonGame[]>();
     const hotLeagues = new Set<number>();
     for (const r of (lfRows || []) as any[]) {
-      if (LIVE_NOW.has(r.status) && Date.now() - new Date(r.updated_at).getTime() < FRESH_LIVE_MS) {
+      if (LIVE_NOW.has(r.status) && Date.now() - new Date(r.updated_at).getTime() < liveFreshMs(r.status)) {
         hotLeagues.add(r.league_id);
         const arr = liveByLeague.get(r.league_id) || [];
         arr.push({ id: r.fixture_id, h: r.home_id, a: r.away_id, gh: r.goals_home, ga: r.goals_away });
