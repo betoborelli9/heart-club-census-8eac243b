@@ -180,6 +180,20 @@ describe("ConfirmarVoto — voto gravado ao chegar logado", () => {
     expect(screen.getByText("entrar.confirm_title")).toBeTruthy(); // fica na tela "Confirme seu voto"
   });
 
+  it("'Voltar' (trocar de clube) limpa a escolha guardada, senão a tela de entrada mandaria o torcedor de volta para cá", async () => {
+    submitVote.mockImplementationOnce(async () => {
+      throw new Error("rede caiu");
+    });
+    savePendingVote(club, []);
+    renderPage();
+    await waitFor(() => expect(screen.getAllByText("entrar.vote_error").length).toBeGreaterThan(0));
+    await act(async () => {
+      fireEvent.click(screen.getByText("entrar.back"));
+    });
+    expect(loadPendingVote()).toBeNull();
+    await waitFor(() => expect(screen.getByTestId("where").textContent).toBe("/entrar"));
+  });
+
   it("quem já aceitou os Termos entra direto no Dashboard", async () => {
     state.hasVoted = true;
     state.profile = { id: "fan-1", terms_accepted_at: "2026-10-01T10:00:00Z" };

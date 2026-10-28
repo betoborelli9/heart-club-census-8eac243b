@@ -254,7 +254,11 @@ const ConfirmarVoto = () => {
           )}
         </Button>
         <button
-          onClick={() => navigate(sim ? "/entrar?sim=1" : "/entrar")}
+          onClick={() => {
+            // "Voltar" = trocar de clube: sem limpar a escolha guardada, a tela de entrada mandaria o torcedor de volta para cá
+            if (!sim) clearPendingVote();
+            navigate(sim ? "/entrar?sim=1" : "/entrar");
+          }}
           disabled={submitting}
           hidden={!sim && (recording || recorded || termsOnly)}
           className="text-xs font-bold uppercase text-white/40 hover:text-white/70"

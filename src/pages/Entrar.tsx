@@ -24,9 +24,11 @@ import {
   PENDING_VOTE_PARAM,
   decodePendingVoteParam,
   encodePendingVoteParam,
+  loadPendingVote,
   savePendingVote,
 } from "@/lib/entry-flow";
 import { buildChromeIntentUrl, detectInAppBrowser } from "@/lib/in-app-browser";
+import { GoogleIcon } from "@/components/GoogleIcon";
 import { isSimActive, startSim } from "@/lib/sim-fan";
 import type { ClubSearchResult } from "@/lib/search-clubs";
 import { ClubLogo } from "@/components/ClubLogo";
@@ -78,17 +80,19 @@ const Entrar = () => {
     if (!isSimActive() || stage === "intro") startSim();
   }, [sim, stage]);
 
-  // Escolha vinda no link: guarda no aparelho (o login com Google volta para "/" e precisa achá-la) e,
-  // se o torcedor já estiver logado, segue direto para "Confirme seu voto".
+  // Escolha vinda no link: guarda no aparelho (o login com Google volta para "/" e precisa achá-la).
   const linkVoteSaved = useRef(false);
   useEffect(() => {
     if (!linkVote || linkVoteSaved.current) return;
     linkVoteSaved.current = true;
     savePendingVote(linkVote.club, linkVote.sympathies);
   }, [linkVote]);
+  // Já logado, ainda sem voto, e já jurou lealdade antes (escolha vinda no link ?pv= ou guardada no aparelho):
+  // vai direto para "Confirme seu voto" — nunca repete a escolha do clube e das simpatias.
   useEffect(() => {
-    if (!linkVote || !isAuthReady || isLoading || sim) return;
-    if (isAuthenticated && !hasVoted && !isMasterEmail((realUser ?? user)?.email)) navigate("/confirmar-voto", { replace: true });
+    if (!isAuthReady || isLoading || sim) return;
+    if (!isAuthenticated || hasVoted || isMasterEmail((realUser ?? user)?.email)) return;
+    if (linkVote || loadPendingVote()) navigate("/confirmar-voto", { replace: true });
   }, [linkVote, isAuthReady, isLoading, sim, isAuthenticated, hasVoted, realUser, user, navigate]);
 
   // ── Porteiro: rota nova só abre para o Master em teste (enquanto o fluxo novo não estiver ligado).
@@ -407,12 +411,14 @@ const Entrar = () => {
             <div className="space-y-4">
               {!inApp.inApp && (
                 <>
+                  {/* mesmo estilo do botão de Google da página /login: fundo escuro, borda fina, logo colorido, texto claro */}
                   <Button
+                    variant="outline"
                     onClick={loginGoogle}
                     disabled={!!busy}
-                    className="h-14 w-full gap-3 rounded-xl bg-white text-base font-bold text-black hover:bg-white/90"
+                    className="glass-card-hover h-14 w-full border-border/50 text-base font-medium text-foreground"
                   >
-                    {busy === "google" ? <Loader2 className="h-5 w-5 animate-spin" /> : null}
+                    {busy === "google" ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <GoogleIcon />}
                     {t("entrar.google")}
                   </Button>
                   <div className="flex items-center gap-3 text-[11px] uppercase text-white/40">
