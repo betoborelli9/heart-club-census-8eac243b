@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { motion } from "framer-motion";
 import { Mail, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { isMasterEmail } from "@/lib/master";
 import { notVotedTarget } from "@/lib/entry-flow";
+import { buildChromeIntentUrl, detectInAppBrowser } from "@/lib/in-app-browser";
 import { useTranslationApp } from "@/hooks/useTranslationApp";
 import logo from "@/assets/logo.png";
 
@@ -20,6 +21,17 @@ const Login = () => {
   const { toast } = useToast();
   const [email, setEmail] = useState("");
   const [loadingProvider, setLoadingProvider] = useState<string | null>(null);
+  // Navegador interno (Instagram, Facebook, TikTok…): o Google bloqueia o login ali — mesmo cuidado da tela /entrar.
+  const inApp = useMemo(() => detectInAppBrowser(), []);
+
+  // Android: abre esta mesma página no Chrome.
+  const openInChrome = () => {
+    try {
+      window.location.href = buildChromeIntentUrl(window.location.href);
+    } catch (err) {
+      console.error("[LOGIN] não abriu no Chrome", err);
+    }
+  };
 
   useEffect(() => {
     if (!isLoading && isAuthenticated) {
@@ -103,6 +115,27 @@ const Login = () => {
           <p className="text-sm text-muted-foreground">{t("header.tagline")}</p>
         </div>
 
+        {inApp.inApp && inApp.platform === "android" && (
+          <div className="space-y-2" data-testid="inapp-android">
+            <Button
+              onClick={openInChrome}
+              className="btn-orange-gradient h-16 w-full rounded-2xl text-lg font-black italic shadow-xl shadow-primary/20 active:scale-95"
+            >
+              {t("entrar.inapp_open_chrome")}
+            </Button>
+            <p className="text-center text-xs text-muted-foreground">{t("entrar.inapp_open_chrome_hint")}</p>
+          </div>
+        )}
+        {inApp.inApp && inApp.platform === "ios" && (
+          <p
+            className="rounded-2xl border border-primary/40 bg-primary/10 p-3 text-center text-sm font-bold text-foreground"
+            data-testid="inapp-ios"
+          >
+            {t("entrar.inapp_ios_notice")}
+          </p>
+        )}
+
+        {!inApp.inApp && (
         <div className="space-y-3">
           <Button
             variant="outline"
@@ -135,7 +168,9 @@ const Login = () => {
             {t("auth.login.google")}
           </Button>
         </div>
+        )}
 
+        {!inApp.inApp && (
         <div className="relative">
           <div className="absolute inset-0 flex items-center">
             <span className="w-full border-t border-border/50" />
@@ -146,6 +181,7 @@ const Login = () => {
             </span>
           </div>
         </div>
+        )}
 
         <form onSubmit={handleMagicLink} className="space-y-4">
           <div className="space-y-2">
@@ -163,7 +199,7 @@ const Login = () => {
           </div>
           <Button
             type="submit"
-            className="w-full h-12 font-bold btn-orange-gradient rounded-xl"
+            className={inApp.inApp ? "w-full h-14 font-bold btn-orange-gradient rounded-xl" : "w-full h-12 font-bold btn-orange-gradient rounded-xl"}
             disabled={!!loadingProvider || !email.trim()}
           >
             {loadingProvider === "magic" ? (
