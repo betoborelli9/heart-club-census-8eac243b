@@ -211,7 +211,7 @@
       "subtitle": "Heart Club · Censo Global del Fútbol",
       "banner_alt": "Trayecto del Embajador — Bronce, Plata, Oro, Diamante",
       "share_more": "Compartir (más opciones)",
-      "invite_text": "⚽ ¡FUISTE CONVOCADO AL HEART CLUB! 🧡\n\nAcabo de votar por nuestro equipo. Heart Club es el mayor censo de hinchadas del mundo.\n\nCÓMO FUNCIONA:\n1️⃣ Toca el enlace y vota.\n2️⃣ Vota por tu Club del Corazón ❤️ Y hasta 4 Clubes Simpatía 🧡\n3️⃣ Después recibes una Clave de Invitación única.\n4️⃣ Toca 'Convocar a la Tropa' y llama a tus amigos.\n\nMientras más gente vote con tu invitación, más puntos ganas para subir de nivel: Bronce ➔ Plata ➔ Oro ➔ ¡DIAMANTE! 💎\n\nLos Embajadores Diamante tendrán premios exclusivos en el futuro. ¡Dominemos el ranking!\n\n👇 VOTA AHORA Y CONVOCA:"
+      "invite_text": "⚽ ¡FUISTE CONVOCADO AL HEART CLUB! 🧡\n\nAcabo de votar por nuestro equipo. Heart Club es el mayor censo de hinchadas del mundo.\n\nCÓMO FUNCIONA:\n1️⃣ Toca el enlace y vota.\n2️⃣ Vota por tu Club del Corazón ❤️ Y hasta 4 Clubes Simpatía 🧡\n3️⃣ Después recibes un Código de Invitación único.\n4️⃣ Toca 'Convocar a la Tropa' y llama a tus amigos.\n\nMientras más gente vote con tu invitación, más puntos ganas para subir de nivel: Bronce ➔ Plata ➔ Oro ➔ ¡DIAMANTE! 💎\n\nLos Embajadores Diamante podrán tener premios exclusivos en el futuro. ¡Dominemos el ranking!\n\n👇 VOTA AHORA Y CONVOCA:"
     },
     "reset_my_vote": {
       "confirm": "¿Reiniciar TU propio voto para repetir pruebas? (Otros usuarios no se ven afectados)",
@@ -498,8 +498,8 @@
     "link_copied_desc": "Pégalo donde quieras compartir.",
     "copy_fail": "No se pudo copiar",
     "share_subject": "Te invito a Heart Club Census 🧡",
-    "referral_msg": "🧡 ¡Hola, hincha! Registra tu corazón en Heart Club por mi enlace y dominemos el mapa:{{from}} {{link}}",
-    "from_who": " (invitación de {{name}})"
+    "referral_msg": "🧡 ¡{{name}} te invitó a Heart Club, el mayor censo de hinchadas del mundo!\n\nVota por tu equipo y muestra la fuerza de tu hinchada. Es gratis y toma menos de 1 minuto 👉 {{link}}",
+    "referral_msg_anon": "🧡 ¡Te invitaron a Heart Club, el mayor censo de hinchadas del mundo!\n\nVota por tu equipo y muestra la fuerza de tu hinchada. Es gratis y toma menos de 1 minuto 👉 {{link}}"
   },
   "ambassador_center": {
     "title": "PANEL DE COMANDO",

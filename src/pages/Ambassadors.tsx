@@ -325,9 +325,11 @@ const Ambassadors = () => {
   }, [profile?.codigo_indicacao, user?.id]);
 
   const referralMessage = useMemo(() => {
-    const nome = profile?.nome_exibicao ? ` ${profile.nome_exibicao}` : "";
-    const fromPart = nome ? t("ambassadors.from_who", { name: nome.trim() }) : "";
-    return t("ambassadors.referral_msg", { from: fromPart, link: referralLink });
+    // "NOME te convidou para o Heart Club…"; sem nome no perfil, usa a versão sem nome (nunca sai "undefined" nem espaço vazio)
+    const nome = (profile?.nome_exibicao || "").trim();
+    return nome
+      ? t("ambassadors.referral_msg", { name: nome, link: referralLink })
+      : t("ambassadors.referral_msg_anon", { link: referralLink });
   }, [referralLink, profile?.nome_exibicao, t]);
 
   /* [MÓDULO: COMPARTILHAR MULTICANAL] */

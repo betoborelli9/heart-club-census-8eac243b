@@ -211,7 +211,7 @@
       "subtitle": "Heart Club · Global Football Census",
       "banner_alt": "Ambassador Journey — Bronze, Silver, Gold, Diamond",
       "share_more": "Share (more options)",
-      "invite_text": "⚽ YOU'VE BEEN DRAFTED TO HEART CLUB! 🧡\n\nI just voted for our team! Heart Club is the biggest fan census in the world.\n\nHOW IT WORKS:\n1️⃣ Click the link below and cast your vote.\n2️⃣ Vote for your Heart Club ❤️ AND up to 4 Sympathy Clubs 🧡\n3️⃣ After voting, you get a unique Invite Code.\n4️⃣ Click 'Rally the Troops' and call your friends.\n\nThe more people vote with your invite, the more points you earn to level up: Bronze ➔ Silver ➔ Gold ➔ DIAMOND! 💎\n\nDiamond Ambassadors will get exclusive rewards in the future. Let's dominate the ranking!\n\n👇 VOTE NOW AND RALLY:"
+      "invite_text": "⚽ YOU'VE BEEN DRAFTED TO HEART CLUB! 🧡\n\nI just voted for our team! Heart Club is the biggest fan census in the world.\n\nHOW IT WORKS:\n1️⃣ Click the link below and cast your vote.\n2️⃣ Vote for your Heart Club ❤️ AND up to 4 Sympathy Clubs 🧡\n3️⃣ After voting, you get a unique Invite Code.\n4️⃣ Click 'Rally the Troops' and call your friends.\n\nThe more people vote with your invite, the more points you earn to level up: Bronze ➔ Silver ➔ Gold ➔ DIAMOND! 💎\n\nDiamond Ambassadors may get exclusive rewards in the future. Let's dominate the ranking!\n\n👇 VOTE NOW AND RALLY:"
     },
     "reset_my_vote": {
       "confirm": "Reset YOUR own vote to run new tests? (Other users are not affected)",
@@ -498,8 +498,8 @@
     "link_copied_desc": "Paste it wherever you want.",
     "copy_fail": "Couldn't copy",
     "share_subject": "I'm inviting you to Heart Club Census 🧡",
-    "referral_msg": "🧡 Hey fan! Register your heart on Heart Club through my link and let's dominate the map:{{from}} {{link}}",
-    "from_who": " (invite from {{name}})"
+    "referral_msg": "🧡 {{name}} invited you to Heart Club, the biggest fan census in the world!\n\nVote for your team and show the strength of your fans. It's free and takes less than 1 minute 👉 {{link}}",
+    "referral_msg_anon": "🧡 You've been invited to Heart Club, the biggest fan census in the world!\n\nVote for your team and show the strength of your fans. It's free and takes less than 1 minute 👉 {{link}}"
   },
   "ambassador_center": {
     "title": "COMMAND PANEL",

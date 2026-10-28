@@ -211,7 +211,7 @@
       "subtitle": "Heart Club · Censo Global do Futebol",
       "banner_alt": "Jornada do Embaixador — Bronze, Prata, Ouro, Diamante",
       "share_more": "Compartilhar (mais opções)",
-      "invite_text": "⚽ VOCÊ FOI CONVOCADO PARA O HEART CLUB! 🧡\n\nAcabei de votar no nosso time! O Heart Club é o maior censo de torcidas do mundo.\n\nCOMO FUNCIONA:\n1️⃣ Clique no link abaixo e dê seu voto.\n2️⃣ Você vota no seu Clube do Coração ❤️ E AINDA em até 4 Clubes Simpatia 🧡\n3️⃣ Após votar, você ganha uma Senha de Convite única.\n4️⃣ Clique em 'Convoca a Tropa' e chame seus amigos.\n\nQuanto mais gente votar com seu convite, mais pontos você ganha para subir de nível: Bronze ➔ Prata ➔ Ouro ➔ DIAMANTE! 💎\n\nEmbaixadores Diamante terão prêmios exclusivos no futuro. Vamos dominar o ranking!\n\n👇 VOTE AGORA E CONVOQUE:"
+      "invite_text": "⚽ VOCÊ FOI CONVOCADO PARA O HEART CLUB! 🧡\n\nAcabei de votar no nosso time! O Heart Club é o maior censo de torcidas do mundo.\n\nCOMO FUNCIONA:\n1️⃣ Clique no link abaixo e dê seu voto.\n2️⃣ Você vota no seu Clube do Coração ❤️ E AINDA em até 4 Clubes Simpatia 🧡\n3️⃣ Após votar, você ganha um Código de Convite único.\n4️⃣ Clique em 'Convoca a Tropa' e chame seus amigos.\n\nQuanto mais gente votar com seu convite, mais pontos você ganha para subir de nível: Bronze ➔ Prata ➔ Ouro ➔ DIAMANTE! 💎\n\nEmbaixadores Diamante poderão ter prêmios exclusivos no futuro. Vamos dominar o ranking!\n\n👇 VOTE AGORA E CONVOQUE:"
     },
     "reset_my_vote": {
       "confirm": "Resetar SEU próprio voto para refazer testes? (Outros usuários não são afetados)",
@@ -498,8 +498,8 @@
     "link_copied_desc": "Cole onde quiser compartilhar.",
     "copy_fail": "Não foi possível copiar",
     "share_subject": "Te convido para o Heart Club Census 🧡",
-    "referral_msg": "🧡 Fala, torcedor! Registre seu coração no Heart Club pelo meu link e vamos dominar o mapa:{{from}} {{link}}",
-    "from_who": " (convite de {{name}})"
+    "referral_msg": "🧡 {{name}} te convidou para o Heart Club, o maior censo de torcidas do mundo!\n\nVote no seu time e mostre a força da sua torcida. É grátis e leva menos de 1 minuto 👉 {{link}}",
+    "referral_msg_anon": "🧡 Você foi convidado para o Heart Club, o maior censo de torcidas do mundo!\n\nVote no seu time e mostre a força da sua torcida. É grátis e leva menos de 1 minuto 👉 {{link}}"
   },
   "ambassador_center": {
     "title": "PAINEL DE COMANDO",
