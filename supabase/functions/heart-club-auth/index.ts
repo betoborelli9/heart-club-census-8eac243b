@@ -35,7 +35,13 @@ const resolveRedirectOrigin = (origin?: string) => {
   return fallback
 }
 
-const isValidEmail = (email: unknown): email is string => {
+/** "&pv=<texto>" só se o texto for curto e feito só de letras/números/_/- (base64 seguro para URL); senão, nada. */
+const safePendingVoteParam = (value: unknown) =>
+  typeof value === 'string' && value.length > 0 && value.length <= 1800 && /^[A-Za-z0-9_-]+$/.test(value)
+    ? `&pv=${value}`
+    : ''
+
+const isValidEmail =(email: unknown): email is string => {
   return typeof email === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()) && email.length <= 254
 }
 
@@ -49,7 +55,7 @@ Deno.serve(async (req) => {
     const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? ''
     const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
 
-    const { email, redirectOrigin } = await req.json()
+    const { email, redirectOrigin, pendingVote } = await req.json()
     if (!isValidEmail(email)) {
       return new Response(JSON.stringify({ error: 'email_invalid' }), {
         status: 400,
@@ -61,7 +67,9 @@ Deno.serve(async (req) => {
     const normalizedEmail = email.trim().toLowerCase()
 
     const token = crypto.randomUUID()
-    const accessUrl = `${resolveRedirectOrigin(redirectOrigin)}/voting?token=${token}`
+    // A escolha do time (clube + simpatias) viaja no link: se ele abrir em outro navegador (ex.: Chrome, fora do
+    // Instagram), a tela "Confirme seu voto" refaz a escolha sem depender do aparelho antigo.
+    const accessUrl = `${resolveRedirectOrigin(redirectOrigin)}/voting?token=${token}${safePendingVoteParam(pendingVote)}`
     const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString()
 
     const { error: dbError } = await supabase

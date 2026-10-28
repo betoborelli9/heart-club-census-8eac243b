@@ -23,7 +23,7 @@ import { getFingerprint, getFastIP, runSilentAudit } from "@/lib/vote-auditor";
 import { detectDeviceModel } from "@/lib/device-detect";
 import { captureIpAudit } from "@/lib/address";
 import { useTranslationApp } from "@/hooks/useTranslationApp";
-import { NEW_ENTRY_FLOW_ENABLED, notVotedTarget } from "@/lib/entry-flow";
+import { NEW_ENTRY_FLOW_ENABLED, PENDING_VOTE_PARAM, adoptPendingVoteFromLink, notVotedTarget } from "@/lib/entry-flow";
 import i18n from "@/i18n";
 
 type ClubResult = ClubSearchResult;
@@ -96,6 +96,9 @@ const Voting = () => {
           return;
         }
 
+        // O link pode ter chegado em outro navegador (ex.: Chrome, fora do Instagram): refaz a escolha do time a
+        // partir do link ANTES de limpar o endereço, para o torcedor cair direto em "Confirme seu voto".
+        adoptPendingVoteFromLink(searchParams.get(PENDING_VOTE_PARAM));
         navigate("/voting", { replace: true });
       } catch (err) {
         console.error("[VOTING_AUTH] conexão instável", err);
@@ -105,7 +108,7 @@ const Voting = () => {
     };
 
     void authenticateFromEmail();
-  }, [authToken, navigate, t, toast]);
+  }, [authToken, navigate, t, toast, searchParams]);
 
   // [BLOQUEIO] Torcedor comum só vota uma vez. Master nunca trava.
   useEffect(() => {

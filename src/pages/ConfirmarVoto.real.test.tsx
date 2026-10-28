@@ -34,7 +34,7 @@ vi.mock("@/hooks/useTranslationApp", () => ({
 }));
 
 import ConfirmarVoto from "./ConfirmarVoto";
-import { loadPendingVote, savePendingVote } from "@/lib/entry-flow";
+import { encodePendingVoteParam, loadPendingVote, savePendingVote } from "@/lib/entry-flow";
 
 const club: any = { id: "1", name: "Paris Saint Germain", logo: "", location: "Paris, France", source: "api" };
 
@@ -140,6 +140,44 @@ describe("ConfirmarVoto — voto gravado ao chegar logado", () => {
     await waitFor(() => expect(rpc).toHaveBeenCalledWith("accept_terms", { p_version: "1.0" }));
     await waitFor(() => expect(screen.getByTestId("where").textContent).toBe("/dashboard"));
     expect(submitVote).not.toHaveBeenCalled(); // nunca grava voto de novo
+  });
+
+  it("já votou, ainda não aceitou os Termos e sobrou escolha guardada: descarta a escolha e libera 'só aceitar e entrar'", async () => {
+    state.hasVoted = true;
+    state.profile = { id: "fan-1", terms_accepted_at: null };
+    savePendingVote(club, []); // sobra de um voto antigo: nunca seria gravado de novo
+    renderPage();
+    expect(await screen.findByText("entrar.terms_only_title")).toBeTruthy();
+    expect(loadPendingVote()).toBeNull(); // escolha velha limpa
+    expect(submitVote).not.toHaveBeenCalled();
+    const button = screen.getByText("entrar.enter_cta").closest("button") as HTMLButtonElement; // NÃO é o "SIM, EU JURO!" travado
+    expect(button.disabled).toBe(true); // falta só o quadradinho
+    fireEvent.click(screen.getByRole("checkbox"));
+    await waitFor(() => expect((screen.getByText("entrar.enter_cta").closest("button") as HTMLButtonElement).disabled).toBe(false));
+    await act(async () => {
+      fireEvent.click(screen.getByText("entrar.enter_cta"));
+    });
+    await waitFor(() => expect(rpc).toHaveBeenCalledWith("accept_terms", { p_version: "1.0" }));
+    await waitFor(() => expect(screen.getByTestId("where").textContent).toBe("/dashboard"));
+    expect(submitVote).not.toHaveBeenCalled();
+  });
+
+  it("link do e-mail aberto em outro navegador (aparelho sem escolha): refaz o voto pela URL e grava o time certo", async () => {
+    const pv = encodePendingVoteParam(club, [{ ...club, id: "2", name: "Goiás", api_id: 2 }])!;
+    expect(loadPendingVote()).toBeNull();
+    render(
+      <MemoryRouter initialEntries={[`/confirmar-voto?pv=${pv}`]}>
+        <Routes>
+          <Route path="/confirmar-voto" element={<ConfirmarVoto />} />
+          <Route path="*" element={<Where />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+    await waitFor(() => expect(submitVote).toHaveBeenCalledTimes(1));
+    const args = (submitVote.mock.calls[0] as any[])[0];
+    expect(args.heartClub.name).toBe("Paris Saint Germain");
+    expect(args.sympathyClubs.map((s: any) => s.name)).toEqual(["Goiás"]);
+    expect(screen.getByText("entrar.confirm_title")).toBeTruthy(); // fica na tela "Confirme seu voto"
   });
 
   it("quem já aceitou os Termos entra direto no Dashboard", async () => {

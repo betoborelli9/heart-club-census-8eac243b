@@ -50,6 +50,102 @@ export function clearPendingVote() {
   }
 }
 
+// ── Escolha levada junto no link (e-mail / "abrir no Chrome") ─────────────────────────────────────────
+// O voto pendente fica só no aparelho (localStorage). Quando o link do e-mail abre em OUTRO navegador
+// (o Chrome, fora do Instagram), o aparelho novo não tem a escolha — por isso ela viaja no próprio link,
+// em um parâmetro curto (?pv=…), e é refeita na chegada se o localStorage estiver vazio.
+export const PENDING_VOTE_PARAM = "pv";
+const MAX_PARAM_LENGTH = 1800; // limite que a função de e-mail também confere
+const MAX_SYMPATHIES = 4;
+
+type CompactClub = { i?: string; n: string; l?: string; g?: string; y?: string; c?: string; a?: number | null; o?: "api" | "local" };
+
+const toCompact = (c: ClubSearchResult, withLogo: boolean): CompactClub => ({
+  i: c.id,
+  n: c.name,
+  l: c.location || undefined,
+  g: withLogo ? c.logo || undefined : undefined,
+  y: c.city || undefined,
+  c: c.country || undefined,
+  a: c.api_id ?? undefined,
+  o: c.source,
+});
+
+const str = (v: unknown, max: number) => (typeof v === "string" ? v.slice(0, max) : "");
+
+const fromCompact = (c: any): ClubSearchResult | null => {
+  const name = str(c?.n, 100).trim();
+  if (!name) return null;
+  const logo = str(c?.g, 300);
+  const apiId = Number(c?.a);
+  const location = str(c?.l, 120);
+  return {
+    id: str(c?.i, 60) || name,
+    name,
+    shortName: name,
+    location,
+    logo: /^https:\/\//i.test(logo) ? logo : "", // só endereço seguro (https) vira imagem
+    city: str(c?.y, 80),
+    state: "",
+    country: str(c?.c, 80),
+    api_id: Number.isInteger(apiId) && apiId > 0 ? apiId : null,
+    source: c?.o === "api" ? "api" : "local",
+  };
+};
+
+const toBase64Url = (s: string) =>
+  btoa(unescape(encodeURIComponent(s))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+
+const fromBase64Url = (s: string) => {
+  const b64 = s.replace(/-/g, "+").replace(/_/g, "/");
+  return decodeURIComponent(escape(atob(b64 + "=".repeat((4 - (b64.length % 4)) % 4))));
+};
+
+/** Texto curto (seguro para URL) com o clube do coração e as simpatias. Null se não couber no link. */
+export function encodePendingVoteParam(club: ClubSearchResult, sympathies: ClubSearchResult[]): string | null {
+  try {
+    for (const withLogo of [true, false]) {
+      const payload = { c: toCompact(club, withLogo), s: sympathies.slice(0, MAX_SYMPATHIES).map((x) => toCompact(x, withLogo)) };
+      const out = toBase64Url(JSON.stringify(payload));
+      if (out.length <= MAX_PARAM_LENGTH) return out;
+    }
+  } catch {
+    /* cai no null */
+  }
+  return null;
+}
+
+/** Refaz a escolha a partir do texto do link. Qualquer coisa estranha → null (nunca quebra a tela). */
+export function decodePendingVoteParam(raw: string | null | undefined): { club: ClubSearchResult; sympathies: ClubSearchResult[] } | null {
+  if (!raw || raw.length > MAX_PARAM_LENGTH || !/^[A-Za-z0-9_-]+$/.test(raw)) return null;
+  try {
+    const parsed = JSON.parse(fromBase64Url(raw));
+    const club = fromCompact(parsed?.c);
+    if (!club) return null;
+    const sympathies = (Array.isArray(parsed?.s) ? parsed.s : [])
+      .slice(0, MAX_SYMPATHIES)
+      .map(fromCompact)
+      .filter((x: ClubSearchResult | null): x is ClubSearchResult => !!x && x.name !== club.name)
+      .filter((x: ClubSearchResult, i: number, all: ClubSearchResult[]) => all.findIndex((y) => y.name === x.name) === i);
+    return { club, sympathies };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Chegou por um link com a escolha (?pv=…) e o aparelho não tem voto pendente guardado?
+ * Então guarda a escolha do link no aparelho. Devolve o voto pendente que valerá daqui em diante (ou null).
+ */
+export function adoptPendingVoteFromLink(raw: string | null | undefined): PendingVote | null {
+  const existing = loadPendingVote();
+  if (existing) return existing;
+  const fromLink = decodePendingVoteParam(raw);
+  if (!fromLink) return null;
+  savePendingVote(fromLink.club, fromLink.sympathies);
+  return loadPendingVote();
+}
+
 /** Para onde mandar quem JÁ fez login mas ainda não votou (fluxo novo ou antigo). */
 export function notVotedTarget(): string {
   if (!NEW_ENTRY_FLOW_ENABLED) return "/voting";

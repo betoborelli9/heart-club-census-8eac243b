@@ -16,7 +16,7 @@ import { useUser } from "@/contexts/UserContext";
 import { useToast } from "@/hooks/use-toast";
 import { useTranslationApp } from "@/hooks/useTranslationApp";
 import { isMasterEmail } from "@/lib/master";
-import { NEW_ENTRY_FLOW_ENABLED, clearPendingVote, loadPendingVote } from "@/lib/entry-flow";
+import { NEW_ENTRY_FLOW_ENABLED, PENDING_VOTE_PARAM, adoptPendingVoteFromLink, clearPendingVote, loadPendingVote } from "@/lib/entry-flow";
 import { submitVote } from "@/lib/submit-vote";
 import { supabase } from "@/integrations/supabase/client";
 import { setSimClub, setSimSympathies } from "@/lib/sim-fan";
@@ -32,7 +32,10 @@ const ConfirmarVoto = () => {
 
   const isMaster = isMasterEmail((realUser ?? user)?.email);
   const sim = isMaster && params.get("sim") === "1";
-  const pending = useMemo(() => loadPendingVote(), []);
+  // A escolha fica no aparelho; se o link abriu em outro navegador (localStorage vazio), ela é refeita pelo link (?pv=…).
+  const storedPending = useMemo(() => (sim ? loadPendingVote() : adoptPendingVoteFromLink(params.get(PENDING_VOTE_PARAM))), []); // eslint-disable-line react-hooks/exhaustive-deps
+  const [discardedPending, setDiscardedPending] = useState(false);
+  const pending = discardedPending ? null : storedPending;
 
   const needsTerms = !!profile && !(profile as any).terms_accepted_at;
   // Voltou depois (já tinha voto, sem escolha pendente) e ainda não aceitou os Termos: só aceita e entra.
@@ -43,6 +46,16 @@ const ConfirmarVoto = () => {
   const [recorded, setRecorded] = useState(false);
   const [recordError, setRecordError] = useState(false);
   const startedRef = useRef(false); // o voto só é gravado UMA vez por visita a esta tela
+
+  // Já votou ANTES de chegar aqui e ainda sobrou uma escolha guardada: ela não vale mais (o voto nunca é regravado,
+  // então o botão ficaria travado esperando "gravado"). Joga fora e trata como "só aceitar os Termos e entrar".
+  useEffect(() => {
+    if (sim || !isAuthReady || isLoading || startedRef.current) return;
+    if (storedPending && !discardedPending && hasVoted) {
+      clearPendingVote();
+      setDiscardedPending(true);
+    }
+  }, [sim, isAuthReady, isLoading, hasVoted, storedPending, discardedPending]);
 
   // ── Porteiro
   useEffect(() => {
