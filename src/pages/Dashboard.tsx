@@ -44,7 +44,7 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const { user, profile, isLoading, isAuthReady, isAuthenticated, signOut, simActive } = useUser();
-  const { heartClubName, viewedClubName, viewedClubId, setViewedClubName, isViewingHeart } = useViewedClub();
+  const { heartClubName, viewedClubName, viewedClubId, setViewedClubName, isViewingHeart, ready: clubReady } = useViewedClub();
 
   const [heartClubData, setHeartClubData] = useState<any>(null);
   const [viewedClubData, setViewedClubData] = useState<any>(null);
@@ -241,7 +241,7 @@ const Dashboard = () => {
         </div>
 
         <ClubBanner
-          clubName={effectiveHeartName || "SELECIONE SEU CLUBE"}
+          clubName={effectiveHeartName || (clubReady ? "SELECIONE SEU CLUBE" : "")}
           clubData={effectiveHeartData}
           theme={effectiveHeartTheme}
           profileName={effectiveProfile.nome_exibicao || "TORCEDOR"}

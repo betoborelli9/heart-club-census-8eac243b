@@ -39,7 +39,7 @@ interface ViewedClubContextType {
 const ViewedClubContext = createContext<ViewedClubContextType | null>(null);
 
 export function ViewedClubProvider({ children }: { children: ReactNode }) {
-  const { user, simActive, profile } = useUser();
+  const { user, simActive, profile, hasVoted } = useUser();
   const [heartClubName, setHeartClubName] = useState<string | null>(null);
   const [viewedClubName, setViewedClubNameState] = useState<string | null>(null);
   const [pickedClubId, setPickedClubId] = useState<number | null>(null);
@@ -98,7 +98,9 @@ export function ViewedClubProvider({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [user, simActive, simClub]);
+    // hasVoted: quem acabou de votar já estava logado (o "user" não muda) — sem reler o voto quando ele passa a
+    // valer, o Dashboard abria sem o time do coração ("Selecione seu clube") até o torcedor recarregar a página.
+  }, [user, simActive, simClub, hasVoted]);
 
   const setViewedClubName = (name: string | null, apiId?: number | null) => {
     setViewedClubNameState(name);

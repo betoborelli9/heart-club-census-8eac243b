@@ -18,7 +18,6 @@ import { useUser } from "@/contexts/UserContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useTranslationApp } from "@/hooks/useTranslationApp";
 import { usePartnerStatus } from "@/hooks/usePartnerStatus";
-
 /* ═══════════════════════════════════════════════════════════
     MÓDULO: INTERFACE DE PROPS
    ═══════════════════════════════════════════════════════════ */
@@ -120,8 +119,16 @@ const ClubBanner = ({
     navigate("/admin");
   };
 
+  // "SELECIONE SEU CLUBE" (e vazio) é só um aviso na tela, nunca o nome de um clube: não busca cores, não pede
+  // escudo à API e não mostra a mensagem "O manto está chegando!".
+  const hasRealClub = !!clubName?.trim() && !/^\s*selecione\b/i.test(clubName);
+
   useEffect(() => {
     if (!clubName) return;
+    if (!hasRealClub) {
+      setEnriching(false);
+      return;
+    }
     let cancelled = false;
     const fetchTheme = async () => {
       // ilike pode trazer múltiplas linhas (ex.: "Vila Nova" + "Vila Nova Futebol Clube").
@@ -177,7 +184,7 @@ const ClubBanner = ({
     };
     fetchTheme();
     return () => { cancelled = true; };
-  }, [clubName]);
+  }, [clubName, hasRealClub]);
 
   const buildFlagGradient = (): string => {
     const colors = [theme.cor_primaria, theme.cor_secundaria, theme.cor_terciaria, theme.cor_quarta].filter(Boolean);
@@ -324,7 +331,7 @@ const ClubBanner = ({
           )}
         </nav>
 
-        {enriching && (
+        {enriching && hasRealClub && (
           <div className="px-5 py-3 bg-gradient-to-r from-[#ff6200]/10 via-[#ff6200]/5 to-transparent border-t border-[#ff6200]/20">
             <div className="flex items-start gap-3">
               <div className="mt-0.5 shrink-0">
