@@ -49,6 +49,19 @@ describe("mensagem de convite do Embaixador", () => {
   });
 });
 
+describe("prévia do link (WhatsApp, vale para o site inteiro)", () => {
+  const html = readFileSync("index.html", "utf8");
+  const TITLE = "Vote no seu time e mostre a força da sua torcida! ⚽";
+  const DESC = "O maior censo de torcidas do mundo. É grátis e leva menos de 1 minuto.";
+  it("título e descrição novos, em Open Graph e Twitter", () => {
+    expect(html).toContain(`<meta property="og:title" content="${TITLE}">`);
+    expect(html).toContain(`<meta name="twitter:title" content="${TITLE}">`);
+    expect(html).toContain(`<meta property="og:description" content="${DESC}">`);
+    expect(html).toContain(`<meta name="twitter:description" content="${DESC}">`);
+    expect(html).not.toMatch(/Convoca a Tropa!/);
+  });
+});
+
 describe("sem promessa de prêmio e 'código' (não 'senha') de convite", () => {
   const all = Object.entries(LOCALES).map(([k, v]) => [k, JSON.stringify(v)] as const);
   const html = readFileSync("index.html", "utf8");
@@ -58,7 +71,7 @@ describe("sem promessa de prêmio e 'código' (não 'senha') de convite", () => 
       expect(text).not.toMatch(/ganhar prêmios|terão prêmios|tendrán premios|will get exclusive|ganhar premios/i);
     }
     expect(html).not.toMatch(/ganhar prêmios|terão prêmios/i);
-    expect(html).toContain("poderão ter prêmios");
+    expect(html).not.toMatch(/prêmios exclusivos/i);
   });
 
   it("o convite diz 'poderão/podrán/may' no lugar da promessa", () => {
@@ -72,7 +85,6 @@ describe("sem promessa de prêmio e 'código' (não 'senha') de convite", () => 
       expect(text).not.toMatch(/senha de convite|clave de invitaci/i);
     }
     expect(html).not.toMatch(/senha de convite/i);
-    expect(html).toContain("código de convite");
     expect(pt.components.share_tropa.invite_text).toContain("Código de Convite");
     expect(es.components.share_tropa.invite_text).toContain("Código de Invitación");
   });

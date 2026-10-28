@@ -186,8 +186,6 @@
       "subtitle": "Invita hinchas y domina el mapa por tu club",
       "your_link": "Tu enlace único",
       "share_cta": "Compartir Invitación",
-      "message": "¡Hola, hincha! Registra tu corazón en Heart Club por mi enlace y dominemos el mapa por {{club}}: {{link}}",
-      "default_club": "nuestro club",
       "ranking_title": "Ranking de Embajadores"
     },
     "address_modal": {

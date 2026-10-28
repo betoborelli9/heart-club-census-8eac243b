@@ -30,10 +30,11 @@ const AmbassadorSection = () => {
   const link = refCode
     ? `https://heartclubapp.com/convite?ref=${refCode}`
     : "https://heartclubapp.com/convite";
-  const message = t("components.ambassador_card.message", {
-    club: clubName || t("components.ambassador_card.default_club"),
-    link,
-  });
+  // Mesma mensagem da página dos Embaixadores: "NOME te convidou para o Heart Club…" (sem nome no perfil, versão sem nome)
+  const inviterName = (profile?.nome_exibicao || "").trim();
+  const message = inviterName
+    ? t("ambassadors.referral_msg", { name: inviterName, link })
+    : t("ambassadors.referral_msg_anon", { link });
 
   const nativeShare = async () => {
     if (typeof navigator !== "undefined" && (navigator as any).share) {

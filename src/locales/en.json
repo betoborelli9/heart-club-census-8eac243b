@@ -186,8 +186,6 @@
       "subtitle": "Invite fans and dominate the map for your club",
       "your_link": "Your unique link",
       "share_cta": "Share Invite",
-      "message": "Hey fan! Register your heart on Heart Club through my link and let's dominate the map for {{club}}: {{link}}",
-      "default_club": "our club",
       "ranking_title": "Ambassador Ranking"
     },
     "address_modal": {

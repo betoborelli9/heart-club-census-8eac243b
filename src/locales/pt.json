@@ -186,8 +186,6 @@
       "subtitle": "Convide torcedores e domine o mapa pelo seu clube",
       "your_link": "Seu link único",
       "share_cta": "Compartilhar Convite",
-      "message": "Fala, torcedor! Registre seu coração no Heart Club pelo meu link e vamos dominar o mapa pelo {{club}}: {{link}}",
-      "default_club": "nosso clube",
       "ranking_title": "Ranking de Embaixadores"
     },
     "address_modal": {
