@@ -80,3 +80,36 @@ describe("escolha do time levada no link", () => {
     expect(adoptPendingVoteFromLink("lixo!")).toBeNull();
   });
 });
+
+describe("sinais 'Termos mostrados' e 'novidades' da porta de entrada direta", () => {
+  const c: any = { id: "1", name: "Vila Nova", logo: "https://x.test/l.png", location: "Goiânia", source: "local" };
+
+  it("o aparelho guarda e devolve os sinais; sem eles ficam falsos", () => {
+    localStorage.clear();
+    savePendingVote(c, [], { terms: true, news: true });
+    expect(loadPendingVote()).toMatchObject({ terms: true, news: true });
+    savePendingVote(c, []);
+    expect(loadPendingVote()).toMatchObject({ terms: false, news: false });
+  });
+
+  it("o link leva os sinais e o clube", () => {
+    const pv = encodePendingVoteParam(c, [], { terms: true, news: true })!;
+    expect(decodePendingVoteParam(pv)).toMatchObject({ terms: true, news: true });
+    expect(decodePendingVoteParam(encodePendingVoteParam(c, [])!)).toMatchObject({ terms: false, news: false });
+  });
+
+  it("link de confiança (e-mail já verificado) preserva os sinais; link comum descarta", () => {
+    const pv = encodePendingVoteParam(c, [], { terms: true, news: true })!;
+    localStorage.clear();
+    expect(adoptPendingVoteFromLink(pv, { trustFlags: true })).toMatchObject({ terms: true, news: true });
+    localStorage.clear();
+    expect(adoptPendingVoteFromLink(pv)).toMatchObject({ terms: false, news: false });
+  });
+
+  it("não troca uma escolha que já está no aparelho", () => {
+    localStorage.clear();
+    savePendingVote({ ...c, name: "Goiás" }, [], { terms: true });
+    const pv = encodePendingVoteParam(c, [], { terms: true })!;
+    expect(adoptPendingVoteFromLink(pv, { trustFlags: true })?.club.name).toBe("Goiás");
+  });
+});

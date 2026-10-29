@@ -18,12 +18,21 @@ export type PendingVote = {
   club: ClubSearchResult;
   sympathies: ClubSearchResult[];
   savedAt: number;
+  /** O aviso "Ao continuar, você aceita os Termos…" foi mostrado ao torcedor junto dos botões de entrar:
+   *  o voto é gravado direto, sem tela de confirmação, e o aceite é registrado junto. Sem isto, vale a tela antiga. */
+  terms?: boolean;
+  /** Marcou a caixinha OPCIONAL de novidades por e-mail (começa desmarcada). */
+  news?: boolean;
 };
 
+export type PendingVoteFlags = { terms?: boolean; news?: boolean };
+
 /** Guarda a escolha do torcedor no aparelho enquanto ele faz o login. */
-export function savePendingVote(club: ClubSearchResult, sympathies: ClubSearchResult[]) {
+export function savePendingVote(club: ClubSearchResult, sympathies: ClubSearchResult[], flags: PendingVoteFlags = {}) {
   try {
     const value: PendingVote = { club, sympathies, savedAt: Date.now() };
+    if (flags.terms) value.terms = true;
+    if (flags.news) value.news = true;
     localStorage.setItem(KEY, JSON.stringify(value));
   } catch {
     /* sem armazenamento: o torcedor escolhe de novo depois do login */
@@ -36,7 +45,12 @@ export function loadPendingVote(): PendingVote | null {
     if (!raw) return null;
     const parsed = JSON.parse(raw) as PendingVote;
     if (!parsed?.club?.name || Date.now() - (parsed.savedAt || 0) > MAX_AGE_MS) return null;
-    return { ...parsed, sympathies: Array.isArray(parsed.sympathies) ? parsed.sympathies : [] };
+    return {
+      ...parsed,
+      sympathies: Array.isArray(parsed.sympathies) ? parsed.sympathies : [],
+      terms: parsed.terms === true,
+      news: parsed.news === true,
+    };
   } catch {
     return null;
   }
@@ -102,10 +116,16 @@ const fromBase64Url = (s: string) => {
 };
 
 /** Texto curto (seguro para URL) com o clube do coração e as simpatias. Null se não couber no link. */
-export function encodePendingVoteParam(club: ClubSearchResult, sympathies: ClubSearchResult[]): string | null {
+export function encodePendingVoteParam(
+  club: ClubSearchResult,
+  sympathies: ClubSearchResult[],
+  flags: PendingVoteFlags = {},
+): string | null {
   try {
     for (const withLogo of [true, false]) {
-      const payload = { c: toCompact(club, withLogo), s: sympathies.slice(0, MAX_SYMPATHIES).map((x) => toCompact(x, withLogo)) };
+      const payload: any = { c: toCompact(club, withLogo), s: sympathies.slice(0, MAX_SYMPATHIES).map((x) => toCompact(x, withLogo)) };
+      if (flags.terms) payload.t = 1;
+      if (flags.news) payload.m = 1;
       const out = toBase64Url(JSON.stringify(payload));
       if (out.length <= MAX_PARAM_LENGTH) return out;
     }
@@ -116,7 +136,9 @@ export function encodePendingVoteParam(club: ClubSearchResult, sympathies: ClubS
 }
 
 /** Refaz a escolha a partir do texto do link. Qualquer coisa estranha → null (nunca quebra a tela). */
-export function decodePendingVoteParam(raw: string | null | undefined): { club: ClubSearchResult; sympathies: ClubSearchResult[] } | null {
+export function decodePendingVoteParam(
+  raw: string | null | undefined,
+): { club: ClubSearchResult; sympathies: ClubSearchResult[]; terms: boolean; news: boolean } | null {
   if (!raw || raw.length > MAX_PARAM_LENGTH || !/^[A-Za-z0-9_-]+$/.test(raw)) return null;
   try {
     const parsed = JSON.parse(fromBase64Url(raw));
@@ -127,7 +149,7 @@ export function decodePendingVoteParam(raw: string | null | undefined): { club: 
       .map(fromCompact)
       .filter((x: ClubSearchResult | null): x is ClubSearchResult => !!x && x.name !== club.name)
       .filter((x: ClubSearchResult, i: number, all: ClubSearchResult[]) => all.findIndex((y) => y.name === x.name) === i);
-    return { club, sympathies };
+    return { club, sympathies, terms: parsed?.t === 1, news: parsed?.m === 1 };
   } catch {
     return null;
   }
@@ -136,13 +158,22 @@ export function decodePendingVoteParam(raw: string | null | undefined): { club: 
 /**
  * Chegou por um link com a escolha (?pv=…) e o aparelho não tem voto pendente guardado?
  * Então guarda a escolha do link no aparelho. Devolve o voto pendente que valerá daqui em diante (ou null).
+ * Os sinais de "Termos mostrados" e "novidades" só valem quando o link é de confiança (login por e-mail já verificado);
+ * em qualquer outro link a escolha vale sem eles — e o voto exige a tela de confirmação.
  */
-export function adoptPendingVoteFromLink(raw: string | null | undefined): PendingVote | null {
+export function adoptPendingVoteFromLink(
+  raw: string | null | undefined,
+  options: { trustFlags?: boolean } = {},
+): PendingVote | null {
   const existing = loadPendingVote();
   if (existing) return existing;
   const fromLink = decodePendingVoteParam(raw);
   if (!fromLink) return null;
-  savePendingVote(fromLink.club, fromLink.sympathies);
+  savePendingVote(
+    fromLink.club,
+    fromLink.sympathies,
+    options.trustFlags ? { terms: fromLink.terms, news: fromLink.news } : {},
+  );
   return loadPendingVote();
 }
 

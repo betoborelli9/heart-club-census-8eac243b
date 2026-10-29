@@ -40,6 +40,10 @@ const ConfirmarVoto = () => {
   const needsTerms = !!profile && !(profile as any).terms_accepted_at;
   // Voltou depois (já tinha voto, sem escolha pendente) e ainda não aceitou os Termos: só aceita e entra.
   const termsOnly = !sim && !pending && hasVoted && needsTerms;
+  // Fluxo direto: o torcedor viu o aviso "Ao continuar, você aceita os Termos…" ao tocar em entrar. Então o voto é
+  // gravado na hora, o aceite é registrado junto e ele cai no painel — sem quadradinho nem "SIM, EU JURO!".
+  // Escolha guardada sem esse sinal (ex.: link de fora, ou de antes desta mudança) segue pela tela de confirmação.
+  const autoFlow = !termsOnly && !!pending?.terms;
   const [accepted, setAccepted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [recording, setRecording] = useState(false);
@@ -80,9 +84,44 @@ const ConfirmarVoto = () => {
     if (!pending && !termsOnly) navigate(sim ? "/entrar?sim=1" : "/entrar", { replace: true });
   }, [isAuthReady, isLoading, isMaster, sim, isAuthenticated, hasVoted, pending, needsTerms, termsOnly, navigate]);
 
+  // Fluxo direto, logo depois do voto gravado: registra o aceite dos Termos (e as novidades, se marcou) e entra no painel.
+  const finishAuto = async (wantsNews: boolean) => {
+    setSubmitting(true);
+    try {
+      const { error } = await supabase.rpc("accept_terms" as any, { p_version: "1.0" });
+      if (error) console.warn("[LGPD] accept_terms falhou (não-crítico):", error);
+    } catch (err) {
+      console.warn("[LGPD] accept_terms falhou (não-crítico):", err);
+    }
+    if (wantsNews) {
+      try {
+        const { error } = await supabase.rpc("set_email_news_opt_in" as any, { p_opt_in: true });
+        if (error) console.warn("[LGPD] novidades por e-mail não gravadas (não-crítico):", error);
+      } catch (err) {
+        console.warn("[LGPD] novidades por e-mail não gravadas (não-crítico):", err);
+      }
+    }
+    await refreshProfile().catch(() => {}); // o app precisa saber que os Termos foram aceitos
+    toast({ title: t("entrar.vote_ok") });
+    navigate("/dashboard", { replace: true });
+    setSubmitting(false);
+  };
+
+  // Teste do Master no fluxo direto: o "torcedor novo" cai no Dashboard, sem gravar nada.
+  useEffect(() => {
+    if (!sim || !autoFlow || !pending || !isAuthReady || isLoading) return;
+    setSimClub(pending.club.name);
+    setSimSympathies(pending.sympathies.map((x) => x.name));
+    clearPendingVote();
+    navigate("/dashboard", { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sim, autoFlow, isAuthReady, isLoading]);
+
   // ── Grava o voto assim que o torcedor chega logado (fluxo real; o teste do Master nunca grava)
   const record = async () => {
     if (!user || !pending) return;
+    const direct = autoFlow;
+    const wantsNews = !!pending.news;
     startedRef.current = true;
     setRecording(true);
     setRecordError(false);
@@ -97,11 +136,13 @@ const ConfirmarVoto = () => {
       });
       setRecorded(true);
       clearPendingVote();
+      if (direct) await finishAuto(wantsNews);
     } catch (err: any) {
       if (err?.code === "23505") {
         // já existe voto original deste torcedor → conta como registrado
         setRecorded(true);
         clearPendingVote();
+        if (direct) await finishAuto(wantsNews);
       } else {
         console.error("[CONFIRMAR_VOTO] erro ao gravar:", err);
         setRecordError(true);
@@ -168,6 +209,49 @@ const ConfirmarVoto = () => {
     navigate("/dashboard", { replace: true });
     setSubmitting(false);
   };
+
+  // Fluxo direto: só mostra o clube e "Registrando seu voto…" enquanto grava (com "Tentar de novo" se a rede falhar).
+  if (autoFlow && club) {
+    return (
+      <div className="min-h-screen bg-background text-white" data-testid="confirmar-auto">
+        <div className="mx-auto flex w-full max-w-sm flex-col items-center gap-4 px-4 py-10">
+          <img src={logo} alt="Heart Club" className="h-14 w-14 object-contain" />
+          <div className="flex w-full items-center gap-3 rounded-2xl border-2 border-primary bg-card p-3">
+            <ClubLogo src={club.logo} alt={club.name} size="lg" />
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-lg font-black uppercase italic tracking-tighter">{club.name}</p>
+              <p className="text-[10px] font-bold uppercase text-white/50">{club.location}</p>
+            </div>
+            <Heart className="h-6 w-6 fill-current text-primary" />
+          </div>
+          {!sim && recordError ? (
+            <>
+              <p className="w-full text-center text-sm font-bold text-red-400">{t("entrar.vote_error")}</p>
+              <Button
+                onClick={record}
+                className="btn-orange-gradient h-12 w-full rounded-2xl text-lg font-black italic shadow-xl shadow-primary/20 active:scale-95"
+              >
+                {t("entrar.retry")}
+              </Button>
+              <button
+                onClick={() => {
+                  clearPendingVote();
+                  navigate("/entrar");
+                }}
+                className="text-xs font-bold uppercase text-white/40 hover:text-white/70"
+              >
+                {t("entrar.back")}
+              </button>
+            </>
+          ) : (
+            <p className="flex items-center gap-2 text-sm font-bold text-white/80">
+              <Loader2 className="h-5 w-5 animate-spin text-primary" /> {t("entrar.vote_recording")}
+            </p>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background text-white">

@@ -98,7 +98,8 @@ const Voting = () => {
 
         // O link pode ter chegado em outro navegador (ex.: Chrome, fora do Instagram): refaz a escolha do time a
         // partir do link ANTES de limpar o endereço, para o torcedor cair direto em "Confirme seu voto".
-        adoptPendingVoteFromLink(searchParams.get(PENDING_VOTE_PARAM));
+        // (link do e-mail já verificado pelo token: aqui o sinal "Termos mostrados" e a escolha de novidades valem)
+        adoptPendingVoteFromLink(searchParams.get(PENDING_VOTE_PARAM), { trustFlags: true });
         navigate("/voting", { replace: true });
       } catch (err) {
         console.error("[VOTING_AUTH] conexão instável", err);

@@ -1,18 +1,20 @@
 /**
  * [CAMINHO]: src/pages/Entrar.tsx
- * [MÓDULO]: Porta de entrada NOVA do torcedor — "mostrar primeiro, pedir login depois".
- *  1) Splash curto  2) Escolha do clube (sem login)  3) Tela do clube com a torcida
- *  4) "Juro lealdade" → só aí pede o login (Google ou link por e-mail).
- * O voto em si é gravado em /confirmar-voto (depois do login, com simpatias e o quadradinho dos Termos).
+ * [MÓDULO]: Porta de entrada do torcedor — o caminho mais curto até o voto.
+ *  1) Logo parado (no máximo 2 s)  2) "Qual é o time do seu coração?" (busca, sem login)
+ *  3) Clube escolhido no topo + "Continuar com Google" / link por e-mail, com o aviso dos Termos.
+ * Não há tela de "Juro lealdade" nem de "Confirme seu voto": o voto é gravado em /confirmar-voto assim que o
+ * torcedor volta do login (Google) ou abre o link do e-mail, e o aceite dos Termos é registrado junto.
+ * As simpatias ficam para depois, no painel.
  *
  * Segurança: enquanto NEW_ENTRY_FLOW_ENABLED for false, esta rota só abre para o Master em
  * modo teste (?sim=1), que NÃO grava nada e mostra as telas IDÊNTICAS às do torcedor.
- * O público segue no fluxo antigo.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams, Link } from "react-router-dom";
-import { Heart, Loader2, Mail, Search, X } from "lucide-react";
+import { Heart, Loader2, Mail, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { useUser } from "@/contexts/UserContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -33,12 +35,10 @@ import { isSimActive, startSim } from "@/lib/sim-fan";
 import type { ClubSearchResult } from "@/lib/search-clubs";
 import { ClubLogo } from "@/components/ClubLogo";
 import { ResultsList, useClubSearch } from "@/components/entrar/ClubSearchBox";
-import splashVideo from "@/assets/splash.mp4";
-import logo from "@/assets/logo.png";
+import logo from "@/assets/logo-384.png"; // cópia leve (67 KB) do logo de 1000 px: a abertura carrega rápido no celular
 
-type Stage = "intro" | "pick" | "club" | "login";
-const INTRO_MS = 4500;
-const MAX_SYMPATHY = 4;
+type Stage = "intro" | "pick" | "login";
+const INTRO_MS = 1500; // logo parado: no máximo 2 s
 
 const Entrar = () => {
   const navigate = useNavigate();
@@ -53,7 +53,7 @@ const Entrar = () => {
 
   // Navegador interno (Instagram, Facebook, TikTok…): o Google bloqueia o login ali.
   const inApp = useMemo(() => detectInAppBrowser(), []);
-  // Link com a escolha do time (vindo do "Abrir no Chrome"): o torcedor já jurou lealdade, vai direto ao login.
+  // Link com a escolha do time (vindo do "Abrir no Chrome"): o torcedor já escolheu, vai direto às opções de entrar.
   const linkVote = useMemo(() => (params.get("sim") === "1" ? null : decodePendingVoteParam(params.get(PENDING_VOTE_PARAM))), []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const [stage, setStage] = useState<Stage>(() => {
@@ -65,12 +65,12 @@ const Entrar = () => {
     }
   });
   const [heartClub, setHeartClub] = useState<ClubSearchResult | null>(linkVote?.club ?? null);
-  const [fans, setFans] = useState<number | null>(null);
   const [email, setEmail] = useState("");
+  const [newsOptIn, setNewsOptIn] = useState(!!linkVote?.news); // OPCIONAL: começa sempre desmarcada
   const [busy, setBusy] = useState<"google" | "magic" | null>(null);
-  const [sympathies, setSympathies] = useState<ClubSearchResult[]>(linkVote?.sympathies ?? []);
+  // Simpatias não são mais pedidas aqui (ficam para o painel); só preserva as que vierem num link antigo.
+  const sympathies = useMemo<ClubSearchResult[]>(() => linkVote?.sympathies ?? [], [linkVote]);
   const heartSearch = useClubSearch();
-  const sympathySearch = useClubSearch();
   const simStarted = useRef(false);
 
   // Teste do Master: começa do zero como um torcedor novo (nada do perfil/voto real aparece).
@@ -81,14 +81,14 @@ const Entrar = () => {
   }, [sim, stage]);
 
   // Escolha vinda no link: guarda no aparelho (o login com Google volta para "/" e precisa achá-la).
+  // Guardada SEM o sinal de "Termos mostrados": link de fora nunca grava voto sozinho; o aceite só vale no clique de entrar.
   const linkVoteSaved = useRef(false);
   useEffect(() => {
     if (!linkVote || linkVoteSaved.current) return;
     linkVoteSaved.current = true;
     savePendingVote(linkVote.club, linkVote.sympathies);
   }, [linkVote]);
-  // Já logado, ainda sem voto, e já jurou lealdade antes (escolha vinda no link ?pv= ou guardada no aparelho):
-  // vai direto para "Confirme seu voto" — nunca repete a escolha do clube e das simpatias.
+  // Já logado, ainda sem voto, e já escolheu o clube (link ?pv= ou guardado no aparelho): segue para o voto.
   useEffect(() => {
     if (!isAuthReady || isLoading || sim) return;
     if (!isAuthenticated || hasVoted || isMasterEmail((realUser ?? user)?.email)) return;
@@ -109,7 +109,7 @@ const Entrar = () => {
     if (isAuthenticated && hasVoted && !isMaster) navigate("/dashboard", { replace: true });
   }, [isAuthReady, isLoading, isMaster, sim, isAuthenticated, hasVoted, navigate]);
 
-  // ── Splash: some sozinho em 4,5 s (ou ao tocar em "Pular").
+  // ── Logo parado: some sozinho em 1,5 s (ou ao tocar na tela).
   const finishIntro = useCallback(() => {
     try {
       sessionStorage.setItem("hc_intro_seen", "1");
@@ -124,47 +124,31 @@ const Entrar = () => {
     return () => clearTimeout(timer);
   }, [stage, finishIntro]);
 
-  // ── Quantos torcedores já votaram no clube (número somado, sem dado de pessoa).
-  useEffect(() => {
-    if (!heartClub) {
-      setFans(null);
-      return;
-    }
-    let alive = true;
-    (async () => {
-      const { data, error } = await supabase.rpc("public_get_club_fans" as any, { p_club: heartClub.name });
-      if (alive) setFans(error || typeof data !== "number" ? null : data);
-    })();
-    return () => {
-      alive = false;
-    };
-  }, [heartClub]);
-
   const pickHeart = (club: ClubSearchResult) => {
     heartSearch.reset();
+    // Já logado e sem voto (caso raro): sem o aviso dos Termos na tela, vai pela confirmação normal.
+    if (!sim && isAuthenticated) {
+      savePendingVote(club, []);
+      navigate("/confirmar-voto", { replace: true });
+      return;
+    }
     setHeartClub(club);
-    setStage("club");
+    setStage("login");
   };
 
   const changeClub = () => {
     setHeartClub(null);
-    setSympathies([]);
-    sympathySearch.reset();
+    heartSearch.reset();
     setStage("pick");
   };
 
-  const onSwear = () => {
-    if (!heartClub) return;
-    savePendingVote(heartClub, sympathies);
-    if (!sim && isAuthenticated) {
-      navigate("/confirmar-voto", { replace: true });
-      return;
-    }
-    setStage("login");
-  };
+  // Quem toca em "Continuar" já viu o aviso "Ao continuar, você aceita os Termos…" logo abaixo dos botões.
+  const flags = { terms: true, news: newsOptIn };
 
   // No teste do Master os botões de login têm o mesmo visual, mas só avançam a tela (sem login de verdade).
   const loginGoogle = async () => {
+    if (!heartClub) return;
+    savePendingVote(heartClub, sympathies, flags); // antes de sair para o Google: ao voltar, o voto é gravado na hora
     if (sim) {
       navigate("/confirmar-voto?sim=1");
       return;
@@ -182,7 +166,8 @@ const Entrar = () => {
 
   const loginMagic = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email.trim()) return;
+    if (!email.trim() || !heartClub) return;
+    savePendingVote(heartClub, sympathies, flags);
     if (sim) {
       navigate("/confirmar-voto?sim=1");
       return;
@@ -194,7 +179,7 @@ const Entrar = () => {
           email: email.trim(),
           redirectOrigin: window.location.origin,
           // a escolha do time vai junto no link do e-mail (ele pode abrir em outro navegador)
-          pendingVote: heartClub ? encodePendingVoteParam(heartClub, sympathies) : null,
+          pendingVote: encodePendingVoteParam(heartClub, sympathies, flags),
         },
       });
       if (error || (data && (data as any).error)) throw new Error("auth_failed");
@@ -207,12 +192,12 @@ const Entrar = () => {
     }
   };
 
-  // "Abrir no Chrome" (Android): abre esta mesma página no Chrome, levando a escolha do time se ele já jurou lealdade.
+  // "Abrir no Chrome" (Android): abre esta mesma página no Chrome, levando a escolha do time se ele já escolheu.
   const openInChrome = () => {
     try {
       const url = new URL(window.location.href);
       url.searchParams.delete("sim");
-      const pv = stage === "login" && heartClub ? encodePendingVoteParam(heartClub, sympathies) : null;
+      const pv = stage === "login" && heartClub ? encodePendingVoteParam(heartClub, sympathies, { news: newsOptIn }) : null;
       if (pv) url.searchParams.set(PENDING_VOTE_PARAM, pv);
       else url.searchParams.delete(PENDING_VOTE_PARAM);
       window.location.href = buildChromeIntentUrl(url.toString());
@@ -229,31 +214,18 @@ const Entrar = () => {
     );
   }
 
-  // ── 1) SPLASH
+  // ── 1) LOGO PARADO (sem vídeo: nada pesado no primeiro carregamento)
   if (stage === "intro") {
     return (
-      <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black">
-        <video
-          autoPlay
-          muted
-          playsInline
-          src={splashVideo}
-          onEnded={finishIntro}
-          className="h-full w-full max-h-[100vh] max-w-[100vw] object-contain sm:max-h-[800px] sm:max-w-[450px]"
-          style={{ pointerEvents: "none" }}
-        />
-        <button
-          onClick={finishIntro}
-          className="absolute right-4 top-4 rounded-full bg-white/10 px-4 py-1.5 text-xs font-bold uppercase text-white/80 hover:bg-white/20"
-        >
-          {t("entrar.skip")}
-        </button>
+      <div
+        className="fixed inset-0 z-[9999] flex items-center justify-center bg-black"
+        onClick={finishIntro}
+        data-testid="entrar-intro"
+      >
+        <img src={logo} alt="Heart Club" className="h-40 w-40 object-contain sm:h-48 sm:w-48" />
       </div>
     );
   }
-
-  const primary = (heartClub as any)?.cor_primaria || "#ff6200";
-  const secondary = (heartClub as any)?.cor_secundaria || "#1a1a1a";
 
   return (
     <div className="min-h-screen bg-background text-white">
@@ -315,90 +287,10 @@ const Entrar = () => {
           </div>
         )}
 
-        {/* ── 3) TELA DO CLUBE */}
-        {stage === "club" && heartClub && (
-          <div className="w-full space-y-5">
-            <div
-              className="relative overflow-hidden rounded-3xl p-6 text-center"
-              style={{ background: `linear-gradient(135deg, ${primary} 0%, ${secondary} 100%)` }}
-            >
-              <div className="absolute inset-0 bg-black/35" />
-              <div className="relative space-y-3">
-                <div className="mx-auto flex h-28 w-28 items-center justify-center rounded-full bg-white shadow-xl">
-                  <ClubLogo src={heartClub.logo} alt={heartClub.name} size="xl" />
-                </div>
-                <h2 className="text-3xl font-black italic uppercase leading-tight tracking-tighter drop-shadow">
-                  {heartClub.name}
-                </h2>
-                <p className="text-xs font-bold uppercase text-white/80">{heartClub.location}</p>
-                <p className="mx-auto inline-flex items-center gap-2 rounded-full bg-black/45 px-4 py-1.5 text-sm font-bold">
-                  <Heart className="h-4 w-4 fill-current" />
-                  {fans === null
-                    ? "…"
-                    : fans > 0
-                      ? t("entrar.fans", { count: fans, defaultValue: String(fans) })
-                      : t("entrar.first_fan", { club: heartClub.name })}
-                </p>
-              </div>
-            </div>
-
-            {/* SIMPATIAS: um campo de cada vez; ao escolher um time, abre o próximo (até 4) */}
-            <div className="space-y-2">
-              <p className="text-sm font-bold text-white/70">{t("entrar.sympathy_intro")}</p>
-              {sympathies.map((c, idx) => (
-                <div key={c.name} className="flex items-center gap-3 rounded-xl border border-white/5 bg-card p-2.5">
-                  <ClubLogo src={c.logo} alt={c.name} size="sm" />
-                  <p className="flex-1 truncate text-sm font-bold uppercase italic">{c.name}</p>
-                  <button onClick={() => setSympathies((p) => p.filter((_, i) => i !== idx))} aria-label="remove">
-                    <X className="h-4 w-4 opacity-60" />
-                  </button>
-                </div>
-              ))}
-              {sympathies.length < MAX_SYMPATHY && (
-                <div className="relative">
-                  <Input
-                    value={sympathySearch.query}
-                    onChange={(e) => sympathySearch.setQuery(e.target.value)}
-                    onFocus={() => sympathySearch.setOpen(true)}
-                    onBlur={() => setTimeout(() => sympathySearch.setOpen(false), 200)}
-                    placeholder={t("entrar.sympathy_placeholder_n", { n: sympathies.length + 1 })}
-                    className="h-12 rounded-xl border-white/10 bg-card"
-                  />
-                  <ResultsList
-                    results={sympathySearch.results}
-                    loading={sympathySearch.loading}
-                    open={sympathySearch.open}
-                    onPick={(c) => {
-                      if (c.name !== heartClub.name && !sympathies.find((x) => x.name === c.name)) {
-                        setSympathies((p) => [...p, c]);
-                      }
-                      sympathySearch.reset();
-                    }}
-                  />
-                </div>
-              )}
-            </div>
-
-            <Button
-              onClick={onSwear}
-              className="btn-orange-gradient h-16 w-full rounded-2xl text-xl font-black italic shadow-xl shadow-primary/20 active:scale-95"
-            >
-              {t("entrar.swear")}
-            </Button>
-            <p className="text-center text-xs text-white/50">{t("entrar.privacy_line")}</p>
-            <button
-              onClick={changeClub}
-              className="mx-auto block text-xs font-bold uppercase text-white/40 hover:text-white/70"
-            >
-              {t("entrar.change_club")}
-            </button>
-          </div>
-        )}
-
-        {/* ── 4) LOGIN (só aqui!) */}
+        {/* ── 3) CLUBE ESCOLHIDO NO TOPO + OPÇÕES DE ENTRAR */}
         {stage === "login" && heartClub && (
           <div className="w-full space-y-5">
-            <div className="flex items-center gap-3 rounded-2xl border border-primary/30 bg-card p-3">
+            <div className="flex items-center gap-3 rounded-2xl border border-primary/30 bg-card p-3" data-testid="entrar-chosen-club">
               <ClubLogo src={heartClub.logo} alt={heartClub.name} size="md" />
               <p className="flex-1 truncate text-lg font-black uppercase italic">{heartClub.name}</p>
               <Heart className="h-5 w-5 fill-current text-primary" />
@@ -409,6 +301,17 @@ const Entrar = () => {
             </div>
 
             <div className="space-y-4">
+              {/* Novidades por e-mail (LGPD): OPCIONAL e desmarcada; fica ACIMA dos botões para valer no toque de entrar */}
+              <label htmlFor="news-optin" className="flex cursor-pointer items-start gap-3 text-xs leading-snug text-white/70">
+                <Checkbox
+                  id="news-optin"
+                  checked={newsOptIn}
+                  onCheckedChange={(v) => setNewsOptIn(v === true)}
+                  className="mt-0.5"
+                />
+                <span>{t("entrar.news_optin")}</span>
+              </label>
+
               {!inApp.inApp && (
                 <>
                   {/* mesmo estilo do botão de Google da página /login: fundo escuro, borda fina, logo colorido, texto claro */}
@@ -446,13 +349,26 @@ const Entrar = () => {
                   {t("entrar.send_link")}
                 </Button>
               </form>
+
+              {/* Aviso dos Termos logo abaixo das opções de entrar: continuar = aceitar (registrado junto com o voto) */}
+              <p className="text-center text-xs leading-snug text-white/60" data-testid="entrar-terms-notice">
+                {t("entrar.terms_notice_pre")}
+                <Link to="/termos" target="_blank" className="text-primary underline">
+                  {t("entrar.terms_link")}
+                </Link>
+                {t("entrar.terms_and")}
+                <Link to="/privacidade" target="_blank" className="text-primary underline">
+                  {t("entrar.privacy_link")}
+                </Link>
+                .
+              </p>
             </div>
             <p className="text-center text-xs text-white/50">{t("entrar.privacy_line")}</p>
             <button
-              onClick={() => setStage("club")}
+              onClick={changeClub}
               className="mx-auto block text-xs font-bold uppercase text-white/40 hover:text-white/70"
             >
-              {t("entrar.back")}
+              {t("entrar.change_club")}
             </button>
           </div>
         )}

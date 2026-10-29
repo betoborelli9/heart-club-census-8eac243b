@@ -201,3 +201,125 @@ describe("ConfirmarVoto — voto gravado ao chegar logado", () => {
     await waitFor(() => expect(screen.getByTestId("where").textContent).toBe("/dashboard"));
   });
 });
+
+describe("ConfirmarVoto — fluxo direto (aviso dos Termos já mostrado na entrada)", () => {
+  beforeEach(() => {
+    localStorage.clear();
+    state.hasVoted = false;
+    state.profile = { id: "fan-1", terms_accepted_at: null };
+    submitVote.mockClear();
+    rpc.mockClear();
+    refreshProfile.mockClear();
+  });
+
+  it("grava o voto, registra o aceite dos Termos e cai no painel — sem quadradinho e sem 'SIM, EU JURO!'", async () => {
+    savePendingVote(club, [], { terms: true });
+    renderPage();
+    await waitFor(() => expect(submitVote).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(rpc).toHaveBeenCalledWith("accept_terms", { p_version: "1.0" }));
+    await waitFor(() => expect(screen.getByTestId("where").textContent).toBe("/dashboard"));
+    expect(refreshProfile).toHaveBeenCalled();
+    expect(screen.queryByRole("checkbox")).toBeNull();
+    expect(screen.queryByText("entrar.yes_swear")).toBeNull();
+    expect(submitVote).toHaveBeenCalledTimes(1); // um voto só
+    expect((submitVote.mock.calls[0] as any[])[0].heartClub.name).toBe("Paris Saint Germain");
+    expect(loadPendingVote()).toBeNull();
+  });
+
+  it("enquanto grava, mostra o clube e 'Registrando seu voto…' (nada de confirmar)", async () => {
+    savePendingVote(club, [], { terms: true });
+    let release: () => void = () => {};
+    submitVote.mockImplementationOnce(
+      () =>
+        new Promise<void>((resolve) => {
+          release = () => {
+            state.hasVoted = true;
+            resolve();
+          };
+        }),
+    );
+    renderPage();
+    expect(await screen.findByTestId("confirmar-auto")).toBeTruthy();
+    expect(screen.getByText("entrar.vote_recording")).toBeTruthy();
+    expect(screen.getByText("Paris Saint Germain")).toBeTruthy();
+    expect(screen.queryByText("entrar.yes_swear")).toBeNull();
+    await act(async () => release());
+    await waitFor(() => expect(screen.getByTestId("where").textContent).toBe("/dashboard"));
+  });
+
+  it("novidades por e-mail marcada na entrada: grava no perfil", async () => {
+    savePendingVote(club, [], { terms: true, news: true });
+    renderPage();
+    await waitFor(() => expect(rpc).toHaveBeenCalledWith("set_email_news_opt_in", { p_opt_in: true }));
+    await waitFor(() => expect(screen.getByTestId("where").textContent).toBe("/dashboard"));
+  });
+
+  it("novidades desmarcada: NÃO grava nada de novidades", async () => {
+    savePendingVote(club, [], { terms: true });
+    renderPage();
+    await waitFor(() => expect(screen.getByTestId("where").textContent).toBe("/dashboard"));
+    expect(rpc).not.toHaveBeenCalledWith("set_email_news_opt_in", expect.anything());
+  });
+
+  it("já existia voto deste torcedor (23505): conta como registrado, aceita os Termos e entra, sem regravar", async () => {
+    savePendingVote(club, [], { terms: true });
+    submitVote.mockImplementationOnce(async () => {
+      state.hasVoted = true;
+      throw Object.assign(new Error("duplicado"), { code: "23505" });
+    });
+    renderPage();
+    await waitFor(() => expect(rpc).toHaveBeenCalledWith("accept_terms", { p_version: "1.0" }));
+    await waitFor(() => expect(screen.getByTestId("where").textContent).toBe("/dashboard"));
+    expect(submitVote).toHaveBeenCalledTimes(1);
+  });
+
+  it("se a gravação falhar, mostra 'Tentar de novo' (sem aceitar Termos nem entrar); ao repetir, conclui", async () => {
+    savePendingVote(club, [], { terms: true });
+    submitVote.mockImplementationOnce(async () => {
+      throw new Error("rede caiu");
+    });
+    renderPage();
+    await waitFor(() => expect(screen.getAllByText("entrar.vote_error").length).toBeGreaterThan(0));
+    expect(rpc).not.toHaveBeenCalled();
+    expect(screen.queryByTestId("where")).toBeNull();
+    await act(async () => {
+      fireEvent.click(screen.getByText("entrar.retry"));
+    });
+    await waitFor(() => expect(submitVote).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(rpc).toHaveBeenCalledWith("accept_terms", { p_version: "1.0" }));
+    await waitFor(() => expect(screen.getByTestId("where").textContent).toBe("/dashboard"));
+  });
+
+  it("clube inválido (a validação do clube continua valendo): não entra e mostra o erro", async () => {
+    savePendingVote(club, [], { terms: true });
+    submitVote.mockImplementationOnce(async () => {
+      throw new Error("clube_invalido");
+    });
+    renderPage();
+    await waitFor(() => expect(screen.getAllByText("entrar.vote_error").length).toBeGreaterThan(0));
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
+  it("link de fora (/confirmar-voto?pv=…) NUNCA grava sozinho, mesmo dizendo 'Termos mostrados': cai na confirmação", async () => {
+    const pv = encodePendingVoteParam(club, [], { terms: true, news: true })!;
+    render(
+      <MemoryRouter initialEntries={[`/confirmar-voto?pv=${pv}`]}>
+        <Routes>
+          <Route path="/confirmar-voto" element={<ConfirmarVoto />} />
+          <Route path="*" element={<Where />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+    // a tela antiga (quadradinho + SIM, EU JURO!) aparece e o voto só é gravado ali como antes (aceite no botão)
+    expect(await screen.findByRole("checkbox")).toBeTruthy();
+    expect(screen.queryByTestId("confirmar-auto")).toBeNull();
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
+  it("escolha antiga, guardada SEM o aviso dos Termos: segue pela tela de confirmação de antes", async () => {
+    savePendingVote(club, []);
+    renderPage();
+    expect(await screen.findByRole("checkbox")).toBeTruthy();
+    expect(screen.queryByTestId("confirmar-auto")).toBeNull();
+  });
+});
