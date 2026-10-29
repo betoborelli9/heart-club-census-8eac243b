@@ -27,6 +27,7 @@ import ClubBanner from "@/components/dashboard/ClubBanner";
 import NewsFeedCards from "@/components/dashboard/NewsFeedCards";
 import RivalsColumn from "@/components/dashboard/RivalsColumn";
 import SympathyCarousel from "@/components/dashboard/SympathyCarousel";
+import SympathyAddCard from "@/components/dashboard/SympathyAddCard";
 import CompetitionsPanel from "@/components/dashboard/CompetitionsPanel";
 import SocialShareBanners from "@/components/dashboard/SocialShareBanners";
 import ClubIdentityCard from "@/components/dashboard/ClubIdentityCard";
@@ -258,6 +259,11 @@ const Dashboard = () => {
         <section className="fade-in w-full">
           <MatchCenter userId={user?.id} teamIdOverride={masterTeamIdOverride} />
         </section>
+
+        {/* Simpatias saíram da porta de entrada: aqui o torcedor adiciona até 4 (opcional). Master só no teste (simulação). */}
+        {(!isMasterAdmin || simActive) && isViewingHeart && (
+          <SympathyAddCard heartClubName={effectiveHeartName} sympathies={sympathies} onChanged={setSympathies} />
+        )}
 
         <section className="fade-in w-full">
           <div className="glass-card rounded-[32px] p-4 md:p-6">

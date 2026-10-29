@@ -1,20 +1,23 @@
 /**
  * [CAMINHO]: src/pages/Entrar.tsx
- * [MÓDULO]: Porta de entrada do torcedor — o caminho mais curto até o voto.
- *  1) Logo parado (no máximo 2 s)  2) "Qual é o time do seu coração?" (busca, sem login)
- *  3) Clube escolhido no topo + "Continuar com Google" / link por e-mail, com o aviso dos Termos.
- * Não há tela de "Juro lealdade" nem de "Confirme seu voto": o voto é gravado em /confirmar-voto assim que o
- * torcedor volta do login (Google) ou abre o link do e-mail, e o aceite dos Termos é registrado junto.
- * As simpatias ficam para depois, no painel.
+ * [MÓDULO]: Porta de entrada do torcedor — SÓ DUAS AÇÕES:
+ *  1) Escolher o time: digita o clube do coração e toca nele.
+ *  2) Entrar: com o clube no topo aparecem "Continuar com Google" e o link por e-mail, com o aviso dos Termos.
+ * O voto é gravado em /confirmar-voto assim que o torcedor volta do login (Google) ou abre o link do e-mail,
+ * e o aceite dos Termos é registrado junto. Sem "Juro lealdade", sem "Confirme seu voto", sem simpatias
+ * (as simpatias são opcionais e ficam no painel).
  *
- * Segurança: enquanto NEW_ENTRY_FLOW_ENABLED for false, esta rota só abre para o Master em
- * modo teste (?sim=1), que NÃO grava nada e mostra as telas IDÊNTICAS às do torcedor.
+ * Dentro do Instagram/Facebook o Google é bloqueado: o botão é o MESMO "Continuar com Google".
+ *  - Android: abre esta página no Chrome (levando o clube) e o login com Google começa SOZINHO ao chegar lá (?go=google).
+ *  - iPhone: avisa para abrir no navegador; o link por e-mail funciona normalmente.
+ *
+ * Aparelho que já teve um voto e voltou sem login vê "Bem-vindo de volta!" no lugar da busca.
+ * Segurança: enquanto NEW_ENTRY_FLOW_ENABLED for false, esta rota só abre para o Master em modo teste (?sim=1).
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams, Link } from "react-router-dom";
 import { Heart, Loader2, Mail, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { useUser } from "@/contexts/UserContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -22,6 +25,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useTranslationApp } from "@/hooks/useTranslationApp";
 import { isMasterEmail } from "@/lib/master";
 import {
+  AUTO_GOOGLE_PARAM,
   NEW_ENTRY_FLOW_ENABLED,
   PENDING_VOTE_PARAM,
   decodePendingVoteParam,
@@ -40,6 +44,8 @@ import logo from "@/assets/logo-384.png"; // cópia leve (67 KB) do logo de 1000
 
 type Stage = "intro" | "pick" | "login";
 const INTRO_MS = 1500; // logo parado: no máximo 2 s
+const AUTO_GOOGLE_GUARD_KEY = "hc_auto_google_at";
+const AUTO_GOOGLE_GUARD_MS = 60_000; // evita laço se o torcedor voltar do Google com o "voltar" do navegador
 
 const Entrar = () => {
   const navigate = useNavigate();
@@ -54,8 +60,10 @@ const Entrar = () => {
 
   // Navegador interno (Instagram, Facebook, TikTok…): o Google bloqueia o login ali.
   const inApp = useMemo(() => detectInAppBrowser(), []);
-  // Link com a escolha do time (vindo do "Abrir no Chrome"): o torcedor já escolheu, vai direto às opções de entrar.
+  // Link com a escolha do time (vindo do Instagram pelo Chrome): o torcedor já escolheu, vai direto às opções de entrar.
   const linkVote = useMemo(() => (params.get("sim") === "1" ? null : decodePendingVoteParam(params.get(PENDING_VOTE_PARAM))), []); // eslint-disable-line react-hooks/exhaustive-deps
+  // Veio do Instagram para o Chrome pedindo para o login com Google começar sozinho.
+  const wantsAutoGoogle = useMemo(() => params.get("sim") !== "1" && params.get(AUTO_GOOGLE_PARAM) === "google", []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const [stage, setStage] = useState<Stage>(() => {
     if (linkVote) return "login";
@@ -70,12 +78,24 @@ const Entrar = () => {
   const [returning, setReturning] = useState(() => !linkVote && params.get("sim") !== "1" && deviceHasVoted());
   const showWelcomeBack = returning && !isAuthenticated && !sim;
   const [email, setEmail] = useState("");
-  const [newsOptIn, setNewsOptIn] = useState(!!linkVote?.news); // OPCIONAL: começa sempre desmarcada
   const [busy, setBusy] = useState<"google" | "magic" | null>(null);
+  const [iosHint, setIosHint] = useState(false);
   // Simpatias não são mais pedidas aqui (ficam para o painel); só preserva as que vierem num link antigo.
   const sympathies = useMemo<ClubSearchResult[]>(() => linkVote?.sympathies ?? [], [linkVote]);
   const heartSearch = useClubSearch();
   const simStarted = useRef(false);
+  const autoGoogleStarted = useRef(false);
+
+  // Nada nesta tela pode alargar a página no celular (o Chrome do Android "estica" a tela e corta o lado direito):
+  // enquanto a porta de entrada está aberta, o que passar da borda é cortado em vez de empurrar o resto.
+  useEffect(() => {
+    const root = document.documentElement;
+    const before = root.style.overflowX;
+    root.style.overflowX = "clip";
+    return () => {
+      root.style.overflowX = before;
+    };
+  }, []);
 
   // Teste do Master: começa do zero como um torcedor novo (nada do perfil/voto real aparece).
   useEffect(() => {
@@ -142,16 +162,23 @@ const Entrar = () => {
 
   const changeClub = () => {
     setHeartClub(null);
+    setIosHint(false);
     heartSearch.reset();
     setStage("pick");
   };
 
   // Quem toca em "Continuar" já viu o aviso "Ao continuar, você aceita os Termos…" logo abaixo dos botões.
-  const flags = { terms: true, news: newsOptIn };
+  const flags = { terms: true };
 
-  // "Bem-vindo de volta!": só entra na conta (Google ou link por e-mail). NÃO guarda escolha de clube nem grava voto:
-  // quem já votou vai direto para o painel; se for uma conta sem voto, cai na busca normal.
-  const welcomeGoogle = async () => {
+  // Login com Google no navegador de verdade. Com clube escolhido, guarda a escolha ANTES de sair para o Google:
+  // ao voltar, o voto é gravado na hora. No teste do Master só avança a tela (sem login de verdade).
+  const startGoogle = useCallback(async () => {
+    const choosing = stage === "login" && heartClub;
+    if (choosing) savePendingVote(heartClub, sympathies, flags);
+    if (sim) {
+      if (choosing) navigate("/confirmar-voto?sim=1");
+      return;
+    }
     setBusy("google");
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
@@ -161,8 +188,87 @@ const Entrar = () => {
       toast({ variant: "destructive", title: t("entrar.login_error") });
       setBusy(null);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stage, heartClub, sympathies, sim, navigate, toast, t]);
+
+  // Android dentro do Instagram/Facebook: abre ESTA página no Chrome (levando o clube escolhido) e o Google começa sozinho lá.
+  const openInChromeForGoogle = () => {
+    try {
+      const url = new URL(window.location.href);
+      url.searchParams.delete("sim");
+      const pv = stage === "login" && heartClub ? encodePendingVoteParam(heartClub, sympathies) : null;
+      if (pv) url.searchParams.set(PENDING_VOTE_PARAM, pv);
+      else url.searchParams.delete(PENDING_VOTE_PARAM);
+      url.searchParams.set(AUTO_GOOGLE_PARAM, "google");
+      setBusy("google");
+      window.location.href = buildChromeIntentUrl(url.toString());
+      // se o Chrome não abrir, o botão volta ao normal (nada fica travado)
+      setTimeout(() => setBusy((b) => (b === "google" ? null : b)), 4000);
+    } catch (err) {
+      console.error("[ENTRAR] não abriu no Chrome", err);
+      setBusy(null);
+    }
   };
 
+  // O MESMO botão "Continuar com Google" em qualquer navegador; o que ele faz depende de onde a página está aberta.
+  const onGoogleClick = () => {
+    if (inApp.inApp && inApp.platform === "android") return openInChromeForGoogle();
+    if (inApp.inApp && inApp.platform === "ios") return setIosHint(true);
+    void startGoogle();
+  };
+
+  // Chegou no Chrome vindo do Instagram com ?go=google: o login com Google começa sozinho, sem outro toque.
+  useEffect(() => {
+    if (!wantsAutoGoogle || autoGoogleStarted.current || inApp.inApp || sim) return;
+    if (!isAuthReady || isLoading || isAuthenticated) return;
+    autoGoogleStarted.current = true;
+    // tira o ?go=google do endereço: se o torcedor voltar do Google com "voltar", não começa de novo sozinho
+    try {
+      const clean = new URL(window.location.href);
+      clean.searchParams.delete(AUTO_GOOGLE_PARAM);
+      window.history.replaceState(window.history.state, "", clean.pathname + clean.search + clean.hash);
+    } catch {
+      /* ignora */
+    }
+    try {
+      const last = Number(sessionStorage.getItem(AUTO_GOOGLE_GUARD_KEY) || 0);
+      if (last && Date.now() - last < AUTO_GOOGLE_GUARD_MS) return;
+      sessionStorage.setItem(AUTO_GOOGLE_GUARD_KEY, String(Date.now()));
+    } catch {
+      /* sem armazenamento: segue */
+    }
+    void startGoogle();
+  }, [wantsAutoGoogle, inApp.inApp, sim, isAuthReady, isLoading, isAuthenticated, startGoogle]);
+
+  const loginMagic = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email.trim() || !heartClub) return;
+    savePendingVote(heartClub, sympathies, flags);
+    if (sim) {
+      navigate("/confirmar-voto?sim=1");
+      return;
+    }
+    setBusy("magic");
+    try {
+      const { data, error } = await supabase.functions.invoke("heart-club-auth", {
+        body: {
+          email: email.trim(),
+          redirectOrigin: window.location.origin,
+          // a escolha do time vai junto no link do e-mail (ele pode abrir em outro navegador) e fica guardada como voto pendente
+          pendingVote: encodePendingVoteParam(heartClub, sympathies, flags),
+        },
+      });
+      if (error || (data && (data as any).error)) throw new Error("auth_failed");
+      toast({ title: t("entrar.link_sent") });
+    } catch (err) {
+      console.error("[ENTRAR] link por e-mail falhou", err);
+      toast({ variant: "destructive", title: t("entrar.login_error") });
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  // "Bem-vindo de volta!": só entra na conta por e-mail. NÃO guarda escolha de clube nem grava voto.
   const welcomeMagic = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email.trim()) return;
@@ -181,67 +287,6 @@ const Entrar = () => {
     }
   };
 
-  // No teste do Master os botões de login têm o mesmo visual, mas só avançam a tela (sem login de verdade).
-  const loginGoogle = async () => {
-    if (!heartClub) return;
-    savePendingVote(heartClub, sympathies, flags); // antes de sair para o Google: ao voltar, o voto é gravado na hora
-    if (sim) {
-      navigate("/confirmar-voto?sim=1");
-      return;
-    }
-    setBusy("google");
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: { redirectTo: `${window.location.origin}/` },
-    });
-    if (error) {
-      toast({ variant: "destructive", title: t("entrar.login_error") });
-      setBusy(null);
-    }
-  };
-
-  const loginMagic = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!email.trim() || !heartClub) return;
-    savePendingVote(heartClub, sympathies, flags);
-    if (sim) {
-      navigate("/confirmar-voto?sim=1");
-      return;
-    }
-    setBusy("magic");
-    try {
-      const { data, error } = await supabase.functions.invoke("heart-club-auth", {
-        body: {
-          email: email.trim(),
-          redirectOrigin: window.location.origin,
-          // a escolha do time vai junto no link do e-mail (ele pode abrir em outro navegador)
-          pendingVote: encodePendingVoteParam(heartClub, sympathies, flags),
-        },
-      });
-      if (error || (data && (data as any).error)) throw new Error("auth_failed");
-      toast({ title: t("entrar.link_sent") });
-    } catch (err) {
-      console.error("[ENTRAR] link por e-mail falhou", err);
-      toast({ variant: "destructive", title: t("entrar.login_error") });
-    } finally {
-      setBusy(null);
-    }
-  };
-
-  // "Abrir no Chrome" (Android): abre esta mesma página no Chrome, levando a escolha do time se ele já escolheu.
-  const openInChrome = () => {
-    try {
-      const url = new URL(window.location.href);
-      url.searchParams.delete("sim");
-      const pv = stage === "login" && heartClub ? encodePendingVoteParam(heartClub, sympathies, { news: newsOptIn }) : null;
-      if (pv) url.searchParams.set(PENDING_VOTE_PARAM, pv);
-      else url.searchParams.delete(PENDING_VOTE_PARAM);
-      window.location.href = buildChromeIntentUrl(url.toString());
-    } catch (err) {
-      console.error("[ENTRAR] não abriu no Chrome", err);
-    }
-  };
-
   if (!isAuthReady || isLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
@@ -250,7 +295,7 @@ const Entrar = () => {
     );
   }
 
-  // ── 1) LOGO PARADO (sem vídeo: nada pesado no primeiro carregamento)
+  // ── LOGO PARADO (sem vídeo: nada pesado no primeiro carregamento)
   if (stage === "intro") {
     return (
       <div
@@ -263,58 +308,49 @@ const Entrar = () => {
     );
   }
 
-  return (
-    <div className="min-h-screen bg-background text-white">
-      <div className="mx-auto flex w-full max-w-lg flex-col items-center gap-6 px-4 py-8">
-        {/* NAVEGADOR INTERNO (Instagram/Facebook…): o Google não deixa entrar aqui — Chrome no Android, aviso no iPhone */}
-        {inApp.inApp && inApp.platform === "android" && (
-          <div className="w-full space-y-2" data-testid="inapp-android">
-            <Button
-              onClick={openInChrome}
-              className="btn-orange-gradient h-16 w-full rounded-2xl text-lg font-black italic shadow-xl shadow-primary/20 active:scale-95"
-            >
-              {t("entrar.inapp_open_chrome")}
-            </Button>
-            <p className="text-center text-xs text-white/60">{t("entrar.inapp_open_chrome_hint")}</p>
-          </div>
-        )}
-        {inApp.inApp && inApp.platform === "ios" && (
-          <p
-            className="w-full rounded-2xl border border-primary/40 bg-primary/10 p-3 text-center text-sm font-bold text-white/90"
-            data-testid="inapp-ios"
-          >
-            {t("entrar.inapp_ios_notice")}
-          </p>
-        )}
+  // Botão "Continuar com Google" + aviso curto do iPhone (usados na tela de voto e na de "bem-vindo de volta")
+  const googleBlock = (
+    <>
+      <Button
+        variant="outline"
+        onClick={onGoogleClick}
+        disabled={!!busy}
+        className="glass-card-hover h-14 w-full border-border/50 text-base font-medium text-foreground"
+      >
+        {busy === "google" ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <GoogleIcon />}
+        {t("entrar.google")}
+      </Button>
+      {iosHint && inApp.inApp && inApp.platform === "ios" && (
+        <p
+          className="w-full rounded-xl border border-primary/40 bg-primary/10 p-3 text-center text-sm font-bold text-white/90"
+          data-testid="inapp-ios"
+          role="status"
+        >
+          {t("entrar.inapp_ios_tap")}
+        </p>
+      )}
+      <div className="flex items-center gap-3 text-[11px] uppercase text-white/40">
+        <div className="h-px flex-1 bg-white/10" />
+        {t("entrar.or_email")}
+        <div className="h-px flex-1 bg-white/10" />
+      </div>
+    </>
+  );
 
+  return (
+    <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-background text-white">
+      <div className="mx-auto flex w-full min-w-0 max-w-lg flex-col items-center gap-6 px-4 py-8">
         <img src={logo} alt="Heart Club" className="h-20 w-20 object-contain" />
 
-        {/* ── 2a) BEM-VINDO DE VOLTA (aparelho que já teve um voto, sem login) */}
+        {/* ── BEM-VINDO DE VOLTA (aparelho que já teve um voto, sem login) */}
         {stage === "pick" && showWelcomeBack && (
-          <div className="w-full space-y-5" data-testid="entrar-welcome-back">
+          <div className="w-full min-w-0 space-y-5" data-testid="entrar-welcome-back">
             <div className="space-y-2 text-center">
               <h1 className="text-3xl font-black italic uppercase leading-tight tracking-tighter">{t("entrar.back_title")}</h1>
               <p className="text-sm text-white/60">{t("entrar.back_sub")}</p>
             </div>
             <div className="space-y-4">
-              {!inApp.inApp && (
-                <>
-                  <Button
-                    variant="outline"
-                    onClick={welcomeGoogle}
-                    disabled={!!busy}
-                    className="glass-card-hover h-14 w-full border-border/50 text-base font-medium text-foreground"
-                  >
-                    {busy === "google" ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <GoogleIcon />}
-                    {t("entrar.google")}
-                  </Button>
-                  <div className="flex items-center gap-3 text-[11px] uppercase text-white/40">
-                    <div className="h-px flex-1 bg-white/10" />
-                    {t("entrar.or_email")}
-                    <div className="h-px flex-1 bg-white/10" />
-                  </div>
-                </>
-              )}
+              {googleBlock}
               <form onSubmit={welcomeMagic} className="space-y-3">
                 <Input
                   type="email"
@@ -326,8 +362,8 @@ const Entrar = () => {
                 <Button
                   type="submit"
                   disabled={!!busy || !email.trim()}
-                  variant={inApp.inApp ? "default" : "outline"}
-                  className={inApp.inApp ? "btn-orange-gradient h-14 w-full gap-2 rounded-xl font-bold" : "h-12 w-full gap-2 rounded-xl font-bold"}
+                  variant="outline"
+                  className="h-12 w-full gap-2 rounded-xl font-bold"
                 >
                   {busy === "magic" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
                   {t("entrar.send_link")}
@@ -343,9 +379,9 @@ const Entrar = () => {
           </div>
         )}
 
-        {/* ── 2b) ESCOLHA DO CLUBE */}
+        {/* ── AÇÃO 1: ESCOLHER O TIME */}
         {stage === "pick" && !showWelcomeBack && (
-          <div className="w-full space-y-5">
+          <div className="w-full min-w-0 space-y-5">
             <div className="space-y-2 text-center">
               <h1 className="text-3xl font-black italic uppercase leading-tight tracking-tighter">{t("entrar.pick_title")}</h1>
               <p className="text-sm text-white/60">{t("entrar.pick_sub")}</p>
@@ -364,7 +400,7 @@ const Entrar = () => {
               <ResultsList
                 results={heartSearch.results}
                 loading={heartSearch.loading}
-                open={heartSearch.open}
+                open={heartSearch.open && heartSearch.query.trim().length >= 3} // sem "Nenhum clube encontrado" antes de digitar
                 onPick={pickHeart}
               />
             </div>
@@ -377,50 +413,24 @@ const Entrar = () => {
           </div>
         )}
 
-        {/* ── 3) CLUBE ESCOLHIDO NO TOPO + OPÇÕES DE ENTRAR */}
+        {/* ── AÇÃO 2: ENTRAR (clube escolhido no topo) */}
         {stage === "login" && heartClub && (
-          <div className="w-full space-y-5">
-            <div className="flex items-center gap-3 rounded-2xl border border-primary/30 bg-card p-3" data-testid="entrar-chosen-club">
+          <div className="w-full min-w-0 space-y-5">
+            <div
+              className="flex w-full min-w-0 items-center gap-3 rounded-2xl border border-primary/30 bg-card p-3"
+              data-testid="entrar-chosen-club"
+            >
               <ClubLogo src={heartClub.logo} alt={heartClub.name} size="md" />
-              <p className="flex-1 truncate text-lg font-black uppercase italic">{heartClub.name}</p>
-              <Heart className="h-5 w-5 fill-current text-primary" />
+              <p className="min-w-0 flex-1 truncate text-lg font-black uppercase italic">{heartClub.name}</p>
+              <Heart className="h-5 w-5 shrink-0 fill-current text-primary" />
             </div>
             <div className="space-y-2 text-center">
               <h1 className="text-3xl font-black italic uppercase tracking-tighter">{t("entrar.login_title")}</h1>
               <p className="text-sm text-white/60">{t("entrar.login_sub")}</p>
             </div>
 
-            <div className="space-y-4">
-              {/* Novidades por e-mail (LGPD): OPCIONAL e desmarcada; fica ACIMA dos botões para valer no toque de entrar */}
-              <label htmlFor="news-optin" className="flex cursor-pointer items-start gap-3 text-xs leading-snug text-white/70">
-                <Checkbox
-                  id="news-optin"
-                  checked={newsOptIn}
-                  onCheckedChange={(v) => setNewsOptIn(v === true)}
-                  className="mt-0.5"
-                />
-                <span>{t("entrar.news_optin")}</span>
-              </label>
-
-              {!inApp.inApp && (
-                <>
-                  {/* mesmo estilo do botão de Google da página /login: fundo escuro, borda fina, logo colorido, texto claro */}
-                  <Button
-                    variant="outline"
-                    onClick={loginGoogle}
-                    disabled={!!busy}
-                    className="glass-card-hover h-14 w-full border-border/50 text-base font-medium text-foreground"
-                  >
-                    {busy === "google" ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <GoogleIcon />}
-                    {t("entrar.google")}
-                  </Button>
-                  <div className="flex items-center gap-3 text-[11px] uppercase text-white/40">
-                    <div className="h-px flex-1 bg-white/10" />
-                    {t("entrar.or_email")}
-                    <div className="h-px flex-1 bg-white/10" />
-                  </div>
-                </>
-              )}
+            <div className="w-full min-w-0 space-y-4">
+              {googleBlock}
               <form onSubmit={loginMagic} className="space-y-3">
                 <Input
                   type="email"
@@ -432,8 +442,8 @@ const Entrar = () => {
                 <Button
                   type="submit"
                   disabled={!!busy || !email.trim()}
-                  variant={inApp.inApp ? "default" : "outline"}
-                  className={inApp.inApp ? "btn-orange-gradient h-14 w-full gap-2 rounded-xl font-bold" : "h-12 w-full gap-2 rounded-xl font-bold"}
+                  variant="outline"
+                  className="h-12 w-full gap-2 rounded-xl font-bold"
                 >
                   {busy === "magic" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
                   {t("entrar.send_link")}

@@ -623,7 +623,18 @@
     "halftime": "Half-time",
     "live_table": "Live table (projection)"
   },
+  "sympathy_card": {
+    "title": "Add up to 4 sympathy teams (optional)",
+    "sub_one": "{{count}} spot left. The teams you also follow show up here on your dashboard.",
+    "sub_other": "{{count}} spots left. The teams you also follow show up here on your dashboard.",
+    "placeholder": "Type the name of a sympathy team",
+    "already": "That team is already on your list.",
+    "saved": "{{club}} added!",
+    "error": "Could not save right now. Please try again.",
+    "dismiss": "Not now"
+  },
   "entrar": {
+    "inapp_ios_tap": "Tap ••• and choose 'Open in browser' to continue with Google.",
     "skip": "Skip",
     "amb2_title": "Become your fan base's Ambassador",
     "amb2_sub": "Enter your WhatsApp to generate your link and lead your club's fan base.",

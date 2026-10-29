@@ -41,6 +41,19 @@ const safePendingVoteParam = (value: unknown) =>
     ? `&pv=${value}`
     : ''
 
+/** Nome do clube escolhido, lido do mesmo texto curto (?pv=) que viaja no link. Qualquer coisa estranha → null. */
+const clubNameFromPendingVote = (value: unknown): string | null => {
+  if (typeof value !== 'string' || value.length === 0 || value.length > 1800 || !/^[A-Za-z0-9_-]+$/.test(value)) return null
+  try {
+    const b64 = value.replace(/-/g, '+').replace(/_/g, '/')
+    const bytes = Uint8Array.from(atob(b64 + '='.repeat((4 - (b64.length % 4)) % 4)), (c) => c.charCodeAt(0))
+    const name = JSON.parse(new TextDecoder().decode(bytes))?.c?.n
+    return typeof name === 'string' && name.trim() && name.trim().length <= 100 ? name.trim() : null
+  } catch {
+    return null
+  }
+}
+
 const isValidEmail =(email: unknown): email is string => {
   return typeof email === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()) && email.length <= 254
 }
@@ -77,6 +90,23 @@ Deno.serve(async (req) => {
       .insert([{ email: normalizedEmail, token, expires_at: expiresAt }])
 
     if (dbError) throw new Error(`Erro Banco: ${dbError.message}`)
+
+    // VOTO PENDENTE: no toque em "Enviar link" já guardamos e-mail + clube escolhido (mesmo que ele nunca abra o e-mail).
+    // Não é voto: fica em tabela à parte, fora de qualquer ranking, e serve só para UM lembrete 24h depois.
+    // Só grava quando há um clube escolhido; se falhar, o envio do link NÃO é afetado.
+    const pendingClub = clubNameFromPendingVote(pendingVote)
+    if (pendingClub) {
+      try {
+        const { error: pendingError } = await supabase.rpc('register_pending_vote', {
+          p_email: normalizedEmail,
+          p_club: pendingClub,
+          p_pv: safePendingVoteParam(pendingVote) ? pendingVote : null,
+        })
+        if (pendingError) console.error('[heart-club-auth] voto pendente não gravado', pendingError.message)
+      } catch (pendingErr) {
+        console.error('[heart-club-auth] voto pendente falhou', pendingErr)
+      }
+    }
 
     // --- DISPARO COM DESIGN PREMIUM ---
     const emailRes = await fetch('https://api.resend.com/emails', {

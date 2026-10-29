@@ -169,24 +169,58 @@ describe("Entrar — 'Bem-vindo de volta!' para aparelho que já teve um voto", 
     expect(screen.queryByTestId("entrar-welcome-back")).toBeNull();
   });
 
-  it("Instagram Android: 'Abrir no Chrome' no topo, sem Google, e-mail como opção principal", async () => {
+  it("Instagram Android: o mesmo botão 'Continuar com Google'; ao tocar, abre a página no Chrome com o Google automático", async () => {
     markDeviceVoted();
     withUa(ANDROID_INSTAGRAM);
-    renderAt();
-    expect(await screen.findByTestId("entrar-welcome-back")).toBeTruthy();
-    expect(screen.getByText("entrar.inapp_open_chrome")).toBeTruthy();
-    expect(screen.queryByText("entrar.google")).toBeNull();
-    expect(screen.getByText("entrar.send_link")).toBeTruthy();
-    expect(screen.getByText("entrar.back_not_me")).toBeTruthy();
+    const hrefSet = vi.fn();
+    const original = window.location;
+    Object.defineProperty(window, "location", {
+      configurable: true,
+      value: {
+        get href() {
+          return "https://www.votenoseutime.com.br/entrar";
+        },
+        set href(v: string) {
+          hrefSet(v);
+        },
+        origin: "https://www.votenoseutime.com.br",
+      },
+    });
+    try {
+      renderAt();
+      expect(await screen.findByTestId("entrar-welcome-back")).toBeTruthy();
+      expect(screen.queryByText("entrar.inapp_open_chrome")).toBeNull();
+      expect(screen.getByText("entrar.send_link")).toBeTruthy();
+      expect(screen.getByText("entrar.back_not_me")).toBeTruthy();
+      fireEvent.click(screen.getByText("entrar.google"));
+      expect(hrefSet).toHaveBeenCalledTimes(1);
+      const target = hrefSet.mock.calls[0][0] as string;
+      expect(target.startsWith("intent://www.votenoseutime.com.br/entrar?")).toBe(true);
+      expect(target).toContain("go=google");
+      expect(target).not.toContain("pv="); // aqui não há clube escolhido: só entra na conta
+      expect(signInWithOAuth).not.toHaveBeenCalled();
+    } finally {
+      Object.defineProperty(window, "location", { configurable: true, value: original });
+    }
   });
 
-  it("Instagram iPhone: aviso de abrir no navegador e sem Google", async () => {
+  it("Instagram iPhone: o mesmo botão; ao tocar, o aviso curto de abrir no navegador", async () => {
     markDeviceVoted();
     withUa(IPHONE_INSTAGRAM);
     renderAt();
     expect(await screen.findByTestId("entrar-welcome-back")).toBeTruthy();
-    expect(screen.getByTestId("inapp-ios")).toBeTruthy();
-    expect(screen.queryByText("entrar.google")).toBeNull();
+    expect(screen.queryByTestId("inapp-ios")).toBeNull();
+    fireEvent.click(screen.getByText("entrar.google"));
+    expect(await screen.findByTestId("inapp-ios")).toBeTruthy();
     expect(screen.getByText("entrar.send_link")).toBeTruthy();
+    expect(signInWithOAuth).not.toHaveBeenCalled();
+  });
+
+  it("Chrome vindo do Instagram (?go=google, sem clube): o Google começa sozinho e nenhum voto é gravado", async () => {
+    markDeviceVoted();
+    renderAt("/entrar?go=google");
+    await waitFor(() => expect(signInWithOAuth).toHaveBeenCalledTimes(1));
+    expect(loadPendingVote()).toBeNull();
+    expect(submitVote).not.toHaveBeenCalled();
   });
 });

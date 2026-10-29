@@ -132,14 +132,6 @@ describe("Entrar — fluxo direto (logo parado, busca, opções de entrar)", () 
       expect(sendLink.compareDocumentPosition(notice) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     });
 
-    it("caixinha de novidades por e-mail é opcional e começa DESMARCADA", async () => {
-      renderAt();
-      await chooseClub();
-      const box = screen.getByRole("checkbox");
-      expect(box.getAttribute("aria-checked")).toBe("false");
-      expect(screen.getByText("entrar.news_optin")).toBeTruthy();
-    });
-
     it("'Trocar de clube' volta para a busca", async () => {
       renderAt();
       await chooseClub();
@@ -151,7 +143,7 @@ describe("Entrar — fluxo direto (logo parado, busca, opções de entrar)", () 
   describe("entrar", () => {
     beforeEach(() => sessionStorage.setItem("hc_intro_seen", "1"));
 
-    it("Google: guarda o clube + 'Termos mostrados' no aparelho ANTES de sair para o Google (novidades desmarcada)", async () => {
+    it("Google: guarda o clube + 'Termos mostrados' no aparelho ANTES de sair para o Google", async () => {
       renderAt();
       await chooseClub();
       fireEvent.click(screen.getByText("entrar.google"));
@@ -159,24 +151,13 @@ describe("Entrar — fluxo direto (logo parado, busca, opções de entrar)", () 
       const saved = loadPendingVote();
       expect(saved?.club.name).toBe("Vila Nova");
       expect(saved?.terms).toBe(true);
-      expect(saved?.news).toBe(false);
       expect(saved?.sympathies).toEqual([]);
       expect((signInWithOAuth.mock.calls[0] as any[])[0].provider).toBe("google");
     });
 
-    it("Google com a caixinha marcada: a escolha de novidades viaja junto", async () => {
+    it("e-mail: o clube e o sinal de 'Termos mostrados' vão no link do e-mail", async () => {
       renderAt();
       await chooseClub();
-      fireEvent.click(screen.getByRole("checkbox"));
-      fireEvent.click(screen.getByText("entrar.google"));
-      await waitFor(() => expect(signInWithOAuth).toHaveBeenCalledTimes(1));
-      expect(loadPendingVote()?.news).toBe(true);
-    });
-
-    it("e-mail: o clube e os sinais (Termos mostrados, novidades) vão no link do e-mail", async () => {
-      renderAt();
-      await chooseClub();
-      fireEvent.click(screen.getByRole("checkbox"));
       fireEvent.change(screen.getByPlaceholderText("entrar.email_placeholder"), { target: { value: "fan@exemplo.com" } });
       fireEvent.click(screen.getByText("entrar.send_link"));
       await waitFor(() => expect(invoke).toHaveBeenCalledTimes(1));
@@ -185,19 +166,15 @@ describe("Entrar — fluxo direto (logo parado, busca, opções de entrar)", () 
       const decoded = decodePendingVoteParam(opts.body.pendingVote);
       expect(decoded?.club.name).toBe("Vila Nova");
       expect(decoded?.terms).toBe(true);
-      expect(decoded?.news).toBe(true);
       expect(decoded?.sympathies).toEqual([]);
       expect(loadPendingVote()?.terms).toBe(true); // e no aparelho, caso ele abra o link aqui mesmo
     });
 
-    it("e-mail com a caixinha desmarcada: novidades NÃO vai marcada no link", async () => {
+    it("a tela de entrada NÃO tem caixinha nenhuma (só duas ações: escolher o time e entrar)", async () => {
       renderAt();
       await chooseClub();
-      fireEvent.change(screen.getByPlaceholderText("entrar.email_placeholder"), { target: { value: "fan@exemplo.com" } });
-      fireEvent.click(screen.getByText("entrar.send_link"));
-      await waitFor(() => expect(invoke).toHaveBeenCalledTimes(1));
-      const decoded = decodePendingVoteParam((invoke.mock.calls[0] as any[])[1].body.pendingVote);
-      expect(decoded?.news).toBe(false);
+      expect(screen.queryByRole("checkbox")).toBeNull();
+      expect(screen.queryByText("entrar.news_optin")).toBeNull();
     });
   });
 
@@ -219,11 +196,12 @@ describe("Entrar — fluxo direto (logo parado, busca, opções de entrar)", () 
       uaSpy = vi.spyOn(window.navigator, "userAgent", "get").mockReturnValue(ANDROID_INSTAGRAM);
     });
 
-    it("Android: 'Abrir no Chrome' aparece, o Google some, e o e-mail grava o clube no link", async () => {
+    it("Android: sem botão laranja de Chrome na busca; depois de escolher, o Google normal e o e-mail levam o clube", async () => {
       renderAt();
-      expect(await screen.findByText("entrar.inapp_open_chrome")).toBeTruthy();
+      expect(await screen.findByText("entrar.pick_title")).toBeTruthy();
+      expect(screen.queryByText("entrar.inapp_open_chrome")).toBeNull();
       await chooseClub();
-      expect(screen.queryByText("entrar.google")).toBeNull();
+      expect(screen.getByText("entrar.google")).toBeTruthy();
       expect(screen.getByTestId("entrar-terms-notice")).toBeTruthy();
       fireEvent.change(screen.getByPlaceholderText("entrar.email_placeholder"), { target: { value: "fan@exemplo.com" } });
       fireEvent.click(screen.getByText("entrar.send_link"));

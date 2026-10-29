@@ -623,7 +623,18 @@
     "halftime": "Descanso",
     "live_table": "Clasificación en vivo (proyección)"
   },
+  "sympathy_card": {
+    "title": "Añade hasta 4 equipos de simpatía (opcional)",
+    "sub_one": "Queda {{count}} lugar. Los equipos que también sigues aparecen aquí en tu panel.",
+    "sub_other": "Quedan {{count}} lugares. Los equipos que también sigues aparecen aquí en tu panel.",
+    "placeholder": "Escribe el nombre del equipo de simpatía",
+    "already": "Ese equipo ya está en tu lista.",
+    "saved": "¡{{club}} añadido!",
+    "error": "No se pudo guardar ahora. Inténtalo de nuevo.",
+    "dismiss": "Ahora no"
+  },
   "entrar": {
+    "inapp_ios_tap": "Toca ••• y elige 'Abrir en el navegador' para continuar con Google.",
     "skip": "Omitir",
     "amb2_title": "Sé el Embajador de tu hinchada",
     "amb2_sub": "Escribe tu WhatsApp para generar tu enlace y liderar la hinchada de tu club.",

@@ -623,7 +623,18 @@
     "halftime": "Intervalo",
     "live_table": "Classificação ao vivo (projeção)"
   },
+  "sympathy_card": {
+    "title": "Adicione até 4 times de simpatia (opcional)",
+    "sub_one": "Faltam {{count}} vaga. Os times que você também acompanha aparecem aqui no seu painel.",
+    "sub_other": "Faltam {{count}} vagas. Os times que você também acompanha aparecem aqui no seu painel.",
+    "placeholder": "Digite o nome do time de simpatia",
+    "already": "Esse time já está na sua lista.",
+    "saved": "{{club}} adicionado!",
+    "error": "Não foi possível salvar agora. Tente de novo.",
+    "dismiss": "Agora não"
+  },
   "entrar": {
+    "inapp_ios_tap": "Toque em ••• e escolha 'Abrir no navegador' para continuar com Google.",
     "skip": "Pular",
     "amb2_title": "Vire o Embaixador da sua torcida",
     "amb2_sub": "Digite seu WhatsApp para gerar seu link e liderar a torcida do seu clube.",

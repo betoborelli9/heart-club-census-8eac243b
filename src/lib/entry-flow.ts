@@ -69,6 +69,8 @@ export function clearPendingVote() {
 // (o Chrome, fora do Instagram), o aparelho novo não tem a escolha — por isso ela viaja no próprio link,
 // em um parâmetro curto (?pv=…), e é refeita na chegada se o localStorage estiver vazio.
 export const PENDING_VOTE_PARAM = "pv";
+/** ?go=google — vindo do Instagram/Facebook para o Chrome: o login com Google começa sozinho. */
+export const AUTO_GOOGLE_PARAM = "go";
 const MAX_PARAM_LENGTH = 1800; // limite que a função de e-mail também confere
 const MAX_SYMPATHIES = 4;
 
