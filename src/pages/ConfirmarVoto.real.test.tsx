@@ -34,7 +34,7 @@ vi.mock("@/hooks/useTranslationApp", () => ({
 }));
 
 import ConfirmarVoto from "./ConfirmarVoto";
-import { encodePendingVoteParam, loadPendingVote, savePendingVote } from "@/lib/entry-flow";
+import { deviceHasVoted, encodePendingVoteParam, loadPendingVote, savePendingVote } from "@/lib/entry-flow";
 
 const club: any = { id: "1", name: "Paris Saint Germain", logo: "", location: "Paris, France", source: "api" };
 
@@ -321,5 +321,33 @@ describe("ConfirmarVoto — fluxo direto (aviso dos Termos já mostrado na entra
     renderPage();
     expect(await screen.findByRole("checkbox")).toBeTruthy();
     expect(screen.queryByTestId("confirmar-auto")).toBeNull();
+  });
+});
+
+describe("ConfirmarVoto — marca o aparelho que já teve um voto", () => {
+  beforeEach(() => {
+    localStorage.clear();
+    state.hasVoted = false;
+    state.profile = { id: "fan-1", terms_accepted_at: null };
+    submitVote.mockClear();
+    rpc.mockClear();
+  });
+
+  it("voto gravado: o aparelho fica marcado (volta como 'Bem-vindo de volta!')", async () => {
+    expect(deviceHasVoted()).toBe(false);
+    savePendingVote(club, [], { terms: true });
+    renderPage();
+    await waitFor(() => expect(screen.getByTestId("where").textContent).toBe("/dashboard"));
+    expect(deviceHasVoted()).toBe(true);
+  });
+
+  it("gravação que falhou: o aparelho NÃO é marcado", async () => {
+    submitVote.mockImplementationOnce(async () => {
+      throw new Error("rede caiu");
+    });
+    savePendingVote(club, [], { terms: true });
+    renderPage();
+    await waitFor(() => expect(screen.getAllByText("entrar.vote_error").length).toBeGreaterThan(0));
+    expect(deviceHasVoted()).toBe(false);
   });
 });

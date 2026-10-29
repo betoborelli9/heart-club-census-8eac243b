@@ -16,7 +16,7 @@ import { useUser } from "@/contexts/UserContext";
 import { useToast } from "@/hooks/use-toast";
 import { useTranslationApp } from "@/hooks/useTranslationApp";
 import { isMasterEmail } from "@/lib/master";
-import { NEW_ENTRY_FLOW_ENABLED, PENDING_VOTE_PARAM, adoptPendingVoteFromLink, clearPendingVote, loadPendingVote } from "@/lib/entry-flow";
+import { NEW_ENTRY_FLOW_ENABLED, PENDING_VOTE_PARAM, adoptPendingVoteFromLink, clearPendingVote, loadPendingVote, markDeviceVoted } from "@/lib/entry-flow";
 import { submitVote } from "@/lib/submit-vote";
 import { supabase } from "@/integrations/supabase/client";
 import { setSimClub, setSimSympathies } from "@/lib/sim-fan";
@@ -136,9 +136,11 @@ const ConfirmarVoto = () => {
       });
       setRecorded(true);
       clearPendingVote();
+      markDeviceVoted(); // este aparelho já teve um voto: se voltar sem login, vê "Bem-vindo de volta!"
       if (direct) await finishAuto(wantsNews);
     } catch (err: any) {
       if (err?.code === "23505") {
+        markDeviceVoted();
         // já existe voto original deste torcedor → conta como registrado
         setRecorded(true);
         clearPendingVote();

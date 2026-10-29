@@ -29,6 +29,7 @@ import AppNavBar from "@/components/AppNavBar";
 import GlobalFooter from "@/components/GlobalFooter";
 import SimBanner from "@/components/entrar/SimBanner";
 import TermsGuard from "@/components/TermsGuard";
+import VotedDeviceMarker from "@/components/VotedDeviceMarker";
 import UsersTableSync from "@/integrations/users-table/UsersTableSync";
 import AccessTracker from "@/components/AccessTracker";
 import { useLocation } from "react-router-dom";
@@ -166,6 +167,7 @@ const App = () => (
           <GlobalFooter />
           <SimBanner />
           <TermsGuard />
+          <VotedDeviceMarker />
         </BrowserRouter>
         </ViewedClubProvider>
       </UserProvider>

@@ -25,6 +25,7 @@ import {
   NEW_ENTRY_FLOW_ENABLED,
   PENDING_VOTE_PARAM,
   decodePendingVoteParam,
+  deviceHasVoted,
   encodePendingVoteParam,
   loadPendingVote,
   savePendingVote,
@@ -65,6 +66,9 @@ const Entrar = () => {
     }
   });
   const [heartClub, setHeartClub] = useState<ClubSearchResult | null>(linkVote?.club ?? null);
+  // Este aparelho já teve um torcedor que votou: quem volta sem login vê "Bem-vindo de volta!" no lugar da busca.
+  const [returning, setReturning] = useState(() => !linkVote && params.get("sim") !== "1" && deviceHasVoted());
+  const showWelcomeBack = returning && !isAuthenticated && !sim;
   const [email, setEmail] = useState("");
   const [newsOptIn, setNewsOptIn] = useState(!!linkVote?.news); // OPCIONAL: começa sempre desmarcada
   const [busy, setBusy] = useState<"google" | "magic" | null>(null);
@@ -144,6 +148,38 @@ const Entrar = () => {
 
   // Quem toca em "Continuar" já viu o aviso "Ao continuar, você aceita os Termos…" logo abaixo dos botões.
   const flags = { terms: true, news: newsOptIn };
+
+  // "Bem-vindo de volta!": só entra na conta (Google ou link por e-mail). NÃO guarda escolha de clube nem grava voto:
+  // quem já votou vai direto para o painel; se for uma conta sem voto, cai na busca normal.
+  const welcomeGoogle = async () => {
+    setBusy("google");
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo: `${window.location.origin}/` },
+    });
+    if (error) {
+      toast({ variant: "destructive", title: t("entrar.login_error") });
+      setBusy(null);
+    }
+  };
+
+  const welcomeMagic = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email.trim()) return;
+    setBusy("magic");
+    try {
+      const { data, error } = await supabase.functions.invoke("heart-club-auth", {
+        body: { email: email.trim(), redirectOrigin: window.location.origin },
+      });
+      if (error || (data && (data as any).error)) throw new Error("auth_failed");
+      toast({ title: t("entrar.link_sent") });
+    } catch (err) {
+      console.error("[ENTRAR] link por e-mail (volta) falhou", err);
+      toast({ variant: "destructive", title: t("entrar.login_error") });
+    } finally {
+      setBusy(null);
+    }
+  };
 
   // No teste do Master os botões de login têm o mesmo visual, mas só avançam a tela (sem login de verdade).
   const loginGoogle = async () => {
@@ -253,8 +289,62 @@ const Entrar = () => {
 
         <img src={logo} alt="Heart Club" className="h-20 w-20 object-contain" />
 
-        {/* ── 2) ESCOLHA DO CLUBE */}
-        {stage === "pick" && (
+        {/* ── 2a) BEM-VINDO DE VOLTA (aparelho que já teve um voto, sem login) */}
+        {stage === "pick" && showWelcomeBack && (
+          <div className="w-full space-y-5" data-testid="entrar-welcome-back">
+            <div className="space-y-2 text-center">
+              <h1 className="text-3xl font-black italic uppercase leading-tight tracking-tighter">{t("entrar.back_title")}</h1>
+              <p className="text-sm text-white/60">{t("entrar.back_sub")}</p>
+            </div>
+            <div className="space-y-4">
+              {!inApp.inApp && (
+                <>
+                  <Button
+                    variant="outline"
+                    onClick={welcomeGoogle}
+                    disabled={!!busy}
+                    className="glass-card-hover h-14 w-full border-border/50 text-base font-medium text-foreground"
+                  >
+                    {busy === "google" ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <GoogleIcon />}
+                    {t("entrar.google")}
+                  </Button>
+                  <div className="flex items-center gap-3 text-[11px] uppercase text-white/40">
+                    <div className="h-px flex-1 bg-white/10" />
+                    {t("entrar.or_email")}
+                    <div className="h-px flex-1 bg-white/10" />
+                  </div>
+                </>
+              )}
+              <form onSubmit={welcomeMagic} className="space-y-3">
+                <Input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder={t("entrar.email_placeholder")}
+                  className="h-12 rounded-xl border-white/10 bg-card"
+                />
+                <Button
+                  type="submit"
+                  disabled={!!busy || !email.trim()}
+                  variant={inApp.inApp ? "default" : "outline"}
+                  className={inApp.inApp ? "btn-orange-gradient h-14 w-full gap-2 rounded-xl font-bold" : "h-12 w-full gap-2 rounded-xl font-bold"}
+                >
+                  {busy === "magic" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
+                  {t("entrar.send_link")}
+                </Button>
+              </form>
+            </div>
+            <button
+              onClick={() => setReturning(false)}
+              className="mx-auto block text-xs text-white/40 underline underline-offset-2 hover:text-white/70"
+            >
+              {t("entrar.back_not_me")}
+            </button>
+          </div>
+        )}
+
+        {/* ── 2b) ESCOLHA DO CLUBE */}
+        {stage === "pick" && !showWelcomeBack && (
           <div className="w-full space-y-5">
             <div className="space-y-2 text-center">
               <h1 className="text-3xl font-black italic uppercase leading-tight tracking-tighter">{t("entrar.pick_title")}</h1>

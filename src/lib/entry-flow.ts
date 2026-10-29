@@ -177,6 +177,27 @@ export function adoptPendingVoteFromLink(
   return loadPendingVote();
 }
 
+// ── "Este aparelho já teve um torcedor que votou" ─────────────────────────────────────────────────────
+// Sinal só de conveniência (nunca prova nada nem libera nada): quem volta sem estar logado vê "Bem-vindo de volta!"
+// em vez da busca de clube. O voto em si continua protegido no banco (um voto por pessoa).
+const VOTED_DEVICE_KEY = "hc_device_voted";
+
+export function markDeviceVoted() {
+  try {
+    localStorage.setItem(VOTED_DEVICE_KEY, "1");
+  } catch {
+    /* sem armazenamento: o torcedor só vê a busca normal */
+  }
+}
+
+export function deviceHasVoted(): boolean {
+  try {
+    return localStorage.getItem(VOTED_DEVICE_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
 /** Para onde mandar quem JÁ fez login mas ainda não votou (fluxo novo ou antigo). */
 export function notVotedTarget(): string {
   if (!NEW_ENTRY_FLOW_ENABLED) return "/voting";
