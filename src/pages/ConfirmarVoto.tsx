@@ -16,7 +16,7 @@ import { useUser } from "@/contexts/UserContext";
 import { useToast } from "@/hooks/use-toast";
 import { useTranslationApp } from "@/hooks/useTranslationApp";
 import { isMasterEmail } from "@/lib/master";
-import { NEW_ENTRY_FLOW_ENABLED, PENDING_VOTE_PARAM, adoptPendingVoteFromLink, clearPendingVote, loadPendingVote, markDeviceVoted } from "@/lib/entry-flow";
+import { NEW_ENTRY_FLOW_ENABLED, PENDING_VOTE_PARAM, adoptPendingVoteFromLink, clearPendingVote, loadPendingVote, markDeviceVoted, maskEmail } from "@/lib/entry-flow";
 import { submitVote } from "@/lib/submit-vote";
 import { supabase } from "@/integrations/supabase/client";
 import { setSimClub, setSimSympathies } from "@/lib/sim-fan";
@@ -136,11 +136,12 @@ const ConfirmarVoto = () => {
       });
       setRecorded(true);
       clearPendingVote();
-      markDeviceVoted(); // este aparelho já teve um voto: se voltar sem login, vê "Bem-vindo de volta!"
+      // este aparelho já teve um voto: se voltar sem login, vê "Bem-vindo de volta, torcedor do <Clube>!"
+      markDeviceVoted({ clubName: pending.club.name, logo: pending.club.logo, email: maskEmail(user.email) });
       if (direct) await finishAuto(wantsNews);
     } catch (err: any) {
       if (err?.code === "23505") {
-        markDeviceVoted();
+        markDeviceVoted({ clubName: pending.club.name, logo: pending.club.logo, email: maskEmail(user.email) });
         // já existe voto original deste torcedor → conta como registrado
         setRecorded(true);
         clearPendingVote();

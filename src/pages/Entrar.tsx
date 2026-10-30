@@ -28,10 +28,11 @@ import {
   AUTO_GOOGLE_PARAM,
   NEW_ENTRY_FLOW_ENABLED,
   PENDING_VOTE_PARAM,
+  clearVotedDevice,
   decodePendingVoteParam,
-  deviceHasVoted,
   encodePendingVoteParam,
   loadPendingVote,
+  readVotedDevice,
   savePendingVote,
 } from "@/lib/entry-flow";
 import { buildChromeIntentUrl, detectInAppBrowser } from "@/lib/in-app-browser";
@@ -74,9 +75,12 @@ const Entrar = () => {
     }
   });
   const [heartClub, setHeartClub] = useState<ClubSearchResult | null>(linkVote?.club ?? null);
-  // Este aparelho já teve um torcedor que votou: quem volta sem login vê "Bem-vindo de volta!" no lugar da busca.
-  const [returning, setReturning] = useState(() => !linkVote && params.get("sim") !== "1" && deviceHasVoted());
-  const showWelcomeBack = returning && !isAuthenticated && !sim;
+  // Este aparelho já teve um torcedor que votou (marca com clube + e-mail mascarado): quem volta sem login vê
+  // "Bem-vindo de volta, torcedor do <Clube>!" no lugar da busca.
+  const [votedInfo, setVotedInfo] = useState(() => (!linkVote && params.get("sim") !== "1" ? readVotedDevice() : null));
+  const showWelcomeBack = !!votedInfo && !isAuthenticated && !sim;
+  // "Já votei — Entrar": mostra direto o Google e o link por e-mail, sem pedir clube (quem votou em outro aparelho).
+  const [signinMode, setSigninMode] = useState(false);
   const [email, setEmail] = useState("");
   const [busy, setBusy] = useState<"google" | "magic" | null>(null);
   const [iosHint, setIosHint] = useState(false);
@@ -295,6 +299,15 @@ const Entrar = () => {
     );
   }
 
+  // Sessão ativa e voto feito: vai direto ao painel, sem mostrar nada da porta de entrada (o redirecionamento está nos efeitos acima).
+  if (isAuthenticated && hasVoted && !isMaster && !sim) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background" data-testid="entrar-redirecting">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
   // ── LOGO PARADO (sem vídeo: nada pesado no primeiro carregamento)
   if (stage === "intro") {
     return (
@@ -342,12 +355,28 @@ const Entrar = () => {
       <div className="mx-auto flex w-full min-w-0 max-w-lg flex-col items-center gap-6 px-4 py-8">
         <img src={logo} alt="Heart Club" className="h-20 w-20 object-contain" />
 
-        {/* ── BEM-VINDO DE VOLTA (aparelho que já teve um voto, sem login) */}
-        {stage === "pick" && showWelcomeBack && (
-          <div className="w-full min-w-0 space-y-5" data-testid="entrar-welcome-back">
-            <div className="space-y-2 text-center">
-              <h1 className="text-3xl font-black italic uppercase leading-tight tracking-tighter">{t("entrar.back_title")}</h1>
-              <p className="text-sm text-white/60">{t("entrar.back_sub")}</p>
+        {/* ── BEM-VINDO DE VOLTA, TORCEDOR DO <CLUBE> (aparelho que já teve um voto, sem login) ou "Já votei — Entrar" */}
+        {stage === "pick" && (showWelcomeBack || signinMode) && (
+          <div className="w-full min-w-0 space-y-5" data-testid={showWelcomeBack ? "entrar-welcome-back" : "entrar-signin"}>
+            <div className="space-y-3 text-center">
+              {showWelcomeBack && votedInfo?.clubName && (
+                <div className="mx-auto flex h-24 w-24 items-center justify-center rounded-full bg-white shadow-xl" data-testid="entrar-welcome-crest">
+                  <ClubLogo src={votedInfo.logo} alt={votedInfo.clubName} clubName={votedInfo.clubName} size="xl" />
+                </div>
+              )}
+              <h1 className="text-2xl font-black italic uppercase leading-tight tracking-tighter sm:text-3xl">
+                {showWelcomeBack
+                  ? votedInfo?.clubName
+                    ? t("entrar.back_title_club", { club: votedInfo.clubName })
+                    : t("entrar.back_title")
+                  : t("entrar.signin_title")}
+              </h1>
+              <p className="text-sm text-white/60">{showWelcomeBack ? t("entrar.back_sub") : t("entrar.signin_sub")}</p>
+              {showWelcomeBack && votedInfo?.email && (
+                <p className="text-xs text-white/40" data-testid="entrar-masked-email">
+                  {t("entrar.back_account", { email: votedInfo.email })}
+                </p>
+              )}
             </div>
             <div className="space-y-4">
               {googleBlock}
@@ -370,46 +399,65 @@ const Entrar = () => {
                 </Button>
               </form>
             </div>
-            <button
-              onClick={() => setReturning(false)}
-              className="mx-auto block text-xs text-white/40 underline underline-offset-2 hover:text-white/70"
-            >
-              {t("entrar.back_not_me")}
-            </button>
+            {showWelcomeBack ? (
+              <button
+                onClick={() => {
+                  // "Não é você?": apaga a marca do aparelho e volta a busca normal
+                  clearVotedDevice();
+                  setVotedInfo(null);
+                }}
+                className="mx-auto block text-xs text-white/40 underline underline-offset-2 hover:text-white/70"
+              >
+                {t("entrar.back_not_you")}
+              </button>
+            ) : (
+              <button
+                onClick={() => setSigninMode(false)}
+                className="mx-auto block text-xs font-bold uppercase text-white/40 hover:text-white/70"
+              >
+                {t("entrar.back")}
+              </button>
+            )}
           </div>
         )}
 
         {/* ── AÇÃO 1: ESCOLHER O TIME */}
-        {stage === "pick" && !showWelcomeBack && (
+        {stage === "pick" && !showWelcomeBack && !signinMode && (
           <div className="w-full min-w-0 space-y-5">
             <div className="space-y-2 text-center">
               <h1 className="text-3xl font-black italic uppercase leading-tight tracking-tighter">{t("entrar.pick_title")}</h1>
               <p className="text-sm text-white/60">{t("entrar.pick_sub")}</p>
             </div>
-            <div className="relative">
-              <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-primary opacity-60" />
-              <Input
-                autoFocus
-                value={heartSearch.query}
-                onChange={(e) => heartSearch.setQuery(e.target.value)}
-                onFocus={() => heartSearch.setOpen(true)}
-                onBlur={() => setTimeout(() => heartSearch.setOpen(false), 200)}
-                placeholder={t("entrar.search_placeholder")}
-                className="h-14 rounded-2xl border-white/10 bg-card pl-11 text-base"
-              />
-              <ResultsList
-                results={heartSearch.results}
-                loading={heartSearch.loading}
-                open={heartSearch.open && heartSearch.query.trim().length >= 3} // sem "Nenhum clube encontrado" antes de digitar
-                onPick={pickHeart}
-              />
+            <div className="space-y-3">
+              <div className="relative">
+                <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-primary opacity-60" />
+                <Input
+                  autoFocus
+                  value={heartSearch.query}
+                  onChange={(e) => heartSearch.setQuery(e.target.value)}
+                  onFocus={() => heartSearch.setOpen(true)}
+                  onBlur={() => setTimeout(() => heartSearch.setOpen(false), 200)}
+                  placeholder={t("entrar.search_placeholder")}
+                  className="h-14 rounded-2xl border-white/10 bg-card pl-11 text-base"
+                />
+                <ResultsList
+                  results={heartSearch.results}
+                  loading={heartSearch.loading}
+                  open={heartSearch.open && heartSearch.query.trim().length >= 3} // sem "Nenhum clube encontrado" antes de digitar
+                  onPick={pickHeart}
+                />
+              </div>
+              {/* "Já votei — Entrar": sóbrio, do tamanho da caixa de busca; mostra direto Google/e-mail, sem pedir clube */}
+              <button
+                type="button"
+                onClick={() => setSigninMode(true)}
+                data-testid="entrar-already-voted"
+                className="h-14 w-full rounded-2xl border border-white/20 bg-card text-base font-medium text-white transition-colors hover:border-white/40 focus-visible:border-white/50 focus-visible:outline-none"
+              >
+                {t("entrar.already_voted_btn")}
+              </button>
             </div>
             <p className="text-center text-xs text-white/50">{t("entrar.privacy_line")}</p>
-            <p className="text-center text-xs text-white/40">
-              <Link to="/login" className="underline underline-offset-2 hover:text-white/70">
-                {t("entrar.already_voted")}
-              </Link>
-            </p>
           </div>
         )}
 

@@ -34,7 +34,7 @@ vi.mock("@/hooks/useTranslationApp", () => ({
 }));
 
 import ConfirmarVoto from "./ConfirmarVoto";
-import { deviceHasVoted, encodePendingVoteParam, loadPendingVote, savePendingVote } from "@/lib/entry-flow";
+import { clearVotedDevice, deviceHasVoted, encodePendingVoteParam, loadPendingVote, readVotedDevice, savePendingVote } from "@/lib/entry-flow";
 
 const club: any = { id: "1", name: "Paris Saint Germain", logo: "", location: "Paris, France", source: "api" };
 
@@ -327,18 +327,20 @@ describe("ConfirmarVoto — fluxo direto (aviso dos Termos já mostrado na entra
 describe("ConfirmarVoto — marca o aparelho que já teve um voto", () => {
   beforeEach(() => {
     localStorage.clear();
+    clearVotedDevice();
     state.hasVoted = false;
     state.profile = { id: "fan-1", terms_accepted_at: null };
     submitVote.mockClear();
     rpc.mockClear();
   });
 
-  it("voto gravado: o aparelho fica marcado (volta como 'Bem-vindo de volta!')", async () => {
+  it("voto gravado: o aparelho fica marcado com o clube e o e-mail mascarado (volta como 'Bem-vindo de volta, torcedor do …')", async () => {
     expect(deviceHasVoted()).toBe(false);
     savePendingVote(club, [], { terms: true });
     renderPage();
     await waitFor(() => expect(screen.getByTestId("where").textContent).toBe("/dashboard"));
     expect(deviceHasVoted()).toBe(true);
+    expect(readVotedDevice()).toMatchObject({ clubName: "Paris Saint Germain", email: "f***n@exemplo.com" });
   });
 
   it("gravação que falhou: o aparelho NÃO é marcado", async () => {

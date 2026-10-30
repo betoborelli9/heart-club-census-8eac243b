@@ -182,22 +182,98 @@ export function adoptPendingVoteFromLink(
 // ── "Este aparelho já teve um torcedor que votou" ─────────────────────────────────────────────────────
 // Sinal só de conveniência (nunca prova nada nem libera nada): quem volta sem estar logado vê "Bem-vindo de volta!"
 // em vez da busca de clube. O voto em si continua protegido no banco (um voto por pessoa).
+// A marca guarda o clube (nome + escudo) e o e-mail MASCARADO, para a tela "Bem-vindo de volta, torcedor do <Clube>!".
+// Fica no localStorage e, de reserva, num cookie de 1 ano (alguns navegadores internos limpam o localStorage).
 const VOTED_DEVICE_KEY = "hc_device_voted";
+const VOTED_COOKIE = "hc_voted";
+const VOTED_COOKIE_MAX_AGE = 365 * 24 * 60 * 60; // 1 ano
 
-export function markDeviceVoted() {
+export type VotedDevice = { clubName?: string; logo?: string; email?: string };
+
+/** "beto.borelli9@gmail.com" → "b***9@gmail.com" (nunca guardamos nem mostramos o e-mail inteiro). */
+export function maskEmail(email: string | null | undefined): string | undefined {
+  const value = (email || "").trim();
+  const at = value.lastIndexOf("@");
+  if (at < 1) return undefined;
+  const local = value.slice(0, at);
+  const domain = value.slice(at);
+  const masked = local.length <= 2 ? `${local[0]}***` : `${local[0]}***${local[local.length - 1]}`;
+  return masked + domain;
+}
+
+// Só texto curto e escudo em endereço seguro: o que vem do aparelho nunca é confiado às cegas.
+const cleanVotedDevice = (raw: any): VotedDevice => {
+  const out: VotedDevice = {};
+  if (typeof raw?.clubName === "string" && raw.clubName.trim()) out.clubName = raw.clubName.trim().slice(0, 100);
+  if (typeof raw?.logo === "string" && /^(https:\/\/|\/)[^\s"'<>]{1,300}$/.test(raw.logo)) out.logo = raw.logo;
+  if (typeof raw?.email === "string" && raw.email.includes("@") && raw.email.length <= 120) out.email = raw.email;
+  return out;
+};
+
+const readVotedCookie = (): string | null => {
   try {
-    localStorage.setItem(VOTED_DEVICE_KEY, "1");
+    const hit = document.cookie.split("; ").find((c) => c.startsWith(`${VOTED_COOKIE}=`));
+    return hit ? decodeURIComponent(hit.slice(VOTED_COOKIE.length + 1)) : null;
   } catch {
-    /* sem armazenamento: o torcedor só vê a busca normal */
+    return null;
+  }
+};
+
+const writeVotedCookie = (value: VotedDevice) => {
+  try {
+    const secure = typeof location !== "undefined" && location.protocol === "https:" ? "; Secure" : "";
+    document.cookie = `${VOTED_COOKIE}=${encodeURIComponent(JSON.stringify(value))}; max-age=${VOTED_COOKIE_MAX_AGE}; path=/; SameSite=Lax${secure}`;
+  } catch {
+    /* sem cookie: fica só o localStorage */
+  }
+};
+
+/** Lê a marca "este aparelho já teve um voto" (localStorage; cookie de reserva). Null se não existir. */
+export function readVotedDevice(): VotedDevice | null {
+  let raw: string | null = null;
+  try {
+    raw = localStorage.getItem(VOTED_DEVICE_KEY);
+  } catch {
+    raw = null;
+  }
+  if (!raw) raw = readVotedCookie();
+  if (!raw) return null;
+  if (raw === "1") return {}; // marca antiga (só "já votou", sem clube)
+  try {
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === "object" ? cleanVotedDevice(parsed) : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Grava a marca quando o voto é confirmado. Informações novas se juntam às que já existiam. */
+export function markDeviceVoted(info: { clubName?: string | null; logo?: string | null; email?: string | null } = {}) {
+  const merged = cleanVotedDevice({ ...(readVotedDevice() ?? {}), ...Object.fromEntries(Object.entries(info).filter(([, v]) => !!v)) });
+  try {
+    localStorage.setItem(VOTED_DEVICE_KEY, JSON.stringify(merged));
+  } catch {
+    /* sem armazenamento: o cookie ainda guarda */
+  }
+  writeVotedCookie(merged);
+}
+
+/** "Não é você?": apaga a marca (e o cookie) e a busca de clube volta ao normal. */
+export function clearVotedDevice() {
+  try {
+    localStorage.removeItem(VOTED_DEVICE_KEY);
+  } catch {
+    /* ignora */
+  }
+  try {
+    document.cookie = `${VOTED_COOKIE}=; max-age=0; path=/; SameSite=Lax`;
+  } catch {
+    /* ignora */
   }
 }
 
 export function deviceHasVoted(): boolean {
-  try {
-    return localStorage.getItem(VOTED_DEVICE_KEY) === "1";
-  } catch {
-    return false;
-  }
+  return readVotedDevice() !== null;
 }
 
 /** Para onde mandar quem JÁ fez login mas ainda não votou (fluxo novo ou antigo). */

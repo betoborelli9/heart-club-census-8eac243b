@@ -30,7 +30,9 @@ vi.mock("@/contexts/UserContext", () => ({
   }),
 }));
 vi.mock("@/hooks/use-toast", () => ({ useToast: () => ({ toast: vi.fn() }) }));
-vi.mock("@/hooks/useTranslationApp", () => ({ useTranslationApp: () => ({ t: (k: string) => k }) }));
+vi.mock("@/hooks/useTranslationApp", () => ({
+  useTranslationApp: () => ({ t: (k: string, o?: any) => (o?.club ? `${k}:${o.club}` : o?.email ? `${k}:${o.email}` : k) }),
+}));
 vi.mock("@/components/ClubLogo", () => ({ ClubLogo: () => null }));
 const club: any = { id: "1", name: "Vila Nova", logo: "", location: "Goiânia, Brazil", source: "local" };
 vi.mock("@/components/entrar/ClubSearchBox", () => ({
@@ -40,7 +42,7 @@ vi.mock("@/components/entrar/ClubSearchBox", () => ({
 vi.mock("@/lib/entry-flow", async (orig) => ({ ...(await orig<typeof import("@/lib/entry-flow")>()), NEW_ENTRY_FLOW_ENABLED: true }));
 
 import Entrar from "./Entrar";
-import { encodePendingVoteParam, loadPendingVote, markDeviceVoted } from "@/lib/entry-flow";
+import { clearVotedDevice, encodePendingVoteParam, loadPendingVote, markDeviceVoted, readVotedDevice } from "@/lib/entry-flow";
 
 function Where() {
   const l = useLocation();
@@ -70,6 +72,7 @@ const withUa = (ua: string) => {
 describe("Entrar — 'Bem-vindo de volta!' para aparelho que já teve um voto", () => {
   beforeEach(() => {
     localStorage.clear();
+    clearVotedDevice();
     sessionStorage.clear();
     sessionStorage.setItem("hc_intro_seen", "1");
     invoke.mockClear();
@@ -90,7 +93,7 @@ describe("Entrar — 'Bem-vindo de volta!' para aparelho que já teve um voto", 
     expect(screen.getByText("entrar.back_title")).toBeTruthy();
     expect(screen.getByText("entrar.google")).toBeTruthy();
     expect(screen.getByText("entrar.send_link")).toBeTruthy();
-    expect(screen.getByText("entrar.back_not_me")).toBeTruthy();
+    expect(screen.getByText("entrar.back_not_you")).toBeTruthy();
     expect(screen.queryByText("entrar.pick_title")).toBeNull(); // nada de busca de clube
     expect(screen.queryByText("escolher-vila-nova")).toBeNull();
   });
@@ -129,7 +132,7 @@ describe("Entrar — 'Bem-vindo de volta!' para aparelho que já teve um voto", 
   it("'Não sou eu / votar com outra conta' mostra a busca normal e o fluxo de voto segue funcionando", async () => {
     markDeviceVoted();
     renderAt();
-    fireEvent.click(await screen.findByText("entrar.back_not_me"));
+    fireEvent.click(await screen.findByText("entrar.back_not_you"));
     expect(await screen.findByText("entrar.pick_title")).toBeTruthy();
     expect(screen.queryByTestId("entrar-welcome-back")).toBeNull();
     fireEvent.click(screen.getByText("escolher-vila-nova"));
@@ -191,7 +194,7 @@ describe("Entrar — 'Bem-vindo de volta!' para aparelho que já teve um voto", 
       expect(await screen.findByTestId("entrar-welcome-back")).toBeTruthy();
       expect(screen.queryByText("entrar.inapp_open_chrome")).toBeNull();
       expect(screen.getByText("entrar.send_link")).toBeTruthy();
-      expect(screen.getByText("entrar.back_not_me")).toBeTruthy();
+      expect(screen.getByText("entrar.back_not_you")).toBeTruthy();
       fireEvent.click(screen.getByText("entrar.google"));
       expect(hrefSet).toHaveBeenCalledTimes(1);
       const target = hrefSet.mock.calls[0][0] as string;
