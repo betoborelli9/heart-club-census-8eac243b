@@ -12,7 +12,7 @@ import { useTranslationApp } from "@/hooks/useTranslationApp";
 import { ClubLogo } from "@/components/ClubLogo";
 import { pctText, zoneColor, zoneLabel } from "@/components/clube/ClubChances";
 import { roundNumber, runWhatIf, type Pick, type WGame, type WTeam } from "@/lib/whatif";
-import { fmtExpPts, orderByExpected } from "@/lib/projected-order";
+import { orderByExpected } from "@/lib/projected-order";
 import type { TieRule } from "../../../supabase/functions/_shared/prognosis";
 
 type TeamP = WTeam & { name: string; logo: string | null; remaining: number; dist: number[] };
@@ -171,7 +171,7 @@ export default function ClubSimulator({ teamId, leagueId, season, accent = "#ff6
   const rows =
     view === "now"
       ? result.table.map((r) => ({ pos: r.pos, id: r.id, delta: r.delta, big: r.points, sub: `${t("sim.j")} ${r.played} · ${t("sim.sg")} ${r.gd > 0 ? `+${r.gd}` : r.gd}` }))
-      : finalOrder.map((tm, i) => ({ pos: i + 1, id: tm.id, delta: tm.position - (i + 1), big: fmtExpPts(result.expPoints.get(tm.id) ?? 0, language), sub: `${pctText(result.dist.get(tm.id)?.[i] ?? 0)} ${t("sim.here")}` }));
+      : finalOrder.map((tm, i) => ({ pos: i + 1, id: tm.id, delta: tm.position - (i + 1), big: String(Math.round(result.expPoints.get(tm.id) ?? 0)), sub: `${pctText(result.dist.get(tm.id)?.[i] ?? 0)} ${t("sim.here")}` }));
 
   const setScore = (id: number, side: "h" | "a", v: string) => {
     const clean = v.replace(/\D/g, "").slice(0, 2);

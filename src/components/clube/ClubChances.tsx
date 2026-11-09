@@ -14,7 +14,8 @@ import { useLeaguePrognosis } from "@/hooks/useLeaguePrognosis";
 import { useTranslationApp } from "@/hooks/useTranslationApp";
 import { getLeagueRules } from "@/data/leagueRules";
 import { ClubLogo } from "@/components/ClubLogo";
-import { fmtExpPts, orderByExpected } from "@/lib/projected-order";
+import { orderByExpected } from "@/lib/projected-order";
+import { displayTablePoints, minReachableGain, nearestReachableTotal } from "@/lib/reachable-points";
 
 type TeamP = {
   id: number; name: string; logo: string | null; position: number; points: number; played: number; remaining: number;
@@ -131,7 +132,9 @@ export function zoneColor(label: string): string {
 export function amr(cut: number, points: number, remaining: number): { need: number; pct: number | null; done: boolean; impossible: boolean } {
   const need = Math.max(0, Math.ceil(cut) - points);
   if (remaining <= 0) return { need, pct: null, done: need === 0, impossible: need > 0 };
-  const pct = Math.round((need / (3 * remaining)) * 100);
+  // o aproveitamento conta os pontos que dá mesmo para fazer (com 1 jogo, "faltam 2" só se alcança vencendo: 3 pontos = 100%)
+  const reachable = minReachableGain(need, remaining) ?? need;
+  const pct = Math.round((reachable / (3 * remaining)) * 100);
   return { need, pct, done: need === 0, impossible: need > 3 * remaining };
 }
 
@@ -233,6 +236,12 @@ export default function ClubChances({ teamId, leagueId, season, accent = "#ff620
   // posição média nas simulações (mais fiel que os pontos arredondados quando há empate técnico)
   const meanPos = (x: TeamP) => x.dist.reduce((acc, p, i) => acc + p * (i + 1), 0);
   const projectedOrder = orderByExpected(grp.teams ?? [], grp.meta?.rule, (x) => x.expPoints, meanPos);
+  // Pontos mostrados: nunca um total impossível (a média, como 69,9, só ordena a tabela)
+  const shownPtsList = displayTablePoints(projectedOrder.map((x) => ({ points: x.points, remaining: x.remaining, exp: x.expPoints })));
+  const shownPts = new Map<number, number>(projectedOrder.map((x, i) => [x.id, shownPtsList[i]]));
+  // Cartão "Pontos projetados": também um total possível; com 1 jogo só, mostramos os três resultados reais
+  const projectedPts = nearestReachableTotal(me.points, me.expPoints, me.remaining);
+  const lastGameOnly = me.remaining === 1 && !myLive;
   const shownPos = new Set<number>([1, ...covered]);
   const tableRows: TableRow[] = [];
   for (let p = 1; p <= total; p++) {
@@ -265,7 +274,7 @@ export default function ClubChances({ teamId, leagueId, season, accent = "#ff620
       <section className="grid grid-cols-3 gap-2">
         <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-3 text-center">
           <p className="text-[10px] font-bold uppercase tracking-wider text-white/50">{t("chances.projected")}</p>
-          <p className="mt-1 text-2xl font-black tabular-nums">{Math.round(me.expPoints)}</p>
+          <p className="mt-1 text-2xl font-black tabular-nums" data-testid="projected-pts">{projectedPts}</p>
           <p className="text-[10px] text-white/40">{me.p10}–{me.p90} pts</p>
         </div>
         <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-3 text-center">
@@ -274,11 +283,16 @@ export default function ClubChances({ teamId, leagueId, season, accent = "#ff620
           <p className="text-[10px] text-white/40">{t("chances.now")} {me.position}º</p>
         </div>
         <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-3 text-center">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-white/50">{t("chances.left")}</p>
+          <p className="text-[10px] font-bold uppercase tracking-wider text-white/50">{t("chances.left", { count: remNow === 0 ? 2 : remNow })}</p>
           <p className="mt-1 text-2xl font-black tabular-nums" data-testid="left-count">{remNow}</p>
-          <p className="text-[10px] text-white/40">{t("chances.games")}{myLive ? ` · ${t("chances.live_one")}` : ""}</p>
+          <p className="text-[10px] text-white/40">{t("chances.games", { count: remNow === 0 ? 2 : remNow })}{myLive ? ` · ${t("chances.live_one")}` : ""}</p>
         </div>
       </section>
+      {lastGameOnly && (
+        <p className="-mt-3 text-center text-[11px] font-semibold text-white/60" data-testid="last-game-outcomes">
+          {t("chances.last_game", { w: me.points + 3, d: me.points + 1, l: me.points })}
+        </p>
+      )}
 
       {/* Pontos de corte */}
       {cutRows.length > 0 && (
@@ -296,8 +310,11 @@ export default function ClubChances({ teamId, leagueId, season, accent = "#ff620
                         ? t("chances.safe_now")
                         : t("chances.reached")
                       : r.need.impossible
-                        ? `${t("chances.cut_missing", { n: r.need.need })} · ${t("chances.out_of_reach", { max: 3 * remNow })}`
-                        : `${t("chances.cut_missing", { n: r.need.need })}${r.need.pct != null ? ` · ${t("chances.need", { n: r.need.pct })}` : ""}`}
+                        ? `${t("chances.cut_missing", { count: r.need.need })} · ${t("chances.out_of_reach", { max: 3 * remNow })}`
+                        : remNow === 1
+                          ? // com 1 jogo só: ou empata (1 ponto) ou precisa vencer (2 ou 3 pontos); nunca "faltam 2 pts"
+                            t(r.need.need <= 1 ? "chances.need_draw" : "chances.need_win")
+                          : `${t("chances.cut_missing", { count: r.need.need })}${r.need.pct != null ? ` · ${t("chances.need", { n: r.need.pct })}` : ""}`}
                   </span>
                 </span>
                 <span className="shrink-0 text-right">
@@ -422,7 +439,7 @@ export default function ClubChances({ teamId, leagueId, season, accent = "#ff620
                       )}
                     </span>
                     <span className="shrink-0 text-right leading-tight">
-                      <span className="block text-[13px] font-black tabular-nums" data-testid="table-pts">{fmtExpPts(r.team.expPoints, language)}</span>
+                      <span className="block text-[13px] font-black tabular-nums" data-testid="table-pts">{shownPts.get(r.team.id)}</span>
                       <span className="block text-[9px] font-bold text-white/55">{pctFmt(r.team.dist[r.pos - 1] ?? 0)}</span>
                     </span>
                   </button>

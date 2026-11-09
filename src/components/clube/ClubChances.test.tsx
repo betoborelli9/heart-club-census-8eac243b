@@ -86,7 +86,7 @@ describe("Chances do clube", () => {
     // Campeão (1º): corte 14, tem 10 → faltam 4 pontos em 2 jogos (6 possíveis) = 67%
     expect(cuts[0]).toContain("chances.cut_champion");
     expect(cuts[0]).toContain("14");
-    expect(cuts[0]).toContain('"n":4');
+    expect(cuts[0]).toContain('"count":4');
     expect(cuts[0]).toContain('"n":67');
     // Rebaixamento: para escapar vale o corte do 3º (8) + 1 = 9; já tem 10 → "já está acima do corte"
     expect(cuts[1]).toContain("chances.cut_escape");
@@ -237,13 +237,14 @@ describe("Chances do clube", () => {
     expect(screen.getAllByTestId("table-also")[0].textContent).toContain("Nosso FC"); // também pode ficar em 1º
   });
 
-  it("tabela provável mostra os pontos esperados com 1 casa decimal e diz qual desempate foi usado", async () => {
+  it("tabela provável mostra pontos INTEIROS (nunca 15,1) e diz qual desempate foi usado", async () => {
     state.payload = payload();
     state.payload.groups[0].meta.rule = "br";
     renderIt();
     await screen.findByTestId("chances-table");
     const pts = screen.getAllByTestId("table-pts").map((e) => e.textContent);
-    expect(pts[0]).toBe("15,1"); // Líder FC: 13 + 2,1
+    expect(pts[0]).toBe("15"); // Líder FC: 13 + 2,1 de média → o total possível mais perto (15)
+    for (const v of pts) expect(v).toMatch(/^[0-9]+$/); // nenhuma casa decimal para o torcedor
     expect(screen.getByTestId("table-tiebreak").textContent).toContain("chances.tiebreak_br");
   });
 
@@ -343,7 +344,7 @@ describe("Chances do clube", () => {
     expect(first).toContain('"max":6');
     expect(first).not.toContain("chances.need");
     for (const r of screen.getAllByTestId("cut-row")) {
-      const m = /"n":(\d+)\}.*chances\.need:\{"n":(\d+)/.exec(r.textContent || "");
+      const m = /"count":(\d+)\}.*chances\.need:\{"n":(\d+)/.exec(r.textContent || "");
       if (m) expect(Number(m[2])).toBeLessThanOrEqual(100);
     }
   });
@@ -357,8 +358,8 @@ describe("Chances do clube", () => {
     await screen.findByTestId("chances-cuts");
     expect(screen.getByTestId("left-count").textContent).toBe("1");
     const champion = screen.getAllByTestId("cut-row")[0].textContent || "";
-    expect(champion).toContain('"n":1'); // corte 14: tem 13 → falta 1 ponto (e não 4, como seria com os 10 oficiais)
-    expect(champion).toContain('"n":33'); // 1 de 3 pontos possíveis no 1 jogo que sobra
+    // corte 14: tem 13 → falta 1 ponto (e não 4, como seria com os 10 oficiais); com 1 jogo só: basta empatar
+    expect(champion).toContain("chances.need_draw");
   });
 
   it("casa/fora dos jogos que faltam em branco e legível", async () => {
@@ -367,5 +368,83 @@ describe("Chances do clube", () => {
     const v = screen.getAllByTestId("chance-venue")[0];
     expect(v.className).toContain("text-white");
     expect(v.className).not.toContain("text-white/");
+  });
+});
+
+describe("Chances — só números que podem acontecer (caso do Juventude: 68 pontos, 1 jogo)", () => {
+  // Série B: Juventude 2º com 68 pts e 1 jogo; média das simulações 69,9. Só pode terminar com 68, 69 ou 71.
+  const juve = () => {
+    const p = payload();
+    const g = p.groups[0];
+    g.teams = [
+      team(1, "Novorizontino", 1, 70, { remaining: 1, expPoints: 71.5, p10: 70, p90: 73, title: 0.8, dist: [0.84, 0.16, 0, 0], zoneProb: { Promotion: 0.84, "Relegation - Serie B": 0 } }),
+      team(2, "Juventude", 2, 68, { remaining: 1, expPoints: 69.9, p10: 68, p90: 71, title: 0.16, dist: [0.16, 0.71, 0.13, 0], zoneProb: { Promotion: 0.87, "Relegation - Serie B": 0 } }),
+      team(3, "Meio FC", 3, 65, { remaining: 1, expPoints: 67.2, p10: 65, p90: 68, title: 0, dist: [0, 0.13, 0.87, 0], zoneProb: { Promotion: 0.13, "Relegation - Serie B": 0 } }),
+      team(4, "Lanterna FC", 4, 20, { remaining: 1, expPoints: 20.3, p10: 20, p90: 23, title: 0, dist: [0, 0, 0, 1], zoneProb: { Promotion: 0, "Relegation - Serie B": 1 } }),
+    ];
+    g.cutMedian = [71, 70, 66, 30];
+    g.zones = [{ label: "Promotion", positions: [1, 2] }, { label: "Relegation - Serie B", positions: [4] }];
+    g.remaining = [{ id: 1, date: "2026-11-10T20:00:00Z", h: 2, a: 1, hn: "Juventude", an: "Novorizontino", hl: null, al: null, pH: 0.5, pD: 0.3, pA: 0.2, live: null }];
+    g.meta = { sims: 12000, finishedGames: 150, remainingGames: 2, minPlayed: 37 };
+    return p;
+  };
+
+  beforeEach(() => {
+    clearPrognosisCache();
+    state.invokes = [];
+    state.payload = juve();
+  });
+
+  it("'Pontos projetados' nunca é 70: com 68 pts e 1 jogo só existe 68, 69 ou 71 (média 69,9 → 69)", async () => {
+    renderIt(2);
+    await screen.findByTestId("chances");
+    const shown = screen.getByTestId("projected-pts").textContent;
+    expect(shown).toBe("69");
+    expect(["68", "69", "71"]).toContain(shown);
+    expect(shown).not.toBe("70");
+  });
+
+  it("com 1 jogo, mostra os três resultados reais: vitória 71 · empate 69 · derrota 68", async () => {
+    renderIt(2);
+    await screen.findByTestId("chances");
+    const txt = screen.getByTestId("last-game-outcomes").textContent || "";
+    expect(txt).toContain("chances.last_game");
+    expect(txt).toContain('"w":71');
+    expect(txt).toContain('"d":69');
+    expect(txt).toContain('"l":68');
+  });
+
+  it("pontos de corte com 1 jogo: 'precisa vencer' (nunca 'faltam 2 pts' nem 67%)", async () => {
+    renderIt(2);
+    await screen.findByTestId("chances-cuts");
+    const rows = screen.getAllByTestId("cut-row").map((r) => r.textContent || "");
+    const second = rows.find((r) => r.includes('"pos":2')) || rows[1];
+    expect(second).toContain("chances.need_win"); // 70 pts: faltam 2, mas um empate dá só 1 → só vencendo
+    expect(second).not.toContain("cut_missing");
+    expect(second).not.toContain('"n":67');
+    expect(rows[0]).toContain("chances.need_win"); // campeão: 71 → vencer
+  });
+
+  it("tabela provável: pontos inteiros e possíveis, sem '71,5' / '69,9' e sem subir ao descer a tabela", async () => {
+    renderIt(2);
+    await screen.findByTestId("chances-table");
+    const pts = screen.getAllByTestId("table-pts").map((e) => e.textContent || "");
+    for (const v of pts) expect(v).toMatch(/^[0-9]+$/);
+    expect(pts.some((v) => v.includes(",") || v.includes("."))).toBe(false);
+    const nums = pts.map(Number);
+    expect(nums).toEqual([...nums].sort((a, b) => b - a)); // nunca 65 acima de 66
+    // Juventude (68 + 1 jogo): só 68, 69 ou 71
+    const juventudeRow = screen.getAllByTestId("table-row").find((r) => (r.textContent || "").includes("Juventude"))!;
+    const j = Number((within(juventudeRow).getByTestId("table-pts").textContent || "").trim());
+    expect([68, 69, 71]).toContain(j);
+  });
+
+  it("'Falta 1 jogo' no singular", async () => {
+    renderIt(2);
+    await screen.findByTestId("chances");
+    expect(screen.getByTestId("left-count").textContent).toBe("1");
+    // o rótulo usa o plural certo: count = 1 (não "1 jogos")
+    expect(screen.getByText('chances.left:{"count":1}')).toBeTruthy();
+    expect(screen.getByText(/^chances\.games:\{"count":1\}/)).toBeTruthy();
   });
 });
