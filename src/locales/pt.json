@@ -579,7 +579,7 @@
   "competitions": {
     "title": "Competições Ativas",
     "tournaments": "{{count}} torneio(s)",
-    "empty": "Nenhuma competição ativa encontrada.",
+    "empty": "Este clube está sem campeonato no momento.",
     "select_club": "Selecione um clube.",
     "no_match": "Sem jogo agendado nesta competição.",
     "no_standings": "Sem classificação disponível.",

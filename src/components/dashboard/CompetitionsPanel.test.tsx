@@ -3,7 +3,18 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 
-const state: { prognosis: any; invokes: string[] } = { prognosis: null, invokes: [] };
+const day = 24 * 60 * 60 * 1000;
+// Jogo de verdade para o clube: o servidor só devolve competição em que o time tem jogo ao vivo ou próximo jogo
+const match = (offsetMs: number, status = "NS") => ({
+  id: 1,
+  date: new Date(Date.now() + offsetMs).toISOString(),
+  status,
+  league: { id: 9999, name: "Liga X", logo: "", round: "Regular Season - 34" },
+  home: { id: 142, name: "Vila Nova", logo: "" },
+  away: { id: 2, name: "Juventude", logo: "" },
+  goals: { home: null, away: null },
+});
+const state: { prognosis: any; invokes: string[]; competitions: any[] | null } = { prognosis: null, invokes: [], competitions: null };
 
 const standings = [
   { position: 1, name: "Vila Nova", teamId: 142, points: 61, played: 33, win: 18, draw: 7, lose: 8, goalsDiff: 15 },
@@ -22,7 +33,7 @@ vi.mock("@/integrations/supabase/client", () => ({
           return Promise.resolve({
             data: {
               team: { id: 142, name: "Vila Nova", logo: "" },
-              competitions: [{ leagueId: 9999, leagueName: "Liga X", leagueLogo: "", season: 2026, standings, me: standings[0], nextMatch: null, liveMatch: null }],
+              competitions: state.competitions ?? [{ leagueId: 9999, leagueName: "Liga X", leagueLogo: "", season: 2026, standings, me: standings[0], nextMatch: match(2 * day), liveMatch: null }],
             },
             error: null,
           });
@@ -78,6 +89,7 @@ describe("Tabela do Dashboard — chances %", () => {
   beforeEach(() => {
     state.prognosis = prognosis();
     state.invokes = [];
+    state.competitions = null;
   });
 
   it("a tabela de classificação abre CLÁSSICA: P J V E D SG, sem colunas de porcentagem e sem consultar chances", async () => {
@@ -145,5 +157,65 @@ describe("Tabela do Dashboard — chances %", () => {
     expect(await screen.findByTestId("chances-unavailable")).toBeTruthy();
     expect(screen.queryAllByTestId("chance-cell").length).toBe(0);
     expect(screen.getAllByText("SG").length).toBeGreaterThan(0);
+  });
+});
+
+// Regra geral (qualquer clube do mundo): clube SEM campeonato no momento não mostra tabela nem jogo velho
+describe("Clube sem campeonato no momento", () => {
+  const comp = (over: any) => ({ leagueId: 9999, leagueName: "Serie D", leagueLogo: "", season: 2026, standings, me: standings[0], nextMatch: null, liveMatch: null, ...over });
+
+  beforeEach(() => {
+    state.prognosis = prognosis();
+    state.invokes = [];
+    state.competitions = null;
+  });
+
+  it("servidor sem nenhuma competição: aparece 'sem campeonato' e nenhuma tabela", async () => {
+    state.competitions = [];
+    renderPanel();
+    expect(await screen.findByText("competitions.empty")).toBeTruthy();
+    expect(screen.queryAllByRole("row").length).toBe(0);
+    expect(screen.queryByTestId("chances-toggle")).toBeNull();
+  });
+
+  it("jogo antigo 'não iniciado' (cache velho de 26/jul, caso do Goiatuba) NÃO vale como próximo jogo: nada de tabela nem 'Começando…'", async () => {
+    state.competitions = [comp({ nextMatch: match(-110 * day, "NS") })]; // data passada há meses, status NS
+    renderPanel();
+    expect(await screen.findByText("competitions.empty")).toBeTruthy();
+    expect(screen.queryAllByRole("row").length).toBe(0);
+    expect(screen.queryByText("competitions.starting_soon")).toBeNull();
+  });
+
+  it("próximo jogo longe demais (mais de 30 dias): clube sem campeonato no momento, nada aparece", async () => {
+    state.competitions = [comp({ nextMatch: match(45 * day) })];
+    renderPanel();
+    expect(await screen.findByText("competitions.empty")).toBeTruthy();
+    expect(screen.queryAllByRole("row").length).toBe(0);
+  });
+
+  it("competição com jogo próximo (até 30 dias) continua aparecendo com a tabela", async () => {
+    state.competitions = [comp({ nextMatch: match(5 * day) })];
+    renderPanel();
+    await screen.findByTestId("chances-toggle");
+    expect(screen.getAllByRole("row").length).toBeGreaterThan(3);
+    expect(screen.queryByText("competitions.empty")).toBeNull();
+  });
+
+  it("competição com jogo AO VIVO aparece mesmo sem próximo jogo", async () => {
+    state.competitions = [comp({ liveMatch: match(-30 * 60 * 1000, "2H") })];
+    renderPanel();
+    await screen.findByTestId("chances-toggle");
+    expect(screen.getAllByRole("row").length).toBeGreaterThan(3);
+  });
+
+  it("só a competição ativa fica: campeonato parado some e a que está em andamento permanece", async () => {
+    state.competitions = [
+      comp({ leagueId: 628, leagueName: "Goiano - 1", nextMatch: match(-200 * day) }), // parado
+      comp({ leagueId: 76, leagueName: "Serie D", nextMatch: match(3 * day) }), // em andamento
+    ];
+    renderPanel();
+    await screen.findByTestId("chances-toggle");
+    expect(screen.getByText("Serie D")).toBeTruthy();
+    expect(screen.queryByText("Goiano - 1")).toBeNull();
   });
 });

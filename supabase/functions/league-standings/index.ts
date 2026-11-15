@@ -11,6 +11,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { projectStandings, LIVE_NOW, FINISHED, type StRow, type SeasonGame, type LiveGame } from "../_shared/standings-projection.ts";
+import { upcomingOnly, apiResponseFailed } from "../_shared/upcoming-fixtures.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -292,7 +293,15 @@ async function getFixtures(teamId: number) {
   if (cached && Date.now() - new Date(cached.updated_at as any).getTime() < TTL_1M) {
     return cached.payload as any;
   }
-  const next = await af(`/fixtures?team=${teamId}&next=15`).catch(() => ({ response: [] }));
+  // "Falhou" = a API deu erro (exceção ou campo "errors"). Resposta vazia SEM erro é válida: o clube não tem mais jogos.
+  let next: any = { response: [] };
+  let apiFailed = false;
+  try {
+    next = await af(`/fixtures?team=${teamId}&next=15`);
+    apiFailed = apiResponseFailed(next);
+  } catch {
+    apiFailed = true;
+  }
   const live = { response: [] as any[] }; // ao vivo vem de liveFromDb() (nosso banco), não da API
   const mapFx = (f: any) => ({
     id: f.fixture.id,
@@ -311,17 +320,14 @@ async function getFixtures(teamId: number) {
     live: (live?.response || []).map(mapFx),
   };
 
-  // Resposta fresca veio totalmente vazia (ex.: limite de requisições da
-  // API-Football momentâneo) mas já tínhamos jogos guardados — mantém o
-  // último estado bom conhecido em vez de apagar o próximo jogo/a tabela
-  // inteira do torcedor (a ausência de jogos vira "nenhuma competição
-  // ativa" mais adiante, derrubando a tabela de classificação também).
+  // A API deu ERRO (limite de requisições, instabilidade): mantém o último estado conhecido em vez de apagar tudo.
+  // O que sai daqui ainda passa pelo filtro "só jogo que ainda vai acontecer" (upcomingOnly), então um cache velho
+  // nunca vira "próximo jogo". Já resposta vazia SEM erro quer dizer "o clube não tem mais jogos": grava vazio
+  // (antes o cache antigo era devolvido para sempre e o clube parado ficava preso num jogo e numa tabela velhos).
   const cachedPayload = cached?.payload as { next?: unknown[]; live?: unknown[] } | undefined;
-  const hadGoodCache = !!(cachedPayload && (((cachedPayload.next as unknown[])?.length ?? 0) > 0 || ((cachedPayload.live as unknown[])?.length ?? 0) > 0));
-  const freshIsEmpty = payload.next.length === 0 && payload.live.length === 0;
-  if (freshIsEmpty && hadGoodCache) {
-    console.warn(`[getFixtures] fetch veio vazio para team=${teamId}, usando cache anterior`);
-    return cachedPayload;
+  if (apiFailed) {
+    console.warn(`[getFixtures] API falhou para team=${teamId}, usando cache anterior (se houver)`);
+    return cachedPayload ?? { next: [], live: [] };
   }
 
   await supabase.from("team_fixtures_cache").upsert({
@@ -359,9 +365,23 @@ serve(async (req) => {
 
     const leagues = await getCurrentLeagues(team.id, team.name, team.logo);
 
+    // "Ao vivo" do time vem do nosso banco (nunca guardado no cache de 5 min).
+    // PRÓXIMOS jogos: só os que ainda vão acontecer, dentro de 30 dias (jogo "não iniciado" com data passada, vindo de
+    // cache velho, nunca é "próximo jogo").
+    const rawFixtures = await getFixtures(team.id);
+    const fixtures = { ...rawFixtures, next: upcomingOnly(rawFixtures?.next as any[]), live: await liveFromDb(team.id) };
+
+    // VERDADE DE CAMPO (regra geral, vale para TODO clube): competição só está ativa se o time tem jogo ao vivo ou
+    // próximo (até 30 dias) nela. Sem isso = temporada acabou / time eliminado / ainda não começou => nada aparece
+    // (nem tabela de campeonato antigo, nem jogo). A tabela só é buscada para as competições ativas.
+    const activeLeagueIds = new Set<number>([
+      ...fixtures.next.map((f: any) => f.league.id),
+      ...fixtures.live.map((f: any) => f.league.id),
+    ]);
+    const activeLeagues = leagues.filter((l: any) => activeLeagueIds.has(l.id));
 
     // Jogos ao vivo e recém-encerrados vêm do NOSSO banco (league_fixtures): nenhuma chamada à API por torcedor.
-    const leagueIds = leagues.map((l: any) => l.id);
+    const leagueIds = activeLeagues.map((l: any) => l.id);
     const { data: lfRows } = leagueIds.length
       ? await supabase
           .from("league_fixtures")
@@ -387,7 +407,7 @@ serve(async (req) => {
     }
 
     const standingsResults = await Promise.all(
-      leagues.map(async (lg: any) => {
+      activeLeagues.map(async (lg: any) => {
         try {
           const st = await getStandings(lg.id, lg.season, false);
           // Achatar groups (pega o primeiro grupo do time, ou todos se for liga única)
@@ -430,17 +450,6 @@ serve(async (req) => {
         }
       }),
     );
-
-    // "Ao vivo" do time vem do nosso banco (nunca guardado no cache de 5 min)
-    const fixtures = { ...(await getFixtures(team.id)), live: await liveFromDb(team.id) };
-
-
-    // VERDADE DE CAMPO: competição só está ativa se o time tem jogo futuro ou ao vivo nela.
-    // Sem fixture pendente => time eliminado / torneio encerrado => não exibe.
-    const activeLeagueIds = new Set<number>([
-      ...fixtures.next.map((f: any) => f.league.id),
-      ...fixtures.live.map((f: any) => f.league.id),
-    ]);
 
     const competitions = standingsResults
       .filter((r) => activeLeagueIds.has(r.league.id))

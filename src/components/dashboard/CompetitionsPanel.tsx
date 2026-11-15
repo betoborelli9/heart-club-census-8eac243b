@@ -18,6 +18,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useTranslationApp } from "@/hooks/useTranslationApp";
 import { useToast } from "@/hooks/use-toast";
 import { isHistoricalRival } from "@/lib/rivalries";
+import { onlyActiveCompetitions } from "@/lib/active-competitions";
 import { getLeagueRules, getZoneForPosition, type LeagueRules, type LeagueZone } from "@/data/leagueRules";
 import { teamColors } from "@/data/teamColors";
 
@@ -245,9 +246,9 @@ export default function CompetitionsPanel({ clubName, teamId: clubTeamIdProp, pr
         const { data, error } = await supabase.functions.invoke("league-standings", { body: clubTeamId ? { clubName, teamId: clubTeamId } : { clubName } });
         if (cancelled) return;
         if (error) throw error;
-        const comps: Competition[] = data?.competitions || [];
-        // Só atualiza se veio conteúdo — evita "sumir" a tabela quando o
-        // polling recebe uma resposta vazia transitória da API-Football.
+        // Só competições em andamento (jogo ao vivo ou próximo jogo que ainda vai acontecer): clube sem campeonato
+        // no momento não mostra tabela nem jogo velho. Mesma regra do servidor, vale para qualquer clube.
+        const comps: Competition[] = onlyActiveCompetitions((data?.competitions || []) as Competition[]);
         if (comps.length) {
           setTeam(data?.team || null);
           const sorted = [...comps].sort((a, b) => {
@@ -266,7 +267,10 @@ export default function CompetitionsPanel({ clubName, teamId: clubTeamIdProp, pr
             const stillValid = prev && sorted.some((c) => String(c.leagueId) === prev);
             return stillValid ? prev : String(sorted[0].leagueId);
           });
-        } else if (firstLoad) {
+        } else {
+          // O servidor só devolve vazio quando o clube realmente está sem campeonato (falha da API ele resolve com o
+          // último estado conhecido): então vazio é resposta de verdade e a tabela antiga não pode ficar na tela.
+          setTeam(data?.team || null);
           setCompetitions([]);
         }
       } catch (e) {

@@ -579,7 +579,7 @@
   "competitions": {
     "title": "Active Competitions",
     "tournaments": "{{count}} tournament(s)",
-    "empty": "No active competition found.",
+    "empty": "This club has no competition at the moment.",
     "select_club": "Select a club.",
     "no_match": "No match scheduled for this competition.",
     "no_standings": "No standings available.",
