@@ -20,6 +20,9 @@ import { ClubSearch } from "@/components/dashboard/ClubSearch";
 import { pickMainCompetition } from "@/lib/main-competition";
 import { readableOnDark } from "@/lib/readable-color";
 import { useViewedClubOptional } from "@/contexts/ViewedClubContext";
+import ClubPlayoff from "@/components/clube/ClubPlayoff";
+import { useLeaguePrognosis } from "@/hooks/useLeaguePrognosis";
+import { leagueHasPlayoff } from "@/lib/playoff-view";
 
 type Game = {
   id: number;
@@ -105,10 +108,10 @@ const Clube = () => {
   const [data, setData] = useState<Payload | null>(null);
   const [error, setError] = useState(false);
   const [filter, setFilter] = useState<"all" | "done" | "next">("all");
-  const [tab, setTab] = useState<"jogos" | "chances" | "simular" | "elenco">(sp.get("aba") === "elenco" ? "elenco" : sp.get("aba") === "chances" ? "chances" : sp.get("aba") === "simular" ? "simular" : "jogos");
+  const [tab, setTab] = useState<"jogos" | "chances" | "simular" | "elenco" | "playoff">(sp.get("aba") === "elenco" ? "elenco" : sp.get("aba") === "chances" ? "chances" : sp.get("aba") === "simular" ? "simular" : sp.get("aba") === "playoff" ? "playoff" : "jogos");
   const [now, setNow] = useState(() => Date.now());
   // Trocar de aba (Jogos, Chances, Simular, Elenco) também começa no topo, como qualquer página
-  const selectTab = (k: "jogos" | "chances" | "simular" | "elenco") => {
+  const selectTab = (k: "jogos" | "chances" | "simular" | "elenco" | "playoff") => {
     setTab(k);
     window.scrollTo({ top: 0, left: 0 });
   };
@@ -172,6 +175,11 @@ const Clube = () => {
   const secondary = (club?.cor_secundaria && HEX.test(club.cor_secundaria) ? club.cor_secundaria : null) || (HEX.test(nameTheme.secondaryHex) ? nameTheme.secondaryHex : "#ffffff");
   const heroText = isLightColor(primary) ? "#111111" : "#ffffff";
 
+  // Campeonato com play-off de acesso em mata-mata (ex.: Série B 2026): a aba PLAY-OFF só aparece quando a disputa existe
+  // (a consulta é a mesma da aba Chances, compartilhada; só é feita nos campeonatos com play-off)
+  const poLeague = leagueHasPlayoff(leagueId, season);
+  const { data: poData } = useLeaguePrognosis<any>(leagueId, season, poLeague) as { data: { groups?: { playoff?: { series?: unknown[] } }[] } | null };
+  const hasPlayoffTab = poLeague && !!poData?.groups?.some((g) => g.playoff?.series?.length);
   const games = useMemo(() => data?.games ?? [], [data]);
   const sum = (data?.liveSummary ?? data?.summary) as Summary;
   const nextGame = useMemo(() => games.find((g) => LIVE.has(g.st) || BREAK.has(g.st)) || games.find((g) => g.st === "NS" || g.st === "TBD"), [games]);
@@ -323,7 +331,7 @@ const Clube = () => {
       {/* Abas */}
       <nav className="sticky top-0 z-20 border-b border-white/10 bg-black/90 backdrop-blur" aria-label="clube">
         <div className="mx-auto flex max-w-xl gap-1 overflow-x-auto px-3 py-2">
-          {([["jogos", t("clube.tab_games")], ["chances", t("clube.tab_chances")], ["simular", t("clube.tab_sim")], ["elenco", t("clube.tab_squad")]] as const).map(([k, label]) => (
+          {([["jogos", t("clube.tab_games")], ["chances", t("clube.tab_chances")], ...(hasPlayoffTab ? [["playoff", t("clube.tab_playoff")]] : []), ["simular", t("clube.tab_sim")], ["elenco", t("clube.tab_squad")]] as ["jogos" | "chances" | "simular" | "elenco" | "playoff", string][]).map(([k, label]) => (
             <button
               key={k}
               onClick={() => selectTab(k)}
@@ -340,6 +348,13 @@ const Clube = () => {
       {tab === "chances" && (
         <main className="mx-auto max-w-xl px-3 pt-4" data-testid="tab-chances">
           <ClubChances teamId={teamId} leagueId={leagueId} season={season} accent={readableOnDark(primary === "#1a1a1a" ? "#ff6200" : isLightColor(primary) ? secondary : primary)} />
+        </main>
+      )}
+
+      {/* Play-off de acesso: tabela dos 4 clubes com a chance de subir (só em campeonato com disputa de acesso) */}
+      {tab === "playoff" && (
+        <main className="mx-auto max-w-xl px-3 pt-4" data-testid="tab-playoff">
+          <ClubPlayoff teamId={teamId} leagueId={leagueId} season={season} accent={readableOnDark(primary === "#1a1a1a" ? "#ff6200" : isLightColor(primary) ? secondary : primary)} />
         </main>
       )}
 

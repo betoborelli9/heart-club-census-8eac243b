@@ -19,6 +19,10 @@ import { useTranslationApp } from "@/hooks/useTranslationApp";
 import { useToast } from "@/hooks/use-toast";
 import { isHistoricalRival } from "@/lib/rivalries";
 import { onlyActiveCompetitions } from "@/lib/active-competitions";
+import { playoffPromotion, type PlayoffSeries } from "@/components/clube/PlayoffSection";
+import PlayoffTable from "@/components/clube/PlayoffTable";
+import { leagueHasPlayoff, playoffLegOf } from "@/lib/playoff-view";
+import { competitionPhase, roundLabel } from "@/lib/competition-phase";
 import { getLeagueRules, getZoneForPosition, type LeagueRules, type LeagueZone } from "@/data/leagueRules";
 import { teamColors } from "@/data/teamColors";
 
@@ -61,6 +65,8 @@ interface Competition {
   leagueId: number;
   leagueName: string;
   leagueLogo: string;
+  /** "League" (pontos corridos) ou "Cup" (copa); o servidor informa. Sem ele, copa = competição com grupos. */
+  leagueType?: string | null;
   country?: string;
   season: number;
   standings: StandingRow[];
@@ -90,6 +96,15 @@ function buildChancesView(payload: any, leagueId: number, lang: string): Chances
   });
   if (zones.length > 4) zones = [...zones.slice(0, 3), zones[zones.length - 1]];
   if (!zones.length) zones = [{ label: "__first", short: "1º", color: "#ff6200", name: "1º" }];
+  // Disputa de acesso em mata-mata (ex.: Série B 2026): na coluna ACESSO de quem disputa vai a chance real de subir pelo play-off
+  const promo = playoffPromotion(g0.playoff?.series);
+  if (promo.size && zones.length) {
+    const key = zones[0].label;
+    for (const [id, p] of promo) {
+      const tm = teams.get(id);
+      if (tm) teams.set(id, { ...tm, cum: { ...tm.cum, [key]: p }, zoneProb: { ...tm.zoneProb, [key]: p } });
+    }
+  }
   return { zones, teams };
 }
 
@@ -124,6 +139,8 @@ export default function CompetitionsPanel({ clubName, teamId: clubTeamIdProp, pr
   const [team, setTeam] = useState<{ id: number; name: string; logo: string } | null>(null);
   const [competitions, setCompetitions] = useState<Competition[]>([]);
   const [activeTab, setActiveTab] = useState<string>("");
+  // campeonato com play-off de acesso: o play-off aparece em destaque e a tabela geral fica escondida até o torcedor pedir
+  const [fullOpen, setFullOpen] = useState<Record<number, boolean>>({});
 
   // Pede as chances do campeonato aberto quando o torcedor toca em "Chances %" (cálculo pronto no servidor, em cache)
   useEffect(() => {
@@ -134,6 +151,16 @@ export default function CompetitionsPanel({ clubName, teamId: clubTeamIdProp, pr
     void loadChances(comp.leagueId, comp.season);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showChances, activeTab, competitions]);
+
+  // Campeonato com play-off de acesso (ex.: Série B): busca já o cálculo do play-off para mostrar a tabela dele de cara
+  useEffect(() => {
+    for (const comp of competitions) {
+      if (!leagueHasPlayoff(comp.leagueId, comp.season) || chances[comp.leagueId] !== undefined) continue;
+      setChances((p) => ({ ...p, [comp.leagueId]: null }));
+      void loadChances(comp.leagueId, comp.season);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [competitions]);
 
   // Renovação sem piscar: mantém o que está na tela até chegar o número novo
   const loadChances = async (leagueId: number, season: number) => {
@@ -360,13 +387,63 @@ export default function CompetitionsPanel({ clubName, teamId: clubTeamIdProp, pr
 
         {competitions.map((c) => {
           const focusMatch = c.liveMatch || c.nextMatch;
+          // FASE da competição (pela rodada do jogo que vem aí). Copa em mata-mata (final, semi, oitavas…) NÃO tem tabela:
+          // a de pontos corridos é só da fase de grupos. Na fase de grupos mostra só o grupo do clube, nunca todos misturados.
+          const phase = competitionPhase(focusMatch?.league?.round);
+          const hasGroups = c.standings.some((r) => !!r.group);
+          const cupLike = c.leagueType ? c.leagueType.toLowerCase() === "cup" : hasGroups;
+          const knockout = phase === "knockout" && (cupLike || hasGroups);
+          const meRow = c.standings.find((r) => r.teamId === team?.id);
+          const groupMode = !knockout && hasGroups && phase !== "league";
+          const tableRows = groupMode ? (meRow?.group ? c.standings.filter((r) => r.group === meRow.group) : []) : c.standings;
           const opponent = focusMatch
             ? focusMatch.home.id === team?.id
               ? focusMatch.away
               : focusMatch.home
             : null;
+          // PLAY-OFF DE ACESSO: quando o campeonato chega nessa fase, a tabela do play-off (os 4 clubes e a chance de subir)
+          // aparece primeiro; a tabela geral do campeonato fica escondida atrás de um toque.
+          const poPayload = chances[c.leagueId];
+          const poGroup = poPayload && poPayload !== false ? ((poPayload.groups || []) as any[]).find((g) => g.playoff?.series?.length) : null;
+          const poSeries: PlayoffSeries[] = poGroup?.playoff?.series ?? [];
+          const poMode = leagueHasPlayoff(c.leagueId, c.season) && poSeries.length > 0;
+          const poPending = leagueHasPlayoff(c.leagueId, c.season) && (poPayload === undefined || poPayload === null);
+          const isFullOpen = !!fullOpen[c.leagueId];
+          const poLeg = poMode && focusMatch ? playoffLegOf(poSeries, focusMatch.home.id, focusMatch.away.id) : null;
+          const roundText = poLeg ? t(poLeg.kind === "leg1" ? "playoff.round_leg1" : "playoff.round_leg2") : undefined;
+          const generalBlock = (
+knockout ? (
+                  <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4 text-center" data-testid="knockout-note">
+                    <p className="text-[9px] font-black uppercase tracking-widest text-white/40">{t("competitions.phase")}</p>
+                    <p className="mt-1 text-base font-black italic uppercase text-white">{roundLabel(focusMatch?.league?.round, language)}</p>
+                    <p className="mt-1.5 text-[11px] leading-snug text-white/50">{t("competitions.knockout_note")}</p>
+                  </div>
+                ) : (
+                <>
+                {groupMode && meRow?.group && (
+                  <p className="text-[10px] font-black uppercase italic tracking-widest text-white/50" data-testid="my-group">
+                    {t("competitions.your_group", { group: meRow.group })}
+                  </p>
+                )}
+                <StandingsTable
+                  rows={tableRows}
+                  meTeamId={team?.id}
+                  opponentTeamId={opponent?.id}
+                  opponentName={opponent?.name}
+                  heartClubName={clubName}
+                  primaryColor={primaryColor}
+                  leagueId={c.leagueId}
+                  leagueName={c.leagueName}
+                  onOpenTeam={(id) => openTeam(id, c.leagueId, c.season)}
+                  chances={showChances && chances[c.leagueId] ? buildChancesView(chances[c.leagueId], c.leagueId, language) : null}
+                />
+                {showChances && chances[c.leagueId] && <p className="text-[9px] text-white/40">{t("clube.chances_caption")}</p>}
+                </>
+                )
+          );
           return (
             <TabsContent key={c.leagueId} value={String(c.leagueId)} className="space-y-4 mt-3">
+              {!knockout && (!poMode || isFullOpen) && (
               <div className="flex items-center gap-1.5" data-testid="view-toggle">
                 <button
                   type="button"
@@ -388,25 +465,39 @@ export default function CompetitionsPanel({ clubName, teamId: clubTeamIdProp, pr
                 {showChances && chances[c.leagueId] === null && <span className="text-[10px] text-white/40">{t("clube.chances_loading")}</span>}
                 {showChances && chances[c.leagueId] === false && <span className="text-[10px] text-amber-300/80" data-testid="chances-unavailable">{t("clube.chances_unsupported")}</span>}
               </div>
+              )}
               <div
                 ref={(el) => (shareRefs.current[String(c.leagueId)] = el)}
                 className="space-y-4 bg-[#0b0b0b] p-2 rounded-xl"
               >
-                <MatchCard match={focusMatch} live={!!c.liveMatch} primaryColor={primaryColor} />
+                <MatchCard match={focusMatch} live={!!c.liveMatch} primaryColor={primaryColor} roundText={roundText} />
                 <LeagueLiveStrip leagueId={c.leagueId} teamId={team?.id} primaryColor={primaryColor} onChange={refreshSoon} onOpenTeam={(id) => openTeam(id, c.leagueId, c.season)} />
-                <StandingsTable
-                  rows={c.standings}
-                  meTeamId={team?.id}
-                  opponentTeamId={opponent?.id}
-                  opponentName={opponent?.name}
-                  heartClubName={clubName}
-                  primaryColor={primaryColor}
-                  leagueId={c.leagueId}
-                  leagueName={c.leagueName}
-                  onOpenTeam={(id) => openTeam(id, c.leagueId, c.season)}
-                  chances={showChances && chances[c.leagueId] ? buildChancesView(chances[c.leagueId], c.leagueId, language) : null}
-                />
-                {showChances && chances[c.leagueId] && <p className="text-[9px] text-white/40">{t("clube.chances_caption")}</p>}
+                {poMode ? (
+                  <>
+                    <PlayoffTable
+                      series={poSeries}
+                      teams={(poGroup?.teams ?? []) as any[]}
+                      meTeamId={team?.id}
+                      opponentId={opponent?.id}
+                      accent={primaryColor}
+                      onOpenTeam={(id) => openTeam(id, c.leagueId, c.season)}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setFullOpen((p) => ({ ...p, [c.leagueId]: !p[c.leagueId] }))}
+                      aria-expanded={isFullOpen}
+                      data-testid="full-table-toggle"
+                      className="w-full rounded-xl border border-white/20 bg-[#0f0f0f] px-4 py-3 text-[11px] font-black uppercase italic tracking-wide text-white transition-colors hover:border-white/40"
+                    >
+                      {isFullOpen ? t("playoff.hide_general") : t("playoff.show_general")}
+                    </button>
+                    {isFullOpen && generalBlock}
+                  </>
+                ) : poPending ? (
+                  <Skeleton className="h-48 w-full rounded-xl bg-white/5" data-testid="po-loading" />
+                ) : (
+                  generalBlock
+                )}
                 {/* Assinatura da imagem compartilhada: logo oficial centralizada entre fios finos + endereço do site */}
                 <div className="flex flex-col items-center pt-2" data-testid="share-signature">
                   <div className="flex w-full items-center gap-3">
@@ -435,7 +526,7 @@ export default function CompetitionsPanel({ clubName, teamId: clubTeamIdProp, pr
   );
 }
 
-function MatchCard({ match, live, primaryColor }: { match: Match | null; live: boolean; primaryColor: string }) {
+function MatchCard({ match, live, primaryColor, roundText }: { match: Match | null; live: boolean; primaryColor: string; roundText?: string }) {
   const { t, language } = useTranslationApp();
   if (!match) {
     return (
@@ -462,7 +553,7 @@ function MatchCard({ match, live, primaryColor }: { match: Match | null; live: b
             <Calendar className="w-3 h-3" /> {dateStr} · {timeStr}
           </span>
         )}
-        {match.league.round && <span className="text-white/30 truncate max-w-[140px]">{match.league.round}</span>}
+        {(roundText || match.league.round) && <span className="text-white/30 truncate max-w-[160px]">{roundText ?? roundLabel(match.league.round, language)}</span>}
       </div>
       <div className="flex items-start gap-2">
         <div className="flex-1 flex flex-col items-center gap-1.5 min-w-0">

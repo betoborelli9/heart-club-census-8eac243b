@@ -16,6 +16,7 @@ import { getLeagueRules } from "@/data/leagueRules";
 import { ClubLogo } from "@/components/ClubLogo";
 import { orderByExpected } from "@/lib/projected-order";
 import { displayTablePoints, minReachableGain, nearestReachableTotal } from "@/lib/reachable-points";
+import PlayoffSection, { playoffPromotion, type PlayoffSeries } from "./PlayoffSection";
 
 type TeamP = {
   id: number; name: string; logo: string | null; position: number; points: number; played: number; remaining: number;
@@ -25,7 +26,7 @@ type TeamP = {
 };
 type RemGame = { id: number; date: string; h: number; a: number; hn: string; an: string; hl: string | null; al: string | null; pH: number; pD: number; pA: number; sh?: number; sa?: number; live: { gh: number; ga: number; el: number | null; st: string } | null };
 type Zone = { label: string; positions: number[] };
-type GroupP = { group: string | null; unsupported?: string; teams?: TeamP[]; zones?: Zone[]; cutMedian?: number[]; remaining?: RemGame[]; meta?: { sims: number; finishedGames: number; remainingGames: number; minPlayed: number; rule?: string } };
+type GroupP = { group: string | null; unsupported?: string; teams?: TeamP[]; zones?: Zone[]; cutMedian?: number[]; remaining?: RemGame[]; playoff?: { series: PlayoffSeries[] }; meta?: { sims: number; finishedGames: number; remainingGames: number; minPlayed: number; rule?: string } };
 type Payload = { supported: boolean; reason?: string | null; league?: { id: number; season: number; name?: string }; groups: GroupP[] };
 
 export const pctText = (p: number) => {
@@ -174,6 +175,10 @@ export default function ClubChances({ teamId, leagueId, season, accent = "#ff620
       </div>
     );
 
+  // Disputa de acesso em mata-mata (ex.: Série B 2026, 3º×6º e 4º×5º): chance de subir de cada clube que está nela
+  const poSeries = grp.playoff?.series ?? [];
+  const poPromo = playoffPromotion(poSeries);
+  const poMine = poPromo.has(teamId);
   const zones = (grp.zones ?? []).map((z) => ({ ...z, name: zoneLabel(leagueId, z, total, language), color: zoneColor(`${z.label} ${zoneLabel(leagueId, z, total, language)}`) }));
   const modePos = me.dist.indexOf(Math.max(...me.dist)) + 1;
   const cumMe = cumZoneProbs(zones, total, me.dist, me.zoneProb);
@@ -200,7 +205,12 @@ export default function ClubChances({ teamId, leagueId, season, accent = "#ff620
   const range = (a: number, b: number) => (a === b ? `${a}º` : `${a}º–${b}º`);
   const isRelegation = (z: { label: string; name: string }) => /relegation|rebaix|descenso/i.test(`${z.label} ${z.name}`);
   type Line = { key: string; color: string; p: number; title: string; sub: string; seg: number };
+  const mySeries = poSeries.find((x) => x.betterId === teamId || x.worseId === teamId);
   const sumLines: Line[] = [
+    // quem está na disputa de acesso: a chance real de subir (pelo play-off) vem primeiro
+    ...(poMine && mySeries
+      ? [{ key: "__po", color: "#f59e0b", p: poPromo.get(teamId) ?? 0, title: t("chances.po_summary_title"), sub: t("chances.po_summary_sub", { a: mySeries.seeds[0], b: mySeries.seeds[1] }), seg: 0 } as Line]
+      : []),
     ...topZ.map((z, i): Line => {
       const first = z.positions[0];
       const last = z.positions[z.positions.length - 1];
@@ -288,6 +298,7 @@ export default function ClubChances({ teamId, leagueId, season, accent = "#ff620
           <p className="text-[10px] text-white/40">{t("chances.games", { count: remNow === 0 ? 2 : remNow })}{myLive ? ` · ${t("chances.live_one")}` : ""}</p>
         </div>
       </section>
+      {poMine && <PlayoffSection series={poSeries} teams={(grp.teams ?? []) as any} teamId={teamId} accent={accent} />}
       {lastGameOnly && (
         <p className="-mt-3 text-center text-[11px] font-semibold text-white/60" data-testid="last-game-outcomes">
           {t("chances.last_game", { w: me.points + 3, d: me.points + 1, l: me.points })}
@@ -523,7 +534,8 @@ export default function ClubChances({ teamId, leagueId, season, accent = "#ff620
               label: zoneShort(z.name),
               title: topZ.indexOf(z) > 0 ? `${z.name} (${t("chances.or_better")})` : z.name,
               color: z.color,
-              val: (tm: TeamP) => cumZoneProbs(zones, total, tm.dist, tm.zoneProb)[z.label] ?? 0,
+              // ACESSO de quem disputa o play-off = chance de subir pelo mata-mata (e não 0% de "acesso direto")
+              val: (tm: TeamP) => (topZ.indexOf(z) === 0 && poPromo.has(tm.id) ? (poPromo.get(tm.id) as number) : cumZoneProbs(zones, total, tm.dist, tm.zoneProb)[z.label] ?? 0),
             })),
             ...(neutralPos.length
               ? [{ key: "__neutral", label: t("chances.neutral"), title: t("chances.sum_neutral"), color: "#a1a1aa", val: (tm: TeamP) => neutralPos.reduce((acc, p) => acc + (tm.dist[p - 1] ?? 0), 0) } as Col]
@@ -584,6 +596,7 @@ export default function ClubChances({ teamId, leagueId, season, accent = "#ff620
           );
         })()}
         <p className="mt-1 text-[10px] text-white/60">{t("chances.legend")}</p>
+        {poSeries.length > 0 && <p className="mt-0.5 text-[10px] text-white/60" data-testid="po-legend">{t("chances.po_legend")}</p>}
       </section>
 
       <div className="rounded-xl bg-white/[0.04] p-3" data-testid="chances-method">

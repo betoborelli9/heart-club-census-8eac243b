@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 
 const state: { payload: any; error: any; invokes: any[]; standings: any; viewed: any } = { payload: null, error: null, invokes: [], standings: null, viewed: null };
@@ -128,10 +128,12 @@ describe("Página do clube — temporada completa", () => {
   it("abas: Jogos e Elenco; o elenco só é buscado quando a aba é aberta", async () => {
     renderAt();
     await screen.findByTestId("club-summary");
-    expect(state.invokes.map((i) => i.name)).toEqual(["club-season"]); // elenco ainda não foi pedido
+    // Série B (liga 72) já confere se há play-off de acesso (para mostrar a aba PLAY-OFF); o elenco ainda não foi pedido
+    expect(state.invokes.map((i) => i.name)).not.toContain("club-squad");
     fireEvent.click(screen.getByText("clube.tab_squad"));
     expect(await screen.findByTestId("squad")).toBeTruthy();
-    expect(state.invokes.map((i) => i.name)).toEqual(["club-season", "club-squad"]);
+    expect(state.invokes.map((i) => i.name)).toContain("club-squad");
+    expect(state.invokes.filter((i) => i.name === "club-squad").length).toBe(1);
     fireEvent.click(screen.getByText("clube.tab_games"));
     await waitFor(() => expect(screen.queryByTestId("tab-elenco")).toBeNull());
   });
@@ -266,5 +268,87 @@ describe("Página do clube — temporada completa", () => {
     fireEvent.click(screen.getByText("clube.tab_squad"));
     expect(spy).toHaveBeenCalledWith({ top: 0, left: 0 });
     spy.mockRestore();
+  });
+});
+
+// ── Aba PLAY-OFF (Série B 2026: 3º × 6º e 4º × 5º) ─────────────────────────────────────────────────────────
+describe("Página do clube — aba PLAY-OFF", () => {
+  const leg = (homeId: number, awayId: number) => ({ homeId, awayId, date: "2026-11-21T21:00:00+00:00", status: "NS", gh: null, ga: null, pH: 0.42, pD: 0.29, pA: 0.29 });
+  const t6 = (id: number, name: string, position: number, points: number) => ({
+    id, name, logo: null, position, points, played: 38, remaining: 0, dist: [0, 0, 0, 0, 0, 0].map((_, i) => (i + 1 === position ? 1 : 0)),
+    expPoints: points, p10: points, p90: points, title: 0, zoneProb: {}, difficulty: 50, strength: 80, homePpg: 2, win: 15, gf: 50, ga: 40,
+  });
+  const prognosis = (withPlayoff: boolean) => ({
+    supported: true,
+    league: { id: 72, season: 2026, name: "Serie B" },
+    groups: [
+      {
+        group: null,
+        teams: [t6(1, "Novo FC", 1, 73), t6(2, "Juve FC", 2, 71), t6(142, "Vila Nova", 3, 66), t6(4, "Forta FC", 4, 65), t6(5, "Crici FC", 5, 62), t6(6, "Atle FC", 6, 61)],
+        zones: [{ label: "Promotion", positions: [1, 2] }, { label: "Promotion Play-offs", positions: [3, 4, 5, 6] }],
+        cutMedian: [73, 71, 66, 65, 62, 61],
+        remaining: [],
+        ...(withPlayoff
+          ? { playoff: { series: [
+              { seeds: [3, 6], betterId: 142, worseId: 6, pBetter: 0.61, pWorse: 0.39, decided: false, leg1: leg(6, 142), leg2: leg(142, 6) },
+              { seeds: [4, 5], betterId: 4, worseId: 5, pBetter: 0.65, pWorse: 0.35, decided: false, leg1: leg(5, 4), leg2: leg(4, 5) },
+            ] } }
+          : {}),
+        meta: { sims: 1000, finishedGames: 380, remainingGames: 0, minPlayed: 38, rule: "br" },
+      },
+    ],
+  });
+  // a mesma resposta de "league-prognosis" serve a Clube.tsx e às abas; o resto do mock devolve a temporada do clube
+  const useBoth = (withPlayoff: boolean) => {
+    const club = payload();
+    state.payload = new Proxy(club, { get: (t: any, k) => (k === "groups" || k === "supported" ? (prognosis(withPlayoff) as any)[k] : t[k]) });
+  };
+
+  beforeEach(() => {
+    clearPrognosisCache();
+    state.error = null;
+    state.invokes = [];
+    state.viewed = null;
+  });
+
+  it("campeonato com play-off já definido: aparece a aba PLAY-OFF junto de Jogos, Chances, Simular e Elenco", async () => {
+    useBoth(true);
+    renderAt();
+    await screen.findByTestId("club-summary");
+    expect(await screen.findByText("clube.tab_playoff")).toBeTruthy();
+    for (const k of ["clube.tab_games", "clube.tab_chances", "clube.tab_sim", "clube.tab_squad"]) expect(screen.getByText(k)).toBeTruthy();
+  });
+
+  it("a aba mostra a tabela com os 4 clubes e a chance de subir de cada um (61%, 39%, 65%, 35%)", async () => {
+    useBoth(true);
+    renderAt();
+    await screen.findByTestId("club-summary");
+    fireEvent.click(await screen.findByText("clube.tab_playoff"));
+    const box = await screen.findByTestId("tab-playoff");
+    const table = await within(box).findByTestId("playoff-table");
+    expect(within(table).getAllByTestId("po-row").length).toBe(4);
+    expect(within(table).getAllByTestId("po-row-pct").map((e) => e.textContent)).toEqual(["61%", "39%", "65%", "35%"]);
+    expect(within(box).getByTestId("chances-playoff")).toBeTruthy(); // e o detalhe de cada disputa logo abaixo
+  });
+
+  it("endereço com ?aba=playoff já abre nessa aba", async () => {
+    useBoth(true);
+    renderAt("/clube/142?liga=72&temp=2026&aba=playoff");
+    expect(await screen.findByTestId("tab-playoff")).toBeTruthy();
+  });
+
+  it("campeonato SEM play-off definido (ainda em pontos corridos, ou outro campeonato): a aba não aparece", async () => {
+    useBoth(false);
+    renderAt();
+    await screen.findByTestId("club-summary");
+    await new Promise((r) => setTimeout(r, 30));
+    expect(screen.queryByText("clube.tab_playoff")).toBeNull();
+    // outro campeonato (sem formato de play-off cadastrado): nem consulta a probabilidade só por causa da aba
+    clearPrognosisCache();
+    state.invokes = [];
+    state.payload = { ...payload(), league: { id: 71, season: 2026, name: "Serie A", logo: "", country: "Brazil" } };
+    renderAt("/clube/142?liga=71&temp=2026");
+    await waitFor(() => expect(state.invokes.map((i) => i.name)).toContain("club-season"));
+    expect(state.invokes.map((i) => i.name)).not.toContain("league-prognosis");
   });
 });

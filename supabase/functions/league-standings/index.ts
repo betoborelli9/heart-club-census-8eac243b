@@ -461,6 +461,7 @@ serve(async (req) => {
           leagueId: r.league.id,
           leagueName: r.league.name,
           leagueLogo: r.league.logo,
+          leagueType: r.league.type ?? null, // "League" (pontos corridos) ou "Cup" (copa): decide se uma tabela vale na fase de mata-mata
           country: r.league.country,
           season: r.league.season,
           standings: r.standings,

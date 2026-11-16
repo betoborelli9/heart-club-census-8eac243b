@@ -448,3 +448,132 @@ describe("Chances — só números que podem acontecer (caso do Juventude: 68 po
     expect(screen.getByText(/^chances\.games:\{"count":1\}/)).toBeTruthy();
   });
 });
+
+// ── Disputa de acesso em mata-mata (Série B 2026: 3º × 6º e 4º × 5º, ida e volta) ──────────────────────────────
+describe("Chances — disputa pelo acesso (play-off)", () => {
+  const leg = (homeId: number, awayId: number, over: any = {}) => ({ homeId, awayId, date: "2026-11-21T20:00:00+00:00", status: "NS", gh: null, ga: null, pH: 0.42, pD: 0.29, pA: 0.29, ...over });
+  const poPayload = (over: any = {}) => {
+    const t6 = (id: number, name: string, position: number, points: number, extra: any = {}) =>
+      team(id, name, position, points, { remaining: 0, played: 38, dist: [0, 0, 0, 0, 0, 0].map((_, i) => (i + 1 === position ? 1 : 0)), expPoints: points, p10: points, p90: points, title: position === 1 ? 1 : 0, strength: 80, homePpg: 2.0, win: 15, gf: 50, ga: 40, zoneProb: { Promotion: position <= 2 ? 1 : 0, "Promotion Play-offs": position >= 3 && position <= 6 ? 1 : 0, Relegation: 0 }, ...extra });
+    return {
+      supported: true,
+      league: { id: 9999, season: 2026, name: "Liga X" },
+      groups: [
+        {
+          group: null,
+          teams: [t6(1, "Novo FC", 1, 73), t6(2, "Juve FC", 2, 71), t6(3, "Vila FC", 3, 66, { strength: 89, homePpg: 2.32 }), t6(4, "Forta FC", 4, 65), t6(5, "Crici FC", 5, 62), t6(6, "Atle FC", 6, 61), t6(7, "CRB FC", 7, 59, { zoneProb: { Promotion: 0, "Promotion Play-offs": 0, Relegation: 0 } })],
+          zones: [{ label: "Promotion", positions: [1, 2] }, { label: "Promotion Play-offs", positions: [3, 4, 5, 6] }],
+          cutMedian: [73, 71, 66, 65, 62, 61, 59],
+          remaining: [],
+          playoff: {
+            series: [
+              { seeds: [3, 6], betterId: 3, worseId: 6, pBetter: 0.61, pWorse: 0.39, decided: false, leg1: leg(6, 3), leg2: leg(3, 6, { date: "2026-11-28T20:00:00+00:00", pH: 0.44, pD: 0.29, pA: 0.27 }) },
+              { seeds: [4, 5], betterId: 4, worseId: 5, pBetter: 0.652, pWorse: 0.348, decided: false, leg1: leg(5, 4), leg2: leg(4, 5) },
+            ],
+          },
+          meta: { sims: 12000, finishedGames: 380, remainingGames: 0, minPlayed: 38, rule: "br" },
+        },
+      ],
+      ...over,
+    };
+  };
+
+  beforeEach(() => {
+    clearPrognosisCache();
+    state.invokes = [];
+    state.payload = poPayload();
+  });
+
+  it("o clube na disputa vê o bloco com a chance de SUBIR dele e do adversário (61% × 39%)", async () => {
+    renderIt(3);
+    const box = await screen.findByTestId("chances-playoff");
+    const series = within(box).getAllByTestId("po-series");
+    expect(series.length).toBe(2);
+    expect(series[0].getAttribute("data-mine")).toBe("1"); // a disputa do clube vem primeiro
+    expect(within(series[0]).getAllByTestId("po-pct").map((e) => e.textContent)).toEqual(["61%", "39%"]);
+    expect(within(series[1]).getAllByTestId("po-pct").map((e) => e.textContent)).toEqual(["65%", "35%"]);
+    expect(within(box).getByTestId("po-rules").textContent).toContain("chances.po_sub");
+  });
+
+  it("mostra as duas partidas: ida na casa do pior colocado e volta (decisiva) na casa do melhor", async () => {
+    renderIt(3);
+    const box = await screen.findByTestId("chances-playoff");
+    const legs = within(within(box).getAllByTestId("po-series")[0]).getAllByTestId("po-leg");
+    expect(legs.length).toBe(2);
+    expect(legs[0].textContent).toContain("Atle FC × Vila FC"); // ida: mandante = 6º
+    expect(legs[1].textContent).toContain("Vila FC × Atle FC"); // volta: mandante = 3º (decide em casa)
+    expect(legs[0].textContent).toContain("chances.po_leg1");
+    expect(legs[1].textContent).toContain("chances.po_leg2");
+    expect(within(legs[1]).getByTestId("po-leg-probs").textContent).toContain('"h":"44%"');
+  });
+
+  it("explica o porquê: campanha, vitórias, saldo, força do time e aproveitamento em casa dos dois", async () => {
+    renderIt(3);
+    const box = await screen.findByTestId("chances-playoff");
+    const why = within(within(box).getAllByTestId("po-series")[0]).getByTestId("po-why");
+    const rows = within(why).getAllByTestId("po-stat").map((r) => r.textContent || "");
+    expect(rows.length).toBe(5);
+    expect(rows[0]).toContain("chances.po_stat_campaign");
+    expect(rows[0]).toContain("66");
+    expect(rows[0]).toContain("61");
+    expect(rows.some((r) => r.includes("chances.po_stat_strength") && r.includes("89"))).toBe(true);
+    expect(rows.some((r) => r.includes("chances.po_stat_home") && r.includes("2,32"))).toBe(true); // decimal com vírgula (português)
+    expect(within(box).getAllByTestId("po-favorite")[0].textContent).toContain('"club":"Vila FC"');
+  });
+
+  it("no resumo, a 1ª linha é a chance real de subir pelo play-off (e não só 0% de acesso direto)", async () => {
+    renderIt(3);
+    await screen.findByTestId("chances-summary");
+    const lines = screen.getAllByTestId("sum-line");
+    expect(lines[0].textContent).toContain("61%");
+    expect(lines[0].textContent).toContain("chances.po_summary_title");
+  });
+
+  it("'Todos os clubes': a coluna ACESSO de quem disputa vira a chance de subir pelo play-off; acesso direto segue 100%", async () => {
+    renderIt(3);
+    const all = await screen.findByTestId("chances-all");
+    const rows = within(all).getAllByRole("button");
+    const cells = (name: string) => within(rows.find((r) => r.textContent?.includes(name))!).getAllByTestId("all-cell").map((c) => c.textContent);
+    expect(cells("Vila FC")[0]).toBe("61%"); // antes: 0%
+    expect(cells("Atle FC")[0]).toBe("39%");
+    expect(cells("Forta FC")[0]).toBe("65%");
+    expect(cells("Crici FC")[0]).toBe("35%");
+    expect(cells("Novo FC")[0]).toBe("100%"); // acesso direto
+    expect(screen.getByTestId("po-legend")).toBeTruthy();
+  });
+
+  it("clube que não está na disputa (acesso direto ou zona neutra) não vê o bloco do play-off", async () => {
+    renderIt(1);
+    await screen.findByTestId("chances");
+    expect(screen.queryByTestId("chances-playoff")).toBeNull();
+    clearPrognosisCache();
+    renderIt(7);
+    await screen.findAllByTestId("chances");
+    expect(screen.queryByTestId("chances-playoff")).toBeNull();
+  });
+
+  it("campeonato SEM play-off continua igual: nenhum bloco e nenhuma legenda extra", async () => {
+    state.payload = payload();
+    renderIt(2);
+    await screen.findByTestId("chances");
+    expect(screen.queryByTestId("chances-playoff")).toBeNull();
+    expect(screen.queryByTestId("po-legend")).toBeNull();
+  });
+
+  it("disputa encerrada: mostra o placar das duas partidas e quem se classificou, sem probabilidade de jogo", async () => {
+    const p = poPayload();
+    p.groups[0].playoff!.series[0] = {
+      seeds: [3, 6], betterId: 3, worseId: 6, pBetter: 1, pWorse: 0, decided: true,
+      leg1: leg(6, 3, { status: "FT", gh: 1, ga: 1 }), leg2: leg(3, 6, { status: "FT", gh: 2, ga: 0 }),
+    };
+    state.payload = p;
+    renderIt(3);
+    const box = await screen.findByTestId("chances-playoff");
+    const first = within(box).getAllByTestId("po-series")[0];
+    expect(within(first).getAllByTestId("po-pct").map((e) => e.textContent)).toEqual(["100%", "0%"]);
+    expect(within(first).getAllByTestId("po-leg")[0].textContent).toContain("Atle FC 1 × 1 Vila FC");
+    expect(within(first).getAllByTestId("po-leg")[1].textContent).toContain("Vila FC 2 × 0 Atle FC");
+    expect(within(first).queryAllByTestId("po-leg-probs").length).toBe(0);
+    expect(within(first).getByTestId("po-favorite").textContent).toContain("chances.po_done");
+  });
+});

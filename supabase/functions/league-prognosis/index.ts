@@ -10,6 +10,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { getFullSeason, type FullGame } from "../_shared/season-full.ts";
 import { projectGroup, ruleFor, type SeasonGame, type StRow } from "../_shared/standings-projection.ts";
+import { isPlayoffRound, playoffFormat, twoLegSeries } from "../_shared/playoff.ts";
 import {
   fitStrengths, lambdas, matchProbs, mulberry32, scheduleDifficulty, simsFor, simulateGroup, strengthSigma, validateRule,
   isFinishedGame, isRemainingGame, LIVE_ST, type GameIn, type SimGame, type SimTeam, type TieRule,
@@ -37,7 +38,14 @@ async function af(path: string) {
 
 type Row = { team: { id: number; name: string; logo: string }; rank: number; points: number; description?: string | null; all: any; goalsDiff: number };
 
-function computeGroup(leagueId: number, rowsApi: Row[], gamesAll: (FullGame & { el?: number | null })[], teamName: Map<number, { name: string; logo: string | null }>) {
+function computeGroup(
+  leagueId: number,
+  rowsApi: Row[],
+  gamesAll: (FullGame & { el?: number | null })[],
+  teamName: Map<number, { name: string; logo: string | null }>,
+  playoffGames: (FullGame & { el?: number | null })[] = [],
+  season = 0,
+) {
   const ids = rowsApi.map((r) => r.team.id);
   const idSet = new Set(ids);
   const inGroup = gamesAll.filter((g) => idSet.has(g.h) && idSet.has(g.a));
@@ -171,11 +179,53 @@ function computeGroup(leagueId: number, rowsApi: Row[], gamesAll: (FullGame & { 
     };
   });
 
+  // 5) PLAY-OFF DE ACESSO (mata-mata): só quando a fase de pontos corridos terminou e o campeonato tem esse formato.
+  // Chance de cada clube subir = força da temporada inteira + jogo decisivo em casa do melhor colocado + empate favorece o melhor colocado.
+  let playoff: any = null;
+  const fmt = playoffFormat(leagueId, season);
+  if (fmt && remaining.length === 0 && baseRows.length >= 6) {
+    const byPos = new Map<number, (typeof baseRows)[number]>(baseRows.map((r) => [r.position, r]));
+    const sigmaOf = (id: number) => sigma[baseRows.findIndex((r) => r.teamId === id)] ?? 0;
+    const r3 = (v: number) => Math.round(v * 1000) / 1000;
+    const series: any[] = [];
+    for (const [sb, sw] of fmt.pairs) {
+      const b = byPos.get(sb);
+      const w = byPos.get(sw);
+      if (!b || !w) continue;
+      const between = playoffGames.filter((g) => (g.h === b.teamId && g.a === w.teamId) || (g.h === w.teamId && g.a === b.teamId));
+      const leg1g = between.find((g) => g.h === w.teamId); // ida: o de pior campanha é o mandante
+      const leg2g = between.find((g) => g.h === b.teamId); // volta: o de melhor campanha decide em casa
+      const finishedLeg = (g?: FullGame) => (g && isFinishedGame(toIn(g)) ? { gh: g.gh as number, ga: g.ga as number } : null);
+      const l1 = finishedLeg(leg1g);
+      const l2 = finishedLeg(leg2g);
+      const res = twoLegSeries({
+        strengths, better: b.teamId, worse: w.teamId, sigmaBetter: sigmaOf(b.teamId), sigmaWorse: sigmaOf(w.teamId),
+        leg1: l1, leg2: l2, seed: leagueId * 31 + sb,
+      });
+      const legOut = (g: FullGame | undefined, homeId: number, awayId: number, p: { lh: number; la: number; pH: number; pD: number; pA: number }) => ({
+        homeId, awayId, date: g?.date ?? null, status: g?.st ?? null, gh: g && isFinishedGame(toIn(g)) ? g.gh : null, ga: g && isFinishedGame(toIn(g)) ? g.ga : null,
+        pH: r3(p.pH), pD: r3(p.pD), pA: r3(p.pA),
+      });
+      series.push({
+        seeds: [sb, sw],
+        betterId: b.teamId,
+        worseId: w.teamId,
+        pBetter: r3(res.pBetter),
+        pWorse: r3(res.pWorse),
+        decided: !!(l1 && l2),
+        leg1: legOut(leg1g, w.teamId, b.teamId, res.leg1),
+        leg2: legOut(leg2g, b.teamId, w.teamId, res.leg2),
+      });
+    }
+    if (series.length) playoff = { series };
+  }
+
   return {
     teams,
     zones,
     cutMedian: sim.cutMedian,
     remaining: remainingOut,
+    ...(playoff ? { playoff } : {}),
     meta: { sims, finishedGames: finished.length, remainingGames: remaining.length, rule, minPlayed: Math.min(...stRows.map((r) => r.played)), tieRuleChecked: true },
   };
 }
@@ -222,16 +272,22 @@ serve(async (req) => {
     const full = await getFullSeason({ supabase, af }, leagueId, season, hot);
     if (!full) return json({ error: "temporada indisponível agora" }, 503);
     const liveMap = new Map<number, any>(recent.map((r) => [Number(r.fixture_id), r]));
-    const games = full.games.map((g) => {
+    const allGames = full.games.map((g) => {
       const o = liveMap.get(g.id);
       return o ? { ...g, st: o.status, gh: o.goals_home, ga: o.goals_away, el: o.elapsed } : g;
     });
+    // Campeonato com play-off de acesso: os jogos do mata-mata NUNCA entram na tabela de pontos corridos (ficam à parte)
+    const hasPlayoff = !!playoffFormat(leagueId, season);
+    const playoffGames = hasPlayoff ? allGames.filter((g) => isPlayoffRound(g.r)) : [];
+    const games = hasPlayoff ? allGames.filter((g) => !isPlayoffRound(g.r)) : allGames;
 
     // Cache: mesma contagem de jogos encerrados + mesmo placar ao vivo = mesmo resultado
     const finishedCount = games.filter((g) => ["FT", "AET", "PEN", "AWD", "WO"].includes(g.st) && g.gh != null && g.ga != null).length;
     const liveSig = games.filter((g) => LIVE_ST.has(g.st)).map((g) => `${g.id}:${g.gh}-${g.ga}:${Math.floor((((g as any).el as number) || 0) / 5)}`).sort().join(",");
     const stSig = groups.flat().reduce((a, r: any) => a + (r.points || 0) * 31 + (r.all?.played || 0), 0);
-    const signature = `v4|${finishedCount}|${liveSig}|${stSig}`;
+    // v5: inclui o play-off de acesso (placar das partidas já jogadas muda a chance de cada clube)
+    const poSig = playoffGames.map((g) => `${g.id}:${g.st}:${g.gh}-${g.ga}`).sort().join(",");
+    const signature = `v5|${finishedCount}|${liveSig}|${stSig}|${poSig}`;
     const { data: cached } = await supabase.from("league_prognosis").select("payload, signature, computed_at").eq("league_id", leagueId).eq("season", season).maybeSingle();
     if (cached) {
       const age = Date.now() - new Date(cached.computed_at).getTime();
@@ -245,7 +301,7 @@ serve(async (req) => {
       names.set(g.a, { name: g.an, logo: g.al });
     }
 
-    const out = groups.map((rows, gi) => ({ group: groups.length > 1 ? `Grupo ${gi + 1}` : null, ...computeGroup(leagueId, rows, games as any, names) }));
+    const out = groups.map((rows, gi) => ({ group: groups.length > 1 ? `Grupo ${gi + 1}` : null, ...computeGroup(leagueId, rows, games as any, names, playoffGames as any, season) }));
     const supported = out.some((g: any) => !g.unsupported);
     const payload = {
       supported,
