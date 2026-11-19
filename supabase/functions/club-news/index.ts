@@ -1,7 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import {
-  buildLocalQueries, isLocalRelevant, marketFor, mergeNews, sanitizeProfile, selectByWindow, type LocalProfile,
+  buildLocalQueries, coreName, dedupeStories, isLocalRelevant, isOtherClub, mergeNews, sanitizeProfile, selectByWindow, type LocalProfile,
 } from "../_shared/club-news-local.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
@@ -356,25 +356,41 @@ const bingNewsUrl = (q: { q: string; cc: string; lang: string }) =>
 async function loadProfile(admin: any, clubKey: string): Promise<LocalProfile | null> {
   try {
     const { data } = await admin.from("club_news_profile").select("profile").eq("club_key", clubKey).maybeSingle();
-    return data?.profile ? sanitizeProfile(data.profile) : null;
+    // perfil da 1ª versão (sem homônimos/apelidos) é refeito uma vez
+    return data?.profile && data.profile.v === 2 ? sanitizeProfile(data.profile) : null;
   } catch {
     return null;
   }
 }
 
-/** Pergunta à IA como a imprensa local escreve o clube (uma vez; fica guardado). Qualquer falha → null (a busca segue sem isso). */
+/** Limite de segurança: no máximo 80 perfis novos por hora (protege o custo da IA contra nomes aleatórios). */
+async function aiBudgetOk(admin: any): Promise<boolean> {
+  try {
+    const since = new Date(Date.now() - 3_600_000).toISOString();
+    const { count } = await admin.from("club_news_profile").select("club_key", { count: "exact", head: true }).gte("created_at", since);
+    return (count ?? 0) < 80;
+  } catch {
+    return false;
+  }
+}
+
+/** Pergunta à IA como a imprensa local escreve o clube e com quais clubes ele costuma ser confundido (uma vez; fica guardado). Qualquer falha → null (a busca segue sem isso). */
 async function aiProfile(admin: any, clubKey: string, clubName: string, cidade: string | null, pais: string | null): Promise<LocalProfile | null> {
   if (!LOVABLE_KEY) return null;
+  if (!(await aiBudgetOk(admin))) return null;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 9000);
   try {
-    const prompt = `Você ajuda um site de futebol a achar notícias da imprensa LOCAL de um clube.
-Clube: "${clubName}". Cidade: "${(cidade || "").slice(0, 80)}". País: "${(pais || "").slice(0, 60)}".
+    const prompt = `Você ajuda um site de futebol a achar notícias da imprensa LOCAL de um clube e a NÃO confundir com clubes de nome parecido.
+Clube: "${clubName.replace(/["\n\r]/g, " ")}". Cidade: "${(cidade || "").replace(/["\n\r]/g, " ").slice(0, 80)}". País: "${(pais || "").replace(/["\n\r]/g, " ").slice(0, 60)}".
 Responda SOMENTE com um JSON, sem nenhum texto fora dele, neste formato:
-{"cc":"código ISO de 2 letras do país, em minúsculas","lang":"código de idioma usado pela imprensa do país, como ja-JP, ko-KR, es-AR, pt-BR, tr-TR","club_names":["nome do clube como a imprensa local escreve, na ESCRITA LOCAL; até 3"],"city_names":["nome da cidade na escrita local; até 2"],"football_words":["a palavra futebol na língua local; até 2"]}
+{"cc":"código ISO de 2 letras do país, em minúsculas","lang":"código de idioma usado pela imprensa do país, como ja-JP, ko-KR, es-AR, pt-BR, tr-TR","club_names":["nome do clube como a imprensa local escreve, na ESCRITA LOCAL; até 3"],"city_names":["nome da cidade na escrita local; até 2"],"football_words":["a palavra futebol na língua local; até 2"],"homonyms":["nome COMPLETO de OUTROS clubes de futebol que costumam ser confundidos com este por terem o mesmo nome ou nome parecido, em qualquer país (ex.: para o Nacional da Madeira: Nacional de Montevideo, Club Nacional de Football, Nacional Potosí); até 6; nunca o próprio clube"],"markers":["termos que identificam ESTE clube e quase só aparecem em notícia dele: apelido, estádio, torcida; até 5"]}
 Se não tiver certeza de algum campo, use lista vazia ou omita. Nunca invente links.`;
     const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: { Authorization: `Bearer ${LOVABLE_KEY}`, "Content-Type": "application/json" },
       body: JSON.stringify({ model: "google/gemini-2.5-flash", messages: [{ role: "user", content: prompt }], temperature: 0 }),
+      signal: controller.signal,
     });
     if (!res.ok) return null;
     const json = await res.json();
@@ -382,11 +398,33 @@ Se não tiver certeza de algum campo, use lista vazia ou omita. Nunca invente li
     const braces = text.match(/\{[\s\S]*\}/);
     if (!braces) return null;
     const profile = sanitizeProfile(JSON.parse(braces[0]));
-    await admin.from("club_news_profile").upsert({ club_key: clubKey, club_name: clubName, profile });
+    await admin.from("club_news_profile").upsert({ club_key: clubKey, club_name: clubName, profile: { ...profile, v: 2 }, created_at: new Date().toISOString() });
     return profile;
   } catch (e) {
     console.warn("[club-news] perfil local por IA falhou:", e);
     return null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/** Outros clubes de nome parecido que o próprio cadastro do site conhece (nome completo e cidade deles). */
+async function homonymsFromRegistry(admin: any, clubName: string, apiId: number | null): Promise<string[]> {
+  try {
+    const core = coreName(clubName);
+    if (core.length < 4) return [];
+    const { data } = await admin.from("clubes_cache").select("nome, cidade, api_id").ilike("nome", `%${core.replace(/[%_\\]/g, "\\$&")}%`).limit(12);
+    const out: string[] = [];
+    for (const r of data ?? []) {
+      if (apiId && Number(r.api_id) === apiId) continue;
+      if (normalize(String(r.nome)) === normalize(clubName)) continue;
+      out.push(String(r.nome));
+      const c = String(r.cidade || "").split(",")[0].trim();
+      if (c.length >= 4 && c !== "Não informado") out.push(c);
+    }
+    return [...new Set(out)].slice(0, 16);
+  } catch {
+    return [];
   }
 }
 
@@ -411,15 +449,19 @@ serve(async (req) => {
 
     const admin = SUPABASE_URL && SERVICE_ROLE ? createClient(SUPABASE_URL, SERVICE_ROLE) : null;
 
-    // Só clubes que o site conhece (cadastro de clubes) usam cache e perfil da IA no banco: protege contra nomes aleatórios.
+    // QUALQUER clube do mundo tem a busca. Cache e perfil da IA no banco só para clube "confiável": o que o site já conhece
+    // (cadastro de clubes) ou que veio com o código oficial da API de futebol — protege contra nomes aleatórios.
     const apiIdNum = Number(body?.apiId);
-    const clubKey = `${normalize(clubName)}|${Number.isInteger(apiIdNum) && apiIdNum > 0 ? apiIdNum : ""}`;
+    const validApiId = Number.isInteger(apiIdNum) && apiIdNum > 0;
+    const clubKey = `${normalize(clubName)}|${validApiId ? apiIdNum : ""}`;
     let known = false;
+    let trusted = false;
     if (admin) {
       try {
         const { data: kc } = await admin.from("clubes_cache").select("id").ilike("nome", clubName.replace(/[%_\\]/g, "\\$&")).limit(1);
         known = !!kc?.length;
-        if (known) {
+        trusted = known || validApiId;
+        if (trusted) {
           const { data: hit } = await admin.from("club_news_cache").select("payload, expires_at").eq("club_key", clubKey).maybeSingle();
           if (hit?.payload && new Date(hit.expires_at).getTime() > Date.now()) {
             return new Response(JSON.stringify(hit.payload), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
@@ -429,6 +471,16 @@ serve(async (req) => {
         console.warn("[club-news] cache indisponível:", e);
       }
     }
+    // Perfil do clube (nome na escrita local, clubes que se confundem com ele, apelido/estádio): pronto no banco ou a IA
+    // descobre uma vez. Roda ao mesmo tempo que a busca nos portais, para não somar tempo de espera.
+    const profilePromise: Promise<LocalProfile | null> = admin && trusted
+      ? loadProfile(admin, clubKey).then((p) => p ?? aiProfile(admin, clubKey, clubName, cidade, pais))
+      : Promise.resolve(null);
+    const homonymsPromise: Promise<string[]> = admin ? homonymsFromRegistry(admin, clubName, validApiId ? apiIdNum : null) : Promise.resolve([]);
+    // Em que divisões o clube joga (da classificação que o site já guarda): "Série A" no texto → Botafogo do Rio; "Série B" → o de Ribeirão Preto
+    const divisionsPromise: Promise<string[]> = admin && validApiId
+      ? Promise.resolve(admin.rpc("club_news_divisions", { p_team: apiIdNum })).then((r: any) => (Array.isArray(r?.data) ? r.data.map(String) : [])).catch(() => [])
+      : Promise.resolve([]);
     const officialDomain = admin ? await resolveOfficialSite(admin, clubName) : null;
 
     const countryContext = pais && normalize(pais) !== "brazil" && normalize(pais) !== "brasil"
@@ -518,6 +570,41 @@ serve(async (req) => {
     addVariant(`${quotedClub} futebol ${countryContext}`);
     // 4) Nome curto (apelido) se existir
     if (shortName) addVariant(`${shortName} futebol clube ${countryContext} ${EXCLUSIONS}`);
+
+    // ── NOTÍCIAS LOCAIS: a imprensa da cidade do clube (jornal, rádio, site local), na língua do país ─────────────────
+    // Busca pelo nome + cidade + mercado do país e, quando há perfil, pelo nome na escrita local. Só fica o que é mesmo do
+    // clube (e não de outro de mesmo nome). Clube de fora do Brasil: roda JUNTO com a busca dos portais (não soma espera).
+    const brazilian = ["brazil", "brasil"].includes(normalize(pais || ""));
+    const localSearch = async (ctx: { profile: LocalProfile | null; dbHomonyms: string[] } & Record<string, any>): Promise<any[]> => {
+      const queries = buildLocalQueries({ clubName, shortName: body?.nomeCurto, cidade, country: pais, profile: ctx.profile });
+      const docs = await Promise.all(queries.map((q) => fetchRss(bingNewsUrl(q))));
+      const found: any[] = [];
+      for (const xml of docs) {
+        if (!xml) continue;
+        for (const it of parseRssItems(xml)) {
+          if (!it.title || !it.pubDate || isNaN(new Date(it.pubDate).getTime())) continue;
+          if (!isLocalRelevant({ title: it.title, description: it.description }, ctx as any)) continue;
+          const isOfficial = Boolean(officialDomain && getDomain(extractRealUrl(it.link)) === officialDomain);
+          found.push({
+            title: decodeHtmlEntities(it.title),
+            link: decodeHtmlEntities(it.link),
+            pubDate: it.pubDate,
+            source: decodeHtmlEntities(it.source),
+            imageUrl: it.imageUrl,
+            guid: it.guid || `local-${found.length}`,
+            isOfficial,
+            sourceRank: isOfficial ? 0 : 30, // imprensa local fica à frente de fonte desconhecida (50), atrás dos grandes portais conhecidos
+            local: true,
+          });
+        }
+      }
+      return found;
+    };
+    const earlyLocal: Promise<any[]> | null = brazilian
+      ? null
+      : Promise.all([profilePromise, homonymsPromise])
+        .then(([p, h]) => localSearch({ clubName, shortName: body?.nomeCurto, cidade, country: pais, profile: p, dbHomonyms: h }))
+        .catch((e) => { console.warn("[club-news] busca local falhou:", e); return []; });
 
     const xmlDocs: string[] = [];
     for (const q of queryVariants) {
@@ -708,56 +795,42 @@ serve(async (req) => {
 
     console.log(`[club-news] ${clubName} →`, JSON.stringify(debug));
 
-    // ── NOTÍCIAS LOCAIS: clube com pouca notícia nos portais grandes (clube pequeno / em baixa) ────────────────────
-    // A imprensa da cidade (jornal, rádio, site local), na língua do país, fala dele. Busca pelo nome + cidade + mercado do
-    // país e, quando preciso, pelo nome na escrita local (a IA descobre uma vez e fica guardado).
-    const localSearch = async (profile: LocalProfile | null): Promise<any[]> => {
-      const queries = buildLocalQueries({ clubName, shortName: body?.nomeCurto, cidade, country: pais, profile });
-      const docs = await Promise.all(queries.map((q) => fetchRss(bingNewsUrl(q))));
-      const found: any[] = [];
-      for (const xml of docs) {
-        if (!xml) continue;
-        for (const it of parseRssItems(xml)) {
-          if (!it.title || !it.pubDate || isNaN(new Date(it.pubDate).getTime())) continue;
-          if (!isLocalRelevant({ title: it.title, description: it.description }, { clubName, shortName: body?.nomeCurto, cidade, profile })) continue;
-          const isOfficial = Boolean(officialDomain && getDomain(extractRealUrl(it.link)) === officialDomain);
-          found.push({
-            title: decodeHtmlEntities(it.title),
-            link: decodeHtmlEntities(it.link),
-            pubDate: it.pubDate,
-            source: decodeHtmlEntities(it.source),
-            imageUrl: it.imageUrl,
-            guid: it.guid || `local-${found.length}`,
-            isOfficial,
-            sourceRank: isOfficial ? 0 : 60,
-            local: true,
-          });
-        }
-      }
-      return found;
-    };
+    const profile = await profilePromise;
+    const dbHomonyms = await homonymsPromise;
+    const divisions = await divisionsPromise;
+    const idCtx = { clubName, shortName: body?.nomeCurto, cidade, country: pais, profile, dbHomonyms, divisions };
 
-    let pool: any[] = items; // dos portais grandes: já são das últimas 48 h
+    // CLUBE DE MESMO NOME: tira do que veio dos portais grandes o que é de outro clube homônimo (Nacional de Montevideo,
+    // Botafogo-SP, Santos Laguna…). Sem prova de que é outro, a notícia fica.
+    const bigItems = items.filter((it) => !isOtherClub(it.title, idCtx));
+    // Clube de fora do Brasil: os portais brasileiros quase só falam dos grandes; a imprensa DO PAÍS dele é sempre consultada.
+    const needLocal = bigItems.length < 5 || !brazilian;
+
+    let pool: any[] = bigItems; // dos portais grandes: já são das últimas 48 h
     let localUsed = false;
-    if (items.length < 5) {
+    if (needLocal) {
       localUsed = true;
-      const mk = marketFor(pais);
-      let profile: LocalProfile | null = admin && known ? await loadProfile(admin, clubKey) : null;
-      // país de outro alfabeto: sem o nome na escrita local a busca quase nunca acha — pergunta à IA já na primeira vez
-      if (!profile && !mk.latin && admin && known) profile = await aiProfile(admin, clubKey, clubName, cidade, pais);
-      pool = mergeNews(pool, await localSearch(profile));
-      if (!profile && admin && known && selectByWindow(pool, Date.now(), 3).items.length < 3) {
-        profile = await aiProfile(admin, clubKey, clubName, cidade, pais);
-        if (profile && (profile.club_names.length > 0 || profile.cc)) pool = mergeNews(pool, await localSearch(profile));
-      }
+      pool = mergeNews(bigItems, earlyLocal ? await earlyLocal : await localSearch(idCtx));
     }
+    // MESMO ASSUNTO em sites diferentes vira uma notícia só (fica a do site oficial / fonte mais confiável; as outras em "alsoIn").
+    pool = dedupeStories(pool, idCtx);
     // 48 h; se houver pouca notícia, 7 dias; ainda pouca, 30 dias. A tela mostra "há N dias".
     const sel = selectByWindow(pool, Date.now(), 3);
     const result = { data: sel.items.slice(0, 12), windowDays: sel.windowDays, local: localUsed };
 
-    if (admin && known) {
+    // clube que o site não conhece: só guarda cache enquanto a tabela estiver pequena (nome aleatório não enche o banco)
+    let canCache = !!admin && trusted;
+    if (canCache && !known) {
       try {
-        const ttlMin = result.data.length === 0 ? 10 : localUsed ? 60 : 10;
+        const { count } = await admin!.from("club_news_cache").select("club_key", { count: "exact", head: true });
+        canCache = (count ?? 0) < 3000;
+      } catch {
+        canCache = false;
+      }
+    }
+    if (admin && canCache) {
+      try {
+        const ttlMin = result.data.length === 0 ? 10 : bigItems.length >= 5 ? 10 : 60;
         await admin.from("club_news_cache").upsert({
           club_key: clubKey,
           payload: result,

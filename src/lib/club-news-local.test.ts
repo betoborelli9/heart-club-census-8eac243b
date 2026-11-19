@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
-  buildLocalQueries, coreName, footballWordFor, hasFootballWord, isLocalRelevant, marketFor, mergeNews, sanitizeProfile, selectByWindow,
+  buildLocalQueries, coreName, dedupeStories, footballWordFor, hasFootballWord, isLocalRelevant, isOtherClub, marketFor, mergeNews, sameStory,
+  sanitizeProfile, selectByWindow, storyTokens,
 } from "../../supabase/functions/_shared/club-news-local";
 
 const NOW = new Date("2026-11-19T12:00:00Z").getTime();
@@ -77,7 +78,7 @@ describe("buscas locais", () => {
 describe("perfil local vindo da IA é validado", () => {
   it("aceita o formato certo", () => {
     expect(sanitizeProfile({ cc: "JP", lang: "ja-JP", club_names: ["FC岐阜", "岐阜"], city_names: ["岐阜市"], football_words: ["サッカー"] })).toEqual({
-      cc: "jp", lang: "ja-JP", club_names: ["FC岐阜", "岐阜"], city_names: ["岐阜市"], football_words: ["サッカー"],
+      cc: "jp", lang: "ja-JP", club_names: ["FC岐阜", "岐阜"], city_names: ["岐阜市"], football_words: ["サッカー"], homonyms: [], markers: [],
     });
   });
 
@@ -88,7 +89,7 @@ describe("perfil local vindo da IA é validado", () => {
     expect(p.club_names).toEqual(["ok FC"]);
     expect(p.city_names).toEqual([]);
     expect(p.football_words).toEqual([]);
-    expect(sanitizeProfile(null)).toEqual({ cc: undefined, lang: undefined, club_names: [], city_names: [], football_words: [] });
+    expect(sanitizeProfile(null)).toEqual({ cc: undefined, lang: undefined, club_names: [], city_names: [], football_words: [], homonyms: [], markers: [] });
   });
 
   it("no máximo 3 nomes de clube, 2 de cidade e 3 palavras", () => {
@@ -184,5 +185,176 @@ describe("juntar listas sem repetir assunto", () => {
     );
     expect(out.map((o: any) => o.src)).toEqual(["ge", "local"]);
     expect(out.length).toBe(2);
+  });
+});
+
+describe("mesma notícia em sites diferentes vira uma só", () => {
+  const rv = { clubName: "Rio Verde", cidade: "Rio Verde, Goiás" };
+  const mk = (title: string, source: string, sourceRank = 50, extra: any = {}) => ({ title, source, sourceRank, pubDate: at(2 * H), ...extra });
+  const jorginho = [
+    mk("Jorginho, ex-Vila Nova e Atlético-GO, reforça Rio Verde no Goianão 2027", "Diário da Manhã", 60),
+    mk("Rio Verde anuncia contratação do meia Jorginho, ex-Atlético-GO e Vila Nova", "ge.globo", 1),
+    mk("Jorginho, ex-Vila Nova e Atlético, volta a disputar o Goianão em 2027", "ogol.com.br", 50),
+    mk("De volta à elite, Rio Verde anuncia ídolo do Atlético-GO para o Goianão 2027", "Esporte Goiano", 60),
+    mk("Lembra dele? Jorginho, ex-Atlético, vai defender o Rio Verde no Goianão 2027", "Mais Goiás", 60),
+  ];
+
+  it("as 5 manchetes do reforço Jorginho viram 1, com a fonte mais confiável e as outras em 'alsoIn'", () => {
+    const out = dedupeStories(jorginho, rv);
+    expect(out.length).toBe(1);
+    expect(out[0].source).toBe("ge.globo");
+    expect(out[0].alsoIn?.length).toBe(4);
+    expect(out[0].alsoIn).not.toContain("ge.globo");
+  });
+
+  it("assuntos diferentes do mesmo clube continuam separados", () => {
+    const out = dedupeStories(
+      [...jorginho, mk("Rio Verde divulga tabela do Goianão 2027 e estreia contra o Anápolis", "Mais Goiás"), mk("Presidente do Rio Verde fala sobre reforma do estádio Mozart Veloso do Carmo", "O Popular")],
+      rv,
+    );
+    expect(out.length).toBe(3);
+  });
+
+  it("dois jogos diferentes do mesmo clube não se misturam", () => {
+    const fla = { clubName: "Flamengo", cidade: "Rio de Janeiro, Rio de Janeiro" };
+    const out = dedupeStories([mk("Flamengo vence o Athletico-PR de virada no Maracanã", "A"), mk("Flamengo empata com o Palmeiras e segue na liderança", "B")], fla);
+    expect(out.length).toBe(2);
+  });
+
+  it("o site oficial vence qualquer outra fonte", () => {
+    const out = dedupeStories(
+      [mk("Rio Verde anuncia contratação do meia Jorginho, ex-Atlético-GO e Vila Nova", "ge.globo", 1), mk("Jorginho, ex-Vila Nova e Atlético-GO, reforça o Rio Verde no Goianão 2027", "Rio Verde EC", 0, { isOfficial: true })],
+      rv,
+    );
+    expect(out.length).toBe(1);
+    expect(out[0].source).toBe("Rio Verde EC");
+  });
+
+  it("funciona em japonês (sem espaço entre palavras)", () => {
+    const ctx = { clubName: "FC Gifu", profile: sanitizeProfile({ club_names: ["FC岐阜"], city_names: ["岐阜"] }) };
+    const out = dedupeStories([mk("FC岐阜、堅守で首位キープ J3 アウェーで愛媛戦", "岐阜新聞"), mk("FC岐阜が堅守で首位キープ J3 愛媛とのアウェー戦", "中日新聞"), mk("FC岐阜、新監督に就任が決定", "岐阜新聞")], ctx);
+    expect(out.length).toBe(2);
+  });
+
+  it("palavras-chave ignoram o nome do clube e palavras vazias", () => {
+    const t = storyTokens("O Rio Verde vence a partida de ontem", new Set(["rio", "verde"]));
+    expect([...t]).toEqual(["vence", "partida", "ontem"]);
+    expect(sameStory(new Set(["a1", "b2"]), new Set(["a1", "b2"]))).toBe(false); // poucas palavras: não junta
+  });
+});
+
+describe("clubes de MESMO NOME não se misturam", () => {
+  it("Nacional (Portugal) x Nacional de Montevideo: nome do homônimo sem prova de que é o nosso → fora", () => {
+    const profile = sanitizeProfile({ homonyms: ["Nacional de Montevideo", "Nacional Potosí"], markers: ["Choupana"], city_names: ["Funchal"] });
+    const ctx = { clubName: "Nacional", cidade: "Funchal, Madeira", country: "Portugal", profile };
+    expect(isOtherClub("Nacional de Montevideo vence clássico no campeonato uruguaio", ctx)).toBe(true);
+    expect(isOtherClub("Nacional vence no Choupana e sobe na tabela", ctx)).toBe(false);
+    expect(isOtherClub("Nacional do Funchal contrata avançado", ctx)).toBe(false);
+    expect(isOtherClub("Nacional de Montevideo visita o Funchal em jogo amistoso", ctx)).toBe(false); // cita a nossa cidade
+  });
+
+  it("homônimos que o próprio cadastro do site conhece também valem", () => {
+    const ctx = { clubName: "Santos", cidade: "Santos, São Paulo", country: "Brazil", dbHomonyms: ["Santos Laguna", "Santos de Guápiles"] };
+    expect(isOtherClub("Santos Laguna vence o América pela Liga MX", ctx)).toBe(true);
+    expect(isOtherClub("Santos vence o Corinthians pelo Brasileirão", ctx)).toBe(false);
+  });
+
+  it("nome completo nosso mais comprido que o do homônimo não é bloqueado", () => {
+    const ctx = { clubName: "Real Sociedad", cidade: "San Sebastián", country: "Spain", profile: sanitizeProfile({ homonyms: ["Real Madrid"] }) };
+    expect(isOtherClub("Real Sociedad vence o Real Madrid na Copa del Rey", ctx)).toBe(false);
+    expect(isOtherClub("Real Madrid goleia na Champions", ctx)).toBe(true);
+  });
+
+  it("homônimo cujo nome é parte do nosso nome é ignorado (Santos Laguna x 'Santos')", () => {
+    const ctx = { clubName: "Santos Laguna", cidade: "Torreón, Coahuila", country: "Mexico", dbHomonyms: ["Santos"] };
+    expect(isOtherClub("Santos Laguna vence en la Liga MX", ctx)).toBe(false);
+  });
+
+  it("Brasil: Botafogo-SP não entra no Botafogo do Rio, e vice-versa", () => {
+    const rj = { clubName: "Botafogo", cidade: "Rio de Janeiro, Rio de Janeiro", country: "Brazil" };
+    expect(isOtherClub("Botafogo-SP vence o Santos e assume a liderança", rj)).toBe(true);
+    expect(isOtherClub("Botafogo-RJ vence o Flamengo no Nilton Santos", rj)).toBe(false);
+    expect(isOtherClub("Botafogo se prepara para a final", rj)).toBe(false); // "se" é palavra, não estado
+    const sp = { clubName: "Botafogo", cidade: "Ribeirão Preto, São Paulo", country: "Brazil" };
+    expect(isOtherClub("Botafogo-SP vence o Santos", sp)).toBe(false);
+    expect(isOtherClub("Botafogo-PB perde em casa", sp)).toBe(true);
+  });
+
+  it("título todo em maiúsculas não dispara o teste de sigla de estado", () => {
+    const rj = { clubName: "Botafogo", cidade: "Rio de Janeiro, Rio de Janeiro", country: "Brazil" };
+    expect(isOtherClub("BOTAFOGO SE PREPARA PARA O JOGO", rj)).toBe(false);
+  });
+
+  it("a relevância usa a checagem de homônimo", () => {
+    const profile = sanitizeProfile({ homonyms: ["Nacional de Montevideo"] });
+    const ctx = { clubName: "Nacional", cidade: "Funchal, Madeira", country: "Portugal", profile };
+    expect(isLocalRelevant({ title: "Nacional de Montevideo vence clássico no campeonato uruguaio" }, ctx)).toBe(false);
+    expect(isLocalRelevant({ title: "Nacional do Funchal vence clássico no campeonato" }, ctx)).toBe(true);
+  });
+});
+
+describe("clube cadastrado com sigla (Botafogo SP) exige prova de que a notícia é dele", () => {
+  const sp = { clubName: "Botafogo SP", cidade: "Ribeirão Preto, São Paulo", country: "Brazil" };
+  it("só 'Botafogo' (sem sigla) é do outro Botafogo, não do paulista", () => {
+    expect(isOtherClub("Corinthians bate Botafogo e deixa o Z4 em noite de Kaio César", sp)).toBe(true);
+    expect(isOtherClub("Tite define permanência na Série A como primeiro objetivo do Botafogo", sp)).toBe(true);
+  });
+  it("com a sigla, a cidade ou o apelido, é dele", () => {
+    expect(isOtherClub("Botafogo-SP define critérios rigorosos para novas contratações", sp)).toBe(false);
+    expect(isOtherClub("Botafogo SP renova com o goleiro", sp)).toBe(false);
+    expect(isOtherClub("Em Ribeirão Preto, Botafogo anuncia reforço para 2027", sp)).toBe(false);
+    expect(isOtherClub("Botafogo-PB perde em casa", sp)).toBe(true); // sigla de outro estado
+  });
+  it("o Botafogo do Rio (sem sigla no cadastro) segue com as notícias dele e não pega as de outro estado", () => {
+    const rj = { clubName: "Botafogo", cidade: "Rio de Janeiro", country: "Brazil" };
+    expect(isOtherClub("Corinthians bate Botafogo e deixa o Z4", rj)).toBe(false);
+    expect(isOtherClub("Botafogo-SP define critérios rigorosos para novas contratações", rj)).toBe(true);
+  });
+});
+
+describe("palavra de futebol só vale como palavra", () => {
+  it("'brasileiro' (gente), 'machine' e 'ligar' não são futebol", () => {
+    expect(hasFootballWord("O cânion brasileiro onde um rio verde-esmeralda corre entre paredões gigantes")).toBe(false);
+    expect(hasFootballWord("Machine learning in Gateshead")).toBe(false);
+    expect(hasFootballWord("Como ligar o ar condicionado")).toBe(false);
+  });
+  it("mas futebol de verdade continua valendo (plural, sufixo, outras escritas)", () => {
+    expect(hasFootballWord("Rio Verde acerta com dois goleiros e três jogos de preparação")).toBe(true);
+    expect(hasFootballWord("Corinthians vence o Brasileirão")).toBe(true);
+    expect(hasFootballWord("岐阜のサッカークラブが首位を維持")).toBe(true);
+  });
+  it("o rio verde-esmeralda não vira notícia do clube Rio Verde", () => {
+    expect(isLocalRelevant({ title: "O cânion brasileiro onde um rio verde-esmeralda corre entre paredões gigantes" }, { clubName: "Rio Verde", cidade: "Rio Verde, Goiás" })).toBe(false);
+  });
+});
+
+describe("a divisão (Série A/B/C) diz qual dos Botafogos é", () => {
+  const rj = { clubName: "Botafogo", cidade: "Rio de Janeiro", country: "Brazil", divisions: ["Carioca - 1", "Serie A"], dbHomonyms: ["Botafogo SP", "Ribeirão Preto", "Botafogo PB", "João Pessoa"] };
+  const sp = { clubName: "Botafogo SP", cidade: "Ribeirão Preto, São Paulo", country: "Brazil", divisions: ["Paulista - A1", "Serie B"], dbHomonyms: ["Botafogo", "Botafogo PB", "João Pessoa"] };
+  const pb = { clubName: "Botafogo PB", cidade: "João Pessoa, Paraíba", country: "Brazil", divisions: ["Paraibano", "Serie C"], dbHomonyms: ["Botafogo", "Botafogo SP", "Ribeirão Preto"] };
+
+  it("Série A → Botafogo do Rio; Série B → Botafogo de Ribeirão Preto; Série C → Botafogo da Paraíba", () => {
+    expect(isOtherClub("Botafogo empata e segue na Série A com Tite", rj)).toBe(false);
+    expect(isOtherClub("Botafogo vence e embala na Série B rumo ao acesso, diz técnico", sp)).toBe(false);
+    expect(isOtherClub("Botafogo avança na Série C com gol no fim", pb)).toBe(false);
+    // a notícia da divisão errada não entra
+    expect(isOtherClub("Botafogo vence e lidera a Série B", rj)).toBe(true);
+    expect(isOtherClub("Botafogo goleia na Série A e sonha com a Libertadores", sp)).toBe(true);
+    expect(isOtherClub("Botafogo sofre na Série A", pb)).toBe(true);
+  });
+
+  it("para o Botafogo SP, 'Botafogo' + Série A não é dele, mas + Série B ou Ribeirão Preto é", () => {
+    expect(isOtherClub("Corinthians bate Botafogo pela Série A", sp)).toBe(true);
+    expect(isOtherClub("Botafogo encara o Juventude pela Série B", sp)).toBe(false);
+    expect(isOtherClub("Em Ribeirão Preto, Botafogo encara a final", sp)).toBe(false);
+  });
+
+  it("notícia que fala em cair ou subir de divisão não é descartada por citar a outra série", () => {
+    expect(isOtherClub("Risco de rebaixamento: Botafogo pode cair para a Série B", rj)).toBe(false);
+  });
+
+  it("sem outro clube de nome parecido, a divisão não é usada (não descarta notícia certa)", () => {
+    const solo = { clubName: "Flamengo", cidade: "Rio de Janeiro", country: "Brazil", divisions: ["Serie A"] };
+    expect(isOtherClub("Flamengo vence o Palmeiras e olha para a Série B de 2027 com respeito", solo)).toBe(false);
   });
 });

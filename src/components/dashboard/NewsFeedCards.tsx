@@ -18,6 +18,8 @@ interface NewsItem {
   source: string;
   pubDate?: string;
   time?: string;
+  /** outras fontes que deram o MESMO assunto (o servidor já juntou numa notícia só) */
+  alsoIn?: string[];
 }
 
 interface ClubMeta {
@@ -185,6 +187,14 @@ export default function NewsFeedCards({ teamName, primaryColor = "#ff6200", club
                       <span className="flex items-center gap-1 text-[8px] text-white/30 uppercase font-bold">
                         <Clock className="w-2.5 h-2.5" />
                         {item.time || timeAgo(item.pubDate)}
+                      </span>
+                    )}
+                    {Array.isArray(item.alsoIn) && item.alsoIn.length > 0 && (
+                      <span
+                        className="text-[8px] text-white/30 uppercase font-bold"
+                        title={item.alsoIn.join(", ")}
+                      >
+                        {t("news.also_in", { count: item.alsoIn.length })}
                       </span>
                     )}
                   </div>

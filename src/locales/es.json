@@ -81,6 +81,7 @@
     "official_links": "Solo Enlaces Oficiales — Monitoreo IA",
     "empty_48h": "Aún no encontramos noticias recientes de este club, ni en la prensa de su ciudad.",
     "local_window": "Prensa local · últimos {{count}} días",
+    "also_in": "+{{count}} fuentes",
     "data_sources": "Cruce de datos: Google · Gemini · Wikipedia",
     "time_now": "ahora",
     "time_minutes_short": "{{count}}m",
