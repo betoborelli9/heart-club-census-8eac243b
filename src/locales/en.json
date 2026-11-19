@@ -79,7 +79,8 @@
   "news": {
     "radar_label": "Radar",
     "official_links": "Official Links Only — AI Monitoring",
-    "empty_48h": "No news published in the last 48 hours.",
+    "empty_48h": "We haven't found recent news for this club yet, not even in the local press.",
+    "local_window": "Local press · last {{count}} days",
     "data_sources": "Data crossover: Google · Gemini · Wikipedia",
     "time_now": "now",
     "time_minutes_short": "{{count}}m",

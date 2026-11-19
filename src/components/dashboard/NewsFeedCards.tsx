@@ -37,6 +37,7 @@ export default function NewsFeedCards({ teamName, primaryColor = "#ff6200", club
   const { t } = useTranslationApp();
   const [news, setNews] = useState<NewsItem[]>([]);
   const [loading, setLoading] = useState(false);
+  const [windowDays, setWindowDays] = useState(2);
 
   const timeAgo = (d?: string) => {
     if (!d) return "";
@@ -67,14 +68,17 @@ export default function NewsFeedCards({ teamName, primaryColor = "#ff6200", club
           },
         });
         const raw: NewsItem[] = Array.isArray(data) ? data : data?.data || [];
+        // Clube grande: 48 h. Clube pequeno / em baixa: o servidor amplia para 7 ou 30 dias (imprensa local) e informa aqui.
+        const wd = Number(Array.isArray(data) ? 2 : data?.windowDays);
+        const days = wd === 7 || wd === 30 ? wd : 2;
 
-        // FILTRO DE VALIDADE (48h rígido + anti-zumbi):
-        // - descarta tudo publicado há mais de 48h
+        // FILTRO DE VALIDADE (janela do servidor + anti-zumbi):
+        // - descarta tudo publicado antes da janela (48 h por padrão)
         // - itens sem pubDate são descartados (não dá pra garantir frescor)
         // - "onde assistir", "escalação", "provável", "pré-jogo", "ao vivo",
         //   "tempo real" só valem se publicados nas últimas 24h.
         const now = Date.now();
-        const MAX_AGE = 48 * 60 * 60 * 1000; // 48 horas
+        const MAX_AGE = days * 24 * 60 * 60 * 1000;
         const H24 = 24 * 60 * 60 * 1000;
         const PRE_MATCH_RX = /(onde\s+assistir|escala[cç][aã]o|escala[cç][oõ]es|prov[aá]vel|pr[eé][- ]?jogo|ao\s+vivo|tempo\s+real|minuto\s+a\s+minuto)/i;
         const fresh = raw.filter((item) => {
@@ -109,7 +113,10 @@ export default function NewsFeedCards({ teamName, primaryColor = "#ff6200", club
           unique.push(item);
         }
 
-        if (!cancelled) setNews(unique.slice(0, 10));
+        if (!cancelled) {
+          setNews(unique.slice(0, 10));
+          setWindowDays(days);
+        }
       } catch {
         if (!cancelled) setNews([]);
       } finally {
@@ -147,6 +154,11 @@ export default function NewsFeedCards({ teamName, primaryColor = "#ff6200", club
         </p>
       ) : (
         <ul className="flex flex-col">
+          {windowDays > 2 && (
+            <li className="px-2 pb-2 text-[8px] text-white/30 uppercase font-black italic tracking-wider">
+              {t("news.local_window", { count: windowDays })}
+            </li>
+          )}
           {news.map((item, i) => (
             <li key={i}>
               <a

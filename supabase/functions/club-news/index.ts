@@ -1,5 +1,8 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import {
+  buildLocalQueries, isLocalRelevant, marketFor, mergeNews, sanitizeProfile, selectByWindow, type LocalProfile,
+} from "../_shared/club-news-local.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
@@ -316,6 +319,77 @@ async function resolveOfficialSite(admin: any, clubName: string): Promise<string
   }
 }
 
+// ───────────────────────── NOTÍCIAS LOCAIS (clubes menores) ─────────────────────────
+type RssItem = { title: string; link: string; pubDate: string; source: string; description: string; imageUrl: string | null; guid: string };
+
+/** Lê os <item> de um RSS do Bing Notícias (qualquer idioma). */
+function parseRssItems(xml: string): RssItem[] {
+  const out: RssItem[] = [];
+  const re = /<item>([\s\S]*?)<\/item>/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(xml)) !== null) {
+    const block = m[1];
+    const get = (tag: string) => {
+      const x = block.match(
+        new RegExp(`<${tag}[^>]*><!\\[CDATA\\[([\\s\\S]*?)\\]\\]><\\/${tag}>|<${tag}[^>]*>([\\s\\S]*?)<\\/${tag}>`),
+      );
+      return x ? (x[1] || x[2] || "").trim() : "";
+    };
+    const { cleanTitle, source: parsed } = extractSource(decodeHtmlEntities(get("title")));
+    const bingSource = (block.match(/<News:Source>([\s\S]*?)<\/News:Source>/) || [])[1];
+    out.push({
+      title: cleanTitle,
+      link: get("link"),
+      pubDate: get("pubDate") || get("dc:date") || get("updated"),
+      source: (bingSource || parsed || "Notícias").trim(),
+      description: decodeHtmlEntities(get("description")).replace(/<[^>]+>/g, " "),
+      imageUrl: extractImage(block),
+      guid: get("guid"),
+    });
+  }
+  return out;
+}
+
+const bingNewsUrl = (q: { q: string; cc: string; lang: string }) =>
+  `https://www.bing.com/news/search?q=${encodeURIComponent(q.q)}&format=rss&cc=${encodeURIComponent(q.cc)}&setlang=${encodeURIComponent(q.lang)}&qft=sortbydate%3d%221%22`;
+
+async function loadProfile(admin: any, clubKey: string): Promise<LocalProfile | null> {
+  try {
+    const { data } = await admin.from("club_news_profile").select("profile").eq("club_key", clubKey).maybeSingle();
+    return data?.profile ? sanitizeProfile(data.profile) : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Pergunta à IA como a imprensa local escreve o clube (uma vez; fica guardado). Qualquer falha → null (a busca segue sem isso). */
+async function aiProfile(admin: any, clubKey: string, clubName: string, cidade: string | null, pais: string | null): Promise<LocalProfile | null> {
+  if (!LOVABLE_KEY) return null;
+  try {
+    const prompt = `Você ajuda um site de futebol a achar notícias da imprensa LOCAL de um clube.
+Clube: "${clubName}". Cidade: "${(cidade || "").slice(0, 80)}". País: "${(pais || "").slice(0, 60)}".
+Responda SOMENTE com um JSON, sem nenhum texto fora dele, neste formato:
+{"cc":"código ISO de 2 letras do país, em minúsculas","lang":"código de idioma usado pela imprensa do país, como ja-JP, ko-KR, es-AR, pt-BR, tr-TR","club_names":["nome do clube como a imprensa local escreve, na ESCRITA LOCAL; até 3"],"city_names":["nome da cidade na escrita local; até 2"],"football_words":["a palavra futebol na língua local; até 2"]}
+Se não tiver certeza de algum campo, use lista vazia ou omita. Nunca invente links.`;
+    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${LOVABLE_KEY}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ model: "google/gemini-2.5-flash", messages: [{ role: "user", content: prompt }], temperature: 0 }),
+    });
+    if (!res.ok) return null;
+    const json = await res.json();
+    const text = String(json?.choices?.[0]?.message?.content || "");
+    const braces = text.match(/\{[\s\S]*\}/);
+    if (!braces) return null;
+    const profile = sanitizeProfile(JSON.parse(braces[0]));
+    await admin.from("club_news_profile").upsert({ club_key: clubKey, club_name: clubName, profile });
+    return profile;
+  } catch (e) {
+    console.warn("[club-news] perfil local por IA falhou:", e);
+    return null;
+  }
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -336,6 +410,25 @@ serve(async (req) => {
     }
 
     const admin = SUPABASE_URL && SERVICE_ROLE ? createClient(SUPABASE_URL, SERVICE_ROLE) : null;
+
+    // Só clubes que o site conhece (cadastro de clubes) usam cache e perfil da IA no banco: protege contra nomes aleatórios.
+    const apiIdNum = Number(body?.apiId);
+    const clubKey = `${normalize(clubName)}|${Number.isInteger(apiIdNum) && apiIdNum > 0 ? apiIdNum : ""}`;
+    let known = false;
+    if (admin) {
+      try {
+        const { data: kc } = await admin.from("clubes_cache").select("id").ilike("nome", clubName.replace(/[%_\\]/g, "\\$&")).limit(1);
+        known = !!kc?.length;
+        if (known) {
+          const { data: hit } = await admin.from("club_news_cache").select("payload, expires_at").eq("club_key", clubKey).maybeSingle();
+          if (hit?.payload && new Date(hit.expires_at).getTime() > Date.now()) {
+            return new Response(JSON.stringify(hit.payload), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+          }
+        }
+      } catch (e) {
+        console.warn("[club-news] cache indisponível:", e);
+      }
+    }
     const officialDomain = admin ? await resolveOfficialSite(admin, clubName) : null;
 
     const countryContext = pais && normalize(pais) !== "brazil" && normalize(pais) !== "brasil"
@@ -456,10 +549,7 @@ serve(async (req) => {
     }
 
     if (xmlDocs.length === 0) {
-      console.error("[club-news] Nenhuma fonte RSS respondeu");
-      return new Response(JSON.stringify([]), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      console.error("[club-news] Nenhuma fonte RSS dos portais grandes respondeu (segue para a busca local)");
     }
 
     const items: any[] = [];
@@ -618,7 +708,70 @@ serve(async (req) => {
 
     console.log(`[club-news] ${clubName} →`, JSON.stringify(debug));
 
-    return new Response(JSON.stringify(items), {
+    // ── NOTÍCIAS LOCAIS: clube com pouca notícia nos portais grandes (clube pequeno / em baixa) ────────────────────
+    // A imprensa da cidade (jornal, rádio, site local), na língua do país, fala dele. Busca pelo nome + cidade + mercado do
+    // país e, quando preciso, pelo nome na escrita local (a IA descobre uma vez e fica guardado).
+    const localSearch = async (profile: LocalProfile | null): Promise<any[]> => {
+      const queries = buildLocalQueries({ clubName, shortName: body?.nomeCurto, cidade, country: pais, profile });
+      const docs = await Promise.all(queries.map((q) => fetchRss(bingNewsUrl(q))));
+      const found: any[] = [];
+      for (const xml of docs) {
+        if (!xml) continue;
+        for (const it of parseRssItems(xml)) {
+          if (!it.title || !it.pubDate || isNaN(new Date(it.pubDate).getTime())) continue;
+          if (!isLocalRelevant({ title: it.title, description: it.description }, { clubName, shortName: body?.nomeCurto, cidade, profile })) continue;
+          const isOfficial = Boolean(officialDomain && getDomain(extractRealUrl(it.link)) === officialDomain);
+          found.push({
+            title: decodeHtmlEntities(it.title),
+            link: decodeHtmlEntities(it.link),
+            pubDate: it.pubDate,
+            source: decodeHtmlEntities(it.source),
+            imageUrl: it.imageUrl,
+            guid: it.guid || `local-${found.length}`,
+            isOfficial,
+            sourceRank: isOfficial ? 0 : 60,
+            local: true,
+          });
+        }
+      }
+      return found;
+    };
+
+    let pool: any[] = items; // dos portais grandes: já são das últimas 48 h
+    let localUsed = false;
+    if (items.length < 5) {
+      localUsed = true;
+      const mk = marketFor(pais);
+      let profile: LocalProfile | null = admin && known ? await loadProfile(admin, clubKey) : null;
+      // país de outro alfabeto: sem o nome na escrita local a busca quase nunca acha — pergunta à IA já na primeira vez
+      if (!profile && !mk.latin && admin && known) profile = await aiProfile(admin, clubKey, clubName, cidade, pais);
+      pool = mergeNews(pool, await localSearch(profile));
+      if (!profile && admin && known && selectByWindow(pool, Date.now(), 3).items.length < 3) {
+        profile = await aiProfile(admin, clubKey, clubName, cidade, pais);
+        if (profile && (profile.club_names.length > 0 || profile.cc)) pool = mergeNews(pool, await localSearch(profile));
+      }
+    }
+    // 48 h; se houver pouca notícia, 7 dias; ainda pouca, 30 dias. A tela mostra "há N dias".
+    const sel = selectByWindow(pool, Date.now(), 3);
+    const result = { data: sel.items.slice(0, 12), windowDays: sel.windowDays, local: localUsed };
+
+    if (admin && known) {
+      try {
+        const ttlMin = result.data.length === 0 ? 10 : localUsed ? 60 : 10;
+        await admin.from("club_news_cache").upsert({
+          club_key: clubKey,
+          payload: result,
+          expires_at: new Date(Date.now() + ttlMin * 60_000).toISOString(),
+          updated_at: new Date().toISOString(),
+        });
+        // limpeza de rotina: linhas vencidas há mais de 3 dias (em ~2% das chamadas)
+        if (Math.random() < 0.02) await admin.from("club_news_cache").delete().lt("expires_at", new Date(Date.now() - 3 * 86_400_000).toISOString());
+      } catch (e) {
+        console.warn("[club-news] não consegui guardar o cache:", e);
+      }
+    }
+
+    return new Response(JSON.stringify(result), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
