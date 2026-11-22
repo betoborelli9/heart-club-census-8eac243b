@@ -153,6 +153,26 @@ export function parseListing(html: string, nowMs: number, defaultDate?: string):
     .replace(/\sclass="[^"]*"/g, "");
 
   const games: ListedGame[] = [];
+
+  // FORMATO NOVO do site (nov/2026): cada jogo é <article data-ts="1795383000" …> com o horário em <strong>18:30</strong>,
+  // os dois times em <img alt="…"><span>Nome</span> e os canais em <svg><use href="#i-tv"></svg><b>NOME</b> <small>(…)</small>.
+  // A data e a hora vêm do carimbo de tempo (data-ts), sem depender de cabeçalho de dia. O formato antigo continua lido abaixo.
+  const newFmt = /<article\b[^>]*\bdata-ts="(\d{9,11})"[^>]*>([\s\S]*?)<\/article>/gi;
+  let n: RegExpExecArray | null;
+  while ((n = newFmt.exec(src))) {
+    const art = n[2] || "";
+    const teams = [...art.matchAll(/<img[^>]*\balt="([^"]*)"[^>]*>\s*<span[^>]*>([^<]*)<\/span>/gi)].map((t) => clean(t[2] || t[1]));
+    if (teams.length < 2 || !teams[0] || !teams[1]) continue;
+    const when = toBrt(new Date(Number(n[1]) * 1000).toISOString());
+    const pills: string[] = [];
+    for (const p of art.matchAll(/<use href="#i-tv"><\/use><\/svg>\s*<b>([^<]+)<\/b>\s*(?:<small>([^<]*)<\/small>)?/gi)) {
+      // "YOUTUBE (SPORTYNET)": é o YouTube da emissora estrangeira, não ajuda o torcedor brasileiro
+      if (p[2] && FOREIGN.has(clean(p[2]).replace(/[()]/g, "").trim().toUpperCase())) continue;
+      pills.push(p[1]);
+    }
+    games.push({ date: when.date, time: when.time, home: teams[0], away: teams[1], channels: cleanChannelList(pills) });
+  }
+
   let currentDate: string | null = defaultDate ?? null;
   const token = /<h3[^>]*>([\s\S]*?)<\/h3>|<article[^>]*>([\s\S]*?)<\/article>/gi;
   let m: RegExpExecArray | null;

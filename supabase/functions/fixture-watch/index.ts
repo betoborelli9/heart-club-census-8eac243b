@@ -24,7 +24,7 @@ const WINDOW_DAYS = 8;
 const FRESH_WITH_CHANNELS_MS = 12 * 60 * 60 * 1000;
 const FRESH_EMPTY_MS = 6 * 60 * 60 * 1000;
 const PAUSE_MS = 1500; // intervalo entre páginas: leitura educada, uma por vez
-const VERSAO = 3;
+const VERSAO = 4; // 4 = lê o formato novo da grade (nov/2026); linhas gravadas vazias por versão antiga são refeitas
 
 type Fx = {
   id: number;
@@ -69,7 +69,9 @@ serve(async (req) => {
 
   const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
-  const { data: caches, error } = await supabase.from("team_fixtures_cache").select("payload");
+  // do mais velho para o mais novo: o mesmo jogo pode estar guardado em 2 clubes, e quando é remarcado só uma cópia está
+  // atualizada — a última a entrar vale (senão o robô procura o jogo no dia errado e deixa "a confirmar")
+  const { data: caches, error } = await supabase.from("team_fixtures_cache").select("payload, updated_at").order("updated_at", { ascending: true });
   if (error) return json({ error: error.message }, 500);
 
   const now = Date.now();
@@ -103,12 +105,16 @@ serve(async (req) => {
 
   // 1) jogos de hoje e de amanhã (todas as ligas, uma página cada); 2) só se sobrar jogo sem canal: a página de cada liga
   const listing: ListedGame[] = [];
+  const harvested = new Set<string>(); // campeonatos que as próprias páginas citam (o mapa do site lista só alguns)
   let paginas = 0;
   const read = async (url: string, defaultDate?: string) => {
     if (paginas > 0) await sleep(PAUSE_MS);
     paginas++;
     const html = await fetchPage(url);
-    if (html) listing.push(...parseListing(html, now, defaultDate));
+    if (html) {
+      listing.push(...parseListing(html, now, defaultDate));
+      for (const m of html.matchAll(/href="(\/liga\/[a-z0-9-]+)"/gi)) harvested.add(SITE + m[1]);
+    }
     return html !== null;
   };
   const okHoje = await read(`${SITE}/jogos-hoje`, brtDate(now, 0));
@@ -118,8 +124,12 @@ serve(async (req) => {
   if (pending().length) {
     if (paginas > 0) await sleep(PAUSE_MS);
     paginas++;
-    const ligas = await leagueUrls();
-    for (const url of ligas) await read(url);
+    const ligas = [...new Set([...(await leagueUrls()), ...harvested])];
+    // uma página por campeonato, uma a uma; para assim que todos os jogos têm resposta (e no máximo 35 páginas por rodada)
+    for (const url of ligas) {
+      if (!pending().length || paginas >= 35) break;
+      await read(url);
+    }
   }
 
   if (!okHoje && !okAmanha && !listing.length) return json({ ok: false, erro: "grade fora do ar", paginas }, 502);

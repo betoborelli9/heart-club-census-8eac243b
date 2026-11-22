@@ -109,3 +109,62 @@ describe("auxiliares", () => {
     expect(brtDate(NOW, 1)).toBe("2026-10-25");
   });
 });
+
+// FORMATO NOVO da grade (futebolnatv.com.br, nov/2026): o robô lia ZERO jogos e deixava "a confirmar" em todos.
+// Trechos reais da página /jogos-hoje (22/11/2026).
+const tv = (names: string[], small = "") =>
+  names.map((n, i) => `<span><svg fill="none" aria-hidden="true"><use href="#i-tv"></use></svg><b>${n}</b> ${i === names.length - 1 ? small : ""}</span>`).join("");
+const newArticle = (ts: number, league: string, time: string, a: string, b: string, channels: string) =>
+  `<article data-slot="j1" data-league="1222" data-teams="4892 4986" data-ts="${ts}" data-status="upcoming"><a href="/aovivo/x.html" aria-label="${a} x ${b}"></a>` +
+  `<div><img src="https://static/c.png" alt="" width="20" height="20"><p><b>${league}</b> - Final</p></div>` +
+  `<div><div><strong>${time}</strong> </div><div><div><img src="https://static/a.png" alt="${a}" width="28" height="28"><span>${a}</span></div>` +
+  `<div><img src="https://static/b.png" alt="${b}" width="28" height="28"><span>${b}</span></div></div></div>` +
+  `<div>${channels}</div><button type="button" data-follow></button></article>`;
+
+describe("parseListing — formato novo da grade (data-ts)", () => {
+  // 22/11/2026 18:30 em Brasília = 21:30 UTC
+  const TS_1830 = Date.UTC(2026, 10, 22, 21, 30, 0) / 1000;
+  const TS_1330 = Date.UTC(2026, 10, 22, 16, 30, 0) / 1000;
+  const NOW_NOV = Date.UTC(2026, 10, 22, 14, 0, 0);
+  const html =
+    `<section><div>` +
+    newArticle(TS_1830, "Brasileirão Série B", "18:30", "Atlético GO", "Vila Nova", tv(["XSPORTS", "ESPN", "CANAL GOAT", "DISNEY+"])) +
+    newArticle(TS_1330, "Premier League", "13:30", "Liverpool", "Manchester United", tv(["ESPN", "DISNEY+"])) +
+    newArticle(TS_1330, "Copa do Canadá", "13:30", "Toronto", "Montreal", tv(["REDETV!", "ESPN", "SPORTYNET", "YOUTUBE", "DISNEY+"], "")) +
+    newArticle(TS_1830, "Série D", "18:30", "Time A", "Time B", "") +
+    `</div></section>`;
+  const games = parseListing(html, NOW_NOV, "2026-11-22");
+
+  it("lê data e hora de Brasília pelo carimbo de tempo, os dois times e os canais", () => {
+    expect(games).toHaveLength(4);
+    expect(games[0]).toEqual({ date: "2026-11-22", time: "18:30", home: "Atlético GO", away: "Vila Nova", channels: ["ESPN", "Canal GOAT", "Disney+"] });
+    expect(games[1]).toEqual({ date: "2026-11-22", time: "13:30", home: "Liverpool", away: "Manchester United", channels: ["ESPN", "Disney+"] });
+  });
+
+  it("jogo sem canal na grade fica com lista vazia (a confirmar), sem inventar", () => {
+    expect(games[3].channels).toEqual([]);
+  });
+
+  it("'YouTube (Sportynet)' é a emissora estrangeira: não entra", () => {
+    const g = parseListing(
+      newArticle(TS_1330, "L", "13:30", "A", "B", tv(["ESPN"]) + `<span><svg><use href="#i-tv"></use></svg><b>YOUTUBE</b> <small>(SPORTYNET)</small></span>`),
+      NOW_NOV,
+    );
+    expect(g[0].channels).toEqual(["ESPN"]);
+  });
+
+  it("o jogo do Heart Club (nomes da API) casa com o da grade e traz ESPN, Canal GOAT e Disney+", () => {
+    const hit = matchGame(games, { date: "2026-11-22T21:30:00+00:00", home: { name: "Atletico Goianiense" }, away: { name: "Vila Nova" } });
+    expect(hit?.channels).toEqual(["ESPN", "Canal GOAT", "Disney+"]);
+  });
+
+  it("não confunde com jogo de outro dia ou de outros times", () => {
+    expect(matchGame(games, { date: "2026-11-23T21:30:00+00:00", home: { name: "Atletico Goianiense" }, away: { name: "Vila Nova" } })).toBeNull();
+    expect(matchGame(games, { date: "2026-11-22T21:30:00+00:00", home: { name: "Atletico Mineiro" }, away: { name: "Vila Nova" } })).toBeNull();
+  });
+
+  it("o formato antigo continua sendo lido (página com <time> e cabeçalho de dia)", () => {
+    const old = parseListing(LEAGUE_PAGE, NOW);
+    expect(old).toHaveLength(4);
+  });
+});
