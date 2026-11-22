@@ -41,6 +41,7 @@ import { isSimActive, startSim } from "@/lib/sim-fan";
 import type { ClubSearchResult } from "@/lib/search-clubs";
 import { ClubLogo } from "@/components/ClubLogo";
 import { ResultsList, useClubSearch } from "@/components/entrar/ClubSearchBox";
+import { PopularClubs } from "@/components/entrar/PopularClubs";
 import logo from "@/assets/logo-384.png"; // cópia leve (67 KB) do logo de 1000 px: a abertura carrega rápido no celular
 
 type Stage = "intro" | "pick" | "login";
@@ -432,7 +433,6 @@ const Entrar = () => {
               <div className="relative">
                 <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-primary opacity-60" />
                 <Input
-                  autoFocus
                   value={heartSearch.query}
                   onChange={(e) => heartSearch.setQuery(e.target.value)}
                   onFocus={() => heartSearch.setOpen(true)}
@@ -447,6 +447,8 @@ const Entrar = () => {
                   onPick={pickHeart}
                 />
               </div>
+              {/* Os mais votados: toca no escudo do seu time, sem digitar */}
+              <PopularClubs onPick={pickHeart} />
               {/* "Já votei — Entrar": sóbrio, do tamanho da caixa de busca; mostra direto Google/e-mail, sem pedir clube */}
               <button
                 type="button"

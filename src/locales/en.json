@@ -745,6 +745,7 @@
     "back_account": "Account: {{email}}",
     "back_not_you": "Not you? Vote with another account",
     "already_voted_btn": "I already voted — Sign in",
+    "popular_title": "Tap your team",
     "signin_title": "Sign in to your account",
     "signin_sub": "Use Google or the e-mail you voted with to go straight to your dashboard.",
     "terms_notice_pre": "By continuing, you accept the ",

@@ -55,7 +55,7 @@ const dedupeClubKey = (club: Pick<ClubSearchResult, "name" | "city" | "country" 
   return `canon:${canonical}|${location}`;
 };
 
-function mapCacheRow(c: any): ClubSearchResult {
+export function mapCacheRow(c: any): ClubSearchResult {
   return {
     id: String(c.id),
     name: c.nome,
