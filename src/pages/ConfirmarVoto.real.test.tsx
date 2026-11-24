@@ -10,6 +10,8 @@ const submitVote = vi.fn(async () => {
   state.hasVoted = true; // depois de gravar, o app passa a saber que o torcedor votou
 });
 const rpc = vi.fn(() => Promise.resolve({ data: null, error: null }));
+// o contador anônimo da entrada (registrar_passo_entrada) também usa rpc; estas conferências são sobre Termos e voto
+const realRpcCalls = () => rpc.mock.calls.filter((c: any[]) => c[0] !== "registrar_passo_entrada");
 
 vi.mock("@/lib/entry-flow", async (orig) => ({ ...(await orig<typeof import("@/lib/entry-flow")>()), NEW_ENTRY_FLOW_ENABLED: true }));
 vi.mock("@/lib/submit-vote", () => ({ submitVote: (...a: any[]) => (submitVote as any)(...a) }));
@@ -71,7 +73,7 @@ describe("ConfirmarVoto — voto gravado ao chegar logado", () => {
     // nada de aviso verde: o torcedor só vê a tela normal
     expect(screen.queryByText("entrar.vote_recorded")).toBeNull();
     expect(screen.queryByText("entrar.vote_recording")).toBeNull();
-    expect(rpc).not.toHaveBeenCalled(); // o aceite dos Termos só vem no botão
+    expect(realRpcCalls()).toEqual([]); // o aceite dos Termos só vem no botão
   });
 
   it("depois de gravar, NÃO pula a tela: o torcedor ainda marca os Termos e toca em SIM, EU JURO!", async () => {
@@ -280,7 +282,7 @@ describe("ConfirmarVoto — fluxo direto (aviso dos Termos já mostrado na entra
     });
     renderPage();
     await waitFor(() => expect(screen.getAllByText("entrar.vote_error").length).toBeGreaterThan(0));
-    expect(rpc).not.toHaveBeenCalled();
+    expect(realRpcCalls()).toEqual([]);
     expect(screen.queryByTestId("where")).toBeNull();
     await act(async () => {
       fireEvent.click(screen.getByText("entrar.retry"));
@@ -297,7 +299,7 @@ describe("ConfirmarVoto — fluxo direto (aviso dos Termos já mostrado na entra
     });
     renderPage();
     await waitFor(() => expect(screen.getAllByText("entrar.vote_error").length).toBeGreaterThan(0));
-    expect(rpc).not.toHaveBeenCalled();
+    expect(realRpcCalls()).toEqual([]);
   });
 
   it("link de fora (/confirmar-voto?pv=…) NUNCA grava sozinho, mesmo dizendo 'Termos mostrados': cai na confirmação", async () => {
@@ -313,7 +315,7 @@ describe("ConfirmarVoto — fluxo direto (aviso dos Termos já mostrado na entra
     // a tela antiga (quadradinho + SIM, EU JURO!) aparece e o voto só é gravado ali como antes (aceite no botão)
     expect(await screen.findByRole("checkbox")).toBeTruthy();
     expect(screen.queryByTestId("confirmar-auto")).toBeNull();
-    expect(rpc).not.toHaveBeenCalled();
+    expect(realRpcCalls()).toEqual([]);
   });
 
   it("escolha antiga, guardada SEM o aviso dos Termos: segue pela tela de confirmação de antes", async () => {

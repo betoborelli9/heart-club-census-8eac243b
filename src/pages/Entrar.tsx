@@ -42,12 +42,14 @@ import type { ClubSearchResult } from "@/lib/search-clubs";
 import { ClubLogo } from "@/components/ClubLogo";
 import { ResultsList, useClubSearch } from "@/components/entrar/ClubSearchBox";
 import { PopularClubs } from "@/components/entrar/PopularClubs";
+import { entryVisitorId, trackEntry } from "@/lib/entry-funnel";
 import logo from "@/assets/logo-384.png"; // cópia leve (67 KB) do logo de 1000 px: a abertura carrega rápido no celular
 
 type Stage = "intro" | "pick" | "login";
 const INTRO_MS = 1500; // logo parado: no máximo 2 s
 const AUTO_GOOGLE_GUARD_KEY = "hc_auto_google_at";
 const AUTO_GOOGLE_GUARD_MS = 60_000; // evita laço se o torcedor voltar do Google com o "voltar" do navegador
+const ORIGIN_PARAM = "vi"; // id anônimo do visitante no Instagram, levado no link que abre o Chrome (liga os dois no contador de passos)
 
 const Entrar = () => {
   const navigate = useNavigate();
@@ -66,6 +68,8 @@ const Entrar = () => {
   const linkVote = useMemo(() => (params.get("sim") === "1" ? null : decodePendingVoteParam(params.get(PENDING_VOTE_PARAM))), []); // eslint-disable-line react-hooks/exhaustive-deps
   // Veio do Instagram para o Chrome pedindo para o login com Google começar sozinho.
   const wantsAutoGoogle = useMemo(() => params.get("sim") !== "1" && params.get(AUTO_GOOGLE_PARAM) === "google", []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const originId = useMemo(() => params.get(ORIGIN_PARAM), []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const [stage, setStage] = useState<Stage>(() => {
     if (linkVote) return "login";
@@ -101,6 +105,15 @@ const Entrar = () => {
       root.style.overflowX = before;
     };
   }, []);
+
+  // Contador de passos: abriu a tela (e, se veio do Instagram pelo Chrome, "chegou no Chrome"). Não conta o teste do Master.
+  const openedTracked = useRef(false);
+  useEffect(() => {
+    if (openedTracked.current || sim || !isAuthReady) return;
+    openedTracked.current = true;
+    trackEntry("abriu", originId);
+    if (wantsAutoGoogle && !inApp.inApp) trackEntry("chrome_chegou", originId);
+  }, [sim, isAuthReady, originId, wantsAutoGoogle, inApp.inApp]);
 
   // Teste do Master: começa do zero como um torcedor novo (nada do perfil/voto real aparece).
   useEffect(() => {
@@ -161,6 +174,7 @@ const Entrar = () => {
       navigate("/confirmar-voto", { replace: true });
       return;
     }
+    if (!sim) trackEntry("toque_time", originId);
     setHeartClub(club);
     setStage("login");
   };
@@ -185,6 +199,7 @@ const Entrar = () => {
       return;
     }
     setBusy("google");
+    trackEntry("google_iniciado", originId);
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: { redirectTo: `${window.location.origin}/` },
@@ -205,6 +220,9 @@ const Entrar = () => {
       if (pv) url.searchParams.set(PENDING_VOTE_PARAM, pv);
       else url.searchParams.delete(PENDING_VOTE_PARAM);
       url.searchParams.set(AUTO_GOOGLE_PARAM, "google");
+      const vi = entryVisitorId();
+      if (vi) url.searchParams.set(ORIGIN_PARAM, vi); // o Chrome avisa "cheguei" com este id: dá para ver se o salto Instagram → Chrome funciona
+      trackEntry("abrir_chrome", originId);
       setBusy("google");
       window.location.href = buildChromeIntentUrl(url.toString());
       // se o Chrome não abrir, o botão volta ao normal (nada fica travado)
@@ -217,9 +235,32 @@ const Entrar = () => {
 
   // O MESMO botão "Continuar com Google" em qualquer navegador; o que ele faz depende de onde a página está aberta.
   const onGoogleClick = () => {
+    if (!sim) trackEntry("toque_google", originId);
     if (inApp.inApp && inApp.platform === "android") return openInChromeForGoogle();
-    if (inApp.inApp && inApp.platform === "ios") return setIosHint(true);
+    if (inApp.inApp && inApp.platform === "ios") {
+      // iPhone: o torcedor abre a página no Safari pelo menu "•••". O endereço da página já leva o time escolhido e o pedido
+      // para o Google começar sozinho, então ele não precisa escolher o time de novo.
+      carryChoiceInUrl();
+      if (!sim) trackEntry("aviso_ios", originId);
+      return setIosHint(true);
+    }
     void startGoogle();
+  };
+
+  // Põe no endereço da página (sem recarregar) o time escolhido + "começar o Google sozinho" + o id do visitante.
+  const carryChoiceInUrl = () => {
+    try {
+      const url = new URL(window.location.href);
+      url.searchParams.delete("sim");
+      const pv = stage === "login" && heartClub ? encodePendingVoteParam(heartClub, sympathies) : null;
+      if (pv) url.searchParams.set(PENDING_VOTE_PARAM, pv);
+      url.searchParams.set(AUTO_GOOGLE_PARAM, "google");
+      const vi = entryVisitorId();
+      if (vi) url.searchParams.set(ORIGIN_PARAM, vi);
+      window.history.replaceState(window.history.state, "", url.pathname + url.search + url.hash);
+    } catch {
+      /* sem isso o torcedor só escolhe o time de novo no navegador */
+    }
   };
 
   // Chegou no Chrome vindo do Instagram com ?go=google: o login com Google começa sozinho, sem outro toque.
@@ -254,6 +295,7 @@ const Entrar = () => {
       return;
     }
     setBusy("magic");
+    trackEntry("envio_link_email", originId);
     try {
       const { data, error } = await supabase.functions.invoke("heart-club-auth", {
         body: {

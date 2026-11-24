@@ -16,6 +16,7 @@ import { useUser } from "@/contexts/UserContext";
 import { useToast } from "@/hooks/use-toast";
 import { useTranslationApp } from "@/hooks/useTranslationApp";
 import { isMasterEmail } from "@/lib/master";
+import { trackEntry } from "@/lib/entry-funnel";
 import { NEW_ENTRY_FLOW_ENABLED, PENDING_VOTE_PARAM, adoptPendingVoteFromLink, clearPendingVote, loadPendingVote, markDeviceVoted, maskEmail } from "@/lib/entry-flow";
 import { submitVote } from "@/lib/submit-vote";
 import { supabase } from "@/integrations/supabase/client";
@@ -136,6 +137,7 @@ const ConfirmarVoto = () => {
       });
       setRecorded(true);
       clearPendingVote();
+      trackEntry("voto_gravado"); // fecha o funil da entrada (anônimo)
       // este aparelho já teve um voto: se voltar sem login, vê "Bem-vindo de volta, torcedor do <Clube>!"
       markDeviceVoted({ clubName: pending.club.name, logo: pending.club.logo, email: maskEmail(user.email) });
       if (direct) await finishAuto(wantsNews);
