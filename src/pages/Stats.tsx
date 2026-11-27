@@ -30,6 +30,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { searchClubsWithFallback } from "@/lib/search-clubs";
 import { ClubLogo } from "@/components/ClubLogo";
 import { scopeTotal, shareText } from "@/lib/vote-share";
+import { MasterTotalVotes } from "@/components/stats/MasterTotalVotes";
 import { getHistoricalRivals } from "@/lib/rivalries";
 import { useTranslationApp } from "@/hooks/useTranslationApp";
 
@@ -467,6 +468,8 @@ const Stats = () => {
           initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
           className="bg-gradient-to-r from-primary/15 via-primary/5 to-transparent border border-primary/30 rounded-2xl p-4"
         >
+          {/* soma de todos os votos do Heart Club: só o dono vê */}
+          <MasterTotalVotes />
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div className="min-w-0 flex-1">
               <p className="text-sm italic text-primary font-bold flex items-start gap-2">
